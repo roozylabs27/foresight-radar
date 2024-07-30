@@ -12,11 +12,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
+        $this->command->info(PHP_EOL);
+        $this->command->info('🧑🏻‍💻 Dummy Default System ' . PHP_EOL);
+        $this->command->info('************ Default Token System ************' . PHP_EOL);
+        $this->command->info('************************************' . PHP_EOL);
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        $this->call([
+            DefaultSystemSeeder::class,
+        ]);
     }
 }

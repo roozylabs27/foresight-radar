@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Short Term",
+        "code": "ST"
+    },
+    {
+        "name": "Mid Term",
+        "code": "MT"
+    },
+    {
+        "name": "Long Term",
+        "code": "LT"
+    }
+]

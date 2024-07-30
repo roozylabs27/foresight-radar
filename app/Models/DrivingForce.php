@@ -10,6 +10,11 @@ class DrivingForce extends Model
     use HasFactory;
 
     protected $fillable = [
-
+        'uuid',
+        'user_id',
+        'dimension_id',
+        'time_horizon_id',
+        'keyword',
+        'description',
     ];
 }

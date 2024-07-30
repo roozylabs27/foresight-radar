@@ -11,17 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('dimensions', function (Blueprint $table) {
-            $table->id();
-            $table->uuid();
-            $table->integer('environment_id');
-            $table->string('name', 100);
-        });
-
         Schema::create('environments', function (Blueprint $table) {
             $table->id();
             $table->uuid();
             $table->string('name', 100);
+            $table->timestamps();
+        });
+
+        Schema::create('dimensions', function (Blueprint $table) {
+            $table->id();
+            $table->uuid();
+            $table->bigInteger('environment_id')->unsigned();
+            $table->string('name', 100);
+            $table->timestamps();
+        });
+
+        Schema::table('dimensions', function (Blueprint $table) {
+            $table->foreign('environment_id')->references("id")->on('environments')->onDelete("cascade");
         });
     }
 

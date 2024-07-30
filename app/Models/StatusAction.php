@@ -8,4 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class StatusAction extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'uuid',
+        'name',
+        'symbol'
+    ];
 }

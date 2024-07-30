@@ -11,34 +11,32 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('driving_forces', function (Blueprint $table) {
+        Schema::create('time_horizons', function (Blueprint $table) {
             $table->id();
             $table->uuid();
-            $table->integer('dimension_id');
-            $table->integer('time_horizon_id');
+            $table->string('name', 100);
+            $table->string('code', 100);
+            $table->timestamps();
+        });
+
+        Schema::create('driving_forces', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->uuid();
+            $table->bigInteger('dimension_id')->unsigned();
+            $table->bigInteger('time_horizon_id')->unsigned();
+            $table->bigInteger('created_by')->unsigned();
+            $table->bigInteger('updated_by')->unsigned()->nullable();
             $table->string('keyword', 100);
             $table->string('description', 100);
             $table->timestamps();
             $table->softDeletes();
         });
 
-        Schema::create('time_horizons', function (Blueprint $table) {
-            $table->id();
-            $table->uuid();
-            $table->string('name', 100);
-            $table->string('code', 100);
-        });
-
-        Schema::create('driving_force_ratings', function (Blueprint $table) {
-            $table->id();
-            $table->uuid();
-            $table->integer('driving_force_id');
-            $table->integer('status_action_id');
-            $table->integer('priority_id');
-            $table->unsignedTinyInteger('impact_analysis');
-            $table->unsignedTinyInteger('uncertainty_analysis');
-            $table->timestamps();
-            $table->softDeletes();
+        Schema::table('driving_forces', function (Blueprint $table) {
+            $table->foreign('dimension_id')->references("id")->on('dimensions')->onDelete("cascade");
+            $table->foreign('time_horizon_id')->references("id")->on('time_horizons')->onDelete("cascade");
+            $table->foreign('created_by')->references("id")->on('users')->onDelete("cascade");
+            $table->foreign('updated_by')->references("id")->on('users')->onDelete("cascade");
         });
 
         Schema::create('status_actions', function (Blueprint $table) {
@@ -46,6 +44,7 @@ return new class extends Migration
             $table->uuid();
             $table->string('name');
             $table->string('symbol');
+            $table->timestamps();
         });
 
         Schema::create('priorities', function (Blueprint $table) {
@@ -53,6 +52,24 @@ return new class extends Migration
             $table->uuid();
             $table->string('name');
             $table->string('color');
+            $table->timestamps();
+        });
+
+        Schema::create('driving_force_ratings', function (Blueprint $table) {
+            $table->id();
+            $table->uuid();
+            $table->bigInteger('driving_force_id')->unsigned();
+            $table->bigInteger('status_action_id')->unsigned();
+            $table->bigInteger('priority_id')->unsigned();
+            $table->unsignedTinyInteger('impact_analysis');
+            $table->unsignedTinyInteger('uncertainty_analysis');
+            $table->timestamps();
+        });
+
+        Schema::table('driving_force_ratings', function (Blueprint $table) {
+            $table->foreign('driving_force_id')->references("id")->on('driving_forces')->onDelete("cascade");
+            $table->foreign('status_action_id')->references("id")->on('status_actions')->onDelete("cascade");
+            $table->foreign('priority_id')->references("id")->on('priorities')->onDelete("cascade");
         });
     }
 
