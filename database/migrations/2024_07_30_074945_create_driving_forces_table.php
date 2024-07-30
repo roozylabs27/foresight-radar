@@ -28,6 +28,8 @@ return new class extends Migration
             $table->bigInteger('updated_by')->unsigned()->nullable();
             $table->string('keyword', 100);
             $table->string('description', 100);
+            $table->boolean('is_approve')->default(0);
+            $table->text('remark')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
