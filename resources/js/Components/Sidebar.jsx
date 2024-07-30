@@ -1,23 +1,43 @@
 import React, { useState } from "react";
 import { Layout, Menu } from "antd";
-import {
-    UploadOutlined,
-    UserOutlined,
-    VideoCameraOutlined,
-} from "@ant-design/icons";
+import { UsergroupAddOutlined, DashboardOutlined, RadarChartOutlined } from "@ant-design/icons";
+import { Link, usePage } from "@inertiajs/react";
 
 export default function Sidebar({ collapsed }) {
     const { Sider } = Layout;
-    const items = [
-        UserOutlined,
-        VideoCameraOutlined,
-        UploadOutlined,
-        UserOutlined,
-    ].map((icon, index) => ({
-        key: String(index + 1),
-        icon: React.createElement(icon),
-        label: `nav ${index + 1}`,
-    }));
+    const { url } = usePage();
+
+    const [items, setItems] = useState([
+        {
+            label: <Link href={route("dashboard.")}>Dashboard</Link>,
+            icon: <DashboardOutlined />,
+            key: "/dashboard",
+        },
+        {
+            label: <Link href={route("dashboard.")}>Dimension</Link>,
+            icon: <RadarChartOutlined />,
+            key: "/driven",
+        },
+        {
+            label: "User Management",
+            icon: <UsergroupAddOutlined />,
+            key: "/user-management",
+            children: [
+                {
+                    key: "/user-management/user",
+                    label: <Link href={route("dashboard.")}>User</Link>,
+                },
+                {
+                    key: "/user-management/role",
+                    label: <Link href={route("dashboard.")}>Role</Link>,
+                },
+                {
+                    key: "/user-management/permission",
+                    label: <Link href={route("dashboard.")}>Permission</Link>,
+                },
+            ],
+        },
+    ]);
     const [theme, setTheme] = useState("light");
 
     return (
@@ -26,6 +46,7 @@ export default function Sidebar({ collapsed }) {
                 breakpoint="lg"
                 collapsedWidth="0"
                 theme={theme}
+                width={225}
                 collapsed={collapsed}
                 collapsible
                 trigger={null}
@@ -34,7 +55,7 @@ export default function Sidebar({ collapsed }) {
                 <Menu
                     theme={theme}
                     mode="inline"
-                    defaultSelectedKeys={["4"]}
+                    defaultSelectedKeys={url}
                     items={items}
                 />
             </Sider>

@@ -1,9 +1,66 @@
 import React, { useState } from "react";
-import { Layout, theme } from "antd";
-import Sidebar from "@/Components/Sidebar";
-import Navbar from "@/Components/Navbar";
+import {
+    UploadOutlined,
+    UserOutlined,
+    VideoCameraOutlined,
+    MenuFoldOutlined,
+    MenuUnfoldOutlined,
+    DownOutlined,
+    DashboardOutlined,
+    RadarChartOutlined,
+    UsergroupAddOutlined,
+} from "@ant-design/icons";
+import { Layout, Menu, theme, Flex, Button, Dropdown, Space } from "antd";
+import { Link, usePage } from "@inertiajs/react";
+const { Header, Content, Footer, Sider } = Layout;
 
 export default function Authenticated({ user, children }) {
+    const { url } = usePage();
+    const [items, setItems] = useState([
+        {
+            label: <Link href={route("dashboard.")}>Dashboard</Link>,
+            icon: <DashboardOutlined />,
+            key: "/dashboard",
+        },
+        {
+            label: <Link href={route("dashboard.")}>Dimension</Link>,
+            icon: <RadarChartOutlined />,
+            key: "/dimension",
+            children: [
+                {
+                    key: "/user-management/user",
+                    label: <Link href={route("dashboard.")}>User</Link>,
+                },
+                {
+                    key: "/user-management/role",
+                    label: <Link href={route("dashboard.")}>Role</Link>,
+                },
+                {
+                    key: "/user-management/permission",
+                    label: <Link href={route("dashboard.")}>Permission</Link>,
+                },
+            ],
+        },
+        {
+            label: "User Management",
+            icon: <UsergroupAddOutlined />,
+            key: "/user-management",
+            children: [
+                {
+                    key: "/user-management/user",
+                    label: <Link href={route("dashboard.")}>User</Link>,
+                },
+                {
+                    key: "/user-management/role",
+                    label: <Link href={route("dashboard.")}>Role</Link>,
+                },
+                {
+                    key: "/user-management/permission",
+                    label: <Link href={route("dashboard.")}>Permission</Link>,
+                },
+            ],
+        },
+    ]);
     const {
         token: { colorBgContainer },
     } = theme.useToken();
@@ -11,17 +68,90 @@ export default function Authenticated({ user, children }) {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Layout className="min-h-screen"
+        <Layout
+            style={{
+                minHeight: "100vh",
+            }}
         >
-            <Sidebar collapsed={collapsed} />
-            <Layout>
-                <Navbar
-                    collapsed={collapsed}
-                    setCollapsed={setCollapsed}
-                    colorBgContainer={colorBgContainer}
-                    user={user}
+            <Sider
+                breakpoint="lg"
+                collapsedWidth="0"
+                theme="light"
+                width={225}
+                collapsed={collapsed}
+                collapsible
+                trigger={null}
+            >
+                <div className="demo-logo-vertical h-[32px] m-[16px] bg-slate-500 rounded" />
+                <Menu
+                    theme="light"
+                    mode="inline"
+                    defaultSelectedKeys={url}
+                    items={items}
                 />
+            </Sider>
+            <Layout>
+                <Header
+                    style={{
+                        padding: 0,
+                        background: colorBgContainer,
+                    }}
+                >
+                    <Flex
+                        style={{
+                            width: "100%",
+                        }}
+                        justify="space-between"
+                        align="flex-start"
+                    >
+                        <Button
+                            type="text"
+                            icon={
+                                collapsed ? (
+                                    <MenuUnfoldOutlined />
+                                ) : (
+                                    <MenuFoldOutlined />
+                                )
+                            }
+                            onClick={() => setCollapsed(!collapsed)}
+                            style={{
+                                fontSize: "16px",
+                                width: 64,
+                                height: 64,
+                            }}
+                        />
+                        <Dropdown
+                            placement="topLeft"
+                            menu={{
+                                items,
+                                onClick: ({ key }) => {
+                                    handleDropdownItemClick(key, record);
+                                },
+                            }}
+                            trigger={["click"]}
+                        >
+                            <a
+                                style={{
+                                    marginRight: "20px",
+                                }}
+                                onClick={(e) => e.preventDefault()}
+                            >
+                                <Space>
+                                    Hi, {user?.name}
+                                    <DownOutlined />
+                                </Space>
+                            </a>
+                        </Dropdown>
+                    </Flex>
+                </Header>
                 {children}
+                <Footer
+                    style={{
+                        textAlign: "center",
+                    }}
+                >
+                    Ant Design ©{new Date().getFullYear()} Created by Ant UED
+                </Footer>
             </Layout>
         </Layout>
     );

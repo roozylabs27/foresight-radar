@@ -1,3 +1,4 @@
+import Radar from "@/Components/Radar";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
 import { Layout, theme, Breadcrumb } from "antd";
@@ -33,7 +34,8 @@ export default function Dashboard({ auth }) {
                         borderRadius: borderRadiusLG,
                     }}
                 >
-                    content
+                    {/* <img src="/images/Picture1.png" alt="" /> */}
+                    <Radar />
                 </div>
             </Content>
         </AuthenticatedLayout>

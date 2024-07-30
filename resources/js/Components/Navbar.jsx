@@ -17,19 +17,19 @@ export default function Navbar({
 }) {
     const { Header } = Layout;
     const [items, setItems] = useState([
-        {
-            key: "0",
-            label: (
-                <Link
-                    href={route("profile.edit")}
-                >
-                    <Flex gap="middle" vertical={false}>
-                        <UserOutlined />
-                        Profile
-                    </Flex>
-                </Link>
-            ),
-        },
+        // {
+        //     key: "0",
+        //     label: (
+        //         <Link
+        //             href={route("profile.edit")}
+        //         >
+        //             <Flex gap="middle" vertical={false}>
+        //                 <UserOutlined />
+        //                 Profile
+        //             </Flex>
+        //         </Link>
+        //     ),
+        // },
         {
             key: "1",
             label: (
@@ -70,18 +70,18 @@ export default function Navbar({
                                 <MenuFoldOutlined />
                             )
                         }
-                        className="w-[64px] h-[64px] text-[16px]"
+                        className="ml-2 w-[64px] h-[64px] text-[16px]"
                         onClick={() => setCollapsed(!collapsed)}
                     />
                     <Dropdown
                         placement="topLeft"
+                        className="mr-5"
                         menu={{
                             items,
                         }}
                         trigger={["hover"]}
                     >
                         <a
-                            className="mr-[20px]"
                             onClick={(e) => e.preventDefault()}
                         >
                             <Space size="small">

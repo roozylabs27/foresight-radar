@@ -20,6 +20,10 @@
         "vite": "^5.0.0"
     },
     "dependencies": {
-        "antd": "^5.19.3"
+        "@ant-design/icons": "^5.4.0",
+        "@ant-design/plots": "^2.2.6",
+        "antd": "^5.19.3",
+        "echarts": "^5.5.1",
+        "echarts-for-react": "^3.0.2"
     }
 }
