@@ -1,14 +1,6 @@
 [
     {
         "environment_id": 1,
-        "name": "Economic"
-    },
-    {
-        "environment_id": 1,
-        "name": "Ecological"
-    },
-    {
-        "environment_id": 1,
         "name": "Regulation"
     },
     {
@@ -16,16 +8,24 @@
         "name": "Technology"
     },
     {
-        "environment_id": 2,
-        "name": "Suppliers"
+        "environment_id": 1,
+        "name": "Economy"
+    },
+    {
+        "environment_id": 1,
+        "name": "Ecology"
     },
     {
         "environment_id": 2,
-        "name": "Customers"
+        "name": "Competitor"
     },
     {
         "environment_id": 2,
-        "name": "Competitors"
+        "name": "Supplier"
+    },
+    {
+        "environment_id": 2,
+        "name": "Customer"
     },
     {
         "environment_id": 2,

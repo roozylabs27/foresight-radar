@@ -1,0 +1,8 @@
+[
+    {
+        "name" : "Developer",
+        "email" : "dev@foresight.com",
+        "password" : "password",
+        "role" : "developer"
+    }
+]

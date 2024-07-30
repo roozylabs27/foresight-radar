@@ -1,5 +1,7 @@
 [
     {
-        "name" : ""
+        "dimension_id" : 1,
+        "keyword" : "Euro-5 Plan",
+        "description" : "MoEF issued emission limit standard for Euro-5 Regulation"
     }
 ]
