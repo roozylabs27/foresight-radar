@@ -29,13 +29,13 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
         ]);
 
-        // $this->command->info(PHP_EOL);
-        // $this->command->info('🧑🏻‍💻 Dummy Driving Force Data ' . PHP_EOL);
-        // $this->command->info('************************************' . PHP_EOL);
+        $this->command->info(PHP_EOL);
+        $this->command->info('🧑🏻‍💻 Dummy Driving Force Data ' . PHP_EOL);
+        $this->command->info('************************************' . PHP_EOL);
 
-        // $this->call([
-        //     DrivingForceSeeder::class,
-        //     DrivingForceRatingSeeder::class
-        // ]);
+        $this->call([
+            DrivingForceSeeder::class,
+            // DrivingForceRatingSeeder::class
+        ]);
     }
 }

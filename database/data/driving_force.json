@@ -3,5 +3,95 @@
         "dimension_id" : 1,
         "keyword" : "Euro-5 Plan",
         "description" : "MoEF issued emission limit standard for Euro-5 Regulation"
+    },
+    {
+        "dimension_id" : 1,
+        "keyword" : "Import Regulation",
+        "description" : "MoTr issued new regulation of import permission for certain commodities."
+    },
+    {
+        "dimension_id" : 1,
+        "keyword" : "TKDN Regulation",
+        "description" : "MoI issued regulation regarding the requirement of localization toward 2030"
+    },
+    {
+        "dimension_id" : 3,
+        "keyword" : "Interest Rate",
+        "description" : "Central bank will increase the interest rate to anticipate higher inflation."
+    },
+    {
+        "dimension_id" : 3,
+        "keyword" : "Loan Tanure",
+        "description" : "Loan tenure for car purchasing tend to be longer period (3 -> 5 years)"
+    },
+    {
+        "dimension_id" : 3,
+        "keyword" : "Minimum Wage",
+        "description" : "The adjustment of minimum wage by province tend to increase"
+    },
+    {
+        "dimension_id" : 2,
+        "keyword" : "LFP Battery",
+        "description" : "Trend of LFP battery adoption increase."
+    },
+    {
+        "dimension_id" : 2,
+        "keyword" : "Solid Battery",
+        "description" : "Solid battery might be introduced in market by 2030"
+    },
+    {
+        "dimension_id" : 2,
+        "keyword" : "EV Driving Range",
+        "description" : "The driving range per charge of EV get longer allowing for long-distance travel on a single charge."
+    },
+    {
+        "dimension_id" : 4,
+        "keyword" : "NDC Target",
+        "description" : "NDC target 2030 for CO2 emission reduction is revised to be more stringent."
+    },
+    {
+        "dimension_id" : 4,
+        "keyword" : "COP 28",
+        "description" : "Concessus on COP28 to accelearte the emission reduction by each countries"
+    },
+    {
+        "dimension_id" : 4,
+        "keyword" : "EU CBA",
+        "description" : "EU issued carbon border tax adjustment implemented from 2026."
+    },
+    {
+        "dimension_id" : 7,
+        "keyword" : "Mobility Sharing",
+        "description" : "Using car sharing (Gojek, Grab etc) increase significantly."
+    },
+    {
+        "dimension_id" : 7,
+        "keyword" : "Purchasing Power",
+        "description" : "Trend of customer purchasing power index decrease time by time."
+    },
+    {
+        "dimension_id" : 7,
+        "keyword" : "Customer Preference",
+        "description" : "Customer prefer to purchase car that more eco-friendly and hi-technology."
+    },
+    {
+        "dimension_id" : 5,
+        "keyword" : "Introduce xEV",
+        "description" : "Some brand will introduce electrified vehicle agressively in the near future."
+    },
+    {
+        "dimension_id" : 5,
+        "keyword" : "A segment low prices",
+        "description" : "Some brand will introduce new product segment A with low prices."
+    },
+    {
+        "dimension_id" : 6,
+        "keyword" : "New comers",
+        "description" : "Some suppliers has an intention invest new technology of xEV in near future"
+    },
+    {
+        "dimension_id" : 8,
+        "keyword" : "Invest xEV Technology",
+        "description" : "The number of car sharing apps increase."
     }
 ]

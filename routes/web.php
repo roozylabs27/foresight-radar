@@ -25,6 +25,11 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::get("/", "index");
     });
 
+    Route::prefix("driving-force")->controller(App\Http\Controllers\DrivingForceController::class)->name("driving-force.")->group(function() {
+        Route::get("/", "index");
+        Route::get("/fetch-data", "fetch_data")->name('fetch-data');
+    });
+
     Route::prefix('profile')->controller(App\Http\Controllers\ProfileController::class)->name('profile.')->group(function () {
         Route::get('/', 'edit')->name('edit');
         Route::patch('/', 'update')->name('update');

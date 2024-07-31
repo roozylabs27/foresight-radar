@@ -2,8 +2,14 @@
 
 namespace App\Models;
 
+use App\Http\Resources\DrivingForceCollection;
+use App\Http\Resources\DrivingForceResource;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DrivingForce extends Model
@@ -12,10 +18,51 @@ class DrivingForce extends Model
 
     protected $fillable = [
         'uuid',
-        'user_id',
         'dimension_id',
-        'time_horizon_id',
+        'created_by',
+        'updated_by',
         'keyword',
         'description',
     ];
+
+    public function dimension(): BelongsTo
+    {
+        return $this->belongsTo(Dimension::class, 'dimension_id');
+    }
+
+    public function created_by_user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updated_by_user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(DrivingForceRating::class);
+    }
+
+    public function createdAt(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => Carbon::parse($value)->translatedFormat('D, d F Y')
+        );
+    }
+
+    public function approvedAt(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? Carbon::parse($value)->translatedFormat('D, d F Y') : null
+        );
+    }
+
+    public static function filter()
+    {
+        $driving_forces = self::with(['dimension', 'created_by_user', 'updated_by_user'])->paginate(10);
+
+        return new DrivingForceCollection($driving_forces);
+    }
 }

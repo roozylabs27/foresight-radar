@@ -23,23 +23,9 @@ export default function Authenticated({ user, children }) {
             key: "/dashboard",
         },
         {
-            label: <Link href={route("dashboard.")}>Dimension</Link>,
+            label: <Link href={route("driving-force.")}>Driving Force</Link>,
             icon: <RadarChartOutlined />,
-            key: "/dimension",
-            children: [
-                {
-                    key: "/user-management/user",
-                    label: <Link href={route("dashboard.")}>User</Link>,
-                },
-                {
-                    key: "/user-management/role",
-                    label: <Link href={route("dashboard.")}>Role</Link>,
-                },
-                {
-                    key: "/user-management/permission",
-                    label: <Link href={route("dashboard.")}>Permission</Link>,
-                },
-            ],
+            key: "/driving-force",
         },
         {
             label: "User Management",
@@ -53,10 +39,6 @@ export default function Authenticated({ user, children }) {
                 {
                     key: "/user-management/role",
                     label: <Link href={route("dashboard.")}>Role</Link>,
-                },
-                {
-                    key: "/user-management/permission",
-                    label: <Link href={route("dashboard.")}>Permission</Link>,
                 },
             ],
         },
