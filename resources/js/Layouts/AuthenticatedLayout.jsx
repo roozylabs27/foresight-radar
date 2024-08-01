@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import {
-    UploadOutlined,
-    UserOutlined,
-    VideoCameraOutlined,
+    LogoutOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     DownOutlined,
@@ -43,6 +41,29 @@ export default function Authenticated({ user, children }) {
             ],
         },
     ]);
+    const actions = [
+        // {
+        //     key: "profile",
+        //     label: (
+        //         <Flex gap="middle" vertical={false}>
+        //             {/* <MessageOutlined /> */}
+        //             Profile
+        //         </Flex>
+        //     ),
+        // },
+        {
+            key: "logout",
+            label: (
+                <Link href="/logout" method="post" as="button" type="button">
+                    <Flex gap="middle" vertical={false}>
+                        <LogoutOutlined />
+                        Logout
+                    </Flex>
+                </Link>
+            ),
+        },
+    ];
+
     const {
         token: { colorBgContainer },
     } = theme.useToken();
@@ -105,7 +126,7 @@ export default function Authenticated({ user, children }) {
                         <Dropdown
                             placement="topLeft"
                             menu={{
-                                items,
+                                items : actions,
                                 onClick: ({ key }) => {
                                     handleDropdownItemClick(key, record);
                                 },

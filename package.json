@@ -23,7 +23,9 @@
         "@ant-design/icons": "^5.4.0",
         "@ant-design/plots": "^2.2.6",
         "antd": "^5.19.3",
+        "dayjs": "^1.11.12",
         "echarts": "^5.5.1",
-        "echarts-for-react": "^3.0.2"
+        "echarts-for-react": "^3.0.2",
+        "qs": "^6.12.3"
     }
 }

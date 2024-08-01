@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dimension;
 use App\Models\DrivingForce;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,7 +14,14 @@ class DrivingForceController extends Controller
 
     public function index()
     {
-        return Inertia::render("DrivingForce");
+        $dimensions = Dimension::all()->map(function ($dimension) {
+            return [
+                'value' => $dimension->id,
+                'label' => $dimension->name
+            ];
+        });
+
+        return Inertia::render("DrivingForce", compact('dimensions'));
     }
 
     public function fetch_data()

@@ -61,7 +61,25 @@ class DrivingForce extends Model
 
     public static function filter()
     {
-        $driving_forces = self::with(['dimension', 'created_by_user', 'updated_by_user'])->paginate(10);
+        $pagination = request('pagination.pageSize');
+        $search = request('search');
+        $dimension = request('dimension');
+        $date_range = request('date');
+        $date_start = $date_range[0] . ' 00:00:00';
+        $date_end = $date_range[1] . ' 23:59:59';
+
+        $driving_forces = self::with(['dimension', 'created_by_user', 'updated_by_user'])
+            ->when($search, function ($q) use ($search) {
+                $q->where('keyword', 'LIKE', '%' . $search . '%')
+                    ->where('description', 'LIKE', '%' . $search . '%');
+            })
+            ->when($dimension, function ($q) use ($dimension) {
+                $q->where('dimension_id', $dimension);
+            })
+            ->where('created_at', '>=', $date_start)
+            ->where('created_at', '<=', $date_end)
+            ->paginate($pagination);
+
 
         return new DrivingForceCollection($driving_forces);
     }
