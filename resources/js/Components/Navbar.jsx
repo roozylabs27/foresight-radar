@@ -51,17 +51,22 @@ export default function Navbar({
     return (
         <>
             <Header
-                className="p-0"
                 style={{
+                    padding: 0,
                     background: colorBgContainer,
                 }}
             >
                 <Flex
-                    className="w-100"
                     justify="space-between"
                     align="flex-start"
                 >
                     <Button
+                        style={{
+                            marginLeft: "0.5rem",
+                            width: "64px",
+                            height: "64px",
+                            fontSize: "16px",
+                        }}
                         type="text"
                         icon={
                             collapsed ? (
@@ -70,20 +75,19 @@ export default function Navbar({
                                 <MenuFoldOutlined />
                             )
                         }
-                        className="ml-2 w-[64px] h-[64px] text-[16px]"
                         onClick={() => setCollapsed(!collapsed)}
                     />
                     <Dropdown
+                        style={{
+                            marginRight: '1.25rem'
+                         }}
                         placement="topLeft"
-                        className="mr-5"
                         menu={{
                             items,
                         }}
                         trigger={["hover"]}
                     >
-                        <a
-                            onClick={(e) => e.preventDefault()}
-                        >
+                        <a onClick={(e) => e.preventDefault()}>
                             <Space size="small">
                                 Hi, {user ? user.name : "Member"}
                                 <DownOutlined />

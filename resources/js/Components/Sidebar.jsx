@@ -51,7 +51,7 @@ export default function Sidebar({ collapsed }) {
                 collapsible
                 trigger={null}
             >
-                <div className="demo-logo-vertical h-[32px] m-[16px] bg-slate-500 rounded" />
+                <div className="demo-logo-vertical" />
                 <Menu
                     theme={theme}
                     mode="inline"

@@ -23,14 +23,15 @@ import {
     Select,
     Button,
     DatePicker,
-    Modal,
 } from "antd";
 import axios from "axios";
 import qs from "qs";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import Dialog from "@/Components/Dialog";
+import FormDrivingForce from "./Form";
 
-export default function DrivingForce({ auth, dimensions }) {
+export default function TableDrivingForce({ auth, dimensions }) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
@@ -40,10 +41,11 @@ export default function DrivingForce({ auth, dimensions }) {
     const { Search } = Input;
     const { RangePicker } = DatePicker;
 
-    // State
+    const title = "Driving Force";
+
+    // Table
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [open, setOpen] = useState(false);
     const [defaultDimension, setDefaultDimension] = useState(
         dimensions[0]["value"]
     );
@@ -62,6 +64,12 @@ export default function DrivingForce({ auth, dimensions }) {
             dayjs().endOf("month").format("YYYY-MM-DD"),
         ],
     });
+
+    // Modal
+    const [open, setOpen] = useState(false);
+    const [titleModal, setTitleModal] = useState("");
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [initialValues, setInitialValues] = useState({});
 
     useEffect(() => {
         fetchData();
@@ -234,7 +242,10 @@ export default function DrivingForce({ auth, dimensions }) {
                 alert(key);
                 break;
             case "edit":
-                alert(key);
+                setOpen(true);
+                setTitleModal("Update Signal Changes");
+                setIsEditMode(true);
+                setInitialValues(record);
                 break;
             case "delete":
                 alert(key);
@@ -304,12 +315,22 @@ export default function DrivingForce({ auth, dimensions }) {
         }
     };
 
-    const handleModalClick = () => {
+    const handleCreateSignal = () => {
         setOpen(true);
+        setTitleModal("Create Signal Changes");
+        setInitialValues({});
+    };
+
+    const handleOkModal = (values) => {
+        console.log("Form values:", values);
+        setOpen(false);
     };
 
     const handleCancelModal = () => {
         setOpen(false);
+        setTitleModal("");
+        setIsEditMode(false);
+        setInitialValues({});
     };
 
     return (
@@ -317,11 +338,11 @@ export default function DrivingForce({ auth, dimensions }) {
             user={auth.user}
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Driving Force
+                    {title}
                 </h2>
             }
         >
-            <Head title="Driving Force" />
+            <Head title={title} />
 
             <Content
                 style={{
@@ -382,7 +403,7 @@ export default function DrivingForce({ auth, dimensions }) {
             >
                 <Row gutter={16} align="top" style={{ padding: "5px" }}>
                     <Col xs={24} sm={12} md={16}>
-                        <Title level={4}>Driving Force List</Title>
+                        <Title level={4}>{title} List</Title>
                     </Col>
                     <Col
                         xs={24}
@@ -392,7 +413,7 @@ export default function DrivingForce({ auth, dimensions }) {
                         style={{ textAlign: "right" }}
                     >
                         <Space direction="vertical">
-                            <Button type="primary" onClick={handleModalClick}>
+                            <Button type="primary" onClick={handleCreateSignal}>
                                 <PlusOutlined />
                                 Create Signal Changes
                             </Button>
@@ -418,15 +439,21 @@ export default function DrivingForce({ auth, dimensions }) {
                 />
             </Content>
 
-            <Modal
-                title="Create Signal Changes"
+            <Dialog
+                title={titleModal}
                 open={open}
-                // onOk={handleOk}
-                // confirmLoading={confirmLoading}
+                isEditMode={isEditMode}
+                loading={loading}
                 onCancel={handleCancelModal}
+                onOk={handleOkModal}
             >
-                <p>text</p>
-            </Modal>
+                <FormDrivingForce
+                    isEditMode={isEditMode}
+                    initialValues={initialValues}
+                    dimensions={dimensions}
+                    onSubmit={handleOkModal}
+                />
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

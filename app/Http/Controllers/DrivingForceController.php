@@ -21,7 +21,7 @@ class DrivingForceController extends Controller
             ];
         });
 
-        return Inertia::render("DrivingForce", compact('dimensions'));
+        return Inertia::render("DrivingForce/Table", compact('dimensions'));
     }
 
     public function fetch_data()
