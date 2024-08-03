@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DrivingForceRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use Illuminate\Http\Request;
@@ -53,7 +54,7 @@ class DrivingForceController extends Controller
         }
     }
 
-    public function create(Request $request)
+    public function create(DrivingForceRequest $request)
     {
         try {
             DB::beginTransaction();
@@ -83,7 +84,7 @@ class DrivingForceController extends Controller
         return response()->json($response, $response['statusCode']);
     }
 
-    public function update(Request $request, DrivingForce $driving_force)
+    public function update(DrivingForceRequest $request, DrivingForce $driving_force)
     {
         try {
             DB::beginTransaction();

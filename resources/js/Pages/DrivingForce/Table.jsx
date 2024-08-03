@@ -47,15 +47,11 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
     // Table
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [defaultDimension, setDefaultDimension] = useState(
-        dimensions[0]["value"]
-    );
     const [defaultDate, setDefaultDate] = useState([
         dayjs().startOf("month"),
         dayjs().endOf("month"),
     ]);
     const [tableParams, setTableParams] = useState({
-        dimension: defaultDimension,
         pagination: {
             current: 1,
             pageSize: 10,
@@ -433,7 +429,6 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                             <Select
                                 style={{ width: "100%" }}
                                 disabled={loading}
-                                defaultValue={defaultDimension}
                                 placeholder="Select a dimension"
                                 filterOption={(input, option) =>
                                     (option?.label ?? "")
