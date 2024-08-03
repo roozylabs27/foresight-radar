@@ -131,7 +131,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
             case "approved":
                 return <Tag color="success">{status}</Tag>;
             case "rejected":
-                return <Tag color="success">{status}</Tag>;
+                return <Tag color="error">{status}</Tag>;
             default:
                 return <Tag color="default">{status}</Tag>;
         }
@@ -329,13 +329,20 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
     const handleFormSubmit = async (values) => {
         setLoading(true);
-        const request = values.map((value) => ({
-            keyword: value.keyword,
-            description: value.description,
-            remark: value.remark,
-            status: value.status,
-            dimension_id: value.dimension,
-        }));
+        const request = {
+            keyword: values.keyword,
+            description: values.description,
+            dimension_id: values.dimension,
+        };
+
+        if (values.status) {
+            request.status = values.status;
+        }
+
+        if (values.remark) {
+            request.remark = values.remark;
+        }
+
         try {
             const response = isEditMode
                 ? await axios.put(

@@ -57,7 +57,6 @@ class DrivingForceController extends Controller
     {
         try {
             DB::beginTransaction();
-
             $request['uuid'] = Uuid::uuid1();
             $request['created_by'] = auth()->user()->id;
             $request['status'] = "PENDING";
@@ -89,12 +88,29 @@ class DrivingForceController extends Controller
         try {
             DB::beginTransaction();
 
-            $request['updated_by'] = auth()->user()->id;
+            if ($driving_force->isDirty()) {
+                dd('test');
+                $request['updated_by'] = auth()->user()->id;
+            }
             if ($request['status'] == 'APPROVED' && $driving_force->status != 'APPROVED') {
                 $request['approved_at'] = now();
             }
             $request = $request->all();
-            $driving_force->update($request);
+            if (gettype($request['dimension_id']) == "string") {
+                $dimension = Dimension::where('name', $request['dimension_id'])->first();
+                if ($dimension) {
+                    $request['dimension_id'] = $dimension->id;
+                }
+            }
+
+            $driving_force->dimension_id = $request['dimension_id'];
+            $driving_force->updated_by = $request['updated_by'] ?? null;
+            $driving_force->keyword = $request['keyword'];
+            $driving_force->description = $request['description'];
+            $driving_force->status = $request['status'];
+            $driving_force->remark = $request['remark'] ?? null;
+            $driving_force->approved_at = $request['approved_at'] ?? null;
+            $driving_force->save();
 
             DB::commit();
 
