@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
 
 class DrivingForceController extends Controller
@@ -20,8 +22,22 @@ class DrivingForceController extends Controller
                 'label' => $dimension->name
             ];
         });
+        $status = [
+            [
+                "label" => "pending",
+                "value" => "PENDING",
+            ],
+            [
+                "label" => "approved",
+                "value" => "APPROVED",
+            ],
+            [
+                "label" => "rejected",
+                "value" => "REJECTED",
+            ],
+        ];
 
-        return Inertia::render("DrivingForce/Table", compact('dimensions'));
+        return Inertia::render("DrivingForce/Table", compact('dimensions', 'status'));
     }
 
     public function fetch_data()
@@ -35,5 +51,64 @@ class DrivingForceController extends Controller
                 'errors' => $th->getMessage(),
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public function create(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            $request['uuid'] = Uuid::uuid1();
+            $request['created_by'] = auth()->user()->id;
+            $request['status'] = "PENDING";
+
+            $request = $request->all();
+
+            DrivingForce::firstOrCreate([
+                'keyword' => $request['keyword'],
+            ], $request);
+
+            DB::commit();
+
+            $response = [
+                'statusCode' => Response::HTTP_CREATED,
+                'message' => 'Successfully create new signal !'
+            ];
+        } catch (\Throwable $th) {
+            $response = [
+                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $th->getMessage(),
+            ];
+        }
+
+        return response()->json($response, $response['statusCode']);
+    }
+
+    public function update(Request $request, DrivingForce $driving_force)
+    {
+        try {
+            DB::beginTransaction();
+
+            $request['updated_by'] = auth()->user()->id;
+            if ($request['status'] == 'APPROVED' && $driving_force->status != 'APPROVED') {
+                $request['approved_at'] = now();
+            }
+            $request = $request->all();
+            $driving_force->update($request);
+
+            DB::commit();
+
+            $response = [
+                'statusCode' => Response::HTTP_OK,
+                'message' => 'Successfully update new signal !'
+            ];
+        } catch (\Throwable $th) {
+            $response = [
+                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $th->getMessage(),
+            ];
+        }
+
+        return response()->json($response, $response['statusCode']);
     }
 }

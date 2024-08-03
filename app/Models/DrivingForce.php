@@ -59,6 +59,11 @@ class DrivingForce extends Model
         );
     }
 
+    public function getRouteKeyName()
+    {
+        return 'uuid';
+    }
+
     public static function filter()
     {
         $pagination = request('pagination.pageSize');
@@ -78,6 +83,7 @@ class DrivingForce extends Model
             })
             ->where('created_at', '>=', $date_start)
             ->where('created_at', '<=', $date_end)
+            ->orderBy('created_at', 'DESC')
             ->paginate($pagination);
 
 

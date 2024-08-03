@@ -1,74 +1,32 @@
 import { Form, Input, Select } from "antd";
-import { useEffect, useState } from "react";
+import TextArea from "antd/es/input/TextArea";
+import React, {
+    useEffect,
+    useImperativeHandle,
+    useState,
+    forwardRef,
+} from "react";
 
-export default function FormDrivingForce({
-    initialValues,
-    isEditMode,
-    dimensions,
-    onFinish,
-}) {
-    const [form] = Form.useForm();
-    const [formData, setFormData] = useState({
-        keyword: {
-            name: "keyword",
-            label: "Keyword",
-            placeholder: "Enter keyword",
-            rules: [
-                {
-                    required: true,
-                    message: "Please input the keyword!",
-                },
-            ],
-            value: "",
-        },
-        description: {
-            name: "description",
-            label: "Description",
-            placeholder: "Enter description",
-            rules: [
-                {
-                    required: true,
-                    message: "Please input the description!",
-                },
-            ],
-            value: "",
-        },
-        dimension: {
-            name: "dimension",
-            label: "Dimension",
-            placeholder: "Select a dimension",
-            rules: [
-                {
-                    required: true,
-                    message: "Please select the dimension !",
-                },
-            ],
-            value: "",
-        },
-        status: {
-            name: "status",
-            label: "Status",
-            placeholder: "Select a Status",
-            rules: [
-                {
-                    required: true,
-                    message: "Please select the status!",
-                },
-            ],
-            value: "",
-        },
-    });
+const FormDrivingForce = forwardRef(
+    ({ initialValues, isEditMode, dimensions, status, onFinish }, ref) => {
+        const [form] = Form.useForm();
 
-    useEffect(() => {
-        if (isEditMode) {
-            form.setFieldsValue(initialValues);
-        } else {
-            form.resetFields();
-        }
-    }, [isEditMode, initialValues, form]);
+        useEffect(() => {
+            if (isEditMode) {
+                form.setFieldsValue(initialValues);
+            } else {
+                form.resetFields();
+            }
+        }, [isEditMode, initialValues, form]);
 
-    return (
-        <>
+        // Expose form submit function to parent component
+        useImperativeHandle(ref, () => ({
+            submit: () => {
+                form.submit();
+            },
+        }));
+
+        return (
             <Form
                 form={form}
                 name="basic"
@@ -77,99 +35,77 @@ export default function FormDrivingForce({
                 onFinish={onFinish}
             >
                 <Form.Item
-                    name={formData.keyword.name}
-                    label={formData.keyword.label}
-                    rules={formData.keyword.rules}
+                    name="keyword"
+                    label="Keyword"
+                    rules={[
+                        {
+                            required: true,
+                            message: "Please input the keyword!",
+                        },
+                    ]}
                 >
                     <Input
-                        placeholder={formData.keyword.placeholder}
-                        onChange={(e) =>
-                            setFormData((prevState) => ({
-                                ...prevState,
-                                keyword: {
-                                    ...prevState.keyword,
-                                    value: e.target.value,
-                                },
-                            }))
-                        }
+                        placeholder="Enter keyword"
+                        autoFocus={isEditMode ? false : true}
                     />
                 </Form.Item>
                 <Form.Item
-                    name={formData.description.name}
-                    label={formData.description.label}
-                    rules={formData.description.rules}
+                    name="description"
+                    label="Description"
+                    rules={[
+                        {
+                            required: true,
+                            message: "Please input the description!",
+                        },
+                    ]}
                 >
-                    <Input
-                        placeholder={formData.description.placeholder}
-                        onChange={(e) =>
-                            setFormData((prevState) => ({
-                                ...prevState,
-                                description: {
-                                    ...prevState.description,
-                                    value: e.target.value,
-                                },
-                            }))
-                        }
-                    />
+                    <Input placeholder="Enter description" />
                 </Form.Item>
                 <Form.Item
-                    name={formData.dimension.name}
-                    label={formData.dimension.label}
-                    rules={formData.dimension.rules}
+                    name="dimension"
+                    label="Dimension"
+                    rules={[
+                        {
+                            required: true,
+                            message: "Please select the dimension!",
+                        },
+                    ]}
                 >
                     <Select
-                        style={{
-                            width: "100%",
-                        }}
-                        placeholder={formData.dimension.placeholder}
-                        onChange={(e) =>
-                            setFormData((prevState) => ({
-                                ...prevState,
-                                dimension: {
-                                    ...prevState.dimension,
-                                    value: e.target.value,
-                                },
-                            }))
-                        }
+                        style={{ width: "100%" }}
+                        placeholder="Select a dimension"
                         options={dimensions}
                     />
                 </Form.Item>
-                <Form.Item
-                    name={formData.status.name}
-                    label={formData.status.label}
-                    rules={formData.status.rules}
-                >
-                    <Select
-                        style={{
-                            width: "100%",
-                        }}
-                        placeholder={formData.status.placeholder}
-                        onChange={(e) =>
-                            setFormData((prevState) => ({
-                                ...prevState,
-                                status: {
-                                    ...prevState.status,
-                                    value: e.target.value,
+                {isEditMode && (
+                    <>
+                        <Form.Item
+                            name="status"
+                            label="Status"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please select the status!",
                                 },
-                            }))
-                        }
-                        options={[
-                            {
-                                label: "pending",
-                                value: "PENDING",
-                            },
-                            {
-                                label: "approved",
-                                value: "APPROVED",
-                            },
-                            {
-                                label: "rejected",
-                                value: "REJECTED",
-                            },
-                        ]}
-                    />
-                </Form.Item>
+                            ]}
+                        >
+                            <Select
+                                style={{ width: "100%" }}
+                                placeholder="Select a Status"
+                                options={status}
+                            />
+                        </Form.Item>
+                        <Form.Item name="remark" label="Remark">
+                            <TextArea
+                                placeholder="Enter a remark"
+                                autoSize={{ minRows: 3, maxRows: 5 }}
+                            />
+                        </Form.Item>
+                    </>
+                )}
             </Form>
-        </>
-    );
-}
+        );
+    }
+);
+
+export default FormDrivingForce;

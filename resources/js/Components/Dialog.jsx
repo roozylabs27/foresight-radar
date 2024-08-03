@@ -3,23 +3,18 @@ import { Button, Form, Modal } from "antd";
 export default function Dialog({
     title,
     open,
-    isEditMode = false,
-    loading,
     onCancel,
+    isEditMode,
     onOk,
+    loading,
     children,
 }) {
-    const [form] = Form.useForm();
-
-    const handleFormSubmit = () => {
-        form.submit();
-    }
-
     return (
         <>
             <Modal
                 title={title}
                 open={open}
+                loading={loading}
                 onCancel={onCancel}
                 footer={[
                     <Button key="back" onClick={onCancel}>
@@ -29,7 +24,7 @@ export default function Dialog({
                         key="submit"
                         type="primary"
                         loading={loading}
-                        onClick={handleFormSubmit}
+                        onClick={onOk}
                     >
                         {isEditMode ? "Update" : "Create"}
                     </Button>,

@@ -23,15 +23,16 @@ import {
     Select,
     Button,
     DatePicker,
+    message,
 } from "antd";
 import axios from "axios";
 import qs from "qs";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Dialog from "@/Components/Dialog";
 import FormDrivingForce from "./Form";
 
-export default function TableDrivingForce({ auth, dimensions }) {
+export default function TableDrivingForce({ auth, dimensions, status }) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
@@ -66,6 +67,7 @@ export default function TableDrivingForce({ auth, dimensions }) {
     });
 
     // Modal
+    const formRef = useRef(null);
     const [open, setOpen] = useState(false);
     const [titleModal, setTitleModal] = useState("");
     const [isEditMode, setIsEditMode] = useState(false);
@@ -243,6 +245,10 @@ export default function TableDrivingForce({ auth, dimensions }) {
                 break;
             case "edit":
                 setOpen(true);
+                setLoading(true);
+                setTimeout(() => {
+                    setLoading(false);
+                }, 500);
                 setTitleModal("Update Signal Changes");
                 setIsEditMode(true);
                 setInitialValues(record);
@@ -321,9 +327,52 @@ export default function TableDrivingForce({ auth, dimensions }) {
         setInitialValues({});
     };
 
-    const handleOkModal = (values) => {
-        console.log("Form values:", values);
-        setOpen(false);
+    const handleFormSubmit = async (values) => {
+        setLoading(true);
+        const request = values.map((value) => ({
+            keyword: value.keyword,
+            description: value.description,
+            remark: value.remark,
+            status: value.status,
+            dimension_id: value.dimension,
+        }));
+        try {
+            const response = isEditMode
+                ? await axios.put(
+                      route("driving-force.update", `${initialValues.id}`),
+                      request
+                  )
+                : await axios.post(route("driving-force.create"), request);
+
+            if (response.status === 200 || response.status === 201) {
+                message.success(
+                    `Driving force ${
+                        isEditMode ? "updated" : "created"
+                    } successfully`
+                );
+                setOpen(false);
+                fetchData(); // Refresh the table data
+            } else {
+                message.error(
+                    `Failed to ${
+                        isEditMode ? "update" : "create"
+                    } driving force`
+                );
+            }
+        } catch (error) {
+            console.error("Error submitting form:", error);
+            message.error(`Error: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleOkModal = () => {
+        if (formRef.current) {
+            formRef.current.submit(); // Programmatically submit the form
+        } else {
+            console.error("Form ref is not set");
+        }
     };
 
     const handleCancelModal = () => {
@@ -413,7 +462,11 @@ export default function TableDrivingForce({ auth, dimensions }) {
                         style={{ textAlign: "right" }}
                     >
                         <Space direction="vertical">
-                            <Button type="primary" onClick={handleCreateSignal}>
+                            <Button
+                                disabled={loading}
+                                type="primary"
+                                onClick={handleCreateSignal}
+                            >
                                 <PlusOutlined />
                                 Create Signal Changes
                             </Button>
@@ -442,16 +495,18 @@ export default function TableDrivingForce({ auth, dimensions }) {
             <Dialog
                 title={titleModal}
                 open={open}
-                isEditMode={isEditMode}
                 loading={loading}
-                onCancel={handleCancelModal}
+                isEditMode={isEditMode}
                 onOk={handleOkModal}
+                onCancel={handleCancelModal}
             >
                 <FormDrivingForce
+                    ref={formRef}
                     isEditMode={isEditMode}
                     initialValues={initialValues}
                     dimensions={dimensions}
-                    onSubmit={handleOkModal}
+                    status={status}
+                    onFinish={handleFormSubmit}
                 />
             </Dialog>
         </AuthenticatedLayout>
