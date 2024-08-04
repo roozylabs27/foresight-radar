@@ -89,27 +89,21 @@ class DrivingForceController extends Controller
         try {
             DB::beginTransaction();
 
-            if ($driving_force->isDirty()) {
-                dd('test');
+            if ($request['status'] != $driving_force->status) {
                 $request['updated_by'] = auth()->user()->id;
             }
             if ($request['status'] == 'APPROVED' && $driving_force->status != 'APPROVED') {
                 $request['approved_at'] = now();
             }
+
             $request = $request->all();
-            if (gettype($request['dimension_id']) == "string") {
-                $dimension = Dimension::where('name', $request['dimension_id'])->first();
-                if ($dimension) {
-                    $request['dimension_id'] = $dimension->id;
-                }
-            }
 
             $driving_force->dimension_id = $request['dimension_id'];
             $driving_force->updated_by = $request['updated_by'] ?? null;
             $driving_force->keyword = $request['keyword'];
             $driving_force->description = $request['description'];
             $driving_force->status = $request['status'];
-            $driving_force->remark = $request['remark'] ?? null;
+            $driving_force->remark = $request['remark'];
             $driving_force->approved_at = $request['approved_at'] ?? null;
             $driving_force->save();
 

@@ -18,6 +18,7 @@ class DrivingForceResource extends JsonResource
             'id' => $this->uuid,
             'date_created' => $this->created_at,
             'dimension' => $this->dimension->name,
+            'dimension_id' => $this->dimension->id,
             'keyword' => $this->keyword,
             'description' => $this->description,
             'status' => $this->status,

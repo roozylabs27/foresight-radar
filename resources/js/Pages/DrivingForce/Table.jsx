@@ -47,6 +47,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
     // Table
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
     const [defaultDate, setDefaultDate] = useState([
         dayjs().startOf("month"),
         dayjs().endOf("month"),
@@ -77,6 +78,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
         tableParams?.date,
         tableParams?.search,
         tableParams?.dimension,
+        tableParams?.status,
     ]);
 
     const getParams = (params) => {
@@ -110,22 +112,26 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                     setLoading(false);
                 }, 500);
             } else {
-                console.log(error);
+                message.error(`Error: ${error.message}`);
                 setLoading(false);
             }
         } catch (error) {
-            console.log(error);
+            message.error(`Error: ${error.message}`);
             setLoading(false);
         }
     };
 
-    const columnApproved = (text) => {
+    const columnApproved = (text, record) => {
         const status = text.toLowerCase();
         switch (status) {
             case "pending":
                 return <Tag color="processing">{status}</Tag>;
             case "approved":
-                return <Tag color="success">{status}</Tag>;
+                return (
+                    <Tag color="success">
+                        {status} - {record.approved_at}
+                    </Tag>
+                );
             case "rejected":
                 return <Tag color="error">{status}</Tag>;
             default:
@@ -154,18 +160,6 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                 ),
             },
         ];
-
-        if (record.status === "APPROVED") {
-            actions.unshift({
-                key: "calculate",
-                label: (
-                    <Flex gap="middle" vertical={false}>
-                        <BarChartOutlined />
-                        Calculate
-                    </Flex>
-                ),
-            });
-        }
 
         return (
             <Dropdown
@@ -216,6 +210,12 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
         {
             title: "Admin PIC",
             dataIndex: "created_by",
+            align: "center",
+            width: 60,
+        },
+        {
+            title: "Updated By",
+            dataIndex: "updated_by",
             align: "center",
             width: 60,
         },
@@ -292,7 +292,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
         }
     };
 
-    const handleSelectChange = (value) => {
+    const handleSelectChange = (field, value) => {
         setTableParams({
             ...tableParams,
             page: 1,
@@ -300,7 +300,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                 pageSize: 10,
                 current: 1,
             },
-            dimension: value,
+            [field]: value,
         });
     };
 
@@ -325,27 +325,14 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
     const handleFormSubmit = async (values) => {
         setLoading(true);
-        const request = {
-            keyword: values.keyword,
-            description: values.description,
-            dimension_id: values.dimension,
-        };
-
-        if (values.status) {
-            request.status = values.status;
-        }
-
-        if (values.remark) {
-            request.remark = values.remark;
-        }
 
         try {
             const response = isEditMode
                 ? await axios.put(
                       route("driving-force.update", `${initialValues.id}`),
-                      request
+                      values
                   )
-                : await axios.post(route("driving-force.create"), request);
+                : await axios.post(route("driving-force.create"), values);
 
             if (response.status === 200 || response.status === 201) {
                 message.success(
@@ -364,7 +351,10 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
             }
         } catch (error) {
             console.error("Error submitting form:", error);
-            message.error(`Error: ${error.message}`);
+            if (error.response.status === 422) {
+                setErrors(error.response.data.errors);
+            }
+            message.error(`Error: validation failed`);
         } finally {
             setLoading(false);
         }
@@ -372,17 +362,16 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
     const handleOkModal = () => {
         if (formRef.current) {
+            setErrors({})
             formRef.current.submit(); // Programmatically submit the form
-        } else {
-            console.error("Form ref is not set");
         }
     };
 
     const handleCancelModal = () => {
-        setOpen(false);
-        setTitleModal("");
+        setErrors({});
+        formRef.current.reset();
         setIsEditMode(false);
-        setInitialValues({});
+        setOpen(false);
     };
 
     return (
@@ -436,8 +425,30 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                                         .includes(input.toLowerCase())
                                 }
                                 allowClear
-                                onChange={handleSelectChange}
+                                onChange={(value) =>
+                                    handleSelectChange("dimension", value)
+                                }
                                 options={dimensions}
+                            />
+                        </Space>
+                    </Col>
+                    <Col xs={24} sm={12} md={8} lg={6}>
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                            Status :
+                            <Select
+                                style={{ width: "100%" }}
+                                disabled={loading}
+                                placeholder="Select a status"
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "")
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) =>
+                                    handleSelectChange("status", value)
+                                }
+                                options={status}
                             />
                         </Space>
                     </Col>
@@ -508,6 +519,8 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                     initialValues={initialValues}
                     dimensions={dimensions}
                     status={status}
+                    errors={errors}
+                    loading={loading}
                     onFinish={handleFormSubmit}
                 />
             </Dialog>

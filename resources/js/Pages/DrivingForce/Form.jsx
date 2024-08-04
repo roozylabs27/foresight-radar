@@ -3,10 +3,22 @@ import TextArea from "antd/es/input/TextArea";
 import React, { useEffect, useImperativeHandle, forwardRef } from "react";
 
 const FormDrivingForce = forwardRef(
-    ({ initialValues, isEditMode, dimensions, status, onFinish }, ref) => {
+    (
+        {
+            initialValues,
+            isEditMode,
+            dimensions,
+            status,
+            errors,
+            onFinish,
+            loading,
+        },
+        ref
+    ) => {
         const [form] = Form.useForm();
 
         useEffect(() => {
+            console.log(initialValues);
             if (isEditMode) {
                 form.setFieldsValue(initialValues);
             } else {
@@ -19,12 +31,25 @@ const FormDrivingForce = forwardRef(
             submit: () => {
                 form.submit();
             },
+            reset: () => {
+                form.setFieldsValue(initialValues);
+            },
         }));
+
+        // const validateKeywordLength = (_, value) => {
+        //     if (!value || value.length >= 5) {
+        //         return Promise.resolve();
+        //     }
+        //     return Promise.reject(
+        //         new Error("Keyword must be at least 5 characters long")
+        //     );
+        // };
 
         return (
             <Form
                 form={form}
                 name="basic"
+                disabled={loading}
                 initialValues={initialValues}
                 layout="vertical"
                 onFinish={onFinish}
@@ -32,6 +57,9 @@ const FormDrivingForce = forwardRef(
                 <Form.Item
                     name="keyword"
                     label="Keyword"
+                    validateStatus={errors?.keyword ? "error" : ""}
+                    help={errors?.keyword}
+                    validateTrigger="onBlur"
                     rules={[
                         {
                             required: true,
@@ -47,6 +75,9 @@ const FormDrivingForce = forwardRef(
                 <Form.Item
                     name="description"
                     label="Description"
+                    validateTrigger="onBlur"
+                    validateStatus={errors?.description ? "error" : ""}
+                    help={errors?.description}
                     rules={[
                         {
                             required: true,
@@ -57,8 +88,9 @@ const FormDrivingForce = forwardRef(
                     <Input placeholder="Enter description" />
                 </Form.Item>
                 <Form.Item
-                    name="dimension"
+                    name="dimension_id"
                     label="Dimension"
+                    validateTrigger="onBlur"
                     rules={[
                         {
                             required: true,
@@ -76,6 +108,7 @@ const FormDrivingForce = forwardRef(
                     <>
                         <Form.Item
                             name="status"
+                            validateTrigger="onBlur"
                             label="Status"
                             rules={[
                                 {

@@ -14,16 +14,16 @@ export default function Dialog({
             <Modal
                 title={title}
                 open={open}
-                loading={loading}
                 onCancel={onCancel}
                 footer={[
-                    <Button key="back" onClick={onCancel}>
+                    <Button key="back" disabled={loading} onClick={onCancel}>
                         Cancel
                     </Button>,
                     <Button
                         key="submit"
                         type="primary"
                         loading={loading}
+                        disabled={loading}
                         onClick={onOk}
                     >
                         {isEditMode ? "Update" : "Create"}

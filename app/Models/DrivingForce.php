@@ -55,7 +55,7 @@ class DrivingForce extends Model
     public function approvedAt(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? Carbon::parse($value)->translatedFormat('D, d F Y') : null
+            get: fn ($value) => $value ? Carbon::parse($value)->translatedFormat('d F Y') : null
         );
     }
 
@@ -69,6 +69,7 @@ class DrivingForce extends Model
         $pagination = request('pagination.pageSize');
         $search = request('search');
         $dimension = request('dimension');
+        $status = request('status');
         $date_range = request('date');
         $date_start = $date_range[0] . ' 00:00:00';
         $date_end = $date_range[1] . ' 23:59:59';
@@ -80,6 +81,9 @@ class DrivingForce extends Model
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
+            })
+            ->when($status, function ($q) use ($status) {
+                $q->where('status', $status);
             })
             ->where('created_at', '>=', $date_start)
             ->where('created_at', '<=', $date_end)
