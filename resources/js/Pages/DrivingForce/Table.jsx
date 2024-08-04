@@ -24,6 +24,7 @@ import {
     Button,
     DatePicker,
     message,
+    Popconfirm,
 } from "antd";
 import axios from "axios";
 import qs from "qs";
@@ -153,10 +154,18 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
             {
                 key: "delete",
                 label: (
-                    <Flex gap="middle" vertical={false}>
-                        <DeleteOutlined />
-                        Delete
-                    </Flex>
+                    <Popconfirm
+                        title="Delete signal changes"
+                        description="Are you sure to delete this signal changes ?"
+                        onConfirm={() => handleDeleteSignal(record)}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <Flex gap="middle" vertical={false}>
+                            <DeleteOutlined />
+                            Delete
+                        </Flex>
+                    </Popconfirm>
                 ),
             },
         ];
@@ -236,9 +245,6 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
     const handleDropdownClick = (key, record) => {
         switch (key) {
-            case "calculate":
-                alert(key);
-                break;
             case "edit":
                 setOpen(true);
                 setLoading(true);
@@ -250,7 +256,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                 setInitialValues(record);
                 break;
             case "delete":
-                alert(key);
+                // alert(key);
                 break;
             default:
                 return;
@@ -323,6 +329,32 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
         setInitialValues({});
     };
 
+    const handleDeleteSignal = async (record) => {
+        setLoading(true);
+
+        try {
+            const response = await axios.delete(
+                route("driving-force.delete", `${record.id}`)
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success(
+                    `Signal changes deleted successfully`
+                );
+                fetchData(); // Refresh the table data
+            } else {
+                message.error(`Failed to delete signal changes`);
+            }
+        } catch (error) {
+            if (error.response.status === 422) {
+                setErrors(error.response.data.errors);
+            }
+            message.error(`Error: validation failed`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleFormSubmit = async (values) => {
         setLoading(true);
 
@@ -336,7 +368,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
             if (response.status === 200 || response.status === 201) {
                 message.success(
-                    `Driving force ${
+                    `Signal changes ${
                         isEditMode ? "updated" : "created"
                     } successfully`
                 );
@@ -346,11 +378,10 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                 message.error(
                     `Failed to ${
                         isEditMode ? "update" : "create"
-                    } driving force`
+                    } signal changes`
                 );
             }
         } catch (error) {
-            console.error("Error submitting form:", error);
             if (error.response.status === 422) {
                 setErrors(error.response.data.errors);
             }
@@ -362,7 +393,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
     const handleOkModal = () => {
         if (formRef.current) {
-            setErrors({})
+            setErrors({});
             formRef.current.submit(); // Programmatically submit the form
         }
     };

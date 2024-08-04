@@ -122,4 +122,31 @@ class DrivingForceController extends Controller
 
         return response()->json($response, $response['statusCode']);
     }
+
+    public function delete(DrivingForce $driving_force)
+    {
+        try {
+            DB::beginTransaction();
+
+            $driving_force->delete();
+
+            DB::commit();
+
+            $response = [
+                'statusCode' => Response::HTTP_OK,
+                'message' => 'Successfully delete the signal changes !'
+            ];
+        } catch (\Throwable $th) {
+            //throw $th;
+
+            DB::rollBack();
+
+            $response = [
+                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $th->getMessage(),
+            ];
+        }
+
+        return response()->json($response, $response['statusCode']);
+    }
 }

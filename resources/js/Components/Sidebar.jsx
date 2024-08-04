@@ -14,6 +14,11 @@ export default function Sidebar({ collapsed }) {
             key: "/dashboard",
         },
         {
+            label: <Link href={route("driving-force.")}>Dimension</Link>,
+            icon: <RadarChartOutlined />,
+            key: "/driven",
+        },
+        {
             label: <Link href={route("dashboard.")}>Dimension</Link>,
             icon: <RadarChartOutlined />,
             key: "/driven",

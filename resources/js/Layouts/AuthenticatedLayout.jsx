@@ -7,6 +7,7 @@ import {
     DashboardOutlined,
     RadarChartOutlined,
     UsergroupAddOutlined,
+    FieldTimeOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, theme, Flex, Button, Dropdown, Space } from "antd";
 import { Link, usePage } from "@inertiajs/react";
@@ -24,6 +25,11 @@ export default function Authenticated({ user, children }) {
             label: <Link href={route("driving-force.")}>Driving Force</Link>,
             icon: <RadarChartOutlined />,
             key: "/driving-force",
+        },
+        {
+            label: <Link href={route("time-horizon.")}>Time Horizon</Link>,
+            icon: <FieldTimeOutlined />,
+            key: "/time-horizon",
         },
         {
             label: "User Management",

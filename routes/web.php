@@ -30,6 +30,11 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::post("/", "create")->name('create');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data');
         Route::put("/{driving_force}", "update")->name('update');
+        Route::delete("/{driving_force}", "delete")->name('delete');
+    });
+
+    Route::prefix("time-horizon")->controller(App\Http\Controllers\TimeHorizonController::class)->name("time-horizon.")->group(function() {
+        Route::get("/", "index");
     });
 
     Route::prefix('profile')->controller(App\Http\Controllers\ProfileController::class)->name('profile.')->group(function () {
