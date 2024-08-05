@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Http\Resources\DrivingForceCollection;
 use App\Http\Resources\DrivingForceResource;
+use App\Http\Resources\RatingUrgencyCollection;
 use App\Http\Resources\TimeHorizonCollection;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -120,5 +121,31 @@ class DrivingForce extends Model
             ->paginate($pagination);
 
         return new TimeHorizonCollection($time_horizons);
+    }
+
+    public static function rating_urgency()
+    {
+        $pagination = request('pagination.pageSize');
+        $search = request('search');
+        $dimension = request('dimension');
+        $date_range = request('date');
+        $date_start = $date_range[0] . ' 00:00:00';
+        $date_end = $date_range[1] . ' 23:59:59';
+
+        $time_horizons = self::with(['dimension', 'rating'])
+            ->when($search, function ($q) use ($search) {
+                $q->where('keyword', 'LIKE', '%' . $search . '%')
+                    ->where('description', 'LIKE', '%' . $search . '%');
+            })
+            ->when($dimension, function ($q) use ($dimension) {
+                $q->where('dimension_id', $dimension);
+            })
+            ->where('created_at', '>=', $date_start)
+            ->has('rating')
+            ->where('created_at', '<=', $date_end)
+            ->orderBy('created_at', 'DESC')
+            ->paginate($pagination);
+
+        return new RatingUrgencyCollection($time_horizons);
     }
 }

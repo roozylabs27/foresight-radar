@@ -39,4 +39,9 @@ class DrivingForceRating extends Model
     {
         return $this->belongsTo(Priority::class, 'priority_id');
     }
+
+    public function getRouteKeyName()
+    {
+        return 'uuid';
+    }
 }

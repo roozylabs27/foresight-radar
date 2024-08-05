@@ -2,44 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\TimeHorizonRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
-use App\Models\TimeHorizon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
 
-class TimeHorizonController extends Controller
+class RatingUrgencyController extends Controller
 {
     //
 
     public function index()
     {
-        $title = 'Time Horizon';
+        $title = 'Rating Urgency';
         $dimensions = Dimension::all()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name
             ];
         });
-        $time_horizons = TimeHorizon::all()->map(function ($time_horizon){
-            return [
-                'value' => $time_horizon->id,
-                'label' => $time_horizon->name
-            ];
-        });
 
-        return Inertia::render("TimeHorizon/Table", compact('dimensions', 'title', 'time_horizons'));
+        return Inertia::render("RatingUrgency/Table", compact('dimensions', 'title'));
     }
 
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::time_horizon();
+            $result = DrivingForce::rating_urgency();
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
@@ -49,24 +41,24 @@ class TimeHorizonController extends Controller
         }
     }
 
-    public function create(TimeHorizonRequest $request, DrivingForce $driving_force)
+    public function create(Request $request, DrivingForceRating $driving_force_rating)
     {
         try {
             DB::beginTransaction();
 
-            DrivingForceRating::updateOrCreate([
-                'driving_force_id' => $driving_force->id,
-            ], [
-                'uuid' => Uuid::uuid1(),
-                'time_horizon_id' => $request['time_horizon_id'],
-            ]);
+            if ($request['type'] == 'uncertainty') {
+                $driving_force_rating->uncertainty_analysis = $request['value'];
+            } else {
+                $driving_force_rating->impact_analysis = $request['value'];
+            }
 
+            $driving_force_rating->save();
 
             DB::commit();
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully set time horizon !'
+                'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($request['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')
             ];
         } catch (\Throwable $th) {
 

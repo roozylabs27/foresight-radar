@@ -39,10 +39,10 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::post("/{driving_force:id}", "create")->name('create');
     });
 
-    Route::prefix("rating-urgency")->controller(App\Http\Controllers\TimeHorizonController::class)->name("rating-urgency.")->group(function() {
+    Route::prefix("rating-urgency")->controller(App\Http\Controllers\RatingUrgencyController::class)->name("rating-urgency.")->group(function() {
         Route::get("/", "index");
         Route::get("/fetch-data", "fetch_data")->name('fetch-data');
-        // Route::post("/{driving_force:id}", "create")->name('create');
+        Route::post("/{driving_force_rating}", "create")->name('create');
     });
 
     Route::prefix('profile')->controller(App\Http\Controllers\ProfileController::class)->name('profile.')->group(function () {

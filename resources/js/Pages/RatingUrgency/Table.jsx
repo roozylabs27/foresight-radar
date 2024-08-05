@@ -1,17 +1,15 @@
-import Dialog from "@/Components/Dialog";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { BarChartOutlined, EditOutlined, MoreOutlined } from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
     Col,
     DatePicker,
-    Dropdown,
-    Flex,
     message,
+    Popconfirm,
     Row,
     Select,
     Space,
     Table,
+    Tag,
     theme,
     Typography,
 } from "antd";
@@ -19,9 +17,9 @@ import { Content } from "antd/es/layout/layout";
 import dayjs from "dayjs";
 import qs from "qs";
 import { useEffect, useRef, useState } from "react";
-import FormTimeHorizon from "./Form";
+import "../../../css/additional.css";
 
-export default function TableTimeHorizon({ auth, title, dimensions, time_horizons }) {
+export default function TableRatingUrgency({ auth, title, dimensions }) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
@@ -46,6 +44,7 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
             dayjs().endOf("month").format("YYYY-MM-DD"),
         ],
     });
+    const [rating, setRating] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
     // Modal
     const formRef = useRef(null);
@@ -75,7 +74,7 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("time-horizon.fetch-data")}?${qs.stringify(
+                `${route("rating-urgency.fetch-data")}?${qs.stringify(
                     getParams(tableParams)
                 )}`
             );
@@ -102,7 +101,6 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                 setLoading(false);
             }
         } catch (error) {
-            // TODO: Handling error
             message.error(`Error: ${error.message}`);
             setLoading(false);
         }
@@ -131,22 +129,6 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         }
     };
 
-    const handleDropdownClick = (key, record) => {
-        switch (key) {
-            case "calculate":
-                setOpen(true);
-                setLoading(true);
-                setTimeout(() => {
-                    setLoading(false);
-                }, 500);
-                setTitleModal(`Set Time Horizon - ${record.keyword}`);
-                setInitialValues(record);
-                break;
-            default:
-                return;
-        }
-    };
-
     const handleSelectChange = (field, value) => {
         setTableParams({
             ...tableParams,
@@ -159,76 +141,93 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         });
     };
 
-    const columnAction = (text, record) => {
-        const actions = [
-            {
-                key: "calculate",
-                label: (
-                    <Flex gap="middle" vertical={false}>
-                        <BarChartOutlined />
-                        Calculate
-                    </Flex>
-                ),
-            },
-        ];
-
-        return (
-            <Dropdown
-                placement="topLeft"
-                menu={{
-                    items: actions,
-                    onClick: ({ key }) => handleDropdownClick(key, record),
-                }}
-                trigger={["hover"]}
-            >
-                <a onClick={(e) => e.preventDefault()}>
-                    <Space>
-                        <MoreOutlined />
-                    </Space>
-                </a>
-            </Dropdown>
-        );
-    };
-
     const columns = [
         {
             title: "No",
             dataIndex: "no",
             key: "no",
-            width: 10,
-            align: "center",
         },
         {
-            title: "Keyword",
+            title: "ITEM",
             dataIndex: "keyword",
             key: "keyword",
-            width: 250,
         },
         {
-            title: "SHORT TERM",
-            dataIndex: "short_term",
-            key: "short_term",
-            align: "center",
-        },
-        {
-            title: "MID TERM",
-            dataIndex: "mid_term",
-            key: "mid_term",
-            align: "center",
-        },
-        {
-            title: "LONG TERM",
-            dataIndex: "long_term",
-            key: "long_term",
-            align: "center",
-        },
-        {
-            title: "",
-            key: "operation",
-            fixed: "right",
-            align: "right",
-            width: 20,
-            render: columnAction,
+            title: "RATING",
+            dataIndex: "rating",
+            key: "rating",
+            children: [
+                {
+                    title: "Uncertainty",
+                    dataIndex: "uncertainty",
+                    key: "uncertainty",
+                    align: "center",
+                    render: (text, record) => (
+                        <div>
+                            {rating.map((value, index) => (
+                                <Popconfirm
+                                    title={`Are you sure to set rating uncertainty ${value} for ${record.keyword}?`}
+                                    onConfirm={() =>
+                                        handleTagClick(
+                                            record,
+                                            "uncertainty",
+                                            value
+                                        )
+                                    }
+                                    okText="Yes"
+                                    cancelText="No"
+                                    key={index}
+                                >
+                                    <Tag
+                                        className="custom-tag"
+                                        color={
+                                            value == record.uncertainty
+                                                ? "orange"
+                                                : ""
+                                        }
+                                        key={index}
+                                    >
+                                        {value}
+                                    </Tag>
+                                </Popconfirm>
+                            ))}
+                        </div>
+                    ),
+                },
+                {
+                    title: "Impact",
+                    dataIndex: "impact",
+                    key: "impact",
+                    align: "center",
+                    render: (text, record) => (
+                        <div>
+                            {rating.map((value, index) => (
+                                <Popconfirm
+                                    title={`Are you sure to set rating impact ${value} for ${record.keyword}?`}
+                                    onConfirm={() =>
+                                        handleTagClick(record, "impact", value)
+                                    }
+                                    okText="Yes"
+                                    cancelText="No"
+                                    key={index}
+                                >
+                                    <Tag
+                                        className="custom-tag"
+                                        color={
+                                            value == record.impact
+                                                ? "orange"
+                                                : ""
+                                        }
+                                        key={index}
+                                    >
+                                        {value}
+                                    </Tag>
+                                </Popconfirm>
+                            ))}
+                        </div>
+                    ),
+                },
+            ],
         },
     ];
 
@@ -236,21 +235,6 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         const { label } = dimensions.find((d) => d.value === dimension);
 
         return label.toUpperCase();
-    };
-
-    const handleOkModal = () => {
-        if (formRef?.current) {
-            setErrors({});
-            formRef.current.submit();
-        }
-    };
-
-    const handleCancelModal = () => {
-        if (formRef?.current) {
-            setErrors({});
-            formRef.current.reset();
-        }
-        setOpen(false);
     };
 
     const handleTableChange = (pagination, filters, sorter) => {
@@ -265,31 +249,31 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         }
     };
 
-    const handleFormSubmit = async (values) => {
+
+    const handleTagClick = async (record, type, value) => {
+        const payload = {
+            uuid: record.id,
+            type,
+            value,
+        };
+
         setLoading(true);
 
         try {
-            const response = await axios.post(route("time-horizon.create", initialValues.id), values);
+            const response = await axios.post(
+                route("rating-urgency.create", record.id),
+                payload
+            );
 
             if (response.status === 200 || response.status === 201) {
-                message.success(
-                    response.data.message
-                );
+                message.success(response.data.message);
                 setOpen(false);
                 fetchData(); // Refresh the table data
             } else {
-                message.error(
-                    `Failed to create time horizon`
-                );
+                message.error(`Failed to set rating`);
             }
         } catch (error) {
-            // TODO: Handling error
-            if (error.response.status === 422) {
-                setErrors(error.response.data.errors);
-                message.error(`Error: validation failed`);
-            } else {
-                message.error(error)
-            }
+            message.error(`Error: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -374,14 +358,14 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                     dataSource={data}
                     bordered
                     loading={loading}
-                    rowKey={(record) => record.id}
                     onChange={handleTableChange}
+                    rowKey={(record) => record.id}
                     pagination={tableParams.pagination}
                     title={() => (
                         <div
                             style={{ textAlign: "center", fontWeight: "bold" }}
                         >
-                            TIME HORIZON
+                            RATING OF URGENCY
                             {tableParams?.dimension
                                 ? ` ▶ ${showActiveDimension(
                                       tableParams.dimension
@@ -391,25 +375,6 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                     )}
                 />
             </Content>
-
-            <Dialog
-                title={titleModal}
-                open={open}
-                loading={loading}
-                btnText="Set"
-                onOk={handleOkModal}
-                onCancel={handleCancelModal}
-            >
-                <FormTimeHorizon
-                    ref={formRef}
-                    isEditMode={false}
-                    initialValues={initialValues}
-                    errors={errors}
-                    time_horizons={time_horizons}
-                    loading={loading}
-                    onFinish={handleFormSubmit}
-                />
-            </Dialog>
         </AuthenticatedLayout>
     );
 }
