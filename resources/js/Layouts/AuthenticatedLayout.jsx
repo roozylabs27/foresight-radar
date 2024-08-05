@@ -8,6 +8,7 @@ import {
     RadarChartOutlined,
     UsergroupAddOutlined,
     FieldTimeOutlined,
+    StarOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, theme, Flex, Button, Dropdown, Space } from "antd";
 import { Link, usePage } from "@inertiajs/react";
@@ -30,6 +31,16 @@ export default function Authenticated({ user, children }) {
             label: <Link href={route("time-horizon.")}>Time Horizon</Link>,
             icon: <FieldTimeOutlined />,
             key: "/time-horizon",
+        },
+        {
+            label: <Link href={route("rating-urgency.")}>Rating of Urgency</Link>,
+            icon: <StarOutlined />,
+            key: "/rating-urgency",
+        },
+        {
+            label: <Link href={route("time-horizon.")}>Status of Action</Link>,
+            icon: <FieldTimeOutlined />,
+            key: "/status-action",
         },
         {
             label: "User Management",
@@ -132,7 +143,7 @@ export default function Authenticated({ user, children }) {
                         <Dropdown
                             placement="topLeft"
                             menu={{
-                                items : actions,
+                                items: actions,
                                 onClick: ({ key }) => {
                                     handleDropdownItemClick(key, record);
                                 },
@@ -159,7 +170,8 @@ export default function Authenticated({ user, children }) {
                         textAlign: "center",
                     }}
                 >
-                    Ant Design ©{new Date().getFullYear()} Created by Ant UED
+                    Foresight Radar ©{new Date().getFullYear()} All Right
+                    Reserved.
                 </Footer>
             </Layout>
         </Layout>

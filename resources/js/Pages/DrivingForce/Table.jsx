@@ -33,7 +33,7 @@ import { useEffect, useRef, useState } from "react";
 import Dialog from "@/Components/Dialog";
 import FormDrivingForce from "./Form";
 
-export default function TableDrivingForce({ auth, dimensions, status }) {
+export default function TableDrivingForce({ auth, title , dimensions, status }) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
@@ -43,12 +43,9 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
     const { Search } = Input;
     const { RangePicker } = DatePicker;
 
-    const title = "Driving Force";
-
     // Table
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState({});
     const [defaultDate, setDefaultDate] = useState([
         dayjs().startOf("month"),
         dayjs().endOf("month"),
@@ -66,6 +63,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
     // Modal
     const formRef = useRef(null);
+    const [errors, setErrors] = useState({});
     const [open, setOpen] = useState(false);
     const [titleModal, setTitleModal] = useState("");
     const [isEditMode, setIsEditMode] = useState(false);
@@ -117,6 +115,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                 setLoading(false);
             }
         } catch (error) {
+            // TODO: Handling error
             message.error(`Error: ${error.message}`);
             setLoading(false);
         }
@@ -255,9 +254,6 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                 setIsEditMode(true);
                 setInitialValues(record);
                 break;
-            case "delete":
-                // alert(key);
-                break;
             default:
                 return;
         }
@@ -339,7 +335,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
             if (response.status === 200 || response.status === 201) {
                 message.success(
-                    `Signal changes deleted successfully`
+                    response.data.message
                 );
                 fetchData(); // Refresh the table data
             } else {
@@ -368,9 +364,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
 
             if (response.status === 200 || response.status === 201) {
                 message.success(
-                    `Signal changes ${
-                        isEditMode ? "updated" : "created"
-                    } successfully`
+                    response.data.message
                 );
                 setOpen(false);
                 fetchData(); // Refresh the table data
@@ -382,10 +376,11 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
                 );
             }
         } catch (error) {
+            // TODO: Handling error
             if (error.response.status === 422) {
                 setErrors(error.response.data.errors);
+                message.error(`Error: validation failed`);
             }
-            message.error(`Error: validation failed`);
         } finally {
             setLoading(false);
         }
@@ -394,7 +389,7 @@ export default function TableDrivingForce({ auth, dimensions, status }) {
     const handleOkModal = () => {
         if (formRef.current) {
             setErrors({});
-            formRef.current.submit(); // Programmatically submit the form
+            formRef.current.submit();
         }
     };
 

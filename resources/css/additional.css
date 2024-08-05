@@ -1,0 +1,12 @@
+.ant-table-thead > tr > th {
+    text-align: center;
+    background: #d9f7be;
+  }
+
+  .ant-table-cell {
+    text-align: center;
+  }
+
+  .ant-tag-orange {
+    background: #ffa39e;
+  }

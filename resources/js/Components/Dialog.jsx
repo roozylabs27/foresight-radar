@@ -6,6 +6,7 @@ export default function Dialog({
     onCancel,
     isEditMode,
     onOk,
+    btnText = isEditMode ? "Save Changes": "Submit",
     loading,
     children,
 }) {
@@ -14,6 +15,7 @@ export default function Dialog({
             <Modal
                 title={title}
                 open={open}
+                centered
                 onCancel={onCancel}
                 footer={[
                     <Button key="back" disabled={loading} onClick={onCancel}>
@@ -26,7 +28,7 @@ export default function Dialog({
                         disabled={loading}
                         onClick={onOk}
                     >
-                        {isEditMode ? "Update" : "Create"}
+                        {btnText}
                     </Button>,
                 ]}
             >

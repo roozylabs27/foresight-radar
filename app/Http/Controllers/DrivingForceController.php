@@ -37,8 +37,9 @@ class DrivingForceController extends Controller
                 "value" => "REJECTED",
             ],
         ];
+        $title = "Driving Force";
 
-        return Inertia::render("DrivingForce/Table", compact('dimensions', 'status'));
+        return Inertia::render("DrivingForce/Table", compact('dimensions', 'title', 'status'));
     }
 
     public function fetch_data()
@@ -111,7 +112,7 @@ class DrivingForceController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully update new signal !'
+                'message' => 'Successfully update the signal !'
             ];
         } catch (\Throwable $th) {
             $response = [
@@ -134,7 +135,7 @@ class DrivingForceController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully delete the signal changes !'
+                'message' => 'Successfully delete the signal !'
             ];
         } catch (\Throwable $th) {
             //throw $th;

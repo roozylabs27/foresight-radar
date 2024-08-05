@@ -11,7 +11,7 @@ export default function Footer() {
                     textAlign: "center",
                 }}
             >
-                Ant Design ©{new Date().getFullYear()} Created by Ant UED
+                Foresight Radar ©{new Date().getFullYear()} All Right Reserved.
             </Footer>
         </>
     );

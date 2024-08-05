@@ -18,7 +18,6 @@ const FormDrivingForce = forwardRef(
         const [form] = Form.useForm();
 
         useEffect(() => {
-            console.log(initialValues);
             if (isEditMode) {
                 form.setFieldsValue(initialValues);
             } else {

@@ -61,10 +61,10 @@ return new class extends Migration
             $table->uuid();
             $table->bigInteger('driving_force_id')->unsigned();
             $table->bigInteger('time_horizon_id')->unsigned();
-            $table->bigInteger('status_action_id')->unsigned();
-            $table->bigInteger('priority_id')->unsigned();
-            $table->unsignedTinyInteger('impact_analysis');
-            $table->unsignedTinyInteger('uncertainty_analysis');
+            $table->bigInteger('status_action_id')->unsigned()->nullable();
+            $table->bigInteger('priority_id')->unsigned()->nullable();
+            $table->unsignedTinyInteger('impact_analysis')->nullable();
+            $table->unsignedTinyInteger('uncertainty_analysis')->nullable();
             $table->timestamps();
         });
 
