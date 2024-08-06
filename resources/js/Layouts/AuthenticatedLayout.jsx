@@ -71,7 +71,7 @@ export default function Authenticated({ user, children }) {
         {
             key: "logout",
             label: (
-                <Link href="/logout" method="post" as="button" type="button">
+                <Link href="/logout" method="post"  type="button">
                     <Flex gap="middle" vertical={false}>
                         <LogoutOutlined />
                         Logout
@@ -144,9 +144,6 @@ export default function Authenticated({ user, children }) {
                             placement="topLeft"
                             menu={{
                                 items: actions,
-                                onClick: ({ key }) => {
-                                    handleDropdownItemClick(key, record);
-                                },
                             }}
                             trigger={["click"]}
                         >
