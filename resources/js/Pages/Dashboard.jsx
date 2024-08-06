@@ -1,7 +1,7 @@
 import Radar from "@/Components/Radar";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
-import { Layout, theme, Breadcrumb } from "antd";
+import { Layout, theme, Breadcrumb, Tabs } from "antd";
 
 export default function Dashboard({ auth }) {
     const {
@@ -9,6 +9,28 @@ export default function Dashboard({ auth }) {
     } = theme.useToken();
 
     const { Content } = Layout;
+
+    const onChange = (key) => {
+        console.log(key);
+    };
+
+    const items = [
+        {
+            key: "1",
+            label: "Foresight Radar",
+            children: <Radar />,
+        },
+        {
+            key: "2",
+            label: "Tab 2",
+            children: "Content of Tab Pane 2",
+        },
+        {
+            key: "3",
+            label: "Tab 3",
+            children: "Content of Tab Pane 3",
+        },
+    ];
 
     return (
         <AuthenticatedLayout
@@ -28,14 +50,18 @@ export default function Dashboard({ auth }) {
             >
                 <div
                     style={{
-                        padding: 24,
+                        paddingBlock: 10,
+                        paddingInline: 24,
                         minHeight: 360,
                         background: colorBgContainer,
                         borderRadius: borderRadiusLG,
                     }}
                 >
-                    {/* <img src="/images/Picture1.png" alt="" /> */}
-                    <Radar />
+                    <Tabs
+                        defaultActiveKey="1"
+                        items={items}
+                        onChange={onChange}
+                    />
                 </div>
             </Content>
         </AuthenticatedLayout>
