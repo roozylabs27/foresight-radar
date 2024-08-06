@@ -1,97 +1,99 @@
-import { useEffect } from 'react';
-import Checkbox from '@/Components/Checkbox';
-import GuestLayout from '@/Layouts/GuestLayout';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { useEffect, useState } from "react";
+import GuestLayout from "@/Layouts/GuestLayout";
+import { Head, Link, useForm } from "@inertiajs/react";
+import { Alert, Button, Form, Input, Checkbox, message } from "antd";
+import { LockOutlined, UserOutlined } from "@ant-design/icons";
+import axios from "axios";
 
-export default function Login({ status, canResetPassword }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
-        password: '',
-        remember: false,
-    });
+export default function Login() {
+    const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
 
-    useEffect(() => {
-        return () => {
-            reset('password');
-        };
-    }, []);
+    const onFinish = async (values) => {
+        setLoading(true);
 
-    const submit = (e) => {
-        e.preventDefault();
+        try {
+            const response = await axios.post(route("login"), values);
 
-        post(route('login'));
+            if(response.status == 200) {
+                setErrors({})
+                window.location = response.data.data.url
+            }
+        } catch (error) {
+            setLoading(false);
+            switch (error.response.status) {
+                case 422:
+                    setErrors(error.response.data.errors)
+                    break;
+                default:
+                    message.error(error.message);
+            }
+        }
     };
 
     return (
         <GuestLayout>
             <Head title="Log in" />
 
-            {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
-
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
+            <div
+                style={{ maxWidth: "400px", margin: "auto", padding: "50px 0" }}
+            >
+                {errors.email && (
+                    <Alert message={errors.email} type="error" showIcon style={{ marginBottom: "20px" }} />
+                )}
+                <Form
+                    name="login"
+                    disabled={loading}
+                    initialValues={{ remember: false }}
+                    onFinish={onFinish}
+                >
+                    <Form.Item
                         name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        isFocused={true}
-                        onChange={(e) => setData('email', e.target.value)}
-                    />
-
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Please input your Email!",
+                            },
+                        ]}
+                    >
+                        <Input prefix={<UserOutlined />} autoFocus placeholder="Email" />
+                    </Form.Item>
+                    <Form.Item
                         name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="current-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="block mt-4">
-                    <label className="flex items-center">
-                        <Checkbox
-                            name="remember"
-                            checked={data.remember}
-                            onChange={(e) => setData('remember', e.target.checked)}
+                        rules={[
+                            {
+                                required: true,
+                                message: "Please input your Password!",
+                            },
+                        ]}
+                    >
+                        <Input
+                            prefix={<LockOutlined />}
+                            type="password"
+                            placeholder="Password"
                         />
-                        <span className="ms-2 text-sm text-gray-600">Remember me</span>
-                    </label>
-                </div>
-
-                <div className="flex items-center justify-end mt-4">
-                    {canResetPassword && (
-                        <Link
-                            href={route('password.request')}
-                            className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    </Form.Item>
+                    <Form.Item>
+                        <Form.Item
+                            name="remember"
+                            valuePropName="checked"
+                            noStyle
                         >
-                            Forgot your password?
-                        </Link>
-                    )}
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Log in
-                    </PrimaryButton>
-                </div>
-            </form>
+                            <Checkbox>Remember me</Checkbox>
+                        </Form.Item>
+                    </Form.Item>
+                    <Form.Item >
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            className="login-form-button"
+                            loading={loading}
+                        >
+                            Login
+                        </Button>
+                    </Form.Item>
+                </Form>
+            </div>
         </GuestLayout>
     );
 }
