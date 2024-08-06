@@ -1,10 +1,12 @@
 [
     {
         "name": "Monitoring",
-        "symbol": "triangle"
+        "symbol": "triangle",
+        "code" : "∆"
     },
     {
         "name": "Decided Plan",
-        "symbol": "circle"
+        "symbol": "circle",
+        "code" : "O"
     }
 ]

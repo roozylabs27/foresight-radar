@@ -38,7 +38,7 @@ export default function Authenticated({ user, children }) {
             key: "/rating-urgency",
         },
         {
-            label: <Link href={route("time-horizon.")}>Status of Action</Link>,
+            label: <Link href={route("status-action.")}>Status of Action</Link>,
             icon: <FieldTimeOutlined />,
             key: "/status-action",
         },

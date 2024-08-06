@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,8 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::get("/", "index");
     });
 
+    Route::get("/prioritizing", [DashboardController::class, 'prioritizing'])->name('prioritizing');
+
     Route::prefix("driving-force")->controller(App\Http\Controllers\DrivingForceController::class)->name("driving-force.")->group(function() {
         Route::get("/", "index");
         Route::post("/", "create")->name('create');
@@ -40,6 +43,12 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix("rating-urgency")->controller(App\Http\Controllers\RatingUrgencyController::class)->name("rating-urgency.")->group(function() {
+        Route::get("/", "index");
+        Route::get("/fetch-data", "fetch_data")->name('fetch-data');
+        Route::post("/{driving_force_rating}", "create")->name('create');
+    });
+
+    Route::prefix("status-action")->controller(App\Http\Controllers\StatusActionController::class)->name("status-action.")->group(function() {
         Route::get("/", "index");
         Route::get("/fetch-data", "fetch_data")->name('fetch-data');
         Route::post("/{driving_force_rating}", "create")->name('create');

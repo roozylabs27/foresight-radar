@@ -1,13 +1,11 @@
 import { Form, Input, Select, Radio } from "antd";
 import React, { useEffect, useImperativeHandle, forwardRef } from "react";
 
-const FormTimeHorizon = forwardRef(
-    ({ initialValues, errors, onFinish, loading, time_horizons }, ref) => {
+const FormStatusAction = forwardRef(
+    ({ initialValues, errors, onFinish, loading, status_actions }, ref) => {
         const [form] = Form.useForm();
         useEffect(() => {
         }, [initialValues, form]);
-
-        console.log(initialValues)
 
         // Expose form submit function to parent component
         useImperativeHandle(ref, () => ({
@@ -76,20 +74,20 @@ const FormTimeHorizon = forwardRef(
                     />
                 </Form.Item>
                 <Form.Item
-                    name="time_horizon_id"
-                    label="Time Horizon"
+                    name="status_action_id"
+                    label="Status Action"
                     validateTrigger="onBlur"
                     rules={[
                         {
                             required: true,
-                            message: "Please select the time horizon!",
+                            message: "Please select the status action !",
                         },
                     ]}
                 >
-                    <Radio.Group
-                        options={time_horizons}
-                        optionType="button"
-                        buttonStyle="solid"
+                     <Select
+                        style={{ width: "100%" }}
+                        placeholder="Select a status action"
+                        options={status_actions}
                     />
                 </Form.Item>
             </Form>
@@ -97,4 +95,4 @@ const FormTimeHorizon = forwardRef(
     }
 );
 
-export default FormTimeHorizon;
+export default FormStatusAction;

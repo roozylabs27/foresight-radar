@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Resources\PrioritizingResource;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,5 +44,21 @@ class DrivingForceRating extends Model
     public function getRouteKeyName()
     {
         return 'uuid';
+    }
+
+    public static function prioritizing()
+    {
+        $prioritizing = self::with('driving_force')
+            // ->when($dimension, function ($q) use ($dimension) {
+            //     $q->where('dimension_id', $dimension);
+            // })
+            // ->where('created_at', '>=', $date_start)
+            ->whereNotNull('status_action_id')
+            // ->where('created_at', '<=', $date_end)
+            ->orderBy('created_at', 'DESC')
+            ->limit(20)
+            ->get();
+
+        return PrioritizingResource::collection($prioritizing);
     }
 }

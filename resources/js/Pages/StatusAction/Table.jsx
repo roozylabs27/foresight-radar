@@ -1,6 +1,6 @@
 import Dialog from "@/Components/Dialog";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { BarChartOutlined, EditOutlined, MoreOutlined } from "@ant-design/icons";
+import { AimOutlined, MoreOutlined } from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
     Col,
@@ -19,9 +19,14 @@ import { Content } from "antd/es/layout/layout";
 import dayjs from "dayjs";
 import qs from "qs";
 import { useEffect, useRef, useState } from "react";
-import FormTimeHorizon from "./Form";
+import FormStatusAction from "./Form";
 
-export default function TableTimeHorizon({ auth, title, dimensions, time_horizons }) {
+export default function TableStatusAction({
+    auth,
+    title,
+    dimensions,
+    status_actions,
+}) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
@@ -75,7 +80,7 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("time-horizon.fetch-data")}?${qs.stringify(
+                `${route("status-action.fetch-data")}?${qs.stringify(
                     getParams(tableParams)
                 )}`
             );
@@ -133,13 +138,13 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
 
     const handleDropdownClick = (key, record) => {
         switch (key) {
-            case "calculate":
+            case "status action":
                 setOpen(true);
                 setLoading(true);
                 setTimeout(() => {
                     setLoading(false);
                 }, 500);
-                setTitleModal(`Set Time Horizon - ${record.keyword}`);
+                setTitleModal(`Set Status Action - ${record.keyword}`);
                 setInitialValues(record);
                 break;
             default:
@@ -162,11 +167,11 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
     const columnAction = (text, record) => {
         const actions = [
             {
-                key: "calculate",
+                key: "status action",
                 label: (
                     <Flex gap="middle" vertical={false}>
-                        <BarChartOutlined />
-                        Set Time Horizon
+                        <AimOutlined />
+                        Set Status Action
                     </Flex>
                 ),
             },
@@ -205,21 +210,15 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
             width: 250,
         },
         {
-            title: "SHORT TERM",
-            dataIndex: "short_term",
-            key: "short_term",
+            title: "MONITORING",
+            dataIndex: "monitoring",
+            key: "monitoring",
             align: "center",
         },
         {
-            title: "MID TERM",
-            dataIndex: "mid_term",
-            key: "mid_term",
-            align: "center",
-        },
-        {
-            title: "LONG TERM",
-            dataIndex: "long_term",
-            key: "long_term",
+            title: "DECIDED PLAN",
+            dataIndex: "decided_plan",
+            key: "decided_plan",
             align: "center",
         },
         {
@@ -269,27 +268,27 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         setLoading(true);
 
         try {
-            const response = await axios.post(route("time-horizon.create", initialValues.id), values);
+            const response = await axios.post(
+                route("status-action.create", initialValues.id),
+                values
+            );
 
             if (response.status === 200 || response.status === 201) {
-                message.success(
-                    response.data.message
-                );
+                message.success(response.data.message);
                 setOpen(false);
                 fetchData(); // Refresh the table data
             } else {
-                message.error(
-                    `Failed to create time horizon`
-                );
+                message.error(`Failed to create status action`);
             }
         } catch (error) {
             // TODO: Handling error
-            if (error.response.status === 422) {
-                setErrors(error.response.data.errors);
-                message.error(`Error: validation failed`);
-            } else {
-                message.error(error)
-            }
+            console.log(error)
+            // if (error.response.status === 422) {
+            //     setErrors(error.response.data.errors);
+            //     message.error(`Error: validation failed`);
+            // } else {
+            //     message.error(error);
+            // }
         } finally {
             setLoading(false);
         }
@@ -381,7 +380,7 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                         <div
                             style={{ textAlign: "center", fontWeight: "bold" }}
                         >
-                            TIME HORIZON
+                            STATUS OF ACTION
                             {tableParams?.dimension
                                 ? ` ▶ ${showActiveDimension(
                                       tableParams.dimension
@@ -400,12 +399,12 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                 onOk={handleOkModal}
                 onCancel={handleCancelModal}
             >
-                <FormTimeHorizon
+                <FormStatusAction
                     ref={formRef}
                     isEditMode={false}
                     initialValues={initialValues}
                     errors={errors}
-                    time_horizons={time_horizons}
+                    status_actions={status_actions}
                     loading={loading}
                     onFinish={handleFormSubmit}
                 />

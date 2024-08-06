@@ -110,7 +110,8 @@ class DefaultSystemSeeder extends Seeder
             'name' => $status_action->name,
         ], [
             'uuid' => Uuid::uuid1(),
-            'symbol' => $status_action->symbol
+            'symbol' => $status_action->symbol,
+            'code' => $status_action->code
         ]);
     }
 }

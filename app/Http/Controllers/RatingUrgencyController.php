@@ -56,6 +56,26 @@ class RatingUrgencyController extends Controller
 
             DB::commit();
 
+            DB::beginTransaction();
+
+
+            if ($driving_force_rating->impact_analysis != null && $driving_force_rating->uncertainty_analysis != null) {
+                if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis >= 6) {
+                    $driving_force_rating->priority_id = 1;
+                } else if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis <= 5) {
+                    $driving_force_rating->priority_id = 2;
+                } else if ($driving_force_rating->impact_analysis <= 5 && $driving_force_rating->uncertainty_analysis >= 6) {
+                    $driving_force_rating->priority_id = 2;
+                } else {
+                    $driving_force_rating->priority_id = 3;
+                }
+            }
+
+            $driving_force_rating->save();
+
+            DB::commit();
+
+
             $response = [
                 'statusCode' => Response::HTTP_OK,
                 'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($request['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')

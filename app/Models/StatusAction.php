@@ -12,6 +12,7 @@ class StatusAction extends Model
     protected $fillable = [
         'uuid',
         'name',
-        'symbol'
+        'symbol',
+        'code'
     ];
 }

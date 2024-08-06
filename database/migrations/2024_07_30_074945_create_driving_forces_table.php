@@ -45,6 +45,7 @@ return new class extends Migration
             $table->uuid();
             $table->string('name');
             $table->string('symbol');
+            $table->string('code')->nullable();
             $table->timestamps();
         });
 

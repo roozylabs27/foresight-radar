@@ -1,3 +1,4 @@
+import PrioritizingChart from "@/Components/PrioritizingChart";
 import Radar from "@/Components/Radar";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
@@ -17,18 +18,18 @@ export default function Dashboard({ auth }) {
     const items = [
         {
             key: "1",
-            label: "Foresight Radar",
-            children: <Radar />,
+            label: "Prioritizing",
+            children: <PrioritizingChart/>,
         },
         {
             key: "2",
-            label: "Tab 2",
-            children: "Content of Tab Pane 2",
+            label: "Tab 3",
+            children: "Content of Tab Pane 3",
         },
         {
             key: "3",
-            label: "Tab 3",
-            children: "Content of Tab Pane 3",
+            label: "Foresight Radar",
+            children: <Radar />,
         },
     ];
 
