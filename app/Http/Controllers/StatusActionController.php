@@ -9,6 +9,7 @@ use App\Models\DrivingForceRating;
 use App\Models\StatusAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -40,6 +41,7 @@ class StatusActionController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
+            Log::error($th);
             return response()->json([
                 'errors' => $th->getMessage(),
             ], Response::HTTP_INTERNAL_SERVER_ERROR);

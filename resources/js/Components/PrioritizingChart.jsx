@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from "react";
 import ReactEcharts from "echarts-for-react";
 import qs from "qs";
-import { Row, Col, Table, message } from "antd";
+import { Row, Col, Table, message, Skeleton } from "antd";
+import dayjs from "dayjs";
 
-const PrioritizingChart = () => {
+const PrioritizingChart = ({
+    loading,
+    setLoading,
+    date,
+    selectData,
+    dimensions,
+}) => {
     const getParams = (params) => {
         return {
             ...params,
@@ -11,18 +18,21 @@ const PrioritizingChart = () => {
     };
     const [positions, setPositions] = useState([]);
     const [tableParams, setTableParams] = useState({
-        // date: [
-        //     dayjs().startOf("month").format("YYYY-MM-DD"),
-        //     dayjs().endOf("month").format("YYYY-MM-DD"),
-        // ],
+        date: [
+            dayjs().startOf("month").format("YYYY-MM-DD"),
+            dayjs().endOf("month").format("YYYY-MM-DD"),
+        ],
     });
     const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
     const [option, setOption] = useState({
         title: {
             text: "Matrix of Uncertainty and Impact Analysis",
             left: "center",
             top: 10,
+        },
+        legend: {
+            data: ["High Priority", "Medium Priority", "Low Priority"],
+            left: 10,
         },
         tooltip: {
             show: false,
@@ -58,29 +68,7 @@ const PrioritizingChart = () => {
                 name: "Prioritizing",
                 type: "scatter",
                 data: positions,
-                // [
-                //     [0, 0, 1],
-                //     [2, 2, 2],
-                //     [8, 8, 3],
-                //     [8, 6, 4],
-                //     [7, 8, 5],
-                //     [7, 10, 6],
-                //     [6, 8, 7],
-                //     [6, 7, 8],
-                //     [5, 8, 9],
-                //     [5, 6, 10],
-                //     [5, 5, 11],
-                //     [4, 4, 12],
-                //     [4, 3, 13],
-                //     [3, 10, 14],
-                //     [3, 8, 15],
-                //     [3, 6, 16],
-                //     [2, 8, 17],
-                //     [2, 6, 18],
-                //     [6, 6, 19],
-                //     [7, 6, 20],
-                // ],
-                symbolSize: 20,
+                symbolSize: 40,
                 label: {
                     show: true,
                     formatter: "{@[2]}",
@@ -105,33 +93,50 @@ const PrioritizingChart = () => {
 
     useEffect(() => {
         fetchData();
-    }, [tableParams?.dimension, option, positions]);
+    }, [date, selectData]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const response = await axios.get(
                 `${route("prioritizing")}?${qs.stringify(
-                    getParams(tableParams)
+                    getParams({
+                        ...tableParams,
+                        date : date != null ? date.date : tableParams.date,
+                        dimension: selectData ? selectData.dimension : null
+                    })
                 )}`
             );
 
             if (response.status == 200) {
                 setTimeout(() => {
-                    const newData = response.data.map((d, i) => {
-                        const newPosition = d.position.push(i + 1);
-
-                        positions.push(d.position);
-                        return {
-                            no: i + 1,
-                            position: newPosition,
-                            ...d,
-                        };
+                    const newPositions = response.data.map((d, i) => {
+                        d.position.push(i + 1);
+                        return d.position;
                     });
+                    const newData = response.data.map((d, i) => ({
+                        no: i + 1,
+                        ...d,
+                    }));
+
+                    const adjustedPositions =
+                        adjustOverlappingPositions(newPositions);
+
+                    setPositions(adjustedPositions);
                     setData(newData);
                     setTableParams({
                         ...tableParams,
                     });
+                    setOption((prevOption) => ({
+                        ...prevOption,
+                        series: [
+                            {
+                                ...prevOption.series[0],
+                                data: adjustedPositions,
+                            },
+                        ],
+                    }));
+
                     setLoading(false);
                 }, 500);
             } else {
@@ -143,6 +148,29 @@ const PrioritizingChart = () => {
             message.error(`Error: ${error.message}`);
             setLoading(false);
         }
+    };
+
+    const adjustOverlappingPositions = (positions) => {
+        const adjustedPositions = [];
+        const seen = new Map();
+
+        positions.forEach((pos) => {
+            let [x, y, id] = pos;
+            const key = `${x}-${y}`;
+            if (seen.has(key)) {
+                seen.get(key).push(id);
+            } else {
+                seen.set(key, [id]);
+                adjustedPositions.push([x, y, id]);
+            }
+        });
+
+        // Convert seen map to adjusted positions
+        return adjustedPositions.map((pos) => {
+            const key = `${pos[0]}-${pos[1]}`;
+            const ids = seen.get(key);
+            return [pos[0], pos[1], ids];
+        });
     };
 
     const columns = [
@@ -161,6 +189,15 @@ const PrioritizingChart = () => {
         },
     ];
 
+    const showActiveDimension = (dimension) => {
+        if (dimension != null) {
+            const { label } = dimensions.find((d) => d.value === dimension);
+
+            return label.toUpperCase();
+        }
+
+        return "OVERALL";
+    };
     return (
         <Row gutter={16} style={{ margin: 20 }}>
             <Col span={8}>
@@ -170,25 +207,25 @@ const PrioritizingChart = () => {
                     bordered
                     loading={loading}
                     rowKey={(record) => record.no}
-                    // onChange={handleTableChange}
+                    pagination={false}
                     title={() => (
                         <div
                             style={{ textAlign: "center", fontWeight: "bold" }}
                         >
-                            {tableParams?.dimension
-                                ? `${showActiveDimension(
-                                      tableParams.dimension
-                                  )}`
+                            {selectData
+                                ? `${showActiveDimension(selectData.dimension)}`
                                 : "OVERALL"}
                         </div>
                     )}
                 />
             </Col>
             <Col span={16}>
-                <ReactEcharts
-                    option={option}
-                    style={{ height: "600px", width: "100%" }}
-                />
+                <Skeleton active loading={loading}>
+                    <ReactEcharts
+                        option={option}
+                        style={{ height: "600px", width: "100%" }}
+                    />
+                </Skeleton>
             </Col>
         </Row>
     );

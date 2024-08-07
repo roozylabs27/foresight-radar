@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import ReactEcharts from "echarts-for-react";
-import { Card, Col, Row } from "antd";
+import { Card, Col, Row, Skeleton } from "antd";
 
-export default function Radar() {
+export default function Radar({ loading, setLoading }) {
     const data = [
         {
             name: "Economic",
@@ -255,10 +255,12 @@ export default function Radar() {
     return (
         <Row gutter={16} style={{ margin: 20 }}>
             <Col span={24}>
-                <ReactEcharts
-                    option={options}
-                    style={{ height: "600px", width: "100%" }}
-                />
+                <Skeleton loading={loading} active>
+                    <ReactEcharts
+                        option={options}
+                        style={{ height: "600px", width: "100%" }}
+                    />
+                </Skeleton>
             </Col>
         </Row>
     );
