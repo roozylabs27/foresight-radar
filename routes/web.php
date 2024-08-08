@@ -59,6 +59,15 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::patch('/', 'update')->name('update');
         Route::delete('/', 'destroy')->name('destroy');
     });
+
+    Route::prefix('user-management')->name('user-management.')->group(function () {
+        Route::prefix('user')->controller(App\Http\Controllers\UserController::class)->name('user.')->group(function () {
+            Route::get('/', 'index');
+        });
+        Route::prefix('role')->controller(App\Http\Controllers\RoleController::class)->name('role.')->group(function () {
+            Route::get('/', 'index');
+        });
+    });
 });
 
 require __DIR__ . '/auth.php';

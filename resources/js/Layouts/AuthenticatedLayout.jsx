@@ -49,11 +49,11 @@ export default function Authenticated({ user, children }) {
             children: [
                 {
                     key: "/user-management/user",
-                    label: <Link href={route("dashboard.")}>User</Link>,
+                    label: <Link href={route("user-management.user.")}>User</Link>,
                 },
                 {
                     key: "/user-management/role",
-                    label: <Link href={route("dashboard.")}>Role</Link>,
+                    label: <Link href={route("user-management.role.")}>Role</Link>,
                 },
             ],
         },
