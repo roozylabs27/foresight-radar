@@ -9,6 +9,7 @@ import {
     UsergroupAddOutlined,
     FieldTimeOutlined,
     StarOutlined,
+    UserSwitchOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, theme, Flex, Button, Dropdown, Space } from "antd";
 import { Link, usePage } from "@inertiajs/react";
@@ -59,15 +60,15 @@ export default function Authenticated({ user, children }) {
         },
     ]);
     const actions = [
-        // {
-        //     key: "profile",
-        //     label: (
-        //         <Flex gap="middle" vertical={false}>
-        //             {/* <MessageOutlined /> */}
-        //             Profile
-        //         </Flex>
-        //     ),
-        // },
+        {
+            key: "profile",
+            label: (
+                <Flex gap="middle" vertical={false}>
+                    <UserSwitchOutlined />
+                    Profile
+                </Flex>
+            ),
+        },
         {
             key: "logout",
             label: (

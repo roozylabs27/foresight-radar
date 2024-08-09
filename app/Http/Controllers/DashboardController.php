@@ -36,4 +36,18 @@ class DashboardController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function overall_status()
+    {
+        try {
+            $result = DrivingForceRating::overall_status();
+
+            return response()->json($result, Response::HTTP_OK);
+        } catch (\Throwable $th) {
+            Log::error($th);
+            return response()->json([
+                'errors' => $th->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

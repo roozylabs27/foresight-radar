@@ -16,6 +16,7 @@ import {
 import Title from "antd/es/typography/Title";
 import { useState } from "react";
 import dayjs from "dayjs";
+import OverallStatus from "@/Components/OverallStatus";
 
 export default function Dashboard({ auth, dimensions }) {
     const {
@@ -31,12 +32,14 @@ export default function Dashboard({ auth, dimensions }) {
     const [loading, setLoading] = useState(false);
     const [newDate, setNewDate] = useState(null);
     const [selectData, setSelectData] = useState(null);
+    const [display, setDisplay] = useState("block");
+    const [activeTab, setActiveTab] = useState("1");
 
     const items = [
         {
             key: "1",
             label: "Prioritizing",
-            children: (
+            children: activeTab == "1" && (
                 <PrioritizingChart
                     loading={loading}
                     setLoading={setLoading}
@@ -49,17 +52,36 @@ export default function Dashboard({ auth, dimensions }) {
         {
             key: "2",
             label: "Overall Status",
-            children: "Content of Tab Pane 3",
+            children: activeTab == "2" && (
+                <OverallStatus
+                    loading={loading}
+                    setLoading={setLoading}
+                    date={newDate}
+                />
+            ),
         },
         {
             key: "3",
             label: "Foresight Radar",
-            children: <Radar loading={loading} setLoading={setLoading} />,
+            children: activeTab == "3" && (
+                <Radar
+                    loading={loading}
+                    setLoading={setLoading}
+                    date={newDate}
+                />
+            ),
         },
     ];
 
-    const handleTabsChange = () => {
+    const handleTabsChange = (key) => {
         setLoading(true);
+        setActiveTab(key);
+
+        if (key == 2) {
+            setDisplay("none");
+        } else {
+            setDisplay("block");
+        }
 
         setTimeout(() => {
             setLoading(false);
@@ -127,7 +149,15 @@ export default function Dashboard({ auth, dimensions }) {
                             />
                         </Space>
                     </Col>
-                    <Col xs={24} sm={12} md={8} lg={6}>
+                    <Col
+                        style={{
+                            display,
+                        }}
+                        xs={24}
+                        sm={12}
+                        md={8}
+                        lg={6}
+                    >
                         <Space direction="vertical" style={{ width: "100%" }}>
                             Dimension :
                             <Select

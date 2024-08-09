@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Resources\OverallStatusResource;
 use App\Http\Resources\PrioritizingResource;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -55,7 +56,7 @@ class DrivingForceRating extends Model
 
         $prioritizing = self::with('driving_force')
             ->when($dimension, function ($q) use ($dimension) {
-                $q->whereHas('driving_force', function($q) use ($dimension) {
+                $q->whereHas('driving_force', function ($q) use ($dimension) {
                     $q->where('dimension_id', $dimension);
                 });
             })
@@ -68,5 +69,25 @@ class DrivingForceRating extends Model
             ->get();
 
         return PrioritizingResource::collection($prioritizing);
+    }
+
+    public static function overall_status()
+    {
+        $date_range = request('date');
+        $date_start = $date_range[0] . ' 00:00:00';
+        $date_end = $date_range[1] . ' 23:59:59';
+
+        $overall_status = self::with(['driving_force' => function ($q) {
+            $q->orderBy('dimension_id', 'ASC');
+        }])
+            ->has('driving_force')
+            ->where('created_at', '>=', $date_start)
+            ->whereNotNull('status_action_id')
+            ->where('created_at', '<=', $date_end)
+            ->orderBy('created_at', 'ASC')
+            ->limit(20)
+            ->get();
+
+        return OverallStatusResource::collection($overall_status);
     }
 }
