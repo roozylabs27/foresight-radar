@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import ReactEcharts from "echarts-for-react";
-import { Card, Col, Row, Skeleton } from "antd";
+import { Col, Row, Skeleton, Table, Tag } from "antd";
+import "../../css/additional.css";
 
 export default function Radar({ loading, setLoading }) {
     const data = [
@@ -252,9 +253,89 @@ export default function Radar({ loading, setLoading }) {
         },
     };
 
+    const dataSource = [
+        {
+            key: "1",
+            no: "1",
+            signal: "Euro-4 std",
+            act: "Δ",
+            short_term: "✓",
+            mid_term: "",
+            long_term: "",
+            priority: "high",
+        },
+        {
+            key: "2",
+            no: "2",
+            signal: "Import regulation",
+            act: "Δ",
+            short_term: "✓",
+            mid_term: "",
+            long_term: "",
+            priority: "medium",
+        },
+        // Add more data...
+    ];
+
+    const columns = [
+        {
+            title: "No",
+            dataIndex: "no",
+            key: "no",
+        },
+        {
+            title: "Signal of Changes",
+            dataIndex: "signal",
+            key: "signal",
+        },
+        {
+            title: "Act",
+            dataIndex: "act",
+            align: "center",
+            key: "act",
+        },
+        {
+            title: "ST",
+            dataIndex: "short_term",
+            align: "center",
+        },
+        {
+            title: "MT",
+            dataIndex: "mid_term",
+            align: "center",
+        },
+        {
+            title: "LT",
+            dataIndex: "long_term",
+            align: "center",
+        },
+    ];
+
+    const getRowClassName = (record) => {
+        if (record.priority === "high") return "red-background disable-hover";
+        if (record.priority === "medium") return "yellow-background disable-hover";
+        if (record.priority === "low") return "green-background disable-hover";
+        return "disable-hover";
+    };
+
+    setTimeout(() => {
+        setLoading(false)
+    }, 1000);
+
     return (
         <Row gutter={16} style={{ margin: 20 }}>
-            <Col span={24}>
+            <Col span={8}>
+                <Table
+                    columns={columns}
+                    dataSource={dataSource}
+                    bordered
+                    loading={loading}
+                    rowClassName={getRowClassName}
+                    // rowKey={(record) => record.no}
+                    pagination={false}
+                />
+            </Col>
+            <Col span={16}>
                 <Skeleton loading={loading} active>
                     <ReactEcharts
                         option={options}

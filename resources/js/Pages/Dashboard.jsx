@@ -83,9 +83,6 @@ export default function Dashboard({ auth, dimensions }) {
             setDisplay("block");
         }
 
-        setTimeout(() => {
-            setLoading(false);
-        }, 500);
     };
 
     const handleRangePickerChange = (dates) => {

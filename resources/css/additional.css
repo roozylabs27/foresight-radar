@@ -9,3 +9,19 @@
     background: #E39B54;
     color:white;
 }
+
+.green-background {
+    background-color: #eaffea !important;
+}
+
+.yellow-background {
+    background-color: #fffbe6 !important;
+}
+
+.red-background {
+    background-color: #ffe6e6 !important;
+}
+
+.disable-hover:hover {
+    background: none !important;
+}
