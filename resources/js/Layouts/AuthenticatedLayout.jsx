@@ -15,47 +15,58 @@ import { Layout, Menu, theme, Flex, Button, Dropdown, Space } from "antd";
 import { Link, usePage } from "@inertiajs/react";
 const { Header, Content, Footer, Sider } = Layout;
 
-export default function Authenticated({ user, children }) {
+export default function Authenticated({ auth, children }) {
     const { url } = usePage();
+    const { user, permissions } = auth;
     const [items, setItems] = useState([
         {
             label: <Link href={route("dashboard.")}>Dashboard</Link>,
             icon: <DashboardOutlined />,
             key: "/dashboard",
+            permission: "view-dashboard"
         },
         {
             label: <Link href={route("driving-force.")}>Driving Force</Link>,
             icon: <RadarChartOutlined />,
             key: "/driving-force",
+            permission: "view-driving-force"
         },
         {
             label: <Link href={route("time-horizon.")}>Time Horizon</Link>,
             icon: <FieldTimeOutlined />,
             key: "/time-horizon",
+            permission: "view-time-horizon"
         },
         {
-            label: <Link href={route("rating-urgency.")}>Rating of Urgency</Link>,
+            label: (
+                <Link href={route("rating-urgency.")}>Rating of Urgency</Link>
+            ),
             icon: <StarOutlined />,
             key: "/rating-urgency",
+            permission: "view-rating-urgency"
         },
         {
             label: <Link href={route("status-action.")}>Status of Action</Link>,
             icon: <FieldTimeOutlined />,
             key: "/status-action",
+            permission: "view-status-action"
         },
         {
             label: "User Management",
             icon: <UsergroupAddOutlined />,
             key: "/user-management",
+            permission: "view-user",
             children: [
                 {
                     key: "/user-management/user",
-                    label: <Link href={route("user-management.user.")}>User</Link>,
+                    label: (
+                        <Link href={route("user-management.user.")}>User</Link>
+                    ),
                 },
-                {
-                    key: "/user-management/role",
-                    label: <Link href={route("user-management.role.")}>Role</Link>,
-                },
+                // {
+                //     key: "/user-management/role",
+                //     label: <Link href={route("user-management.role.")}>Role</Link>,
+                // },
             ],
         },
     ]);
@@ -72,7 +83,7 @@ export default function Authenticated({ user, children }) {
         {
             key: "logout",
             label: (
-                <Link href="/logout" method="post"  type="button">
+                <Link href="/logout" method="post" type="button">
                     <Flex gap="middle" vertical={false}>
                         <LogoutOutlined />
                         Logout
@@ -81,6 +92,10 @@ export default function Authenticated({ user, children }) {
             ),
         },
     ];
+
+    const filteredItems = items.filter(item =>
+        permissions.includes(item.permission)
+      );
 
     const {
         token: { colorBgContainer },
@@ -108,7 +123,7 @@ export default function Authenticated({ user, children }) {
                     theme="light"
                     mode="inline"
                     defaultSelectedKeys={url}
-                    items={items}
+                    items={filteredItems}
                 />
             </Sider>
             <Layout>

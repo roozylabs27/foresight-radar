@@ -80,8 +80,8 @@ class DrivingForce extends Model
 
         $driving_forces = self::with(['dimension', 'created_by_user', 'updated_by_user'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', '%' . $search . '%')
-                    ->where('description', 'LIKE', '%' . $search . '%');
+                $q->where('keyword', 'LIKE',  $search . '%')
+                    ->orWhere('description', 'LIKE',  $search . '%');
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -109,8 +109,8 @@ class DrivingForce extends Model
 
         $time_horizons = self::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', '%' . $search . '%')
-                    ->where('description', 'LIKE', '%' . $search . '%');
+                $q->where('keyword', 'LIKE', $search . '%')
+                    ->orWhere('description', 'LIKE', $search . '%');
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -135,8 +135,8 @@ class DrivingForce extends Model
 
         $time_horizons = self::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', '%' . $search . '%')
-                    ->where('description', 'LIKE', '%' . $search . '%');
+                $q->where('keyword', 'LIKE', $search . '%')
+                    ->orWhere('description', 'LIKE', $search . '%');
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -161,8 +161,8 @@ class DrivingForce extends Model
 
         $status_actions = self::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', '%' . $search . '%')
-                    ->where('description', 'LIKE', '%' . $search . '%');
+                $q->where('keyword', 'LIKE', $search . '%')
+                    ->orWhere('description', 'LIKE', $search . '%');
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);

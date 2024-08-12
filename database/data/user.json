@@ -4,5 +4,11 @@
         "email" : "dev@foresight.com",
         "password" : "password",
         "role" : "developer"
+    },
+    {
+        "name" : "Super Admin",
+        "email" : "superadmin@foresight.com",
+        "password" : "password",
+        "role" : "super-admin"
     }
 ]

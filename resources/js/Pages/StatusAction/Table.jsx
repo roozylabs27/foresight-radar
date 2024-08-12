@@ -296,7 +296,7 @@ export default function TableStatusAction({
 
     return (
         <AuthenticatedLayout
-            user={auth.user}
+            auth={auth}
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800">
                     {title}

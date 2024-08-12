@@ -1,33 +1,47 @@
-import Dialog from "@/Components/Dialog";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { BarChartOutlined, EditOutlined, MoreOutlined } from "@ant-design/icons";
+import {
+    MoreOutlined,
+    DeleteOutlined,
+    EditOutlined,
+    BarChartOutlined,
+    PlusOutlined,
+} from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
-    Col,
-    DatePicker,
-    Dropdown,
-    Flex,
-    message,
-    Row,
-    Select,
-    Space,
-    Table,
+    Layout,
     theme,
+    Breadcrumb,
+    Table,
+    Tag,
+    Dropdown,
+    Space,
+    Flex,
+    Row,
+    Col,
     Typography,
+    Input,
+    Select,
+    Button,
+    DatePicker,
+    message,
+    Popconfirm,
 } from "antd";
-import { Content } from "antd/es/layout/layout";
-import dayjs from "dayjs";
+import axios from "axios";
 import qs from "qs";
+import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
-import FormTimeHorizon from "./Form";
+import Dialog from "@/Components/Dialog";
+import FormUser from "./Form";
 
-export default function TableTimeHorizon({ auth, title, dimensions, time_horizons }) {
+export default function TableUser({ auth, title, roles }) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
     } = theme.useToken();
-    const { RangePicker } = DatePicker;
+    const { Content } = Layout;
     const { Title } = Typography;
+    const { Search } = Input;
+    const { RangePicker } = DatePicker;
 
     // Table
     const [data, setData] = useState(null);
@@ -52,6 +66,7 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
     const [errors, setErrors] = useState({});
     const [open, setOpen] = useState(false);
     const [titleModal, setTitleModal] = useState("");
+    const [isEditMode, setIsEditMode] = useState(false);
     const [initialValues, setInitialValues] = useState({});
 
     useEffect(() => {
@@ -60,7 +75,9 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         tableParams.pagination?.pageSize,
         tableParams.pagination?.current,
         tableParams?.date,
+        tableParams?.search,
         tableParams?.dimension,
+        tableParams?.status,
     ]);
 
     const getParams = (params) => {
@@ -75,18 +92,14 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("time-horizon.fetch-data")}?${qs.stringify(
+                `${route("user-management.user.fetch-data")}?${qs.stringify(
                     getParams(tableParams)
                 )}`
             );
 
             if (response.status == 200) {
                 setTimeout(() => {
-                    const newData = response.data.data.map((d, i) => ({
-                        no: i + 1,
-                        ...d,
-                    }));
-                    setData(newData);
+                    setData(response.data.data);
                     setTableParams({
                         ...tableParams,
                         pagination: {
@@ -106,6 +119,114 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
             message.error(`Error: ${error.message}`);
             setLoading(false);
         }
+    };
+
+    const columnAction = (text, record) => {
+        const actions = [
+            {
+                key: "edit",
+                label: (
+                    <Flex gap="middle" vertical={false}>
+                        <EditOutlined />
+                        Edit
+                    </Flex>
+                ),
+            },
+            {
+                key: "delete",
+                label: (
+                    <Popconfirm
+                        title="Delete user"
+                        description="Are you sure to delete this user ?"
+                        onConfirm={() => handleDeleteButton(record)}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <Flex gap="middle" vertical={false}>
+                            <DeleteOutlined />
+                            Delete
+                        </Flex>
+                    </Popconfirm>
+                ),
+            },
+        ];
+
+        return (
+            <Dropdown
+                placement="topLeft"
+                menu={{
+                    items: actions,
+                    onClick: ({ key }) => handleDropdownClick(key, record),
+                }}
+                trigger={["hover"]}
+            >
+                <a onClick={(e) => e.preventDefault()}>
+                    <Space>
+                        <MoreOutlined />
+                    </Space>
+                </a>
+            </Dropdown>
+        );
+    };
+
+    const columns = [
+        {
+            title: "Date Created",
+            dataIndex: "date_created",
+            width: 100,
+        },
+        {
+            title: "Name",
+            dataIndex: "name",
+            width: 100,
+        },
+        {
+            title: "Email",
+            dataIndex: "email",
+            width: 150,
+        },
+        {
+            title: "Role",
+            dataIndex: "role",
+            width: 150,
+        },
+        {
+            title: "",
+            key: "operation",
+            fixed: "right",
+            align: "right",
+            width: 20,
+            render: columnAction,
+        },
+    ];
+
+    const handleDropdownClick = (key, record) => {
+        switch (key) {
+            case "edit":
+                setOpen(true);
+                setLoading(true);
+                setTimeout(() => {
+                    setLoading(false);
+                }, 500);
+                setTitleModal(`Update User - ${record.name}`);
+                setIsEditMode(true);
+                setInitialValues(record);
+                break;
+            default:
+                return;
+        }
+    };
+
+    const handleSearchChange = (value) => {
+        setTableParams({
+            ...tableParams,
+            page: 1,
+            pagination: {
+                pageSize: 10,
+                current: 1,
+            },
+            search: value,
+        });
     };
 
     const handleRangePickerChange = (dates) => {
@@ -131,133 +252,12 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         }
     };
 
-    const handleDropdownClick = (key, record) => {
-        switch (key) {
-            case "calculate":
-                setOpen(true);
-                setLoading(true);
-                setTimeout(() => {
-                    setLoading(false);
-                }, 500);
-                setTitleModal(`Set Time Horizon - ${record.keyword}`);
-                setInitialValues(record);
-                break;
-            default:
-                return;
-        }
-    };
-
-    const handleSelectChange = (field, value) => {
-        setTableParams({
-            ...tableParams,
-            page: 1,
-            pagination: {
-                pageSize: 10,
-                current: 1,
-            },
-            [field]: value,
-        });
-    };
-
-    const columnAction = (text, record) => {
-        const actions = [
-            {
-                key: "calculate",
-                label: (
-                    <Flex gap="middle" vertical={false}>
-                        <BarChartOutlined />
-                        Set Time Horizon
-                    </Flex>
-                ),
-            },
-        ];
-
-        return (
-            <Dropdown
-                placement="topLeft"
-                menu={{
-                    items: actions,
-                    onClick: ({ key }) => handleDropdownClick(key, record),
-                }}
-                trigger={["hover"]}
-            >
-                <a onClick={(e) => e.preventDefault()}>
-                    <Space>
-                        <MoreOutlined />
-                    </Space>
-                </a>
-            </Dropdown>
-        );
-    };
-
-    const columns = [
-        {
-            title: "No",
-            dataIndex: "no",
-            key: "no",
-            width: 10,
-            align: "center",
-        },
-        {
-            title: "Keyword",
-            dataIndex: "keyword",
-            key: "keyword",
-            width: 250,
-        },
-        {
-            title: "SHORT TERM",
-            dataIndex: "short_term",
-            key: "short_term",
-            align: "center",
-        },
-        {
-            title: "MID TERM",
-            dataIndex: "mid_term",
-            key: "mid_term",
-            align: "center",
-        },
-        {
-            title: "LONG TERM",
-            dataIndex: "long_term",
-            key: "long_term",
-            align: "center",
-        },
-        {
-            title: "",
-            key: "operation",
-            fixed: "right",
-            align: "right",
-            width: 20,
-            render: columnAction,
-        },
-    ];
-
-    const showActiveDimension = (dimension) => {
-        const { label } = dimensions.find((d) => d.value === dimension);
-
-        return label.toUpperCase();
-    };
-
-    const handleOkModal = () => {
-        if (formRef?.current) {
-            setErrors({});
-            formRef.current.submit();
-        }
-    };
-
-    const handleCancelModal = () => {
-        if (formRef?.current) {
-            setErrors({});
-            formRef.current.reset();
-        }
-        setOpen(false);
-    };
-
     const handleTableChange = (pagination, filters, sorter) => {
         setTableParams({
             pagination,
             date: tableParams.date,
             dimension: tableParams.dimension,
+            search: tableParams.search,
         });
 
         if (pagination.pageSize !== tableParams.pagination?.pageSize) {
@@ -265,21 +265,60 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
         }
     };
 
+    const handleCreateButton = () => {
+        setOpen(true);
+        setTitleModal("Create User");
+        setInitialValues({});
+    };
+
+    const handleDeleteButton = async (record) => {
+        setLoading(true);
+
+        try {
+            const response = await axios.delete(
+                route("user-management.user.delete", `${record.id}`)
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success(response.data.message);
+                fetchData(); // Refresh the table data
+            } else {
+                message.error(`Failed to delete user ${record.name}`);
+            }
+        } catch (error) {
+            if (error.response.status === 422) {
+                setErrors(error.response.data.errors);
+            }
+            message.error(`Error: validation failed`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleFormSubmit = async (values) => {
         setLoading(true);
 
         try {
-            const response = await axios.post(route("time-horizon.create", initialValues.id), values);
+            const response = isEditMode
+                ? await axios.put(
+                      route(
+                          "user-management.user.update",
+                          `${initialValues.id}`
+                      ),
+                      values
+                  )
+                : await axios.post(
+                      route("user-management.user.create"),
+                      values
+                  );
 
             if (response.status === 200 || response.status === 201) {
-                message.success(
-                    response.data.message
-                );
+                message.success(response.data.message);
                 setOpen(false);
                 fetchData(); // Refresh the table data
             } else {
                 message.error(
-                    `Failed to create time horizon`
+                    `Failed to ${isEditMode ? "update" : "create"} user`
                 );
             }
         } catch (error) {
@@ -287,12 +326,24 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
             if (error.response.status === 422) {
                 setErrors(error.response.data.errors);
                 message.error(`Error: validation failed`);
-            } else {
-                message.error(error)
             }
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleOkModal = () => {
+        if (formRef.current) {
+            setErrors({});
+            formRef.current.submit();
+        }
+    };
+
+    const handleCancelModal = () => {
+        setErrors({});
+        formRef.current.reset();
+        setIsEditMode(false);
+        setOpen(false);
     };
 
     return (
@@ -310,7 +361,7 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                 style={{
                     margin: "24px 16px 0",
                     padding: 24,
-                    minHeight: 100,
+                    minHeight: "auto",
                     background: colorBgContainer,
                     borderRadius: borderRadiusLG,
                 }}
@@ -333,26 +384,6 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                             />
                         </Space>
                     </Col>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Dimension :
-                            <Select
-                                style={{ width: "100%" }}
-                                disabled={loading}
-                                placeholder="Select a dimension"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                onChange={(value) =>
-                                    handleSelectChange("dimension", value)
-                                }
-                                options={dimensions}
-                            />
-                        </Space>
-                    </Col>
                 </Row>
             </Content>
 
@@ -368,27 +399,41 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                     <Col xs={24} sm={12} md={16}>
                         <Title level={4}>{title} List</Title>
                     </Col>
+                    <Col
+                        xs={24}
+                        sm={12}
+                        md={8}
+                        offset={0}
+                        style={{ textAlign: "right" }}
+                    >
+                        <Space direction="vertical">
+                            <Button
+                                disabled={loading}
+                                type="primary"
+                                onClick={handleCreateButton}
+                            >
+                                <PlusOutlined />
+                                Create User
+                            </Button>
+                            <Search
+                                placeholder="input search text"
+                                allowClear
+                                disabled={loading}
+                                onSearch={handleSearchChange}
+                                style={{ width: "100%" }}
+                            />
+                        </Space>
+                    </Col>
                 </Row>
                 <Table
-                    columns={columns}
                     dataSource={data}
-                    bordered
-                    loading={loading}
                     rowKey={(record) => record.id}
-                    onChange={handleTableChange}
+                    columns={columns}
                     pagination={tableParams.pagination}
-                    title={() => (
-                        <div
-                            style={{ textAlign: "center", fontWeight: "bold" }}
-                        >
-                            TIME HORIZON
-                            {tableParams?.dimension
-                                ? ` ▶ ${showActiveDimension(
-                                      tableParams.dimension
-                                  )}`
-                                : " ▶ OVERALL"}
-                        </div>
-                    )}
+                    scroll={{ x: "max-content", y: 420 }}
+                    loading={loading}
+                    size="small"
+                    onChange={handleTableChange}
                 />
             </Content>
 
@@ -396,16 +441,16 @@ export default function TableTimeHorizon({ auth, title, dimensions, time_horizon
                 title={titleModal}
                 open={open}
                 loading={loading}
-                btnText="Set"
+                isEditMode={isEditMode}
                 onOk={handleOkModal}
                 onCancel={handleCancelModal}
             >
-                <FormTimeHorizon
+                <FormUser
                     ref={formRef}
-                    isEditMode={false}
+                    isEditMode={isEditMode}
                     initialValues={initialValues}
+                    roles={roles}
                     errors={errors}
-                    time_horizons={time_horizons}
                     loading={loading}
                     onFinish={handleFormSubmit}
                 />

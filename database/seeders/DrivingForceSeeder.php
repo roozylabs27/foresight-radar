@@ -41,8 +41,6 @@ class DrivingForceSeeder extends Seeder
 
     public function initializeDefaultDrivingForce($driving_force)
     {
-        $user = User::first();
-
         DrivingForce::firstOrCreate([
             'keyword' => $driving_force->keyword
         ],
@@ -51,7 +49,9 @@ class DrivingForceSeeder extends Seeder
             'dimension_id' => $driving_force->dimension_id,
             'description' => $driving_force->description,
             'status' => 'APPROVED',
-            'created_by' => $user ? $user->id : 1,
+            'created_by' => User::all()->random()->id,
+            'updated_by' => User::all()->random()->id,
+            'approved_at' => now()->subDays(rand(0, 30))
         ]);
     }
 
