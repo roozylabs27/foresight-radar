@@ -28,6 +28,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
 
     Route::get("/prioritizing", [DashboardController::class, 'prioritizing'])->name('prioritizing');
     Route::get("/overall-status", [DashboardController::class, 'overall_status'])->name('overall-status');
+    Route::get("/foresight-radar", [DashboardController::class, 'foresight_radar'])->name('foresight-radar');
 
     Route::prefix("driving-force")->controller(App\Http\Controllers\DrivingForceController::class)->name("driving-force.")->group(function() {
         Route::get("/", "index");

@@ -68,6 +68,7 @@ export default function Dashboard({ auth, dimensions }) {
                     loading={loading}
                     setLoading={setLoading}
                     date={newDate}
+                    selectData={selectData}
                 />
             ),
         },

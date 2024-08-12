@@ -5,6 +5,7 @@ const FormStatusAction = forwardRef(
     ({ initialValues, errors, onFinish, loading, status_actions }, ref) => {
         const [form] = Form.useForm();
         useEffect(() => {
+            form.setFieldsValue(initialValues);
         }, [initialValues, form]);
 
         // Expose form submit function to parent component
@@ -16,7 +17,6 @@ const FormStatusAction = forwardRef(
                 form.setFieldsValue(initialValues);
             },
         }));
-
         return (
             <Form
                 form={form}
@@ -84,7 +84,7 @@ const FormStatusAction = forwardRef(
                         },
                     ]}
                 >
-                     <Select
+                    <Select
                         style={{ width: "100%" }}
                         placeholder="Select a status action"
                         options={status_actions}

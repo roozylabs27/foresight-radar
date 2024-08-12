@@ -16,13 +16,13 @@ class StatusActionResource extends JsonResource
     {
         $monitoring = null;
         $decided_plan = null;
-        
+
         if($this->rating && $this->rating->status_action_id == 1) {
-            $monitoring = '✔';
+            $monitoring = $this->rating->status_action->code;
         }
 
         if($this->rating && $this->rating->status_action_id == 2) {
-            $decided_plan = '✔';
+            $decided_plan =$this->rating->status_action->code;
         }
 
         return [
@@ -31,6 +31,7 @@ class StatusActionResource extends JsonResource
             'dimension_id' => $this->dimension->id,
             'keyword' => $this->keyword,
             'description' => $this->description,
+            'status_action_id' => $this->rating->status_action_id,
             'monitoring' => $monitoring,
             'decided_plan' => $decided_plan,
         ];

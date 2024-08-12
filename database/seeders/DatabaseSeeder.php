@@ -35,7 +35,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             DrivingForceSeeder::class,
-            // DrivingForceRatingSeeder::class
         ]);
     }
 }

@@ -1,76 +1,24 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import ReactEcharts from "echarts-for-react";
-import { Col, Row, Skeleton, Table, Tag } from "antd";
+import { Col, message, Row, Skeleton, Table } from "antd";
+import dayjs from "dayjs";
+import qs from "qs";
 import "../../css/additional.css";
 
-export default function Radar({ loading, setLoading }) {
-    const data = [
-        {
-            name: "Economic",
-            value: 10,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [0, 10],
-        },
-        {
-            name: "Ecological",
-            value: 12,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [12, 0],
-        },
-        {
-            name: "Regulation",
-            value: 15,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [0, -15],
-        },
-        {
-            name: "Technology",
-            value: 16,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [-16, 0],
-        },
-        {
-            name: "Substitute",
-            value: 19,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [19, 0],
-        },
-        {
-            name: "Suppliers",
-            value: 14,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [0, -14],
-        },
-        {
-            name: "Customers",
-            value: 8,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [-8, 0],
-        },
-        {
-            name: "Competitors",
-            value: 11,
-            priority: "High Priority",
-            symbol: "triangle",
-            color: "#ff4d4f",
-            coord: [0, 11],
-        },
-    ];
-
+export default function Radar({ loading, setLoading, date, selectData }) {
+    const getParams = (params) => {
+        return {
+            ...params,
+        };
+    };
+    const [tableParams, setTableParams] = useState({
+        date: [
+            dayjs().startOf("month").format("YYYY-MM-DD"),
+            dayjs().endOf("month").format("YYYY-MM-DD"),
+        ],
+    });
+    const [radarData, setRadarData] = useState([]);
+    const [data, setData] = useState(null);
     const options = {
         title: {
             text: "Firms Foresight Radar",
@@ -78,20 +26,20 @@ export default function Radar({ loading, setLoading }) {
         },
         legend: {
             data: [
-                "Economic",
-                "Ecological",
+                "Economy",
+                "Ecology",
                 "Regulation",
                 "Technology",
                 "Substitute",
-                "Suppliers",
-                "Customers",
-                "Competitors",
+                "Supplier",
+                "Customer",
+                "Competitor",
             ],
             bottom: 0,
         },
         radar: {
             indicator: [
-                { name: "Economic", max: 5 },
+                { name: "Economy", max: 5 },
                 { name: "Ecological", max: 5 },
                 { name: "Regulation", max: 5 },
                 { name: "Technology", max: 5 },
@@ -148,151 +96,162 @@ export default function Radar({ loading, setLoading }) {
             {
                 name: "Priority",
                 type: "radar",
-                symbolSize: 10,
+                symbolSize: 15,
+                label: {
+                    show: function (params) {
+                        console.log(params);
+                        return true;
+                    },
+                    formatter: "{@[2]}",
+                    fontWeight: "bold",
+                    backgroundColor: "#000",
+                    padding: [3, 3],
+                    borderRadius: 50,
+                    color: "#fff",
+                },
                 lineStyle: {
                     color: "transparent",
                 },
                 areaStyle: {
                     opacity: 0,
                 },
-                data: [
-                    {
-                        value: [1, 2, 3, 4, 1],
-                        name: "Economic",
-                        symbol: "triangle",
-                    },
-                    {
-                        value: [1, 2, 3, 3, 5],
-                        name: "Ecological",
-                        symbol: "triangle",
-                    },
-                    {
-                        value: [5, 3, 2, 3, 4],
-                        name: "Regulation",
-                        symbol: "triangle",
-                    },
-                    {
-                        value: [2, 1, 3, 4, 1],
-                        name: "Technology",
-                        symbol: "triangle",
-                    },
-                    {
-                        value: [5, 3, 2, 3, 4],
-                        name: "Substitute",
-                        symbol: "circle",
-                    },
-                    {
-                        value: [5, 3, 2, 3, 4],
-                        name: "Suppliers",
-                        symbol: "triangle",
-                    },
-                    {
-                        value: [5, 3, 2, 3, 4],
-                        name: "Customers",
-                        symbol: "triangle",
-                    },
-                    {
-                        value: [5, 3, 2, 3, 4],
-                        name: "Competitors",
-                        symbol: "circle",
-                    },
-                ],
+                data: radarData,
+                // [
+                //     {
+                //         value: [1, 2, 3, 3, 5],
+                //         name: "Economic",
+                //         symbol: "triangle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                //     {
+                //         value: [1, 2, 3, 3, 5],
+                //         name: "Ecological",
+                //         symbol: "triangle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                //     {
+                //         value: [5, 3, 2, 3, 4],
+                //         name: "Regulation",
+                //         symbol: "triangle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                //     {
+                //         value: [2, 1, 3, 4, 1],
+                //         name: "Technology",
+                //         symbol: "triangle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                //     {
+                //         value: [5, 3, 2, 3, 4],
+                //         name: "Substitute",
+                //         symbol: "circle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                //     {
+                //         value: [5, 3, 2, 3, 4],
+                //         name: "Suppliers",
+                //         symbol: "triangle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                //     {
+                //         value: [5, 3, 2, 3, 4],
+                //         name: "Customers",
+                //         symbol: "triangle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                //     {
+                //         value: [5, 3, 2, 3, 4],
+                //         name: "Competitors",
+                //         symbol: "circle",
+                //         itemStyle: {
+                //             color: "#ff4d4f",
+                //         },
+                //     },
+                // ],
             },
         ],
-        markPoint: {
-            data: [
-                {
-                    name: "Economic",
-                    coord: [10, 0],
-                    symbol: "triangle",
-                    itemStyle: { color: "#ff4d4f" },
-                },
-                {
-                    name: "Ecological",
-                    coord: [0, 12],
-                    symbol: "triangle",
-                    itemStyle: { color: "#faad14" },
-                },
-                {
-                    name: "Regulation",
-                    coord: [-10, 0],
-                    symbol: "triangle",
-                    itemStyle: { color: "#52c41a" },
-                },
-                {
-                    name: "Technology",
-                    coord: [0, -12],
-                    symbol: "triangle",
-                    itemStyle: { color: "#1890ff" },
-                },
-                {
-                    name: "Substitute",
-                    coord: [6, 6],
-                    symbol: "circle",
-                    itemStyle: { color: "#13c2c2" },
-                },
-                {
-                    name: "Suppliers",
-                    coord: [-6, 6],
-                    symbol: "triangle",
-                    itemStyle: { color: "#13c2c2" },
-                },
-                {
-                    name: "Customers",
-                    coord: [-6, -6],
-                    symbol: "triangle",
-                    itemStyle: { color: "#13c2c2" },
-                },
-                {
-                    name: "Competitors",
-                    coord: [6, -6],
-                    symbol: "circle",
-                    itemStyle: { color: "#13c2c2" },
-                },
-            ],
-        },
     };
 
-    const dataSource = [
-        {
-            key: "1",
-            no: "1",
-            signal: "Euro-4 std",
-            act: "Δ",
-            short_term: "✓",
-            mid_term: "",
-            long_term: "",
-            priority: "high",
-        },
-        {
-            key: "2",
-            no: "2",
-            signal: "Import regulation",
-            act: "Δ",
-            short_term: "✓",
-            mid_term: "",
-            long_term: "",
-            priority: "medium",
-        },
-        // Add more data...
-    ];
+    useEffect(() => {
+        fetchData();
+    }, [date, selectData]);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const response = await axios.get(
+                `${route("foresight-radar")}?${qs.stringify(
+                    getParams({
+                        ...tableParams,
+                        date: date != null ? date.date : tableParams.date,
+                        dimension: selectData ? selectData.dimension : null,
+                    })
+                )}`
+            );
+
+            if (response.status == 200) {
+                setTimeout(() => {
+                    const newData = response.data.map((d, i) => ({
+                        no: i + 1,
+                        ...d,
+                    }));
+
+                    const radar = response.data.map((d) => ({
+                        value: d.value,
+                        name: d.dimension,
+                        symbol: d.symbol,
+                        itemStyle: {
+                            color: d.item_style,
+                        },
+                    }));
+                    setRadarData(radar);
+
+                    console.log(radarData);
+                    setData(newData);
+                    setTableParams({
+                        ...tableParams,
+                    });
+
+                    setLoading(false);
+                }, 500);
+            } else {
+                message.error(`Error: ${error.message}`);
+                setLoading(false);
+            }
+        } catch (error) {
+            // TODO: Handling error
+            message.error(`Error: ${error.message}`);
+            setLoading(false);
+        }
+    };
 
     const columns = [
         {
             title: "No",
             dataIndex: "no",
-            key: "no",
         },
         {
             title: "Signal of Changes",
-            dataIndex: "signal",
-            key: "signal",
+            dataIndex: "keyword",
         },
         {
             title: "Act",
-            dataIndex: "act",
+            dataIndex: "status_action",
             align: "center",
-            key: "act",
         },
         {
             title: "ST",
@@ -312,14 +271,17 @@ export default function Radar({ loading, setLoading }) {
     ];
 
     const getRowClassName = (record) => {
-        if (record.priority === "high") return "red-background disable-hover";
-        if (record.priority === "medium") return "yellow-background disable-hover";
-        if (record.priority === "low") return "green-background disable-hover";
+        if (record.priority.toLowerCase() === "high")
+            return "red-background disable-hover";
+        if (record.priority.toLowerCase() === "medium")
+            return "yellow-background disable-hover";
+        if (record.priority.toLowerCase() === "low")
+            return "green-background disable-hover";
         return "disable-hover";
     };
 
     setTimeout(() => {
-        setLoading(false)
+        setLoading(false);
     }, 1000);
 
     return (
@@ -327,17 +289,18 @@ export default function Radar({ loading, setLoading }) {
             <Col span={8}>
                 <Table
                     columns={columns}
-                    dataSource={dataSource}
+                    dataSource={data}
                     bordered
                     loading={loading}
                     rowClassName={getRowClassName}
-                    // rowKey={(record) => record.no}
+                    rowKey={(record) => record.no}
                     pagination={false}
                 />
             </Col>
             <Col span={16}>
                 <Skeleton loading={loading} active>
                     <ReactEcharts
+                        notMerge={true}
                         option={options}
                         style={{ height: "600px", width: "100%" }}
                     />

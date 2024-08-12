@@ -5,6 +5,7 @@ const FormTimeHorizon = forwardRef(
     ({ initialValues, errors, onFinish, loading, time_horizons }, ref) => {
         const [form] = Form.useForm();
         useEffect(() => {
+            form.setFieldsValue(initialValues);
         }, [initialValues, form]);
 
         console.log(initialValues)

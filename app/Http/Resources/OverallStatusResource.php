@@ -14,22 +14,6 @@ class OverallStatusResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-
-        //  {
-        //         key: "1",
-        //         dimension: "REGULATION",
-        //         rowNumber: 1,
-        //         drivingForce: "Euro – 5 plan",
-        //         shortTerm: checkMark,
-        //         midTerm: "",
-        //         longTerm: "",
-        //         high: checkMark,
-        //         med: "",
-        //         low: "",
-        //         decidedPlan: "",
-        //         monitor: triangle,
-        //     },
-
         $short_term = null;
         $mid_term = null;
         $long_term = null;
