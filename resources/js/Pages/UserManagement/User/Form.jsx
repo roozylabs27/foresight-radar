@@ -1,11 +1,11 @@
+import { EyeInvisibleOutlined, EyeTwoTone } from "@ant-design/icons";
 import { Form, Input, Select } from "antd";
-import TextArea from "antd/es/input/TextArea";
 import React, { useEffect, useImperativeHandle, forwardRef } from "react";
 
 const FormUser = forwardRef(
     ({ initialValues, isEditMode, roles, errors, onFinish, loading }, ref) => {
         const [form] = Form.useForm();
-
+        
         useEffect(() => {
             if (isEditMode) {
                 form.setFieldsValue(initialValues);
@@ -68,6 +68,10 @@ const FormUser = forwardRef(
                     help={errors?.email}
                     rules={[
                         {
+                            type: "email",
+                            message: "Email is not valid!",
+                        },
+                        {
                             required: true,
                             message: "Please input the email!",
                         },
@@ -102,9 +106,22 @@ const FormUser = forwardRef(
                                     required: true,
                                     message: "Please input the password!",
                                 },
+                                {
+                                    min: 6,
+                                    message: "Password minimal 6 characters !",
+                                },
                             ]}
                         >
-                            <Input placeholder="Enter password" />
+                            <Input.Password
+                                placeholder="Enter password"
+                                iconRender={(visible) =>
+                                    visible ? (
+                                        <EyeTwoTone />
+                                    ) : (
+                                        <EyeInvisibleOutlined />
+                                    )
+                                }
+                            />
                         </Form.Item>
                     </>
                 )}

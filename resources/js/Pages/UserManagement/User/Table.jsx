@@ -322,6 +322,7 @@ export default function TableUser({ auth, title, roles }) {
                 );
             }
         } catch (error) {
+            console.log(error)
             // TODO: Handling error
             if (error.response.status === 422) {
                 setErrors(error.response.data.errors);

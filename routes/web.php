@@ -66,6 +66,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::prefix('user')->controller(App\Http\Controllers\UserController::class)->name('user.')->group(function () {
             Route::get('/', 'index')->can('view-user');
             Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-user');
+            Route::post("/", "create")->name('create');
             Route::put("/{user}", "update")->name('update');
             Route::delete("/{user}", "delete")->name('delete');
         });

@@ -67,17 +67,17 @@ class User extends Authenticatable
 
         if (in_array('developer', auth()->user()->roles->pluck('name')->toArray())) {
             $users = self::query()->with('roles', function ($q) {
-                $q->select('uuid', 'display_name')->orderBy('id');
+                $q->select('id', 'display_name')->orderBy('id');
             });
         } else if (in_array('super-admin', auth()->user()->roles->pluck('name')->toArray())) {
             $users = self::query()->with('roles', function ($q) {
-                $q->select('uuid', 'display_name');
+                $q->select('id', 'display_name');
             })->whereHas('roles', function ($q) {
                 $q->whereNotIn('name', ['qa', 'developer', 'token']);
             });
         } else {
             $users = self::query()->with('roles', function ($q) {
-                $q->select('uuid', 'display_name');
+                $q->select('id', 'display_name');
             })->whereHas('roles', function ($q) {
                 $q->whereNotIn('name', ['super-admin', 'qa', 'developer']);
             });
