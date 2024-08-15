@@ -56,11 +56,11 @@ class ForesightRadarResource extends JsonResource
         foreach($dimension as $index => $value) {
             if($value->id == $this->driving_force->dimension_id) {
                 if($this->time_horizon_id == 1) {
-                    $values[$index] = rand(1,2);
+                    $values[($value->id-1)] = rand(2,4);
                 } else if($this->time_horizon_id == 2) {
-                    $values[$index] = rand(3,5);
+                    $values[($value->id-1)] = rand(5,6);
                 } else {
-                    $values[$index] = rand(6,7);
+                    $values[($value->id-1)] = rand(7,8);
                 }
             }
         }

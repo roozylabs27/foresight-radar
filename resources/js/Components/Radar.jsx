@@ -39,20 +39,21 @@ export default function Radar({ loading, setLoading, date, selectData }) {
         },
         radar: {
             indicator: [
-                { name: "Economy", max: 5 },
-                { name: "Ecological", max: 5 },
-                { name: "Regulation", max: 5 },
-                { name: "Technology", max: 5 },
-                { name: "Substitute", max: 5 },
-                { name: "Suppliers", max: 5 },
-                { name: "Customers", max: 5 },
-                { name: "Competitors", max: 5 },
+                { name: "Economy", max: 9 },
+                { name: "Ecology", max: 9 },
+                { name: "Regulation", max: 9 },
+                { name: "Technology", max: 9 },
+                { name: "Substitute", max: 9 },
+                { name: "Supplier", max: 9 },
+                { name: "Customer", max: 9 },
+                { name: "Competitor", max: 9 },
             ],
             shape: "circle",
-            splitNumber: 7,
+            splitNumber: 8,
             splitArea: {
                 areaStyle: {
                     color: [
+                        "rgb(166,166,166)",
                         "rgb(166,166,166)",
                         "rgb(166,166,166)",
                         "rgb(166,166,166)",
@@ -78,6 +79,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                         "rgb(135, 134, 134)",
                         "rgb(135, 134, 134)",
                         "rgb(135, 134, 134)",
+                        "rgb(135, 134, 134)",
                     ],
                     width: 1,
                 },
@@ -96,19 +98,45 @@ export default function Radar({ loading, setLoading, date, selectData }) {
             {
                 name: "Priority",
                 type: "radar",
-                symbolSize: 15,
+                symbolSize: function (value, params) {
+                    // console.log(params)
+                    // Only display the symbol if the value is not zero
+                    // return value !== 0 ? 15 : 0; // Adjust the size as needed (8 here is an example)
+                    // console.log(params, value);
+                    // for(let i=0; i< value.length; i++) {
+                    //     console.log(value[i]);
+                    //     return value[i] !== 0 ? 15 : 0
+                    // }
+                    return 15;
+                },
                 label: {
                     show: function (params) {
-                        console.log(params);
                         return true;
                     },
-                    formatter: "{@[2]}",
+                    // formatter: "{@[2]}",
+                    formatter: function (params) {
+                        const index = params.dataIndex; // This gets the index of the current data point
+                        const tableNumber = data[index].no; // Fetches the corresponding table number
+                        return params.value !== 0 ? tableNumber : "";
+                    },
+                    position: "top",
                     fontWeight: "bold",
                     backgroundColor: "#000",
                     padding: [3, 3],
                     borderRadius: 50,
                     color: "#fff",
                 },
+                // symbolOffset: function (value, params) {
+                //     console.log(value,params);
+                //     // Geser simbol jika memiliki nilai yang sama agar tidak bertumpuk
+                //     if (params.value === 3 && params.dataIndex === 1) {
+                //         return [0, "-20%"]; // Geser ke atas untuk data index 1 dengan nilai 3
+                //     }
+                //     if (params.value === 3 && params.dataIndex === 3) {
+                //         return [0, "20%"]; // Geser ke bawah untuk data index 3 dengan nilai 3
+                //     }
+                //     return [0, "20%"]; // Tidak ada geseran untuk data lainnya
+                // },
                 lineStyle: {
                     color: "transparent",
                 },
@@ -118,8 +146,8 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 data: radarData,
                 // [
                 //     {
-                //         value: [1, 2, 3, 3, 5],
-                //         name: "Economic",
+                //         value: [7, 2, 3, 3, 5],
+                //         name: "Economy",
                 //         symbol: "triangle",
                 //         itemStyle: {
                 //             color: "#ff4d4f",
@@ -127,7 +155,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 //     },
                 //     {
                 //         value: [1, 2, 3, 3, 5],
-                //         name: "Ecological",
+                //         name: "Ecology",
                 //         symbol: "triangle",
                 //         itemStyle: {
                 //             color: "#ff4d4f",
@@ -159,7 +187,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 //     },
                 //     {
                 //         value: [5, 3, 2, 3, 4],
-                //         name: "Suppliers",
+                //         name: "Supplier",
                 //         symbol: "triangle",
                 //         itemStyle: {
                 //             color: "#ff4d4f",
@@ -167,7 +195,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 //     },
                 //     {
                 //         value: [5, 3, 2, 3, 4],
-                //         name: "Customers",
+                //         name: "Customer",
                 //         symbol: "triangle",
                 //         itemStyle: {
                 //             color: "#ff4d4f",
@@ -175,7 +203,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 //     },
                 //     {
                 //         value: [5, 3, 2, 3, 4],
-                //         name: "Competitors",
+                //         name: "Competitor",
                 //         symbol: "circle",
                 //         itemStyle: {
                 //             color: "#ff4d4f",
@@ -220,7 +248,6 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                     }));
                     setRadarData(radar);
 
-                    console.log(radarData);
                     setData(newData);
                     setTableParams({
                         ...tableParams,

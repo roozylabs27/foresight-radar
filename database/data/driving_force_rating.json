@@ -17,7 +17,7 @@
     },
     {
         "driving_force_id": 3,
-        "time_horizon_id": 2,
+        "time_horizon_id": 1,
         "status_action_id": 2,
         "priority_id": 1,
         "impact_analysis": 8,
@@ -147,16 +147,8 @@
         "driving_force_id": 19,
         "time_horizon_id": 2,
         "status_action_id": 2,
-        "priority_id": 1,
+        "priority_id": 2,
         "impact_analysis": 5,
         "uncertainty_analysis": 6
-    },
-    {
-        "driving_force_id": 20,
-        "time_horizon_id": 2,
-        "status_action_id": 2,
-        "priority_id": 1,
-        "impact_analysis": 5,
-        "uncertainty_analysis": 7
     }
 ]

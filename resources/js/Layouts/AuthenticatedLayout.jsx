@@ -23,19 +23,19 @@ export default function Authenticated({ auth, children }) {
             label: <Link href={route("dashboard.")}>Dashboard</Link>,
             icon: <DashboardOutlined />,
             key: "/dashboard",
-            permission: "view-dashboard"
+            permission: "view-dashboard",
         },
         {
             label: <Link href={route("driving-force.")}>Driving Force</Link>,
             icon: <RadarChartOutlined />,
             key: "/driving-force",
-            permission: "view-driving-force"
+            permission: "view-driving-force",
         },
         {
             label: <Link href={route("time-horizon.")}>Time Horizon</Link>,
             icon: <FieldTimeOutlined />,
             key: "/time-horizon",
-            permission: "view-time-horizon"
+            permission: "view-time-horizon",
         },
         {
             label: (
@@ -43,13 +43,13 @@ export default function Authenticated({ auth, children }) {
             ),
             icon: <StarOutlined />,
             key: "/rating-urgency",
-            permission: "view-rating-urgency"
+            permission: "view-rating-urgency",
         },
         {
             label: <Link href={route("status-action.")}>Status of Action</Link>,
             icon: <FieldTimeOutlined />,
             key: "/status-action",
-            permission: "view-status-action"
+            permission: "view-status-action",
         },
         {
             label: "User Management",
@@ -71,19 +71,21 @@ export default function Authenticated({ auth, children }) {
         },
     ]);
     const actions = [
-        {
-            key: "profile",
-            label: (
-                <Flex gap="middle" vertical={false}>
-                    <UserSwitchOutlined />
-                    Profile
-                </Flex>
-            ),
-        },
+        // {
+        //     key: "profile",
+        //     label: (
+        //         <Link href={route("user-management.user.profile.")}>
+        //             <Flex gap="middle" vertical={false}>
+        //                 <UserSwitchOutlined />
+        //                 Profile
+        //             </Flex>
+        //         </Link>
+        //     ),
+        // },
         {
             key: "logout",
             label: (
-                <Link href="/logout" method="post" type="button">
+                <Link href={route("logout")} method="post" type="button">
                     <Flex gap="middle" vertical={false}>
                         <LogoutOutlined />
                         Logout
@@ -93,9 +95,9 @@ export default function Authenticated({ auth, children }) {
         },
     ];
 
-    const filteredItems = items.filter(item =>
+    const filteredItems = items.filter((item) =>
         permissions.includes(item.permission)
-      );
+    );
 
     const {
         token: { colorBgContainer },
