@@ -53,6 +53,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
             splitArea: {
                 areaStyle: {
                     color: [
+                        // "rgb(0,0,0)",
                         "rgb(166,166,166)",
                         "rgb(166,166,166)",
                         "rgb(166,166,166)",
@@ -212,6 +213,20 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 // ],
             },
         ],
+        // graphic: [
+        //     {
+        //         type: 'text',
+        //         left: 'center',
+        //         top: 'center',
+        //         style: {
+        //             text: 'Custom Text',
+        //             textAlign: 'center',
+        //             font: 'bold 18px sans-serif',
+        //             fill: '#000', // Warna teks
+        //             z: 100 // z-index untuk memastikan teks berada di depan
+        //         }
+        //     }
+        // ]
     };
 
     useEffect(() => {
