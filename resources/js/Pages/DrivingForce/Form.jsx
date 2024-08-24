@@ -8,7 +8,7 @@ const FormDrivingForce = forwardRef(
             initialValues,
             isEditMode,
             dimensions,
-            status,
+            users,
             errors,
             onFinish,
             loading,
@@ -54,39 +54,6 @@ const FormDrivingForce = forwardRef(
                 onFinish={onFinish}
             >
                 <Form.Item
-                    name="keyword"
-                    label="Keyword"
-                    validateStatus={errors?.keyword ? "error" : ""}
-                    help={errors?.keyword}
-                    validateTrigger="onBlur"
-                    rules={[
-                        {
-                            required: true,
-                            message: "Please input the keyword!",
-                        },
-                    ]}
-                >
-                    <Input
-                        placeholder="Enter keyword"
-                        autoFocus={isEditMode ? false : true}
-                    />
-                </Form.Item>
-                <Form.Item
-                    name="description"
-                    label="Description"
-                    validateTrigger="onBlur"
-                    validateStatus={errors?.description ? "error" : ""}
-                    help={errors?.description}
-                    rules={[
-                        {
-                            required: true,
-                            message: "Please input the description!",
-                        },
-                    ]}
-                >
-                    <Input placeholder="Enter description" />
-                </Form.Item>
-                <Form.Item
                     name="dimension_id"
                     label="Dimension"
                     validateTrigger="onBlur"
@@ -103,33 +70,66 @@ const FormDrivingForce = forwardRef(
                         options={dimensions}
                     />
                 </Form.Item>
-                {isEditMode && (
-                    <>
-                        <Form.Item
-                            name="status"
-                            validateTrigger="onBlur"
-                            label="Status"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Please select the status!",
-                                },
-                            ]}
-                        >
-                            <Select
-                                style={{ width: "100%" }}
-                                placeholder="Select a Status"
-                                options={status}
-                            />
-                        </Form.Item>
-                        <Form.Item name="remark" label="Remark">
-                            <TextArea
-                                placeholder="Enter a remark"
-                                autoSize={{ minRows: 3, maxRows: 5 }}
-                            />
-                        </Form.Item>
-                    </>
-                )}
+                <Form.Item
+                    name="keyword"
+                    label="Keyword"
+                    validateStatus={errors?.keyword ? "error" : ""}
+                    help={errors?.keyword}
+                    validateTrigger="onBlur"
+                    rules={[
+                        {
+                            required: true,
+                            message: "Please input the keyword!",
+                        },
+                    ]}
+                >
+                    <Input placeholder="Enter keyword" />
+                </Form.Item>
+                <Form.Item
+                    name="description"
+                    label="Description"
+                    validateTrigger="onBlur"
+                    validateStatus={errors?.description ? "error" : ""}
+                    help={errors?.description}
+                    rules={[
+                        {
+                            required: true,
+                            message: "Please input the description!",
+                        },
+                    ]}
+                >
+                    <TextArea
+                        placeholder="Enter a description"
+                        autoSize={{ minRows: 3, maxRows: 5 }}
+                    />
+                </Form.Item>
+                <>
+                    <Form.Item
+                        name="pic_id"
+                        validateTrigger="onBlur"
+                        label="Personal In Charge"
+                        rules={[
+                            {
+                                required: true,
+                                message:
+                                    "Please select the personal in charge!",
+                            },
+                        ]}
+                    >
+                        <Select
+                            showSearch
+                            style={{ width: "100%" }}
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                option.label
+                                    .toLowerCase()
+                                    .includes(input.toLowerCase())
+                            }
+                            placeholder="Select a personal in charge"
+                            options={users}
+                        />
+                    </Form.Item>
+                </>
             </Form>
         );
     }

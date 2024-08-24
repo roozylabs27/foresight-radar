@@ -71,10 +71,10 @@ class ForesightRadarResource extends JsonResource
             'dimension' => $this->driving_force->dimension->name,
             'value' => $values,
             'item_style' => $item_style,
+            'priority' => $this->priority->name,
             'short_term' => $short_term,
             'mid_term' => $mid_term,
             'long_term' => $long_term,
-            'priority' => $this->priority->name,
             'status_action' => $this->status_action->code,
         ];
     }

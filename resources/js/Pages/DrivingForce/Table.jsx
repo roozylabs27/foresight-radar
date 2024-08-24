@@ -33,7 +33,7 @@ import { useEffect, useRef, useState } from "react";
 import Dialog from "@/Components/Dialog";
 import FormDrivingForce from "./Form";
 
-export default function TableDrivingForce({ auth, title , dimensions, status }) {
+export default function TableDrivingForce({ auth, title , dimensions, users }) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
@@ -77,7 +77,7 @@ export default function TableDrivingForce({ auth, title , dimensions, status }) 
         tableParams?.date,
         tableParams?.search,
         tableParams?.dimension,
-        tableParams?.status,
+        // tableParams?.status,
     ]);
 
     const getParams = (params) => {
@@ -121,23 +121,23 @@ export default function TableDrivingForce({ auth, title , dimensions, status }) 
         }
     };
 
-    const columnApproved = (text, record) => {
-        const status = text.toLowerCase();
-        switch (status) {
-            case "pending":
-                return <Tag color="processing">{status}</Tag>;
-            case "approved":
-                return (
-                    <Tag color="success">
-                        {status} - {record.approved_at}
-                    </Tag>
-                );
-            case "rejected":
-                return <Tag color="error">{status}</Tag>;
-            default:
-                return <Tag color="default">{status}</Tag>;
-        }
-    };
+    // const columnApproved = (text, record) => {
+    //     const status = text.toLowerCase();
+    //     switch (status) {
+    //         case "pending":
+    //             return <Tag color="processing">{status}</Tag>;
+    //         case "approved":
+    //             return (
+    //                 <Tag color="success">
+    //                     {status} - {record.approved_at}
+    //                 </Tag>
+    //             );
+    //         case "rejected":
+    //             return <Tag color="error">{status}</Tag>;
+    //         default:
+    //             return <Tag color="default">{status}</Tag>;
+    //     }
+    // };
 
     const columnAction = (text, record) => {
         const actions = [
@@ -201,36 +201,17 @@ export default function TableDrivingForce({ auth, title , dimensions, status }) 
         {
             title: "Keyword",
             dataIndex: "keyword",
-            width: 150,
+            width: 50,
         },
         {
             title: "Description",
             dataIndex: "description",
-            width: 100,
+            width: 200,
         },
         {
-            title: "Status",
-            dataIndex: "status",
-            align: "center",
+            title: "Personal In Charge",
+            dataIndex: "pic",
             width: 60,
-            render: columnApproved,
-        },
-        {
-            title: "Admin PIC",
-            dataIndex: "created_by",
-            align: "center",
-            width: 60,
-        },
-        {
-            title: "Updated By",
-            dataIndex: "updated_by",
-            align: "center",
-            width: 60,
-        },
-        {
-            title: "Remark",
-            dataIndex: "remark",
-            width: 100,
         },
         {
             title: "",
@@ -458,7 +439,7 @@ export default function TableDrivingForce({ auth, title , dimensions, status }) 
                             />
                         </Space>
                     </Col>
-                    <Col xs={24} sm={12} md={8} lg={6}>
+                    {/* <Col xs={24} sm={12} md={8} lg={6}>
                         <Space direction="vertical" style={{ width: "100%" }}>
                             Status :
                             <Select
@@ -477,7 +458,7 @@ export default function TableDrivingForce({ auth, title , dimensions, status }) 
                                 options={status}
                             />
                         </Space>
-                    </Col>
+                    </Col> */}
                 </Row>
             </Content>
 
@@ -544,7 +525,7 @@ export default function TableDrivingForce({ auth, title , dimensions, status }) 
                     isEditMode={isEditMode}
                     initialValues={initialValues}
                     dimensions={dimensions}
-                    status={status}
+                    users={users}
                     errors={errors}
                     loading={loading}
                     onFinish={handleFormSubmit}

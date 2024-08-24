@@ -67,7 +67,8 @@ class OverallStatusResource extends JsonResource
             'medium' => $medium,
             'low' => $low,
             'monitoring' => $monitoring,
-            'decided_plan' => $decided_plan
+            'decided_plan' => $decided_plan,
+            'action_reason' => count($this->action_reasons) > 0 ? $this->action_reasons[0]->reason : null,
         ];
     }
 }

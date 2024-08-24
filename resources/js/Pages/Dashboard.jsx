@@ -51,7 +51,7 @@ export default function Dashboard({ auth, dimensions }) {
         },
         {
             key: "2",
-            label: "Overall Status",
+            label: "Registered List",
             children: activeTab == "2" && (
                 <OverallStatus
                     loading={loading}

@@ -63,8 +63,8 @@ class UserSeeder extends Seeder
         if (config('app.env') == 'local') {
             // initial user dummy admin
             $this->command->info('initial user dummy admin');
-            $this->command->getOutput()->progressStart(100);
-            for ($i = 0; $i < 100; $i++) {
+            $this->command->getOutput()->progressStart(20);
+            for ($i = 0; $i < 20; $i++) {
                 $this->initializeUserDummy($user);
                 $this->command->getOutput()->progressAdvance();
             }

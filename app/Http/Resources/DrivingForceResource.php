@@ -21,11 +21,8 @@ class DrivingForceResource extends JsonResource
             'dimension_id' => $this->dimension->id,
             'keyword' => $this->keyword,
             'description' => $this->description,
-            'status' => $this->status,
-            'remark' => $this->remark,
-            'approved_at' => $this->approved_at,
-            'created_by' => $this->created_by_user->name,
-            'updated_by' => $this->updated_by_user ? $this->updated_by_user->name : null,
+            'pic' => $this->pic_user->name,
+            'pic_id' => $this->pic_user->id,
         ];
     }
 }

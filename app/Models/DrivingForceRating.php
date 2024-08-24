@@ -8,6 +8,7 @@ use App\Http\Resources\PrioritizingResource;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DrivingForceRating extends Model
 {
@@ -38,6 +39,11 @@ class DrivingForceRating extends Model
         return $this->belongsTo(StatusAction::class, 'status_action_id');
     }
 
+    public function action_reasons(): HasMany
+    {
+        return $this->hasMany(ActionReason::class);
+    }
+
     public function priority(): BelongsTo
     {
         return $this->belongsTo(Priority::class, 'priority_id');
@@ -65,8 +71,7 @@ class DrivingForceRating extends Model
             ->where('created_at', '>=', $date_start)
             ->whereNotNull('status_action_id')
             ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'ASC')
-            ->limit(20)
+            ->orderBy('created_at', 'DESC')
             ->get();
 
         return PrioritizingResource::collection($prioritizing);
@@ -80,13 +85,21 @@ class DrivingForceRating extends Model
 
         $overall_status = self::with(['driving_force' => function ($q) {
             $q->orderBy('dimension_id', 'ASC');
-        }])
+        }, 'action_reasons' => function($q) {
+            $q->whereIn('id', function($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('action_reasons')
+                    ->groupBy('driving_force_rating_id') // Ganti dengan foreign key yang relevan
+                    ->orderBy('date', 'DESC');
+            });
+        }, 'status_action' => function($q) {
+            $q->select('id', 'code');
+        }], )
             ->has('driving_force')
             ->where('created_at', '>=', $date_start)
             ->whereNotNull('status_action_id')
             ->where('created_at', '<=', $date_end)
             ->orderBy('created_at', 'ASC')
-            ->limit(20)
             ->get();
 
         return OverallStatusResource::collection($overall_status);

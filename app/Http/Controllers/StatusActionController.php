@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StatusActionRequest;
+use App\Models\ActionReason;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
 
 class StatusActionController extends Controller
@@ -66,6 +68,14 @@ class StatusActionController extends Controller
             }
 
             $driving_force_rating->save();
+
+            $action_reason = new ActionReason();
+            $action_reason->uuid = Uuid::uuid1();
+            $action_reason->driving_force_rating_id = $driving_force_rating->id;
+            $action_reason->status_action_id = $request['status_action_id'];
+            $action_reason->reason = $request['reason'];
+            $action_reason->date = now();
+            $action_reason->save();
 
             DB::commit();
 

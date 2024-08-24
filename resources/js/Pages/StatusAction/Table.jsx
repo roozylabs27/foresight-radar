@@ -145,7 +145,12 @@ export default function TableStatusAction({
                     setLoading(false);
                 }, 500);
                 setTitleModal(`Set Status Action - ${record.keyword}`);
-                setInitialValues(record);
+                const newInitialValues = {
+                    ...record,
+                    status_action_id : null,
+                    reason : null
+                }
+                setInitialValues(newInitialValues);
                 break;
             default:
                 return;
@@ -395,7 +400,8 @@ export default function TableStatusAction({
                 title={titleModal}
                 open={open}
                 loading={loading}
-                btnText="Set"
+                btnText="Save Changes"
+                width={1500}
                 onOk={handleOkModal}
                 onCancel={handleCancelModal}
             >

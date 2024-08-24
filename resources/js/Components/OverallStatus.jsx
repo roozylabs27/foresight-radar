@@ -1,4 +1,13 @@
-import { Col, message, Row, Segmented, Skeleton, Table } from "antd";
+import {
+    Button,
+    Col,
+    message,
+    Row,
+    Segmented,
+    Skeleton,
+    Table,
+    Tooltip,
+} from "antd";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import qs from "qs";
@@ -95,6 +104,15 @@ const OverallStatus = ({ loading, setLoading, date }) => {
         },
     ];
 
+    const renderToolTip = (record, type) => {
+        return (
+            <Tooltip placement="left" title={record.action_reason}>
+
+                {type == "decided_plan" ? record.decided_plan : record.monitoring}
+            </Tooltip>
+        );
+    };
+
     const columns = [
         {
             title: "DIMENSION",
@@ -176,11 +194,13 @@ const OverallStatus = ({ loading, setLoading, date }) => {
                     title: "Decided Plan",
                     dataIndex: "decided_plan",
                     align: "center",
+                    render: (text, record) => renderToolTip(record, "decided_plan"),
                 },
                 {
                     title: "Monitor",
                     dataIndex: "monitoring",
                     align: "center",
+                    render: (text, record) => renderToolTip(record, "monitoring"),
                 },
             ],
         },

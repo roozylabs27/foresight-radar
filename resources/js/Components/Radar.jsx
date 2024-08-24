@@ -290,26 +290,26 @@ export default function Radar({ loading, setLoading, date, selectData }) {
             title: "Signal of Changes",
             dataIndex: "keyword",
         },
-        {
-            title: "Act",
-            dataIndex: "status_action",
-            align: "center",
-        },
-        {
-            title: "ST",
-            dataIndex: "short_term",
-            align: "center",
-        },
-        {
-            title: "MT",
-            dataIndex: "mid_term",
-            align: "center",
-        },
-        {
-            title: "LT",
-            dataIndex: "long_term",
-            align: "center",
-        },
+        // {
+        //     title: "Act",
+        //     dataIndex: "status_action",
+        //     align: "center",
+        // },
+        // {
+        //     title: "ST",
+        //     dataIndex: "short_term",
+        //     align: "center",
+        // },
+        // {
+        //     title: "MT",
+        //     dataIndex: "mid_term",
+        //     align: "center",
+        // },
+        // {
+        //     title: "LT",
+        //     dataIndex: "long_term",
+        //     align: "center",
+        // },
     ];
 
     const getRowClassName = (record) => {

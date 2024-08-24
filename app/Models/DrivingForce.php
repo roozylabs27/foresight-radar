@@ -23,10 +23,13 @@ class DrivingForce extends Model
     protected $fillable = [
         'uuid',
         'dimension_id',
+        'pic',
         'created_by',
         'updated_by',
         'keyword',
         'description',
+        'status',
+        'remark'
     ];
 
     public function dimension(): BelongsTo
@@ -37,6 +40,11 @@ class DrivingForce extends Model
     public function created_by_user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function pic_user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pic');
     }
 
     public function updated_by_user(): BelongsTo
@@ -116,7 +124,6 @@ class DrivingForce extends Model
                 $q->where('dimension_id', $dimension);
             })
             ->where('created_at', '>=', $date_start)
-            ->where('status', 'APPROVED')
             ->where('created_at', '<=', $date_end)
             ->orderBy('created_at', 'DESC')
             ->paginate($pagination);
@@ -159,7 +166,9 @@ class DrivingForce extends Model
         $date_start = $date_range[0] . ' 00:00:00';
         $date_end = $date_range[1] . ' 23:59:59';
 
-        $status_actions = self::with(['dimension', 'rating'])
+        $status_actions = self::with(['dimension', 'rating.action_reasons' => function ($q) {
+            $q->select('driving_force_rating_id' ,'date', 'reason', 'status_action_id')->orderBy('date', 'ASC');
+        }])
             ->when($search, function ($q) use ($search) {
                 $q->where('keyword', 'LIKE', $search . '%')
                     ->orWhere('description', 'LIKE', $search . '%');

@@ -9,6 +9,7 @@ export default function Dialog({
     btnText = isEditMode ? "Save Changes": "Submit",
     loading,
     children,
+    width = 520
 }) {
     return (
         <>
@@ -17,6 +18,7 @@ export default function Dialog({
                 open={open}
                 centered
                 onCancel={onCancel}
+                width={width}
                 footer={[
                     <Button key="back" disabled={loading} onClick={onCancel}>
                         Cancel

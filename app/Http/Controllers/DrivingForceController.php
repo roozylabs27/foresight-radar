@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DrivingForceRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -18,29 +19,24 @@ class DrivingForceController extends Controller
 
     public function index()
     {
-        $dimensions = Dimension::all()->map(function ($dimension) {
+        $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name
             ];
         });
-        $status = [
-            [
-                "label" => "pending",
-                "value" => "PENDING",
-            ],
-            [
-                "label" => "approved",
-                "value" => "APPROVED",
-            ],
-            [
-                "label" => "rejected",
-                "value" => "REJECTED",
-            ],
-        ];
+        $users = User::select('id', 'name')->whereHas('roles', function ($q) {
+            $q->whereNotIn('name', ['super-admin', 'developer']);
+        })->orderBy('name', 'asc')->get()->map(function ($user) {
+            return [
+                'value' => $user->id,
+                'label' => $user->name
+            ];
+        });
+
         $title = "Driving Force";
 
-        return Inertia::render("DrivingForce/Table", compact('dimensions', 'title', 'status'));
+        return Inertia::render("DrivingForce/Table", compact('dimensions', 'title', 'users'));
     }
 
     public function fetch_data()
@@ -63,6 +59,7 @@ class DrivingForceController extends Controller
             DB::beginTransaction();
             $request['uuid'] = Uuid::uuid1();
             $request['created_by'] = auth()->user()->id;
+            $request['pic'] = $request['pic_id'];
             $request['status'] = "PENDING";
 
             $request = $request->all();
@@ -92,22 +89,13 @@ class DrivingForceController extends Controller
         try {
             DB::beginTransaction();
 
-            if ($request['status'] != $driving_force->status) {
-                $request['updated_by'] = auth()->user()->id;
-            }
-            if ($request['status'] == 'APPROVED' && $driving_force->status != 'APPROVED') {
-                $request['approved_at'] = now();
-            }
-
             $request = $request->all();
 
             $driving_force->dimension_id = $request['dimension_id'];
             $driving_force->updated_by = $request['updated_by'] ?? null;
+            $driving_force->pic = $request['pic_id'];
             $driving_force->keyword = $request['keyword'];
             $driving_force->description = $request['description'];
-            $driving_force->status = $request['status'];
-            $driving_force->remark = $request['remark'];
-            $driving_force->approved_at = $request['approved_at'] ?? null;
             $driving_force->save();
 
             DB::commit();

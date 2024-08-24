@@ -2,22 +2,26 @@
 
 namespace Database\Seeders;
 
+use App\Models\ActionReason;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
+use App\Models\StatusAction;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
+use Faker\Factory as Dummy;
 
 class DrivingForceSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
-    protected $driving_forces, $driving_force_ratings;
+    protected $driving_forces, $driving_force_ratings, $dummy;
 
     public function __construct()
     {
+        $this->dummy = Dummy::create('id_ID');
         $this->driving_forces = json_decode(file_get_contents(__DIR__ . '../../data/driving_force.json', true));
         $this->driving_force_ratings = json_decode(file_get_contents(__DIR__ . '../../data/driving_force_rating.json', true));
     }
@@ -51,22 +55,37 @@ class DrivingForceSeeder extends Seeder
             'status' => 'APPROVED',
             'created_by' => User::all()->random()->id,
             'updated_by' => User::all()->random()->id,
+            'pic' => User::all()->random()->id,
             'approved_at' => now()->subDays(rand(0, 30))
         ]);
     }
 
     public function initializeDefaultDrivingForceRating($rating)
     {
-        DrivingForceRating::firstOrCreate([
+        $rating = DrivingForceRating::firstOrCreate([
             'driving_force_id' => $rating->driving_force_id,
+            'status_action_id' => $rating->status_action_id,
         ],
         [
             'uuid' => Uuid::uuid1(),
             'time_horizon_id' => $rating->time_horizon_id,
-            'status_action_id' => $rating->status_action_id,
             'priority_id' => $rating->priority_id,
             'impact_analysis' => $rating->impact_analysis,
             'uncertainty_analysis' => $rating->uncertainty_analysis,
         ]);
+
+        for($i=mt_rand(1,3); $i >= 1; $i--) {
+            ActionReason::create([
+                'uuid' => Uuid::uuid1(),
+                'driving_force_rating_id' => $rating->id,
+                'status_action_id' => StatusAction::all()->random()->id,
+                'date' => now()->subDays($i)->subHours(rand(0,24))->subMinutes(rand(0,60))->subSeconds(rand(0,60)),
+                'reason' => $this->dummy->paragraph(rand(1,3))
+            ]);
+        }
+
+        $action_reason = ActionReason::where('driving_force_rating_id', $rating->id)->latest('id')->first();
+        $rating->status_action_id = $action_reason->status_action_id;
+        $rating->save();
     }
 }

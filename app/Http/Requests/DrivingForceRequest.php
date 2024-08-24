@@ -24,15 +24,17 @@ class DrivingForceRequest extends FormRequest
     {
         if (request()->isMethod("POST")) {
             return [
-                'keyword' => ['required', 'string', new WordCountRule(3)],
+                'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(20)],
-                'dimension_id' => ['required']
+                'dimension_id' => ['required'],
+                'pic_id' => ['required']
             ];
         } else {
             return [
-                'keyword' => ['required', 'string', new WordCountRule(3)],
-                'description' => ['required', 'string', new WordCountRule(20)],
-                'dimension_id' => ['required']
+                'keyword' => ['required', 'string', new WordCountRule(4)],
+                'description' => ['required', 'string', new WordCountRule(30)],
+                'dimension_id' => ['required'],
+                'pic_id' => ['required']
             ];
         }
     }
