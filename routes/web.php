@@ -56,7 +56,17 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::post("/{driving_force_rating}", "create")->name('create');
     });
 
+    Route::prefix("approval")->controller(App\Http\Controllers\ApprovalController::class)->name("approval.")->group(function () {
+        Route::get("/", "index")->can('view-approval');
+        Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-approval');
+        Route::post("/{driving_force_rating}", "create")->name('create');
+    });
 
+    Route::prefix("approval")->controller(App\Http\Controllers\ApprovalController::class)->name("approval.")->group(function () {
+        Route::get("/", "index")->can('view-approval');
+        Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-approval');
+        Route::post("/{driving_force_rating}", "create")->name('create');
+    });
 
     Route::prefix('user-management')->name('user-management.')->group(function () {
         Route::prefix('user')->controller(App\Http\Controllers\UserController::class)->name('user.')->group(function () {

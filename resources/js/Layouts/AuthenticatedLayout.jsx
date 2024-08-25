@@ -10,6 +10,8 @@ import {
     FieldTimeOutlined,
     StarOutlined,
     UserSwitchOutlined,
+    FileProtectOutlined,
+    FileExcelOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, theme, Flex, Button, Dropdown, Space } from "antd";
 import { Link, usePage } from "@inertiajs/react";
@@ -50,6 +52,18 @@ export default function Authenticated({ auth, children }) {
             icon: <FieldTimeOutlined />,
             key: "/status-action",
             permission: "view-status-action",
+        },
+        {
+            label: <Link href={route("status-action.")}>Closed Items</Link>,
+            icon: <FileExcelOutlined />,
+            key: "/closed-items",
+            permission: "view-closed-items",
+        },
+        {
+            label: <Link href={route("status-action.")}>Approval</Link>,
+            icon: <FileProtectOutlined />,
+            key: "/approval",
+            permission: "view-approval",
         },
         {
             label: "User Management",

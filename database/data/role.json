@@ -17,6 +17,9 @@
             "create-rating-urgency",
             "view-status-action",
             "create-status-action",
+            "view-approval",
+            "create-approval",
+            "view-closed-items",
             "view-user",
             "create-user",
             "edit-user",
@@ -48,6 +51,9 @@
             "create-rating-urgency",
             "view-status-action",
             "create-status-action",
+            "view-approval",
+            "create-approval",
+            "view-closed-items",
             "view-user",
             "create-user",
             "edit-user",
@@ -78,7 +84,10 @@
             "view-rating-urgency",
             "create-rating-urgency",
             "view-status-action",
-            "create-status-action"
+            "create-status-action",
+            "view-approval",
+            "create-approval",
+            "view-closed-items"
         ]
     }
 ]

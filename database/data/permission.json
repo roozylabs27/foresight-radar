@@ -60,6 +60,21 @@
         "category": "rating-urgency"
     },
     {
+        "name": "view-approval",
+        "description": "permission for access approval list page",
+        "category": "approval"
+    },
+    {
+        "name": "create-approval",
+        "description": "permission for create approval",
+        "category": "approval"
+    },
+    {
+        "name": "view-closed-items",
+        "description": "permission for access closed items list page",
+        "category": "closed-items"
+    },
+    {
         "name": "view-status-action",
         "description": "permission for access status-action list page",
         "category": "status-action"
