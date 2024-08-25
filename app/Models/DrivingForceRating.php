@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Resources\ClosedItemsResource;
 use App\Http\Resources\ForesightRadarResource;
 use App\Http\Resources\OverallStatusResource;
 use App\Http\Resources\PrioritizingResource;
@@ -68,6 +69,9 @@ class DrivingForceRating extends Model
                 });
             })
             ->has('driving_force')
+            ->whereHas('driving_force', function($q) {
+                $q->where('status', 'APPROVED');
+            })
             ->where('created_at', '>=', $date_start)
             ->whereNotNull('status_action_id')
             ->where('created_at', '<=', $date_end)
@@ -96,6 +100,9 @@ class DrivingForceRating extends Model
             $q->select('id', 'code');
         }], )
             ->has('driving_force')
+            ->whereHas('driving_force', function($q) {
+                $q->where('status', 'APPROVED');
+            })
             ->where('created_at', '>=', $date_start)
             ->whereNotNull('status_action_id')
             ->where('created_at', '<=', $date_end)
@@ -121,11 +128,13 @@ class DrivingForceRating extends Model
                 });
             })
             ->has('driving_force')
+            ->whereHas('driving_force', function($q) {
+                $q->where('status', 'APPROVED');
+            })
             ->where('created_at', '>=', $date_start)
             ->whereNotNull('status_action_id')
             ->where('created_at', '<=', $date_end)
             ->orderBy('created_at', 'ASC')
-            ->limit(20)
             ->get();
 
         return ForesightRadarResource::collection($overall_status);

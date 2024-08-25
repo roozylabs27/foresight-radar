@@ -54,16 +54,16 @@ export default function Authenticated({ auth, children }) {
             permission: "view-status-action",
         },
         {
-            label: <Link href={route("status-action.")}>Closed Items</Link>,
-            icon: <FileExcelOutlined />,
-            key: "/closed-items",
-            permission: "view-closed-items",
-        },
-        {
-            label: <Link href={route("status-action.")}>Approval</Link>,
+            label: <Link href={route("approval.")}>Approval</Link>,
             icon: <FileProtectOutlined />,
             key: "/approval",
             permission: "view-approval",
+        },
+        {
+            label: <Link href={route("closed-items.")}>Closed Items</Link>,
+            icon: <FileExcelOutlined />,
+            key: "/closed-items",
+            permission: "view-closed-items",
         },
         {
             label: "User Management",

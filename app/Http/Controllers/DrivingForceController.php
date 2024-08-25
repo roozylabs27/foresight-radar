@@ -16,7 +16,6 @@ use Symfony\Component\HttpFoundation\Response;
 class DrivingForceController extends Controller
 {
     //
-
     public function index()
     {
         $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {

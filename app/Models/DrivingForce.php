@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Http\Resources\ClosedItemsCollection;
+use App\Http\Resources\ClosedItemsResource;
 use App\Http\Resources\DrivingForceCollection;
 use App\Http\Resources\DrivingForceResource;
 use App\Http\Resources\RatingUrgencyCollection;
@@ -167,7 +169,7 @@ class DrivingForce extends Model
         $date_end = $date_range[1] . ' 23:59:59';
 
         $status_actions = self::with(['dimension', 'rating.action_reasons' => function ($q) {
-            $q->select('driving_force_rating_id' ,'date', 'reason', 'status_action_id')->orderBy('date', 'ASC');
+            $q->select('driving_force_rating_id', 'date', 'reason', 'status_action_id')->orderBy('date', 'ASC');
         }])
             ->when($search, function ($q) use ($search) {
                 $q->where('keyword', 'LIKE', $search . '%')
@@ -187,5 +189,35 @@ class DrivingForce extends Model
             ->paginate($pagination);
 
         return new StatusActionCollection($status_actions);
+    }
+
+    public static function closed_items()
+    {
+        $pagination = request('pagination.pageSize');
+        $search = request('search');
+        $date_range = request('date');
+        $date_start = $date_range[0] . ' 00:00:00';
+        $date_end = $date_range[1] . ' 23:59:59';
+        $dimension = request('dimension');
+
+        $closed_items = self::with(['rating'])
+            ->when($search, function ($q) use ($search) {
+                $q->where('keyword', 'LIKE', $search . '%')
+                    ->orWhere('description', 'LIKE', $search . '%');
+            })
+            ->when($dimension, function ($q) use ($dimension) {
+                $q->where('dimension_id', $dimension);
+            })
+            ->whereHas('rating', function ($q) {
+                $q->whereNotNull('status_action_id');
+            })
+            ->has('rating')
+            ->where('status', 'CLOSED')
+            ->where('created_at', '>=', $date_start)
+            ->where('created_at', '<=', $date_end)
+            ->orderBy('created_at', 'DESC')
+            ->paginate($pagination);
+
+        return new ClosedItemsCollection($closed_items);
     }
 }
