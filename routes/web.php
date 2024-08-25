@@ -56,16 +56,15 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::post("/{driving_force_rating}", "create")->name('create');
     });
 
-    Route::prefix("approval")->controller(App\Http\Controllers\ApprovalController::class)->name("approval.")->group(function () {
-        Route::get("/", "index")->can('view-approval');
-        Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-approval');
-        Route::post("/{driving_force_rating}", "create")->can('create-approval')->name('create');
+    Route::prefix("approval-items")->controller(App\Http\Controllers\ApprovalController::class)->name("approval-items.")->group(function () {
+        Route::get("/", "index")->can('view-approval-items');
+        Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-approval-items');
+        Route::post("/{driving_force}", "create")->can('create-approval-items')->name('create');
     });
 
     Route::prefix("closed-items")->controller(App\Http\Controllers\ClosedItemsController::class)->name("closed-items.")->group(function () {
         Route::get("/", "index")->can('view-closed-items');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-closed-items');
-        Route::post("/{driving_force_rating}", "create")->name('create');
     });
 
     Route::prefix('user-management')->name('user-management.')->group(function () {

@@ -13,9 +13,9 @@ import {
     FileProtectOutlined,
     FileExcelOutlined,
 } from "@ant-design/icons";
-import { Layout, Menu, theme, Flex, Button, Dropdown, Space } from "antd";
+import { Layout, Menu, theme, Flex, Button, Dropdown, Space, FloatButton } from "antd";
 import { Link, usePage } from "@inertiajs/react";
-const { Header, Content, Footer, Sider } = Layout;
+const { Header, Footer, Sider } = Layout;
 
 export default function Authenticated({ auth, children }) {
     const { url } = usePage();
@@ -54,10 +54,10 @@ export default function Authenticated({ auth, children }) {
             permission: "view-status-action",
         },
         {
-            label: <Link href={route("approval.")}>Approval</Link>,
+            label: <Link href={route("approval-items.")}>Approval Items</Link>,
             icon: <FileProtectOutlined />,
-            key: "/approval",
-            permission: "view-approval",
+            key: "/approval-items",
+            permission: "view-approval-items",
         },
         {
             label: <Link href={route("closed-items.")}>Closed Items</Link>,
@@ -203,6 +203,7 @@ export default function Authenticated({ auth, children }) {
                     Reserved.
                 </Footer>
             </Layout>
+            <FloatButton.BackTop />
         </Layout>
     );
 }

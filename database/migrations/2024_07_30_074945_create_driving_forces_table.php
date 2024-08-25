@@ -31,6 +31,7 @@ return new class extends Migration
             $table->string('status')->default("PENDING");
             $table->text('remark')->nullable();
             $table->dateTime('approved_at')->nullable();
+            $table->dateTime('closed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

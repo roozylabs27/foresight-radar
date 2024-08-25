@@ -7,7 +7,7 @@ use App\Models\StatusAction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ClosedItemsResource extends JsonResource
+class ApprovalItemsResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -21,7 +21,7 @@ class ClosedItemsResource extends JsonResource
 
         return [
             'id' => $this->uuid,
-            'closed_at' => $this->closed_at,
+            'approved_at' => $this->approved_at,
             'date_created' => $this->created_at,
             'dimension' => $this->dimension->name,
             'dimension_id' => $this->dimension->id,

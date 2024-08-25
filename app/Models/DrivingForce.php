@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Resources\ApprovalItemsCollection;
 use App\Http\Resources\ClosedItemsCollection;
 use App\Http\Resources\ClosedItemsResource;
 use App\Http\Resources\DrivingForceCollection;
@@ -31,7 +32,9 @@ class DrivingForce extends Model
         'keyword',
         'description',
         'status',
-        'remark'
+        'remark',
+        'approved_at',
+        'closed_at'
     ];
 
     public function dimension(): BelongsTo
@@ -70,6 +73,13 @@ class DrivingForce extends Model
     {
         return Attribute::make(
             get: fn ($value) => $value ? Carbon::parse($value)->translatedFormat('d F Y') : null
+        );
+    }
+
+    public function closedAt(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? Carbon::parse($value)->translatedFormat('D, d F Y') : null
         );
     }
 
@@ -219,5 +229,36 @@ class DrivingForce extends Model
             ->paginate($pagination);
 
         return new ClosedItemsCollection($closed_items);
+    }
+
+    public static function approval_items()
+    {
+        $pagination = request('pagination.pageSize');
+        $search = request('search');
+        $date_range = request('date');
+        $date_start = $date_range[0] . ' 00:00:00';
+        $date_end = $date_range[1] . ' 23:59:59';
+        $dimension = request('dimension');
+
+        $approval_items = self::with(['rating'])
+            ->when($search, function ($q) use ($search) {
+                $q->where('keyword', 'LIKE', $search . '%')
+                    ->orWhere('description', 'LIKE', $search . '%');
+            })
+            ->when($dimension, function ($q) use ($dimension) {
+                $q->where('dimension_id', $dimension);
+            })
+            ->whereHas('rating', function ($q) {
+                $q->whereNotNull('status_action_id');
+            })
+            ->has('rating')
+            ->whereIn('status', ['PENDING', 'APPROVED'])
+            ->where('created_at', '>=', $date_start)
+            ->where('created_at', '<=', $date_end)
+            ->orderBy('created_at', 'DESC')
+            ->orderBy('status', 'DESC')
+            ->paginate($pagination);
+
+        return new ApprovalItemsCollection($approval_items);
     }
 }

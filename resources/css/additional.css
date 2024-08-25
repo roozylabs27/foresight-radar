@@ -6,8 +6,8 @@
 }
 
 .custom-tag:hover {
-    background: #E39B54;
-    color:white;
+    background: #e39b54;
+    color: white;
 }
 
 .green-background {
@@ -24,4 +24,21 @@
 
 .disable-hover:hover {
     background: none !important;
+}
+
+.custom-green-button {
+    background-color: #4caf50;
+    border-color: #4caf50;
+    color: white;
+}
+
+.custom-red-button {
+    background-color: #b63232;
+    border-color: #b63232;
+    color: white;
+}
+
+.custom-green-button:hover {
+    background-color: #45a049;
+    border-color: #45a049;
 }

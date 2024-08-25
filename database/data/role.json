@@ -17,8 +17,8 @@
             "create-rating-urgency",
             "view-status-action",
             "create-status-action",
-            "view-approval",
-            "create-approval",
+            "view-approval-items",
+            "create-approval-items",
             "view-closed-items",
             "view-user",
             "create-user",
@@ -51,8 +51,8 @@
             "create-rating-urgency",
             "view-status-action",
             "create-status-action",
-            "view-approval",
-            "create-approval",
+            "view-approval-items",
+            "create-approval-items",
             "view-closed-items",
             "view-user",
             "create-user",
@@ -85,8 +85,8 @@
             "create-rating-urgency",
             "view-status-action",
             "create-status-action",
-            "view-approval",
-            "create-approval",
+            "view-approval-items",
+            "create-approval-items",
             "view-closed-items"
         ]
     }

@@ -60,14 +60,14 @@
         "category": "rating-urgency"
     },
     {
-        "name": "view-approval",
-        "description": "permission for access approval list page",
-        "category": "approval"
+        "name": "view-approval-items",
+        "description": "permission for access approval items list page",
+        "category": "approval-items"
     },
     {
-        "name": "create-approval",
-        "description": "permission for create approval",
-        "category": "approval"
+        "name": "create-approval-items",
+        "description": "permission for create approval items",
+        "category": "approval-items"
     },
     {
         "name": "view-closed-items",

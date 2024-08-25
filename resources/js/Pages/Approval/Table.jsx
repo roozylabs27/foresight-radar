@@ -1,10 +1,7 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import {
-    MoreOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    BarChartOutlined,
-    PlusOutlined,
+    CheckOutlined,
+    CloseOutlined,
 } from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
@@ -30,7 +27,7 @@ import axios from "axios";
 import qs from "qs";
 import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
-import Dialog from "@/Components/Dialog";
+import "../../../css/additional.css";
 
 export default function TableClosedItems({ auth, title, dimensions }) {
     // Import
@@ -45,6 +42,7 @@ export default function TableClosedItems({ auth, title, dimensions }) {
     // Table
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [loadingButton, setLoadingButton] = useState(false);
     const [defaultDate, setDefaultDate] = useState([
         dayjs().startOf("month"),
         dayjs().endOf("month"),
@@ -59,14 +57,6 @@ export default function TableClosedItems({ auth, title, dimensions }) {
             dayjs().endOf("month").format("YYYY-MM-DD"),
         ],
     });
-
-    // Modal
-    const formRef = useRef(null);
-    const [errors, setErrors] = useState({});
-    const [open, setOpen] = useState(false);
-    const [titleModal, setTitleModal] = useState("");
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [initialValues, setInitialValues] = useState({});
 
     useEffect(() => {
         fetchData();
@@ -90,7 +80,7 @@ export default function TableClosedItems({ auth, title, dimensions }) {
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("closed-items.fetch-data")}?${qs.stringify(
+                `${route("approval-items.fetch-data")}?${qs.stringify(
                     getParams(tableParams)
                 )}`
             );
@@ -121,7 +111,36 @@ export default function TableClosedItems({ auth, title, dimensions }) {
 
     const columnStatus = (text, record) => {
         const status = text.toLowerCase();
-        return <Tag color="error">{status} - {record.closed_at}</Tag>;
+        return (
+            <Tag color={text == "PENDING" ? "processing" : "success"}>
+                {status} - {record.approved_at}
+            </Tag>
+        );
+    };
+
+    const columnApprovedBtn = (text, record) => {
+        const textItem = record.status == "PENDING" ? "show" : "take out";
+        const icon =
+            record.status == "PENDING" ? <CheckOutlined /> : <CloseOutlined />;
+        const value = record.status == "PENDING" ? "APPROVED" : "CLOSED";
+        return (
+            <Popconfirm
+                title={`Are you sure to ${textItem} this ${record.keyword}?`}
+                onConfirm={() => handleApproveClick(record, {value, text: textItem})}
+                okText="Yes"
+                cancelText="No"
+            >
+                <Button
+                    type="primary"
+                    loading={loadingButton}
+                    shape="round"
+                    icon={icon}
+                    iconPosition="end"
+                >
+                    {textItem}
+                </Button>
+            </Popconfirm>
+        );
     };
 
     const columns = [
@@ -181,7 +200,7 @@ export default function TableClosedItems({ auth, title, dimensions }) {
             dataIndex: "status",
             align: "center",
             width: 60,
-            render: columnStatus
+            render: columnStatus,
         },
         {
             title: "Status Action",
@@ -194,7 +213,41 @@ export default function TableClosedItems({ auth, title, dimensions }) {
             dataIndex: "reason",
             width: 60,
         },
+        {
+            title: "",
+            key: "operation",
+            align: "center",
+            render: columnApprovedBtn,
+            width: 60,
+        },
     ];
+
+    const handleApproveClick = async (record, {value, text}) => {
+        setLoadingButton(true);
+        const payload = {
+            status: value,
+            text,
+        };
+
+        try {
+            const response = await axios.post(
+                route("approval-items.create", record.id),
+                payload
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success(response.data.message);
+
+                fetchData(); // Refresh the table data
+            } else {
+                message.error(`Failed to approve items`);
+            }
+        } catch (error) {
+            message.error(`Error: ${error.message}`);
+        } finally {
+            setLoadingButton(false);
+        }
+    };
 
     const handleSearchChange = (value) => {
         setTableParams({
@@ -254,12 +307,6 @@ export default function TableClosedItems({ auth, title, dimensions }) {
         if (pagination.pageSize !== tableParams.pagination?.pageSize) {
             setData([]);
         }
-    };
-
-    const handleCreateSignal = () => {
-        setOpen(true);
-        setTitleModal("Create Signal Changes");
-        setInitialValues({});
     };
 
     return (

@@ -121,24 +121,6 @@ export default function TableDrivingForce({ auth, title , dimensions, users }) {
         }
     };
 
-    // const columnApproved = (text, record) => {
-    //     const status = text.toLowerCase();
-    //     switch (status) {
-    //         case "pending":
-    //             return <Tag color="processing">{status}</Tag>;
-    //         case "approved":
-    //             return (
-    //                 <Tag color="success">
-    //                     {status} - {record.approved_at}
-    //                 </Tag>
-    //             );
-    //         case "rejected":
-    //             return <Tag color="error">{status}</Tag>;
-    //         default:
-    //             return <Tag color="default">{status}</Tag>;
-    //     }
-    // };
-
     const columnAction = (text, record) => {
         const actions = [
             {
