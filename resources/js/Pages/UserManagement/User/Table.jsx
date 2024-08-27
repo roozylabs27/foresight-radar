@@ -186,7 +186,7 @@ export default function TableUser({ auth, title, roles }) {
             width: 150,
         },
         {
-            title: "Role",
+            title: "Role/Division",
             dataIndex: "role",
             width: 150,
         },
@@ -322,7 +322,6 @@ export default function TableUser({ auth, title, roles }) {
                 );
             }
         } catch (error) {
-            console.log(error)
             // TODO: Handling error
             if (error.response.status === 422) {
                 setErrors(error.response.data.errors);

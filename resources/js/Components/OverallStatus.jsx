@@ -12,13 +12,24 @@ import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import qs from "qs";
 
-const OverallStatus = ({ loading, setLoading, date }) => {
+const OverallStatus = ({
+    loading,
+    setLoading,
+    date,
+    selectData,
+}) => {
     const getParams = (params) => {
         return {
+            results: params.pagination?.pageSize,
+            page: params.pagination?.current,
             ...params,
         };
     };
     const [tableParams, setTableParams] = useState({
+        pagination: {
+            current: 1,
+            pageSize: 20,
+        },
         date: [
             dayjs().startOf("month").format("YYYY-MM-DD"),
             dayjs().endOf("month").format("YYYY-MM-DD"),
@@ -29,7 +40,12 @@ const OverallStatus = ({ loading, setLoading, date }) => {
 
     useEffect(() => {
         fetchData();
-    }, [date]);
+    }, [
+        tableParams.pagination?.pageSize,
+        tableParams.pagination?.current,
+        date,
+        selectData,
+    ]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -39,20 +55,28 @@ const OverallStatus = ({ loading, setLoading, date }) => {
                     getParams({
                         ...tableParams,
                         date: date != null ? date.date : tableParams.date,
+                        dimension: selectData ? selectData.dimension : null
                     })
                 )}`
             );
 
             if (response.status == 200) {
                 setTimeout(() => {
-                    const newData = response.data.map((d, i) => ({
+                    const newData = response.data.data.map((d, i) => ({
                         no: i + 1,
                         ...d,
                     }));
 
+                    console.log(newData);
+
                     setData(newData);
                     setTableParams({
                         ...tableParams,
+                        pagination: {
+                            pageSize: response.data.meta.per_page,
+                            current: response.data.meta.current_page,
+                            total: response.data.meta.total,
+                        },
                     });
 
                     setLoading(false);
@@ -107,8 +131,9 @@ const OverallStatus = ({ loading, setLoading, date }) => {
     const renderToolTip = (record, type) => {
         return (
             <Tooltip placement="left" title={record.action_reason}>
-
-                {type == "decided_plan" ? record.decided_plan : record.monitoring}
+                {type == "decided_plan"
+                    ? record.decided_plan
+                    : record.monitoring}
             </Tooltip>
         );
     };
@@ -128,6 +153,7 @@ const OverallStatus = ({ loading, setLoading, date }) => {
                     return acc;
                 }, 0);
 
+                console.log(rowSpan, record.keyword);
                 if (
                     rowIndex === 0 ||
                     data[rowIndex - 1].dimension !== record.dimension
@@ -194,17 +220,31 @@ const OverallStatus = ({ loading, setLoading, date }) => {
                     title: "Decided Plan",
                     dataIndex: "decided_plan",
                     align: "center",
-                    render: (text, record) => renderToolTip(record, "decided_plan"),
+                    render: (text, record) =>
+                        renderToolTip(record, "decided_plan"),
                 },
                 {
                     title: "Monitor",
                     dataIndex: "monitoring",
                     align: "center",
-                    render: (text, record) => renderToolTip(record, "monitoring"),
+                    render: (text, record) =>
+                        renderToolTip(record, "monitoring"),
                 },
             ],
         },
     ];
+
+    const handleTableChange = (pagination, filters, sorter) => {
+        setTableParams({
+            pagination,
+            date: tableParams.date,
+            dimension: tableParams.dimension,
+        });
+
+        if (pagination.pageSize !== tableParams.pagination?.pageSize) {
+            setData([]);
+        }
+    };
 
     return (
         <Skeleton active loading={false}>
@@ -231,7 +271,8 @@ const OverallStatus = ({ loading, setLoading, date }) => {
                         bordered
                         loading={loading}
                         rowKey={(record) => record.id}
-                        pagination={false}
+                        pagination={tableParams.pagination}
+                        onChange={handleTableChange}
                     />
                 </Col>
             </Row>

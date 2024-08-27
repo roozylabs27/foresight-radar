@@ -113,7 +113,7 @@ export default function TableClosedItems({ auth, title, dimensions }) {
         const status = text.toLowerCase();
         return (
             <Tag color={text == "PENDING" ? "processing" : "success"}>
-                {status} - {record.approved_at}
+                {status} {status != "pending" ? `- ${record.approved_at}` : ''}
             </Tag>
         );
     };

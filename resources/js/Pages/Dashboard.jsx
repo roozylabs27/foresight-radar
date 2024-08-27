@@ -56,6 +56,7 @@ export default function Dashboard({ auth, dimensions }) {
                 <OverallStatus
                     loading={loading}
                     setLoading={setLoading}
+                    selectData={selectData}
                     date={newDate}
                 />
             ),
@@ -77,13 +78,6 @@ export default function Dashboard({ auth, dimensions }) {
     const handleTabsChange = (key) => {
         setLoading(true);
         setActiveTab(key);
-
-        if (key == 2) {
-            setDisplay("none");
-        } else {
-            setDisplay("block");
-        }
-
     };
 
     const handleRangePickerChange = (dates) => {

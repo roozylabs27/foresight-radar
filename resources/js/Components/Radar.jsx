@@ -284,6 +284,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
     const columns = [
         {
             title: "No",
+            width: "60px",
             dataIndex: "no",
         },
         {

@@ -29,7 +29,7 @@ class DrivingForceController extends Controller
         })->orderBy('name', 'asc')->get()->map(function ($user) {
             return [
                 'value' => $user->id,
-                'label' => $user->name
+                'label' => $user->name . ' - ' . $user->roles->pluck('display_name')[0]
             ];
         });
 
@@ -63,9 +63,7 @@ class DrivingForceController extends Controller
 
             $request = $request->all();
 
-            DrivingForce::firstOrCreate([
-                'keyword' => $request['keyword'],
-            ], $request);
+            DrivingForce::create($request);
 
             DB::commit();
 
