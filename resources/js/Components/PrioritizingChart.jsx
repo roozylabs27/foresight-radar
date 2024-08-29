@@ -99,7 +99,7 @@ const PrioritizingChart = ({
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("prioritizing")}?${qs.stringify(
+                `${route("visualization.prioritizing.get-data")}?${qs.stringify(
                     getParams({
                         ...tableParams,
                         date : date != null ? date.date : tableParams.date,

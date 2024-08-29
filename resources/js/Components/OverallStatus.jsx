@@ -51,7 +51,7 @@ const OverallStatus = ({
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("overall-status")}?${qs.stringify(
+                `${route("visualization.registered-list.get-data")}?${qs.stringify(
                     getParams({
                         ...tableParams,
                         date: date != null ? date.date : tableParams.date,

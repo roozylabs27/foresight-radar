@@ -5,7 +5,7 @@
         "permissions": [
             "view-dashboard",
             "view-prioritizing",
-            "view-overall-status",
+            "view-registered-list",
             "view-foresight-radar",
             "view-driving-force",
             "create-driving-force",
@@ -39,7 +39,7 @@
         "permissions": [
             "view-dashboard",
             "view-prioritizing",
-            "view-overall-status",
+            "view-registered-list",
             "view-foresight-radar",
             "view-driving-force",
             "create-driving-force",
@@ -73,7 +73,7 @@
         "permissions": [
             "view-dashboard",
             "view-prioritizing",
-            "view-overall-status",
+            "view-registered-list",
             "view-foresight-radar",
             "view-driving-force",
             "create-driving-force",

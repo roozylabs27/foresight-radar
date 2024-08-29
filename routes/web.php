@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ForesightRadarController;
+use App\Http\Controllers\PrioritizingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RegisteredListController;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
@@ -58,9 +61,21 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         dd($registered_list);
     });
 
-    Route::get("/prioritizing", [DashboardController::class, 'prioritizing'])->name('prioritizing');
-    Route::get("/overall-status", [DashboardController::class, 'overall_status'])->name('overall-status');
-    Route::get("/foresight-radar", [DashboardController::class, 'foresight_radar'])->name('foresight-radar');
+    Route::prefix('visualization')->name('visualization.')->group(function() {
+        Route::prefix("/prioritizing")->name('prioritizing.')->group(function() {
+            Route::get("/", [PrioritizingController::class, 'index']);
+            Route::get("/get-data", [PrioritizingController::class, 'prioritizing'])->name('get-data');
+        });
+        Route::prefix("/registered-list")->name('registered-list.')->group(function() {
+            Route::get("/", [RegisteredListController::class, 'index']);
+            Route::get("/get-data", [RegisteredListController::class, 'registered_list'])->name('get-data');
+        });
+        Route::prefix("/foresight-radar")->name('foresight-radar.')->group(function() {
+            Route::get("/", [ForesightRadarController::class, 'index']);
+            Route::get("/get-data", [ForesightRadarController::class, 'foresight_radar'])->name('get-data');
+        });
+    });
+
 
     Route::prefix("driving-force")->controller(App\Http\Controllers\DrivingForceController::class)->name("driving-force.")->group(function () {
         Route::get("/", "index")->can('view-driving-force');

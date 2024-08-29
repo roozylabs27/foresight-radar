@@ -7,17 +7,17 @@
     {
         "name": "view-prioritizing",
         "description": "permission for access prioritizing chart",
-        "category": "dashboard"
+        "category": "report"
     },
     {
-        "name": "view-overall-status",
-        "description": "permission for access overall status table",
-        "category": "dashboard"
+        "name": "view-registered-list",
+        "description": "permission for access registered list table",
+        "category": "report"
     },
     {
         "name": "view-foresight-radar",
         "description": "permission for access foresight radar",
-        "category": "dashboard"
+        "category": "report"
     },
     {
         "name": "view-driving-force",

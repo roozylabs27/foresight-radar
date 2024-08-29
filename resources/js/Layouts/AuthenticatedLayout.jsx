@@ -12,6 +12,8 @@ import {
     UserSwitchOutlined,
     FileProtectOutlined,
     FileExcelOutlined,
+    DotChartOutlined,
+    InsertRowAboveOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, theme, Flex, Button, Dropdown, Space, FloatButton } from "antd";
 import { Link, usePage } from "@inertiajs/react";
@@ -21,12 +23,6 @@ export default function Authenticated({ auth, children }) {
     const { url } = usePage();
     const { user, permissions } = auth;
     const [items, setItems] = useState([
-        {
-            label: <Link href={route("dashboard.")}>Dashboard</Link>,
-            icon: <DashboardOutlined />,
-            key: "/dashboard",
-            permission: "view-dashboard",
-        },
         {
             label: <Link href={route("driving-force.")}>Driving Force</Link>,
             icon: <RadarChartOutlined />,
@@ -77,12 +73,27 @@ export default function Authenticated({ auth, children }) {
                         <Link href={route("user-management.user.")}>User</Link>
                     ),
                 },
-                // {
-                //     key: "/user-management/role",
-                //     label: <Link href={route("user-management.role.")}>Role</Link>,
-                // },
             ],
         },
+        {
+            label: <Link href={route("visualization.prioritizing.")}>Prioritizing</Link>,
+            icon: <DotChartOutlined />,
+            key: "/visualization/prioritizing",
+            permission: "view-prioritizing",
+        },
+        {
+            label: <Link href={route("visualization.registered-list.")}>Registered List</Link>,
+            icon: <InsertRowAboveOutlined />,
+            key: "/visualization/registered-list",
+            permission: "view-registered-list",
+        },
+        {
+            label: <Link href={route("visualization.foresight-radar.")}>Foresight Radar</Link>,
+            icon: <RadarChartOutlined />,
+            key: "/visualization/foresight-radar",
+            permission: "view-foresight-radar",
+        },
+
     ]);
     const actions = [
         // {

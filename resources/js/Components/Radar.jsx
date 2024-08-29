@@ -237,7 +237,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("foresight-radar")}?${qs.stringify(
+                `${route("visualization.foresight-radar.get-data")}?${qs.stringify(
                     getParams({
                         ...tableParams,
                         date: date != null ? date.date : tableParams.date,
