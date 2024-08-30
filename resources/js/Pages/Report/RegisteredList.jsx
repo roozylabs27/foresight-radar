@@ -18,7 +18,14 @@ import dayjs from "dayjs";
 import OverallStatus from "@/Components/OverallStatus";
 import { TikTokOutlined } from "@ant-design/icons";
 
-export default function RegisteredList({ auth, dimensions, title }) {
+export default function RegisteredList({
+    auth,
+    dimensions,
+    title,
+    priorities,
+    status_actions,
+    time_horizons,
+}) {
     const {
         token: { colorBgContainer, borderRadiusLG },
     } = theme.useToken();
@@ -31,7 +38,13 @@ export default function RegisteredList({ auth, dimensions, title }) {
     ]);
     const [loading, setLoading] = useState(false);
     const [newDate, setNewDate] = useState(null);
-    const [selectData, setSelectData] = useState(null);
+    const [selectDimension, setSelectDimension] = useState(null);
+    const [selectedData, setSelectedData] = useState({
+        dimension: null,
+        time_horizon: null,
+        priority: null,
+        status_action: null,
+    });
     const [display, setDisplay] = useState("block");
 
     const handleRangePickerChange = (dates) => {
@@ -52,9 +65,7 @@ export default function RegisteredList({ auth, dimensions, title }) {
     };
 
     const handleSelectChange = (field, value) => {
-        setSelectData({
-            [field]: value != undefined ? value : null,
-        });
+        setSelectedData({ ...selectedData, [field]: value != undefined ? value : null });
     };
 
     return (
@@ -82,7 +93,7 @@ export default function RegisteredList({ auth, dimensions, title }) {
                         <Title level={5}>Filter</Title>
                     </Col>
                 </Row>
-                <Row gutter={16}>
+                <Row gutter={[16, 16]}>
                     <Col xs={24} sm={12} md={8} lg={6}>
                         <Space direction="vertical" style={{ width: "100%" }}>
                             Date Period :
@@ -123,6 +134,90 @@ export default function RegisteredList({ auth, dimensions, title }) {
                             />
                         </Space>
                     </Col>
+                    <Col
+                        style={{
+                            display,
+                        }}
+                        xs={24}
+                        sm={12}
+                        md={8}
+                        lg={6}
+                    >
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                            Time Horizon :
+                            <Select
+                                style={{ width: "100%" }}
+                                disabled={loading}
+                                placeholder="Select a time horizon"
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "")
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) =>
+                                    handleSelectChange("time_horizon", value)
+                                }
+                                options={time_horizons}
+                            />
+                        </Space>
+                    </Col>
+                    <Col
+                        style={{
+                            display,
+                        }}
+                        xs={24}
+                        sm={12}
+                        md={8}
+                        lg={6}
+                    >
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                            Priority :
+                            <Select
+                                style={{ width: "100%" }}
+                                disabled={loading}
+                                placeholder="Select a priority"
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "")
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) =>
+                                    handleSelectChange("priority", value)
+                                }
+                                options={priorities}
+                            />
+                        </Space>
+                    </Col>
+                    <Col
+                        style={{
+                            display,
+                        }}
+                        xs={24}
+                        sm={12}
+                        md={8}
+                        lg={6}
+                    >
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                            Status Action :
+                            <Select
+                                style={{ width: "100%" }}
+                                disabled={loading}
+                                placeholder="Select a status action"
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "")
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) =>
+                                    handleSelectChange("status_action", value)
+                                }
+                                options={status_actions}
+                            />
+                        </Space>
+                    </Col>
                 </Row>
             </Content>
 
@@ -143,7 +238,7 @@ export default function RegisteredList({ auth, dimensions, title }) {
                     <OverallStatus
                         loading={loading}
                         setLoading={setLoading}
-                        selectData={selectData}
+                        selectedData={selectedData}
                         date={newDate}
                     />
                 </div>

@@ -17,7 +17,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/visualitazion/foresight-radar';
+    public const HOME = '/visualization/foresight-radar';
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.

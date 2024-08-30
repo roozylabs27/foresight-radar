@@ -16,7 +16,7 @@ const OverallStatus = ({
     loading,
     setLoading,
     date,
-    selectData,
+    selectedData,
 }) => {
     const getParams = (params) => {
         return {
@@ -44,7 +44,10 @@ const OverallStatus = ({
         tableParams.pagination?.pageSize,
         tableParams.pagination?.current,
         date,
-        selectData,
+        selectedData.dimension,
+        selectedData.time_horizon,
+        selectedData.priority,
+        selectedData.status_action,
     ]);
 
     const fetchData = async () => {
@@ -55,7 +58,7 @@ const OverallStatus = ({
                     getParams({
                         ...tableParams,
                         date: date != null ? date.date : tableParams.date,
-                        dimension: selectData ? selectData.dimension : null
+                        ...selectedData
                     })
                 )}`
             );
@@ -66,8 +69,6 @@ const OverallStatus = ({
                         no: i + 1,
                         ...d,
                     }));
-
-                    console.log(newData);
 
                     setData(newData);
                     setTableParams({
@@ -153,7 +154,6 @@ const OverallStatus = ({
                     return acc;
                 }, 0);
 
-                console.log(rowSpan, record.keyword);
                 if (
                     rowIndex === 0 ||
                     data[rowIndex - 1].dimension !== record.dimension

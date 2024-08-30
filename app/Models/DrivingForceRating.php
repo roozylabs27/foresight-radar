@@ -82,10 +82,13 @@ class DrivingForceRating extends Model
         return PrioritizingResource::collection($prioritizing);
     }
 
-    public static function overall_status()
+    public static function registered_list()
     {
         $pagination = request('pagination.pageSize');
         $dimension = request('dimension');
+        $time_horizon = request('time_horizon');
+        $priority = request('priority');
+        $status_action = request('status_action');
         $date_range = request('date');
         $date_start = $date_range[0] . ' 00:00:00';
         $date_end = $date_range[1] . ' 23:59:59';
@@ -106,6 +109,15 @@ class DrivingForceRating extends Model
                 $q->whereHas('driving_force', function ($q) use ($dimension) {
                     $q->where('dimension_id', $dimension);
                 });
+            })
+            ->when($time_horizon, function ($q) use ($time_horizon) {
+                $q->where('time_horizon_id', $time_horizon);
+            })
+            ->when($priority, function ($q) use ($priority) {
+                $q->where('priority_id', $priority);
+            })
+            ->when($status_action, function ($q) use ($status_action) {
+                $q->where('status_action_id', $status_action);
             })
             ->has('driving_force')
             ->whereHas('driving_force', function ($q) {

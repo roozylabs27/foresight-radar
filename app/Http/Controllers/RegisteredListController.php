@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Dimension;
 use App\Models\DrivingForceRating;
+use App\Models\Priority;
+use App\Models\StatusAction;
+use App\Models\TimeHorizon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -19,15 +22,33 @@ class RegisteredListController extends Controller
                 'label' => $dimension->name
             ];
         });
+        $time_horizons = TimeHorizon::all()->map(function ($time_horizon) {
+            return [
+                'value' => $time_horizon->id,
+                'label' => $time_horizon->name
+            ];
+        });
+        $priorities = Priority::all()->map(function ($priority) {
+            return [
+                'value' => $priority->id,
+                'label' => $priority->name
+            ];
+        });
+        $status_actions = StatusAction::all()->map(function ($status_action) {
+            return [
+                'value' => $status_action->id,
+                'label' => $status_action->name
+            ];
+        });
         $title = "Registered List";
 
-        return Inertia::render('Report/RegisteredList', compact('dimensions','title'));
+        return Inertia::render('Report/RegisteredList', compact('dimensions','title', 'priorities', 'status_actions', 'time_horizons'));
     }
 
     public function registered_list()
     {
         try {
-            $result = DrivingForceRating::overall_status();
+            $result = DrivingForceRating::registered_list();
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
