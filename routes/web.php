@@ -32,35 +32,6 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::get("/", "index")->can('view-dashboard');
     });
 
-    Route::get('/query', function () {
-
-        $dimension = request('dimension');
-        $date_start = now()->subMonth(2);
-        $date_end = now();
-
-        $dimensions = Dimension::query()->select('id', 'name')->when($dimension, function ($q) use ($dimension) {
-            $q->where('id', $dimension);
-        })->orderBy('id', 'asc')->paginate(5);
-
-        $registered_list = $dimensions->map(function ($dimension) use($date_start, $date_end) {
-            $signals = DrivingForceRating::query()
-                ->whereNotNull('status_action_id')
-                ->where('created_at', '>=', $date_start)
-                ->where('created_at', '<=', $date_end)
-                ->whereHas('driving_force', function ($q) use ($dimension) {
-                    $q->where('dimension_id', $dimension->id)->where('status', 'APPROVED');
-                })
-                ->orderBy('created_at', 'DESC')->get();
-
-            return [
-                'dimension' => $dimension->name,
-                'signals' => $signals
-            ];
-        });
-
-        dd($registered_list);
-    });
-
     Route::prefix('visualization')->name('visualization.')->group(function() {
         Route::prefix("/prioritizing")->name('prioritizing.')->group(function() {
             Route::get("/", [PrioritizingController::class, 'index']);
@@ -69,6 +40,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::prefix("/registered-list")->name('registered-list.')->group(function() {
             Route::get("/", [RegisteredListController::class, 'index']);
             Route::get("/get-data", [RegisteredListController::class, 'registered_list'])->name('get-data');
+            Route::get('/export-data', [RegisteredListController::class, 'export_data'])->name('export-data');
         });
         Route::prefix("/foresight-radar")->name('foresight-radar.')->group(function() {
             Route::get("/", [ForesightRadarController::class, 'index']);

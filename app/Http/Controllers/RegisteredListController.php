@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\OverallStatusCollection;
+use App\Http\Resources\OverallStatusResource;
 use App\Models\Dimension;
 use App\Models\DrivingForceRating;
 use App\Models\Priority;
@@ -42,15 +44,34 @@ class RegisteredListController extends Controller
         });
         $title = "Registered List";
 
-        return Inertia::render('Report/RegisteredList', compact('dimensions','title', 'priorities', 'status_actions', 'time_horizons'));
+        return Inertia::render('Report/RegisteredList', compact('dimensions', 'title', 'priorities', 'status_actions', 'time_horizons'));
     }
 
     public function registered_list()
     {
         try {
-            $result = DrivingForceRating::registered_list();
+
+            $pagination = request('pagination.pageSize');
+            $registered_list = DrivingForceRating::registered_list()->paginate($pagination);
+            $result = new OverallStatusCollection($registered_list);
 
             return response()->json($result, Response::HTTP_OK);
+        } catch (\Throwable $th) {
+            Log::error($th);
+            return response()->json([
+                'errors' => $th->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function export_data()
+    {
+        try {
+            $registered_list = DrivingForceRating::registered_list()->get();
+            $result = OverallStatusResource::collection($registered_list);
+
+            return response()->json($result, Response::HTTP_OK);
+
         } catch (\Throwable $th) {
             Log::error($th);
             return response()->json([

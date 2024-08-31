@@ -25,7 +25,7 @@ class DrivingForceController extends Controller
             ];
         });
         $users = User::select('id', 'name')->whereHas('roles', function ($q) {
-            $q->whereNotIn('name', ['super-admin', 'developer']);
+            $q->where('name', 'admin');
         })->orderBy('name', 'asc')->get()->map(function ($user) {
             return [
                 'value' => $user->id,

@@ -239,6 +239,7 @@ export default function RegisteredList({
                         loading={loading}
                         setLoading={setLoading}
                         selectedData={selectedData}
+                        permissions={auth.permissions}
                         date={newDate}
                     />
                 </div>

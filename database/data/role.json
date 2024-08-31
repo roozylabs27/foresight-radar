@@ -6,6 +6,7 @@
             "view-dashboard",
             "view-prioritizing",
             "view-registered-list",
+            "export-registered-list",
             "view-foresight-radar",
             "view-driving-force",
             "create-driving-force",
@@ -40,6 +41,7 @@
             "view-dashboard",
             "view-prioritizing",
             "view-registered-list",
+            "export-registered-list",
             "view-foresight-radar",
             "view-driving-force",
             "create-driving-force",
@@ -74,6 +76,7 @@
             "view-dashboard",
             "view-prioritizing",
             "view-registered-list",
+            "export-registered-list",
             "view-foresight-radar",
             "view-driving-force",
             "create-driving-force",
@@ -87,6 +90,19 @@
             "create-status-action",
             "view-approval-items",
             "create-approval-items",
+            "view-closed-items"
+        ]
+    },
+    {
+        "name": "bod",
+        "display_name": "Board of Directors",
+        "permissions": [
+            "view-dashboard",
+            "view-prioritizing",
+            "view-registered-list",
+            "export-registered-list",
+            "view-foresight-radar",
+            "view-approval-items",
             "view-closed-items"
         ]
     }

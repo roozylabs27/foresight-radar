@@ -84,7 +84,6 @@ class DrivingForceRating extends Model
 
     public static function registered_list()
     {
-        $pagination = request('pagination.pageSize');
         $dimension = request('dimension');
         $time_horizon = request('time_horizon');
         $priority = request('priority');
@@ -93,13 +92,13 @@ class DrivingForceRating extends Model
         $date_start = $date_range[0] . ' 00:00:00';
         $date_end = $date_range[1] . ' 23:59:59';
 
-        $overall_status = self::with(['driving_force' => function ($q) {
+        $registered_list = self::with(['driving_force' => function ($q) {
             $q->orderBy('dimension_id', 'ASC');
         }, 'action_reasons' => function ($q) {
             $q->whereIn('id', function ($query) {
                 $query->selectRaw('MAX(id)')
                     ->from('action_reasons')
-                    ->groupBy('driving_force_rating_id') // Ganti dengan foreign key yang relevan
+                    ->groupBy('driving_force_rating_id')
                     ->orderBy('date', 'DESC');
             });
         }, 'status_action' => function ($q) {
@@ -126,42 +125,9 @@ class DrivingForceRating extends Model
             ->whereNotNull('status_action_id')
             ->where('created_at', '>=', $date_start)
             ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'ASC')
-            ->paginate($pagination);
+            ->orderBy('created_at', 'ASC');
 
-        // $dimensions = Dimension::query()->select('id', 'name')
-        //     ->with(['driving_forces' => function ($q) {
-        //         $q->where('status', 'approved')->with('rating');
-        //     }])
-        //     ->when($dimension, function ($q) use ($dimension) {
-        //         $q->where('id', $dimension);
-        //     })
-        //     ->whereHas('driving_forces', function ($q) use ($date_start, $date_end) {
-        //         $q->where('status', 'approved')
-        //             ->where('created_at', '>=', $date_start)
-        //             ->where('created_at', '<=', $date_end);
-        //     })
-        //     ->orderBy('id', 'asc')
-        //     ->paginate($pagination);
-        // $registered_list = $dimensions->map(function ($dimension) use($date_start, $date_end) {
-        //     $signals = DrivingForceRating::query()
-        //         ->whereNotNull('status_action_id')
-        //         ->where('created_at', '>=', $date_start)
-        //         ->where('created_at', '<=', $date_end)
-        //         ->whereHas('driving_force', function ($q) use ($dimension) {
-        //             $q->where('dimension_id', $dimension->id)->where('status', 'APPROVED');
-        //         })
-        //         ->orderBy('created_at', 'DESC')->get();
-
-        //     return [
-        //         'dimension' => $dimension->name,
-        //         'signals' => $signals
-        //     ];
-        // });
-
-        // dd($registered_list);
-
-        return new OverallStatusCollection($overall_status);
+        return $registered_list;
     }
 
     public static function foresight_radar()

@@ -10,5 +10,11 @@
         "email" : "superadmin@foresight.com",
         "password" : "password",
         "role" : "super-admin"
+    },
+    {
+        "name" : "Test BOD",
+        "email" : "bod@foresight.com",
+        "password" : "password",
+        "role" : "bod"
     }
 ]

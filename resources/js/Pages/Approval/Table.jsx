@@ -1,8 +1,5 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import {
-    CheckOutlined,
-    CloseOutlined,
-} from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
     Layout,
@@ -29,7 +26,7 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import "../../../css/additional.css";
 
-export default function TableClosedItems({ auth, title, dimensions }) {
+export default function TableApproval({ auth, title, dimensions }) {
     // Import
     const {
         token: { colorBgContainer, borderRadiusLG },
@@ -113,7 +110,7 @@ export default function TableClosedItems({ auth, title, dimensions }) {
         const status = text.toLowerCase();
         return (
             <Tag color={text == "PENDING" ? "processing" : "success"}>
-                {status} {status != "pending" ? `- ${record.approved_at}` : ''}
+                {status} {status != "pending" ? `- ${record.approved_at}` : ""}
             </Tag>
         );
     };
@@ -126,7 +123,9 @@ export default function TableClosedItems({ auth, title, dimensions }) {
         return (
             <Popconfirm
                 title={`Are you sure to ${textItem} this ${record.keyword}?`}
-                onConfirm={() => handleApproveClick(record, {value, text: textItem})}
+                onConfirm={() =>
+                    handleApproveClick(record, { value, text: textItem })
+                }
                 okText="Yes"
                 cancelText="No"
             >
@@ -213,16 +212,20 @@ export default function TableClosedItems({ auth, title, dimensions }) {
             dataIndex: "reason",
             width: 60,
         },
-        {
+    ];
+    const { user, permissions } = auth;
+
+    if (permissions.includes("create-approval-items")) {
+        columns.push({
             title: "",
             key: "operation",
             align: "center",
             render: columnApprovedBtn,
             width: 60,
-        },
-    ];
+        });
+    }
 
-    const handleApproveClick = async (record, {value, text}) => {
+    const handleApproveClick = async (record, { value, text }) => {
         setLoadingButton(true);
         const payload = {
             status: value,

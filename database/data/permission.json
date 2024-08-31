@@ -15,6 +15,11 @@
         "category": "report"
     },
     {
+        "name": "export-registered-list",
+        "description": "permission for access export list table",
+        "category": "report"
+    },
+    {
         "name": "view-foresight-radar",
         "description": "permission for access foresight radar",
         "category": "report"

@@ -2,6 +2,7 @@ import {
     Button,
     Col,
     message,
+    notification,
     Row,
     Segmented,
     Skeleton,
@@ -11,13 +12,9 @@ import {
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import qs from "qs";
+import * as XLSX from "xlsx";
 
-const OverallStatus = ({
-    loading,
-    setLoading,
-    date,
-    selectedData,
-}) => {
+const OverallStatus = ({ loading, setLoading, date, selectedData, permissions }) => {
     const getParams = (params) => {
         return {
             results: params.pagination?.pageSize,
@@ -54,11 +51,13 @@ const OverallStatus = ({
         setLoading(true);
         try {
             const response = await axios.get(
-                `${route("visualization.registered-list.get-data")}?${qs.stringify(
+                `${route(
+                    "visualization.registered-list.get-data"
+                )}?${qs.stringify(
                     getParams({
                         ...tableParams,
                         date: date != null ? date.date : tableParams.date,
-                        ...selectedData
+                        ...selectedData,
                     })
                 )}`
             );
@@ -246,21 +245,153 @@ const OverallStatus = ({
         }
     };
 
+    const handleExport = async () => {
+        setLoading(true);
+        try {
+            const response = await axios.get(
+                `${route(
+                    "visualization.registered-list.export-data"
+                )}?${qs.stringify(
+                    getParams({
+                        ...tableParams,
+                        date: date != null ? date.date : tableParams.date,
+                        ...selectedData,
+                    })
+                )}`
+            );
+
+            const exportData = response.data.map((record, index) => ({
+                No: index + 1,
+                Dimension: record.dimension,
+                Keyword: record.keyword,
+                Description: record.description,
+                "Short Term": record.short_term,
+                "Mid Term": record.mid_term,
+                "Long Term": record.long_term,
+                High: record.high,
+                Medium: record.medium,
+                Low: record.low,
+                "Decided Plan": record.decided_plan,
+                Monitor: record.monitoring,
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+            const merges = [];
+            let startRow = 2; // Excel rows are 1-indexed
+            let prevDimension = exportData[0].Dimension;
+            let rowCount = 1;
+
+            for (let i = 1; i < exportData.length; i++) {
+                if (exportData[i].Dimension === prevDimension) {
+                    rowCount++;
+                } else {
+                    if (rowCount > 1) {
+                        merges.push({
+                            s: { r: startRow - 1, c: 1 }, // starting cell (row, col)
+                            e: { r: startRow + rowCount - 2, c: 1 }, // ending cell (row, col)
+                        });
+
+                        // Atur centering untuk sel yang digabungkan
+                        for (
+                            let j = startRow - 1;
+                            j <= startRow + rowCount - 2;
+                            j++
+                        ) {
+                            const cellRef = XLSX.utils.encode_cell({
+                                r: j,
+                                c: 1,
+                            });
+                            if (!worksheet[cellRef]) worksheet[cellRef] = {};
+                            worksheet[cellRef].s = {
+                                alignment: {
+                                    vertical: "center",
+                                    horizontal: "center",
+                                },
+                            };
+                        }
+                    }
+                    startRow += rowCount;
+                    rowCount = 1;
+                    prevDimension = exportData[i].Dimension;
+                }
+            }
+
+            // Handle merge for the last set of rows
+            if (rowCount > 1) {
+                merges.push({
+                    s: { r: startRow - 1, c: 1 }, // starting cell (row, col)
+                    e: { r: startRow + rowCount - 2, c: 1 }, // ending cell (row, col)
+                });
+
+                for (let j = startRow - 1; j <= startRow + rowCount - 2; j++) {
+                    const cellRef = XLSX.utils.encode_cell({ r: j, c: 1 });
+                    if (!worksheet[cellRef]) worksheet[cellRef] = {};
+                    worksheet[cellRef].s = {
+                        alignment: {
+                            vertical: "center",
+                            horizontal: "center",
+                        },
+                    };
+                }
+            }
+
+            worksheet["!merges"] = merges;
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(
+                workbook,
+                worksheet,
+                "Registered List"
+            );
+
+            XLSX.writeFile(
+                workbook,
+                `${dayjs().format("YYYY-MM-DD")} - Registered List Data.xlsx`
+            );
+
+            setTimeout(() => {
+                setLoading(false);
+            }, 1000);
+        } catch (error) {
+            setLoading(false);
+            notification["warning"]("Error", error);
+        }
+    };
+
     return (
         <Skeleton active loading={false}>
             <Row gutter={24}>
                 <Col span={24}>
-                    <Segmented
-                        options={["Overall", "Detail Info"]}
-                        onChange={(value) => {
-                            setSegmented(value);
-                            setLoading(true);
+                    <Row justify="space-between">
+                        <Col span={12}>
+                            <Segmented
+                                options={["Overall", "Detail Info"]}
+                                onChange={(value) => {
+                                    setSegmented(value);
+                                    setLoading(true);
 
-                            setTimeout(() => {
-                                setLoading(false);
-                            }, 500);
-                        }}
-                    />
+                                    setTimeout(() => {
+                                        setLoading(false);
+                                    }, 500);
+                                }}
+                            />
+                        </Col>
+                        {permissions.includes("export-registered-list") && (
+                            <Col span={12}>
+                                <Row justify="end">
+                                    <Button
+                                        onClick={handleExport}
+                                        disabled={loading}
+                                        loading={loading}
+                                        type="default"
+                                    >
+                                        Export to Excel
+                                    </Button>
+                                </Row>
+                            </Col>
+                        )}
+                    </Row>
                 </Col>
                 <Col span={24}>
                     <Table
