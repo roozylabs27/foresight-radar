@@ -21,7 +21,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
     const [data, setData] = useState(null);
     const options = {
         title: {
-            text: "Firms Foresight Radar",
+            text: "Foresight Radar",
             left: "center",
         },
         legend: {
