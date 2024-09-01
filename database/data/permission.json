@@ -1,0 +1,147 @@
+[
+    {
+        "name": "view-dashboard",
+        "description": "permission for access dashboard page",
+        "category": "dashboard"
+    },
+    {
+        "name": "view-prioritizing",
+        "description": "permission for access prioritizing chart",
+        "category": "report"
+    },
+    {
+        "name": "view-registered-list",
+        "description": "permission for access registered list table",
+        "category": "report"
+    },
+    {
+        "name": "export-registered-list",
+        "description": "permission for access export list table",
+        "category": "report"
+    },
+    {
+        "name": "view-foresight-radar",
+        "description": "permission for access foresight radar",
+        "category": "report"
+    },
+    {
+        "name": "view-driving-force",
+        "description": "permission for access driving force list page",
+        "category": "driving-force"
+    },
+    {
+        "name": "create-driving-force",
+        "description": "permission for access create driving force",
+        "category": "driving-force"
+    },
+    {
+        "name": "edit-driving-force",
+        "description": "permission for access driving force list page",
+        "category": "driving-force"
+    },
+    {
+        "name": "delete-driving-force",
+        "description": "permission for delete driving force in CMS",
+        "category": "driving-force"
+    },
+    {
+        "name": "view-time-horizon",
+        "description": "permission for access time horizon list page",
+        "category": "time-horizon"
+    },
+    {
+        "name": "create-time-horizon",
+        "description": "permission for access create time horizon",
+        "category": "time-horizon"
+    },
+    {
+        "name": "view-rating-urgency",
+        "description": "permission for access rating urgency list page",
+        "category": "rating-urgency"
+    },
+    {
+        "name": "create-rating-urgency",
+        "description": "permission for access create rating urgency",
+        "category": "rating-urgency"
+    },
+    {
+        "name": "view-approval-items",
+        "description": "permission for access approval items list page",
+        "category": "approval-items"
+    },
+    {
+        "name": "create-approval-items",
+        "description": "permission for create approval items",
+        "category": "approval-items"
+    },
+    {
+        "name": "view-closed-items",
+        "description": "permission for access closed items list page",
+        "category": "closed-items"
+    },
+    {
+        "name": "view-status-action",
+        "description": "permission for access status-action list page",
+        "category": "status-action"
+    },
+    {
+        "name": "create-status-action",
+        "description": "permission for access create status-action",
+        "category": "status-action"
+    },
+    {
+        "name": "view-user",
+        "description": "permission for access user list page",
+        "category": "user"
+    },
+    {
+        "name": "create-user",
+        "description": "permission for create account in CMS",
+        "category": "user"
+    },
+    {
+        "name": "edit-user",
+        "description": "permission for update account in CMS",
+        "category": "user"
+    },
+    {
+        "name": "delete-user",
+        "description": "permission for delete account in CMS",
+        "category": "user"
+    },
+    {
+        "name": "profile-user",
+        "description": "permission for access profile account page",
+        "category": "user"
+    },
+    {
+        "name": "view-role",
+        "description": "permission for access role list page",
+        "category": "role"
+    },
+    {
+        "name": "create-role",
+        "description": "permission for create role account in CMS",
+        "category": "role"
+    },
+    {
+        "name": "edit-role",
+        "description": "permission for edit role account in CMS",
+        "category": "role"
+    },
+    {
+        "name": "delete-role",
+        "description": "permission for delete role account in CMS",
+        "category": "role"
+    },
+    {
+        "name": "view-permission",
+        "description": "permission for access permission list page",
+        "category": "permission"
+    },
+    {
+        "name": "view-log",
+        "description": "permission for access log list page",
+        "category": "log"
+    }
+]

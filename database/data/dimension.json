@@ -1,0 +1,35 @@
+[
+    {
+        "environment_id": 1,
+        "name": "Economy"
+    },
+    {
+        "environment_id": 1,
+        "name": "Ecology"
+    },
+    {
+        "environment_id": 1,
+        "name": "Regulation"
+    },
+    {
+        "environment_id": 1,
+        "name": "Technology"
+    },
+    {
+        "environment_id": 2,
+        "name": "Substitute"
+    },
+    {
+        "environment_id": 2,
+        "name": "Supplier"
+    },
+
+    {
+        "environment_id": 2,
+        "name": "Customer"
+    },
+    {
+        "environment_id": 2,
+        "name": "Competitor"
+    }
+]

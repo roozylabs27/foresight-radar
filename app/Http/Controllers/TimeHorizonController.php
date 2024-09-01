@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\TimeHorizonRequest;
+use App\Models\Dimension;
+use App\Models\DrivingForce;
+use App\Models\DrivingForceRating;
+use App\Models\TimeHorizon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
+use Ramsey\Uuid\Uuid;
+use Symfony\Component\HttpFoundation\Response;
+
+class TimeHorizonController extends Controller
+{
+    //
+
+    public function index()
+    {
+        $title = 'Time Horizon';
+        $dimensions = Dimension::all()->map(function ($dimension) {
+            return [
+                'value' => $dimension->id,
+                'label' => $dimension->name
+            ];
+        });
+        $time_horizons = TimeHorizon::all()->map(function ($time_horizon){
+            return [
+                'value' => $time_horizon->id,
+                'label' => $time_horizon->name
+            ];
+        });
+
+        return Inertia::render("TimeHorizon/Table", compact('dimensions', 'title', 'time_horizons'));
+    }
+
+    public function fetch_data()
+    {
+        try {
+            $result = DrivingForce::time_horizon();
+
+            return response()->json($result, Response::HTTP_OK);
+        } catch (\Throwable $th) {
+            Log::error($th);
+            return response()->json([
+                'errors' => $th->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function create(TimeHorizonRequest $request, DrivingForce $driving_force)
+    {
+        try {
+            DB::beginTransaction();
+
+            DrivingForceRating::updateOrCreate([
+                'driving_force_id' => $driving_force->id,
+            ], [
+                'uuid' => Uuid::uuid1(),
+                'time_horizon_id' => $request['time_horizon_id'],
+            ]);
+
+
+            DB::commit();
+
+            $response = [
+                'statusCode' => Response::HTTP_OK,
+                'message' => 'Successfully set time horizon !'
+            ];
+        } catch (\Throwable $th) {
+
+            DB::rollBack();
+
+            $response = [
+                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $th->getMessage(),
+            ];
+        }
+
+        return response()->json($response, $response['statusCode']);
+    }
+}

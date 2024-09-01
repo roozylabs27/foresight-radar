@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Dimension;
+use App\Models\DrivingForceRating;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
+
+class DashboardController extends Controller
+{
+    public function index()
+    {
+        $dimensions = Dimension::all()->map(function ($dimension) {
+            return [
+                'value' => $dimension->id,
+                'label' => $dimension->name
+            ];
+        });
+
+        return Inertia::render('Dashboard', compact('dimensions'));
+    }
+}

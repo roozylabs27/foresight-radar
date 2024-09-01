@@ -1,0 +1,12 @@
+[
+    {
+        "name": "Monitoring",
+        "symbol": "triangle",
+        "code" : "∆"
+    },
+    {
+        "name": "Decided Plan",
+        "symbol": "circle",
+        "code" : "O"
+    }
+]
