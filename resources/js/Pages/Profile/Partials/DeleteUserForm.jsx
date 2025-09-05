@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import DangerButton from '@/Components/DangerButton';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Modal';
-import SecondaryButton from '@/Components/SecondaryButton';
+import Modal from '@/Components/Dialog';
+// import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { useForm } from '@inertiajs/react';
 
@@ -77,7 +77,7 @@ export default function DeleteUserForm({ className = '' }) {
                             ref={passwordInput}
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
-                            className="mt-1 block w-3/4"
+                            className="block w-3/4 mt-1"
                             isFocused
                             placeholder="Password"
                         />
@@ -85,8 +85,8 @@ export default function DeleteUserForm({ className = '' }) {
                         <InputError message={errors.password} className="mt-2" />
                     </div>
 
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeModal}>Cancel</SecondaryButton>
+                    <div className="flex justify-end mt-6">
+                        {/* <SecondaryButton onClick={closeModal}>Cancel</SecondaryButton> */}
 
                         <DangerButton className="ms-3" disabled={processing}>
                             Delete Account
