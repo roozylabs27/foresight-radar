@@ -24,12 +24,13 @@ class DrivingForceController extends Controller
                 'label' => $dimension->name
             ];
         });
-        $users = User::select('id', 'name')->whereHas('roles', function ($q) {
+        $users = User::select('id', 'name')->with('roles:id,name,display_name')->whereHas('roles', function ($q) {
             $q->where('name', 'admin');
         })->orderBy('name', 'asc')->get()->map(function ($user) {
+            $roleName = $user->roles->first()?->display_name ?? 'Admin';
             return [
                 'value' => $user->id,
-                'label' => $user->name . ' - ' . $user->roles->pluck('display_name')[0]
+                'label' => $user->name . ' - ' . $roleName
             ];
         });
 
