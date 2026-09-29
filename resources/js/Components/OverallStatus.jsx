@@ -14,7 +14,7 @@ import dayjs from "dayjs";
 import qs from "qs";
 import * as XLSX from "xlsx";
 
-const OverallStatus = ({ loading, setLoading, date, selectedData, permissions }) => {
+const OverallStatus = ({ loading, setLoading, date, selectedData, permissions = [] }) => {
     const getParams = (params) => {
         return {
             results: params.pagination?.pageSize,
@@ -41,10 +41,10 @@ const OverallStatus = ({ loading, setLoading, date, selectedData, permissions })
         tableParams.pagination?.pageSize,
         tableParams.pagination?.current,
         date,
-        selectedData.dimension,
-        selectedData.time_horizon,
-        selectedData.priority,
-        selectedData.status_action,
+        selectedData?.dimension,
+        selectedData?.time_horizon,
+        selectedData?.priority,
+        selectedData?.status_action,
     ]);
 
     const fetchData = async () => {
@@ -57,7 +57,7 @@ const OverallStatus = ({ loading, setLoading, date, selectedData, permissions })
                     getParams({
                         ...tableParams,
                         date: date != null ? date.date : tableParams.date,
-                        ...selectedData,
+                        ...(selectedData || {}),
                     })
                 )}`
             );
@@ -255,7 +255,7 @@ const OverallStatus = ({ loading, setLoading, date, selectedData, permissions })
                     getParams({
                         ...tableParams,
                         date: date != null ? date.date : tableParams.date,
-                        ...selectedData,
+                        ...(selectedData || {}),
                     })
                 )}`
             );
@@ -377,7 +377,7 @@ const OverallStatus = ({ loading, setLoading, date, selectedData, permissions })
                                 }}
                             />
                         </Col>
-                        {permissions.includes("export-registered-list") && (
+                        {permissions?.includes("export-registered-list") && (
                             <Col span={12}>
                                 <Row justify="end">
                                     <Button

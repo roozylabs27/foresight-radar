@@ -56,8 +56,9 @@ export default function Dashboard({ auth, dimensions }) {
                 <OverallStatus
                     loading={loading}
                     setLoading={setLoading}
-                    selectData={selectData}
+                    selectedData={selectData}
                     date={newDate}
+                    permissions={auth?.permissions || []}
                 />
             ),
         },
