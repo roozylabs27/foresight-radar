@@ -85,6 +85,8 @@ class UserController extends Controller
 
     public function update(UserRequest $request, User $user)
     {
+        $this->authorize('update', $user);
+
         try {
             DB::beginTransaction();
 
@@ -116,6 +118,8 @@ class UserController extends Controller
 
     public function delete(User $user)
     {
+        $this->authorize('delete', $user);
+
         try {
             DB::beginTransaction();
 

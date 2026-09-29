@@ -82,6 +82,8 @@ class DrivingForceController extends Controller
 
     public function update(DrivingForceRequest $request, DrivingForce $driving_force)
     {
+        $this->authorize('update', $driving_force);
+
         try {
             DB::beginTransaction();
 
@@ -110,6 +112,8 @@ class DrivingForceController extends Controller
 
     public function delete(DrivingForce $driving_force)
     {
+        $this->authorize('delete', $driving_force);
+
         try {
             DB::beginTransaction();
 
