@@ -52,27 +52,27 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
     Route::prefix("driving-force")->controller(App\Http\Controllers\DrivingForceController::class)->name("driving-force.")->group(function () {
         Route::get("/", "index")->can('view-driving-force');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-driving-force');
-        Route::post("/", "create")->name('create');
-        Route::put("/{driving_force}", "update")->name('update');
-        Route::delete("/{driving_force}", "delete")->name('delete');
+        Route::post("/", "create")->name('create')->can('create-driving-force');
+        Route::put("/{driving_force}", "update")->name('update')->can('update-driving-force');
+        Route::delete("/{driving_force}", "delete")->name('delete')->can('delete-driving-force');
     });
 
     Route::prefix("time-horizon")->controller(App\Http\Controllers\TimeHorizonController::class)->name("time-horizon.")->group(function () {
         Route::get("/", "index")->can('view-time-horizon');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-time-horizon');
-        Route::post("/{driving_force:id}", "create")->name('create');
+        Route::post("/{driving_force:id}", "create")->name('create')->can('create-time-horizon');
     });
 
     Route::prefix("rating-urgency")->controller(App\Http\Controllers\RatingUrgencyController::class)->name("rating-urgency.")->group(function () {
         Route::get("/", "index")->can('view-rating-urgency');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-rating-urgency');
-        Route::post("/{driving_force_rating}", "create")->name('create');
+        Route::post("/{driving_force_rating}", "create")->name('create')->can('create-rating-urgency');
     });
 
     Route::prefix("status-action")->controller(App\Http\Controllers\StatusActionController::class)->name("status-action.")->group(function () {
         Route::get("/", "index")->can('view-status-action');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-status-action');
-        Route::post("/{driving_force_rating}", "create")->name('create');
+        Route::post("/{driving_force_rating}", "create")->name('create')->can('create-status-action');
     });
 
     Route::prefix("approval-items")->controller(App\Http\Controllers\ApprovalController::class)->name("approval-items.")->group(function () {
@@ -90,9 +90,9 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::prefix('user')->controller(App\Http\Controllers\UserController::class)->name('user.')->group(function () {
             Route::get('/', 'index')->can('view-user');
             Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-user');
-            Route::post("/", "create")->name('create');
-            Route::put("/{user}", "update")->name('update');
-            Route::delete("/{user}", "delete")->name('delete');
+            Route::post("/", "create")->name('create')->can('create-user');
+            Route::put("/{user}", "update")->name('update')->can('update-user');
+            Route::delete("/{user}", "delete")->name('delete')->can('delete-user');
 
             Route::prefix('profile')->controller(App\Http\Controllers\ProfileController::class)->name('profile.')->group(function () {
                 Route::get('/', 'edit');
