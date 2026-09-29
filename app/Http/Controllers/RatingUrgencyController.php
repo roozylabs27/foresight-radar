@@ -46,49 +46,40 @@ class RatingUrgencyController extends Controller
     public function create(Request $request, DrivingForceRating $driving_force_rating)
     {
         try {
-            DB::beginTransaction();
-
-            if ($request['type'] == 'uncertainty') {
-                $driving_force_rating->uncertainty_analysis = $request['value'];
-            } else {
-                $driving_force_rating->impact_analysis = $request['value'];
-            }
-
-            $driving_force_rating->save();
-
-            DB::commit();
-
-            DB::beginTransaction();
-
-
-            if ($driving_force_rating->impact_analysis != null && $driving_force_rating->uncertainty_analysis != null) {
-                if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis >= 6) {
-                    $driving_force_rating->priority_id = 1;
-                } else if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis <= 5) {
-                    $driving_force_rating->priority_id = 2;
-                } else if ($driving_force_rating->impact_analysis <= 5 && $driving_force_rating->uncertainty_analysis >= 6) {
-                    $driving_force_rating->priority_id = 2;
+            DB::transaction(function () use ($request, $driving_force_rating) {
+                if ($request['type'] == 'uncertainty') {
+                    $driving_force_rating->uncertainty_analysis = $request['value'];
                 } else {
-                    $driving_force_rating->priority_id = 3;
+                    $driving_force_rating->impact_analysis = $request['value'];
                 }
-            }
 
-            $driving_force_rating->save();
+                // Calculate priority if both analyses are present
+                if ($driving_force_rating->impact_analysis !== null && $driving_force_rating->uncertainty_analysis !== null) {
+                    if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis >= 6) {
+                        $driving_force_rating->priority_id = 1;
+                    } elseif ($driving_force_rating->impact_analysis >= 6 || $driving_force_rating->uncertainty_analysis >= 6) {
+                        $driving_force_rating->priority_id = 2;
+                    } else {
+                        $driving_force_rating->priority_id = 3;
+                    }
+                }
 
-            DB::commit();
-
+                $driving_force_rating->save();
+            });
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
                 'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($request['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')
             ];
         } catch (\Throwable $th) {
-
-            DB::rollBack();
+            Log::error('Rating urgency update failed', [
+                'rating_id' => $driving_force_rating->id,
+                'error' => $th->getMessage(),
+            ]);
 
             $response = [
                 'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
+                'message' => 'An error occurred while updating the rating. Please try again.',
             ];
         }
 
