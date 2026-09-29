@@ -7,12 +7,17 @@ use App\Models\Dimension;
 use App\Models\DrivingForce;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Services\DrivingForceService;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class ClosedItemsController extends Controller
 {
     use HandlesApiErrors;
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
 
     public function index()
     {
@@ -31,7 +36,7 @@ class ClosedItemsController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::closed_items();
+            $result = $this->drivingForceService->closedItems(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {

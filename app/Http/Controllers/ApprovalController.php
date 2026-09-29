@@ -8,12 +8,18 @@ use App\Models\DrivingForce;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\DrivingForceService;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class ApprovalController extends Controller
 {
     use HandlesApiErrors;
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
+
     public function index()
     {
         $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
@@ -31,7 +37,7 @@ class ApprovalController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::approval_items();
+            $result = $this->drivingForceService->approvalItems(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {

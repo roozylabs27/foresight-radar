@@ -12,13 +12,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use App\Services\DrivingForceService;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
 
 class TimeHorizonController extends Controller
 {
     use HandlesApiErrors;
-    //
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
 
     public function index()
     {
@@ -42,7 +46,7 @@ class TimeHorizonController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::time_horizon();
+            $result = $this->drivingForceService->timeHorizon(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {

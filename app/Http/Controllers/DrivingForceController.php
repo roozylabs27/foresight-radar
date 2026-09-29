@@ -12,12 +12,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
+use App\Services\DrivingForceService;
 use Symfony\Component\HttpFoundation\Response;
 
 class DrivingForceController extends Controller
 {
     use HandlesApiErrors;
-    //
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
+
     public function index()
     {
         $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
@@ -44,7 +49,7 @@ class DrivingForceController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::filter();
+            $result = $this->drivingForceService->filter(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {

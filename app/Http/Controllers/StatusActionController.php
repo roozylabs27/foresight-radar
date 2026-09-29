@@ -12,6 +12,7 @@ use App\Models\StatusAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\DrivingForceService;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,6 +20,11 @@ use Symfony\Component\HttpFoundation\Response;
 class StatusActionController extends Controller
 {
     use HandlesApiErrors;
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
+
     public function index()
     {
         $title = 'Status Action';
@@ -41,7 +47,7 @@ class StatusActionController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::status_action();
+            $result = $this->drivingForceService->statusAction(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {

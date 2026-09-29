@@ -10,11 +10,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
+use App\Http\Controllers\Concerns\HandlesApiErrors;
+use App\Services\DrivingForceService;
 use Symfony\Component\HttpFoundation\Response;
 
 class RatingUrgencyController extends Controller
 {
-    //
+    use HandlesApiErrors;
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
 
     public function index()
     {
@@ -32,14 +38,12 @@ class RatingUrgencyController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::rating_urgency();
+            $result = $this->drivingForceService->ratingUrgency(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching rating urgency data');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
