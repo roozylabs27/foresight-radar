@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\StatusActionRequest;
 use App\Models\ActionReason;
 use App\Models\Dimension;
@@ -17,6 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class StatusActionController extends Controller
 {
+    use HandlesApiErrors;
     public function index()
     {
         $title = 'Status Action';
@@ -43,10 +45,8 @@ class StatusActionController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching status actions');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -84,13 +84,8 @@ class StatusActionController extends Controller
                 'message' => 'Successfully set status action for ' . $driving_force_rating->driving_force->keyword
             ];
         } catch (\Throwable $th) {
-
             DB::rollBack();
-
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            $response = $this->handleError($th, 'setting status action');
         }
 
         return response()->json($response, $response['statusCode']);

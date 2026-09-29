@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\TimeHorizonRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -16,6 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class TimeHorizonController extends Controller
 {
+    use HandlesApiErrors;
     //
 
     public function index()
@@ -44,10 +46,8 @@ class TimeHorizonController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching time horizons');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -71,13 +71,8 @@ class TimeHorizonController extends Controller
                 'message' => 'Successfully set time horizon !'
             ];
         } catch (\Throwable $th) {
-
             DB::rollBack();
-
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            $response = $this->handleError($th, 'setting time horizon');
         }
 
         return response()->json($response, $response['statusCode']);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use Illuminate\Http\Request;
@@ -12,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ApprovalController extends Controller
 {
+    use HandlesApiErrors;
     public function index()
     {
         $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
@@ -33,10 +35,8 @@ class ApprovalController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching approval items');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -60,13 +60,8 @@ class ApprovalController extends Controller
                 'message' => 'Successfully ' . $request->text . ' for ' . $driving_force->keyword . ' !'
             ];
         } catch (\Throwable $th) {
-
             DB::rollBack();
-
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            $response = $this->handleError($th, 'processing approval item');
         }
 
         return response()->json($response, $response['statusCode']);
