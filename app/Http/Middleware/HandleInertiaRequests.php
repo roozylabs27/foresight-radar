@@ -43,8 +43,8 @@ class HandleInertiaRequests extends Middleware
                 ...$data,
                 'auth' => [
                     'user' => $user,
-                    'role' => $user->roles[0]->name,
-                    'permissions' => $user->permissions->pluck('name')->toArray(),
+                    'role' => $user->roles->first()?->name ?? null,
+                    'permissions' => $user->permissions ? $user->permissions->pluck('name')->toArray() : [],
                 ]
             ];
         }

@@ -30,6 +30,15 @@ class User extends Authenticatable
         'password',
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($user) {
+            if (empty($user->uuid)) {
+                $user->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *
