@@ -247,29 +247,27 @@ export default function Radar({ loading, setLoading, date, selectData }) {
             );
 
             if (response.status == 200) {
-                setTimeout(() => {
-                    const newData = response.data.map((d, i) => ({
-                        no: i + 1,
-                        ...d,
-                    }));
+                const newData = response.data.map((d, i) => ({
+                    no: i + 1,
+                    ...d,
+                }));
 
-                    const radar = response.data.map((d) => ({
-                        value: d.value,
-                        name: d.dimension,
-                        symbol: d.symbol,
-                        itemStyle: {
-                            color: d.item_style,
-                        },
-                    }));
-                    setRadarData(radar);
+                const radar = response.data.map((d) => ({
+                    value: d.value,
+                    name: d.dimension,
+                    symbol: d.symbol,
+                    itemStyle: {
+                        color: d.item_style,
+                    },
+                }));
+                setRadarData(radar);
 
-                    setData(newData);
-                    setTableParams({
-                        ...tableParams,
-                    });
+                setData(newData);
+                setTableParams({
+                    ...tableParams,
+                });
 
-                    setLoading(false);
-                }, 500);
+                setLoading(false);
             } else {
                 message.error(`Error: ${error.message}`);
                 setLoading(false);
@@ -322,10 +320,6 @@ export default function Radar({ loading, setLoading, date, selectData }) {
             return "green-background disable-hover";
         return "disable-hover";
     };
-
-    setTimeout(() => {
-        setLoading(false);
-    }, 1000);
 
     return (
         <Row gutter={16} style={{ margin: 20 }}>
