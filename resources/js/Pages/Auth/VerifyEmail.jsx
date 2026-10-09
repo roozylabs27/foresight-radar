@@ -1,44 +1,76 @@
-import GuestLayout from '@/Layouts/GuestLayout';
-import PrimaryButton from '@/Components/PrimaryButton';
-import { Head, Link, useForm } from '@inertiajs/react';
+import React, { useState } from "react";
+import GuestLayout from "@/Layouts/GuestLayout";
+import { Head, router } from "@inertiajs/react";
+import { Alert, Button, Flex, Typography } from "antd";
+import { LogoutOutlined, SendOutlined } from "@ant-design/icons";
+
+const { Title, Paragraph } = Typography;
 
 export default function VerifyEmail({ status }) {
-    const { post, processing } = useForm({});
+    const [loading, setLoading] = useState(false);
 
     const submit = (e) => {
         e.preventDefault();
+        setLoading(true);
 
-        post(route('verification.send'));
+        router.post(
+            route("verification.send"),
+            {},
+            {
+                onFinish: () => {
+                    setLoading(false);
+                },
+            }
+        );
+    };
+
+    const logout = (e) => {
+        e.preventDefault();
+        router.post(route("logout"));
     };
 
     return (
         <GuestLayout>
-            <Head title="Email Verification" />
+            <Head title="Verifikasi Email - Foresight Radar" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Thanks for signing up! Before getting started, could you verify your email address by clicking on the
-                link we just emailed to you? If you didn't receive the email, we will gladly send you another.
-            </div>
+            <Title level={3} style={{ marginBottom: 8, color: "#0f172a" }}>
+                Verifikasi Alamat Email
+            </Title>
+            <Paragraph type="secondary" style={{ marginBottom: 20, fontSize: 14 }}>
+                Terima kasih telah bergabung di Foresight Radar. Silakan verifikasi email Anda dengan mengklik tautan yang telah kami kirimkan.
+            </Paragraph>
 
-            {status === 'verification-link-sent' && (
-                <div className="mb-4 font-medium text-sm text-green-600">
-                    A new verification link has been sent to the email address you provided during registration.
-                </div>
+            {status === "verification-link-sent" && (
+                <Alert
+                    message="Tautan verifikasi baru telah berhasil dikirim ke alamat email Anda."
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                />
             )}
 
             <form onSubmit={submit}>
-                <div className="mt-4 flex items-center justify-between">
-                    <PrimaryButton disabled={processing}>Resend Verification Email</PrimaryButton>
-
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                <Flex vertical gap={12} style={{ marginTop: 24 }}>
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={loading}
+                        icon={<SendOutlined />}
+                        block
+                        size="large"
                     >
-                        Log Out
-                    </Link>
-                </div>
+                        Kirim Ulang Email Verifikasi
+                    </Button>
+
+                    <Button
+                        type="default"
+                        onClick={logout}
+                        icon={<LogoutOutlined />}
+                        block
+                    >
+                        Keluar (Logout)
+                    </Button>
+                </Flex>
             </form>
         </GuestLayout>
     );
