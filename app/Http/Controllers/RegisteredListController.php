@@ -67,11 +67,24 @@ class RegisteredListController extends Controller
     public function export_data()
     {
         try {
-            $registered_list = DrivingForceRating::registered_list()->get();
-            $result = OverallStatusResource::collection($registered_list);
+            $query = DrivingForceRating::registered_list();
 
-            return response()->json($result, Response::HTTP_OK);
-
+            return response()->stream(function () use ($query) {
+                echo '[';
+                $first = true;
+                foreach ($query->lazy(100) as $item) {
+                    if (!$first) {
+                        echo ',';
+                    }
+                    $first = false;
+                    $resource = new OverallStatusResource($item);
+                    echo json_encode($resource->resolve());
+                }
+                echo ']';
+            }, Response::HTTP_OK, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'no-cache, must-revalidate',
+            ]);
         } catch (\Throwable $th) {
             Log::error('Export data error: ' . $th->getMessage(), ['exception' => $th]);
             return response()->json([
