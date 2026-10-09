@@ -9,6 +9,7 @@ import {
     Table,
     Tooltip,
 } from "antd";
+import { FileExcelOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import qs from "qs";
@@ -361,52 +362,50 @@ const OverallStatus = ({ loading, setLoading, date, selectedData, permissions = 
 
     return (
         <Skeleton active loading={false}>
-            <Row gutter={24}>
-                <Col span={24}>
-                    <Row justify="space-between">
-                        <Col span={12}>
-                            <Segmented
-                                options={["Overall", "Detail Info"]}
-                                onChange={(value) => {
-                                    setSegmented(value);
-                                    setLoading(true);
+            <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
+                    <Col>
+                        <Segmented
+                            options={["Overall", "Detail Info"]}
+                            value={segmented}
+                            onChange={(value) => {
+                                setSegmented(value);
+                                setLoading(true);
 
-                                    setTimeout(() => {
-                                        setLoading(false);
-                                    }, 500);
-                                }}
-                            />
+                                setTimeout(() => {
+                                    setLoading(false);
+                                }, 300);
+                            }}
+                        />
+                    </Col>
+                    {permissions?.includes("export-registered-list") && (
+                        <Col>
+                            <Button
+                                onClick={handleExport}
+                                disabled={loading}
+                                loading={loading}
+                                type="primary"
+                                icon={<FileExcelOutlined />}
+                            >
+                                Export to Excel
+                            </Button>
                         </Col>
-                        {permissions?.includes("export-registered-list") && (
-                            <Col span={12}>
-                                <Row justify="end">
-                                    <Button
-                                        onClick={handleExport}
-                                        disabled={loading}
-                                        loading={loading}
-                                        type="default"
-                                    >
-                                        Export to Excel
-                                    </Button>
-                                </Row>
-                            </Col>
-                        )}
-                    </Row>
-                </Col>
-                <Col span={24}>
-                    <Table
-                        columns={
-                            segmented == "Overall" ? columns : columnsDetail
-                        }
-                        dataSource={data}
-                        bordered
-                        loading={loading}
-                        rowKey={(record) => record.id}
-                        pagination={tableParams.pagination}
-                        onChange={handleTableChange}
-                    />
-                </Col>
-            </Row>
+                    )}
+                </Row>
+                <Table
+                    columns={
+                        segmented == "Overall" ? columns : columnsDetail
+                    }
+                    dataSource={data}
+                    bordered
+                    size="middle"
+                    loading={loading}
+                    rowKey={(record) => record.id}
+                    pagination={tableParams.pagination}
+                    onChange={handleTableChange}
+                    scroll={{ x: "max-content", y: 460 }}
+                />
+            </div>
         </Skeleton>
     );
 };

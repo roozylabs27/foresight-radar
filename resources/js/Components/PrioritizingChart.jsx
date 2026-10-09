@@ -199,18 +199,20 @@ const PrioritizingChart = ({
         return "OVERALL";
     };
     return (
-        <Row gutter={16} style={{ margin: 20 }}>
-            <Col span={8}>
+        <Row gutter={16} style={{ margin: 0, alignItems: "stretch" }}>
+            <Col xs={24} lg={8}>
                 <Table
                     columns={columns}
                     dataSource={data}
                     bordered
+                    size="middle"
                     loading={loading}
                     rowKey={(record) => record.no}
                     pagination={false}
+                    scroll={{ y: 440 }}
                     title={() => (
                         <div
-                            style={{ textAlign: "center", fontWeight: "bold" }}
+                            style={{ textAlign: "center", fontWeight: 600, color: "#1f1f1f" }}
                         >
                             {selectData
                                 ? `${showActiveDimension(selectData.dimension)}`
@@ -219,11 +221,11 @@ const PrioritizingChart = ({
                     )}
                 />
             </Col>
-            <Col span={16}>
+            <Col xs={24} lg={16}>
                 <Skeleton active loading={loading}>
                     <ReactEcharts
                         option={option}
-                        style={{ height: "600px", width: "100%" }}
+                        style={{ height: "480px", width: "100%" }}
                     />
                 </Skeleton>
             </Col>
