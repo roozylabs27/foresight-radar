@@ -56,11 +56,25 @@ class DrivingForceRating extends Model
         return 'uuid';
     }
 
-    public static function prioritizing()
+    protected static function resolveDateRange(): array
     {
         $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
+        if (!empty($date_range) && is_array($date_range) && count($date_range) >= 2 && !empty($date_range[0]) && !empty($date_range[1])) {
+            return [
+                $date_range[0] . ' 00:00:00',
+                $date_range[1] . ' 23:59:59',
+            ];
+        }
+
+        return [
+            \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d 00:00:00'),
+            \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d 23:59:59'),
+        ];
+    }
+
+    public static function prioritizing()
+    {
+        [$date_start, $date_end] = self::resolveDateRange();
         $dimension = request('dimension');
 
         $prioritizing = self::with('driving_force')
@@ -88,9 +102,7 @@ class DrivingForceRating extends Model
         $time_horizon = request('time_horizon');
         $priority = request('priority');
         $status_action = request('status_action');
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
+        [$date_start, $date_end] = self::resolveDateRange();
 
         $registered_list = self::with(['driving_force' => function ($q) {
             $q->orderBy('dimension_id', 'ASC');
@@ -132,9 +144,7 @@ class DrivingForceRating extends Model
 
     public static function foresight_radar()
     {
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
+        [$date_start, $date_end] = self::resolveDateRange();
         $dimension = request('dimension');
 
         $overall_status = self::with(['driving_force' => function ($q) {
