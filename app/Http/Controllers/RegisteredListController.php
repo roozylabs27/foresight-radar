@@ -57,9 +57,9 @@ class RegisteredListController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
+            Log::error('Registered list fetch error: ' . $th->getMessage(), ['exception' => $th]);
             return response()->json([
-                'errors' => $th->getMessage(),
+                'message' => 'An unexpected server error occurred while retrieving data.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -73,9 +73,9 @@ class RegisteredListController extends Controller
             return response()->json($result, Response::HTTP_OK);
 
         } catch (\Throwable $th) {
-            Log::error($th);
+            Log::error('Export data error: ' . $th->getMessage(), ['exception' => $th]);
             return response()->json([
-                'errors' => $th->getMessage(),
+                'message' => 'An unexpected server error occurred while retrieving data.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

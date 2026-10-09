@@ -31,9 +31,9 @@ class ForesightRadarController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
+            Log::error('Foresight radar fetch error: ' . $th->getMessage(), ['exception' => $th]);
             return response()->json([
-                'errors' => $th->getMessage(),
+                'message' => 'An unexpected server error occurred while retrieving data.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
