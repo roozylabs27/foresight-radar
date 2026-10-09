@@ -55,9 +55,8 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
 
-            $new_user = User::firstOrCreate([
+            $new_user = User::create([
                 "name" => $request->name,
-            ], [
                 "uuid" => Uuid::uuid1(),
                 "email" => $request->email,
                 "password" => bcrypt($request->password),
