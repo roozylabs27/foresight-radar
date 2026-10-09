@@ -28,7 +28,7 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: foresight-radar
+      MYSQL_DATABASE: foresight_radar
       MYSQL_USER: foresight-radar
       MYSQL_PASSWORD: secret
     volumes:
