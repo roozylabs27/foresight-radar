@@ -28,4 +28,8 @@ COPY . .
 
 COPY --from=frontend /app/public/build /var/www/public/build
 
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
+USER www-data
+
 CMD ["php-fpm"]
