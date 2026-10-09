@@ -57,8 +57,10 @@ class DrivingForceService
 
         $drivingForces = DrivingForce::with(['dimension', 'created_by_user', 'updated_by_user'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('keyword', 'LIKE', $search . '%')
+                        ->orWhere('description', 'LIKE', $search . '%');
+                });
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -83,8 +85,10 @@ class DrivingForceService
 
         $timeHorizons = DrivingForce::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('keyword', 'LIKE', $search . '%')
+                        ->orWhere('description', 'LIKE', $search . '%');
+                });
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -106,8 +110,10 @@ class DrivingForceService
 
         $ratings = DrivingForce::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('keyword', 'LIKE', $search . '%')
+                        ->orWhere('description', 'LIKE', $search . '%');
+                });
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -132,8 +138,10 @@ class DrivingForceService
             $q->select('driving_force_rating_id', 'date', 'reason', 'status_action_id')->orderBy('date', 'ASC');
         }])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('keyword', 'LIKE', $search . '%')
+                        ->orWhere('description', 'LIKE', $search . '%');
+                });
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -160,8 +168,10 @@ class DrivingForceService
 
         $approvalItems = DrivingForce::with(['rating'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('keyword', 'LIKE', $search . '%')
+                        ->orWhere('description', 'LIKE', $search . '%');
+                });
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
@@ -189,8 +199,10 @@ class DrivingForceService
 
         $closedItems = DrivingForce::with(['rating'])
             ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('keyword', 'LIKE', $search . '%')
+                        ->orWhere('description', 'LIKE', $search . '%');
+                });
             })
             ->when($dimension, function ($q) use ($dimension) {
                 $q->where('dimension_id', $dimension);
