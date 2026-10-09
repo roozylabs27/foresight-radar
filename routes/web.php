@@ -34,17 +34,17 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('visualization')->name('visualization.')->group(function() {
         Route::prefix("/prioritizing")->name('prioritizing.')->group(function() {
-            Route::get("/", [PrioritizingController::class, 'index']);
-            Route::get("/get-data", [PrioritizingController::class, 'prioritizing'])->name('get-data');
+            Route::get("/", [PrioritizingController::class, 'index'])->can('view-prioritizing');
+            Route::get("/get-data", [PrioritizingController::class, 'prioritizing'])->name('get-data')->can('view-prioritizing');
         });
         Route::prefix("/registered-list")->name('registered-list.')->group(function() {
-            Route::get("/", [RegisteredListController::class, 'index']);
-            Route::get("/get-data", [RegisteredListController::class, 'registered_list'])->name('get-data');
-            Route::get('/export-data', [RegisteredListController::class, 'export_data'])->name('export-data');
+            Route::get("/", [RegisteredListController::class, 'index'])->can('view-registered-list');
+            Route::get("/get-data", [RegisteredListController::class, 'registered_list'])->name('get-data')->can('view-registered-list');
+            Route::get('/export-data', [RegisteredListController::class, 'export_data'])->name('export-data')->can('export-registered-list');
         });
         Route::prefix("/foresight-radar")->name('foresight-radar.')->group(function() {
-            Route::get("/", [ForesightRadarController::class, 'index']);
-            Route::get("/get-data", [ForesightRadarController::class, 'foresight_radar'])->name('get-data');
+            Route::get("/", [ForesightRadarController::class, 'index'])->can('view-foresight-radar');
+            Route::get("/get-data", [ForesightRadarController::class, 'foresight_radar'])->name('get-data')->can('view-foresight-radar');
         });
     });
 
