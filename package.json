@@ -5,8 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
-        "archify": "node .agents/skills/archify/bin/archify.mjs"
+        "build": "vite build"
     },
     "devDependencies": {
         "@headlessui/react": "^1.4.2",
