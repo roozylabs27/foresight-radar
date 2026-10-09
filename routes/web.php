@@ -40,7 +40,10 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::prefix("/registered-list")->name('registered-list.')->group(function() {
             Route::get("/", [RegisteredListController::class, 'index'])->can('view-registered-list');
             Route::get("/get-data", [RegisteredListController::class, 'registered_list'])->name('get-data')->can('view-registered-list');
-            Route::get('/export-data', [RegisteredListController::class, 'export_data'])->name('export-data')->can('export-registered-list');
+            Route::get('/export-data', [RegisteredListController::class, 'export_data'])
+                ->withoutMiddleware([\Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class])
+                ->name('export-data')
+                ->can('export-registered-list');
         });
         Route::prefix("/foresight-radar")->name('foresight-radar.')->group(function() {
             Route::get("/", [ForesightRadarController::class, 'index'])->can('view-foresight-radar');
