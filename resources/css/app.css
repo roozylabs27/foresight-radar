@@ -1,6 +1,21 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 .demo-logo-vertical {
     height: 32px;
-    margin : 16px;
+    margin: 16px;
     background-color: #64748b;
     border-radius: 0.25rem;
 }
