@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Foresight Radar System Architecture",
+    "output": ".archify/architecture-foresight-radar/foresight-radar-architecture.html",
+    "quality_profile": "showcase",
+    "visual_preset": "classic"
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "Web Client",
+      "sublabel": "Browser / Executive UI",
+      "pos": [40, 240],
+      "size": [130, 60]
+    },
+    {
+      "id": "nginx",
+      "type": "backend",
+      "label": "Nginx Web Proxy",
+      "sublabel": "Reverse Proxy :8080",
+      "pos": [260, 240],
+      "size": [140, 60],
+      "tag": "FastCGI 256k"
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React 18 SPA",
+      "sublabel": "Inertia.js & Ant Design 5",
+      "pos": [490, 130],
+      "size": [150, 60]
+    },
+    {
+      "id": "radar",
+      "type": "frontend",
+      "label": "Radar ECharts",
+      "sublabel": "Polar Fan-Out Engine",
+      "pos": [770, 130],
+      "size": [160, 60],
+      "tag": "360° Horizon"
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Laravel 10 App",
+      "sublabel": "PHP 8.2-FPM :9000",
+      "pos": [490, 300],
+      "size": [150, 60]
+    },
+    {
+      "id": "security",
+      "type": "security",
+      "label": "Security Layer",
+      "sublabel": "Policies & Spatie RBAC",
+      "pos": [770, 300],
+      "size": [160, 60],
+      "tag": "Sanitized"
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "Driving Force Svc",
+      "sublabel": "Matrix Calculations",
+      "pos": [490, 460],
+      "size": [150, 60]
+    },
+    {
+      "id": "database",
+      "type": "database",
+      "label": "MySQL 8.0 Database",
+      "sublabel": "foresight_radar :3306",
+      "pos": [770, 460],
+      "size": [160, 60]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Docker Compose Container Network (foresight-radar_laravel)",
+      "wraps": ["nginx", "frontend", "radar", "backend", "security", "service", "database"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Application & Persistence Tier",
+      "wraps": ["backend", "security", "service", "database"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "client-to-nginx",
+      "from": "client",
+      "to": "nginx",
+      "label": "HTTPS :8080",
+      "variant": "emphasis"
+    },
+    {
+      "id": "nginx-to-frontend",
+      "from": "nginx",
+      "to": "frontend",
+      "label": "Assets & SPA",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "frontend-to-radar",
+      "from": "frontend",
+      "to": "radar",
+      "label": "Signal Coordinates"
+    },
+    {
+      "id": "nginx-to-backend",
+      "from": "nginx",
+      "to": "backend",
+      "label": "FastCGI :9000",
+      "variant": "emphasis"
+    },
+    {
+      "id": "backend-to-security",
+      "from": "backend",
+      "to": "security",
+      "label": "Authorize",
+      "variant": "security"
+    },
+    {
+      "id": "backend-to-service",
+      "from": "backend",
+      "to": "service",
+      "label": "Business Logic",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "service-to-database",
+      "from": "service",
+      "to": "database",
+      "label": "Eloquent SQL",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Presentation & Edge",
+      "items": [
+        "Nginx container reverse proxies traffic with 256k FastCGI buffers",
+        "React 18 SPA powered by Ant Design 5 with zero-scroll desktop constraints",
+        "Inertia.js seamless full-stack state synchronization"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Strategic Radar Engine",
+      "items": [
+        "Interactive 360° ECharts polar radar visualization with fullscreen capability",
+        "Deterministic polar collision fan-out algorithm preventing signal mark overlap",
+        "Priority impact matrix and registered driving forces overview"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Security & Architecture",
+      "items": [
+        "Object-level Laravel authorization policies and Spatie RBAC",
+        "Atomic database transactions for ratings and status action changes",
+        "Safe error sanitization preventing sensitive internal exposure"
+      ]
+    }
+  ]
+}

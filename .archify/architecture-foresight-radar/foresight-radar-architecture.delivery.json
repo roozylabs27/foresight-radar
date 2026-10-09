@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "907bf861-dd16-4735-8d3f-64c725232af8",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\laragon\\www\\foresight-radar\\.archify\\architecture-foresight-radar\\candidate.json",
+  "output": "C:\\laragon\\www\\foresight-radar\\.archify\\architecture-foresight-radar\\foresight-radar-architecture.html",
+  "specification": {
+    "sha256": "d52eab427cfeceef84d3ed25411fb5d69d28cd70200437044c18ae3d1803d0e7",
+    "bytes": 4389
+  },
+  "artifact": {
+    "sha256": "ba7b95a2bf85587632419a2b03ee9c807e9a1720d7a30944d92e4d4a087bc42a",
+    "bytes": 762422
+  }
+}
