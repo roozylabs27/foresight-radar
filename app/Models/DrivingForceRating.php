@@ -26,6 +26,15 @@ class DrivingForceRating extends Model
         'uncertainty_analysis',
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) \Ramsey\Uuid\Uuid::uuid1();
+            }
+        });
+    }
+
     public function driving_force(): BelongsTo
     {
         return $this->belongsTo(DrivingForce::class, 'driving_force_id');

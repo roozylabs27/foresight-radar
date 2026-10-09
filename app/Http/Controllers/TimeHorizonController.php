@@ -63,7 +63,6 @@ class TimeHorizonController extends Controller
             DrivingForceRating::updateOrCreate([
                 'driving_force_id' => $driving_force->id,
             ], [
-                'uuid' => Uuid::uuid1(),
                 'time_horizon_id' => $request['time_horizon_id'],
             ]);
 
