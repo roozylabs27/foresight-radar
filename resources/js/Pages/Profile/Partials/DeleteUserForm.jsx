@@ -1,15 +1,17 @@
-import { useRef, useState } from 'react';
-import DangerButton from '@/Components/DangerButton';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Dialog';
-// import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
-import { useForm } from '@inertiajs/react';
+import React, { useRef, useState } from "react";
+import { Form, Input, Button, Modal, Typography, Alert, Space } from "antd";
+import {
+    DeleteOutlined,
+    LockOutlined,
+    ExclamationCircleOutlined,
+} from "@ant-design/icons";
+import { useForm } from "@inertiajs/react";
 
-export default function DeleteUserForm({ className = '' }) {
+const { Title, Text, Paragraph } = Typography;
+
+export default function DeleteUserForm({ className = "" }) {
     const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
-    const passwordInput = useRef();
+    const passwordInput = useRef(null);
 
     const {
         data,
@@ -19,81 +21,108 @@ export default function DeleteUserForm({ className = '' }) {
         reset,
         errors,
     } = useForm({
-        password: '',
+        password: "",
     });
 
     const confirmUserDeletion = () => {
         setConfirmingUserDeletion(true);
     };
 
-    const deleteUser = (e) => {
-        e.preventDefault();
-
-        destroy(route('profile.destroy'), {
+    const deleteUser = () => {
+        destroy(route("profile.destroy"), {
             preserveScroll: true,
             onSuccess: () => closeModal(),
-            onError: () => passwordInput.current.focus(),
+            onError: () => passwordInput.current?.focus(),
             onFinish: () => reset(),
         });
     };
 
     const closeModal = () => {
         setConfirmingUserDeletion(false);
-
         reset();
     };
 
     return (
-        <section className={`space-y-6 ${className}`}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">Delete Account</h2>
+        <div className={className}>
+            <div style={{ marginBottom: 16 }}>
+                <Title level={4} style={{ margin: 0, color: "#cf1322" }}>
+                    Hapus Akun Pengguna
+                </Title>
+                <Paragraph type="secondary" style={{ fontSize: 13, marginTop: 4 }}>
+                    Setelah akun Anda dihapus, semua sumber daya dan data terkait akan
+                    dihapus secara permanen. Harap unduh data atau informasi yang ingin
+                    Anda simpan sebelum melanjutkan.
+                </Paragraph>
+            </div>
 
-                <p className="mt-1 text-sm text-gray-600">
-                    Once your account is deleted, all of its resources and data will be permanently deleted. Before
-                    deleting your account, please download any data or information that you wish to retain.
-                </p>
-            </header>
+            <Button
+                danger
+                type="primary"
+                icon={<DeleteOutlined />}
+                onClick={confirmUserDeletion}
+            >
+                Hapus Akun Ini
+            </Button>
 
-            <DangerButton onClick={confirmUserDeletion}>Delete Account</DangerButton>
-
-            <Modal show={confirmingUserDeletion} onClose={closeModal}>
-                <form onSubmit={deleteUser} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Are you sure you want to delete your account?
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-600">
-                        Once your account is deleted, all of its resources and data will be permanently deleted. Please
-                        enter your password to confirm you would like to permanently delete your account.
-                    </p>
-
-                    <div className="mt-6">
-                        <InputLabel htmlFor="password" value="Password" className="sr-only" />
-
-                        <TextInput
-                            id="password"
-                            type="password"
-                            name="password"
+            <Modal
+                title={
+                    <Space>
+                        <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+                        <span>Konfirmasi Penghapusan Akun</span>
+                    </Space>
+                }
+                open={confirmingUserDeletion}
+                onCancel={closeModal}
+                footer={[
+                    <Button key="cancel" onClick={closeModal} disabled={processing}>
+                        Batal
+                    </Button>,
+                    <Button
+                        key="delete"
+                        danger
+                        type="primary"
+                        loading={processing}
+                        onClick={deleteUser}
+                    >
+                        Hapus Akun Secara Permanen
+                    </Button>,
+                ]}
+            >
+                <Alert
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    message="Peringatan Tindakan Tidak Dapat Dibatalkan"
+                    description="Semua data dan hak akses Anda di Foresight Radar akan dihapus secara permanen."
+                />
+                <Text style={{ fontSize: 13, display: "block", marginBottom: 12 }}>
+                    Masukkan kata sandi Anda saat ini untuk mengonfirmasi bahwa Anda ingin
+                    menghapus akun ini:
+                </Text>
+                <Form layout="vertical" requiredMark={true}>
+                    <Form.Item
+                        label="Kata Sandi Akun"
+                        validateStatus={errors.password ? "error" : ""}
+                        help={errors.password}
+                        rules={[
+                            {
+                                required: true,
+                                message: "Kata sandi wajib diisi untuk konfirmasi.",
+                            },
+                        ]}
+                    >
+                        <Input.Password
                             ref={passwordInput}
+                            prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
+                            size="large"
+                            placeholder="Masukkan kata sandi Anda"
                             value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            className="block w-3/4 mt-1"
-                            isFocused
-                            placeholder="Password"
+                            onChange={(e) => setData("password", e.target.value)}
+                            onPressEnter={deleteUser}
                         />
-
-                        <InputError message={errors.password} className="mt-2" />
-                    </div>
-
-                    <div className="flex justify-end mt-6">
-                        {/* <SecondaryButton onClick={closeModal}>Cancel</SecondaryButton> */}
-
-                        <DangerButton className="ms-3" disabled={processing}>
-                            Delete Account
-                        </DangerButton>
-                    </div>
-                </form>
+                    </Form.Item>
+                </Form>
             </Modal>
-        </section>
+        </div>
     );
 }

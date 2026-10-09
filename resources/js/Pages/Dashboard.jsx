@@ -1,29 +1,38 @@
-import PrioritizingChart from "@/Components/PrioritizingChart";
+﻿import PrioritizingChart from "@/Components/PrioritizingChart";
 import Radar from "@/Components/Radar";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
 import {
     Layout,
     theme,
-    Breadcrumb,
     Tabs,
-    Row,
-    Col,
-    Space,
     DatePicker,
     Select,
+    Card,
+    Typography,
+    Button,
+    Tag,
+    Tooltip,
 } from "antd";
-import Title from "antd/es/typography/Title";
+import {
+    FilterOutlined,
+    CalendarOutlined,
+    AppstoreOutlined,
+    DashboardOutlined,
+    ReloadOutlined,
+} from "@ant-design/icons";
 import { useState } from "react";
 import dayjs from "dayjs";
 import OverallStatus from "@/Components/OverallStatus";
 
+const { Title } = Typography;
+const { Content } = Layout;
+const { RangePicker } = DatePicker;
+
 export default function Dashboard({ auth, dimensions }) {
     const {
-        token: { colorBgContainer, borderRadiusLG },
+        token: { borderRadiusLG },
     } = theme.useToken();
-    const { Content } = Layout;
-    const { RangePicker } = DatePicker;
 
     const [defaultDate, setDefaultDate] = useState([
         dayjs().startOf("month"),
@@ -32,14 +41,13 @@ export default function Dashboard({ auth, dimensions }) {
     const [loading, setLoading] = useState(false);
     const [newDate, setNewDate] = useState(null);
     const [selectData, setSelectData] = useState(null);
-    const [display, setDisplay] = useState("block");
     const [activeTab, setActiveTab] = useState("1");
 
     const items = [
         {
             key: "1",
             label: "Prioritizing",
-            children: activeTab == "1" && (
+            children: activeTab === "1" && (
                 <PrioritizingChart
                     loading={loading}
                     setLoading={setLoading}
@@ -52,7 +60,7 @@ export default function Dashboard({ auth, dimensions }) {
         {
             key: "2",
             label: "Registered List",
-            children: activeTab == "2" && (
+            children: activeTab === "2" && (
                 <OverallStatus
                     loading={loading}
                     setLoading={setLoading}
@@ -65,7 +73,7 @@ export default function Dashboard({ auth, dimensions }) {
         {
             key: "3",
             label: "Foresight Radar",
-            children: activeTab == "3" && (
+            children: activeTab === "3" && (
                 <Radar
                     loading={loading}
                     setLoading={setLoading}
@@ -100,99 +108,161 @@ export default function Dashboard({ auth, dimensions }) {
 
     const handleSelectChange = (field, value) => {
         setSelectData({
-            [field]: value != undefined ? value : null,
+            [field]: value !== undefined ? value : null,
         });
     };
+
+    const handleResetFilter = () => {
+        const start = dayjs().startOf("month");
+        const end = dayjs().endOf("month");
+        setDefaultDate([start, end]);
+        setNewDate({ date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")] });
+        setSelectData(null);
+    };
+
+    const isFiltered = !!selectData?.dimension || !!newDate;
 
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Dashboard
-                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <DashboardOutlined style={{ color: "#1677ff", fontSize: 18 }} />
+                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
+                        Dashboard
+                    </Title>
+                    <Tag
+                        color="blue"
+                        bordered={false}
+                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
+                    >
+                        Executive Overview
+                    </Tag>
+                </div>
             }
         >
             <Head title="Dashboard" />
 
             <Content
                 style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    minHeight: 100,
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
+                    padding: "12px 18px 8px",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "calc(100vh - 104px)",
+                    boxSizing: "border-box",
                 }}
             >
-                <Row gutter={16} style={{ marginBottom: "10px" }}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Title level={5}>Filter</Title>
-                    </Col>
-                </Row>
-                <Row gutter={16}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Date Period :
+                {/* Compact Single-Row Filter Toolbar */}
+                <div className="radar-filter-bar">
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 14,
+                            flexWrap: "wrap",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                color: "#1677ff",
+                                fontWeight: 600,
+                                fontSize: 13,
+                            }}
+                        >
+                            <FilterOutlined />
+                            <span>Filter Analisis:</span>
+                        </div>
+
+                        {/* Periode Tanggal */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
+                                style={{
+                                    fontSize: 12,
+                                    color: "#6b7280",
+                                    fontWeight: 500,
+                                }}
+                            >
+                                <CalendarOutlined style={{ marginRight: 4 }} />
+                                Periode:
+                            </span>
                             <RangePicker
                                 value={defaultDate}
                                 disabled={loading}
                                 onChange={handleRangePickerChange}
                                 format="YYYY-MM-DD"
-                                style={{ width: "100%" }}
+                                style={{ width: 230 }}
+                                size="middle"
                             />
-                        </Space>
-                    </Col>
-                    <Col
-                        style={{
-                            display,
-                        }}
-                        xs={24}
-                        sm={12}
-                        md={8}
-                        lg={6}
-                    >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Dimension :
+                        </div>
+
+                        {/* Dimensi STEEP */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
+                                style={{
+                                    fontSize: 12,
+                                    color: "#6b7280",
+                                    fontWeight: 500,
+                                }}
+                            >
+                                <AppstoreOutlined style={{ marginRight: 4 }} />
+                                Dimensi:
+                            </span>
                             <Select
-                                style={{ width: "100%" }}
+                                style={{ width: 210 }}
                                 disabled={loading}
-                                placeholder="Select a dimension"
+                                placeholder="Semua Dimensi"
                                 filterOption={(input, option) =>
                                     (option?.label ?? "")
                                         .toLowerCase()
                                         .includes(input.toLowerCase())
                                 }
                                 allowClear
+                                value={selectData?.dimension}
                                 onChange={(value) =>
                                     handleSelectChange("dimension", value)
                                 }
                                 options={dimensions}
+                                size="middle"
                             />
-                        </Space>
-                    </Col>
-                </Row>
-            </Content>
+                        </div>
+                    </div>
 
-            <Content
-                style={{
-                    margin: "24px 16px 0",
-                }}
-            >
-                <div
+                    {isFiltered && (
+                        <Tooltip title="Kembalikan filter ke kondisi awal">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<ReloadOutlined />}
+                                onClick={handleResetFilter}
+                                style={{ color: "#ff4d4f", fontSize: 12 }}
+                            >
+                                Reset Filter
+                            </Button>
+                        </Tooltip>
+                    )}
+                </div>
+
+                <Card
+                    bordered={false}
                     style={{
-                        paddingBlock: 10,
-                        paddingInline: 24,
-                        minHeight: 360,
-                        background: colorBgContainer,
                         borderRadius: borderRadiusLG,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
                     }}
+                    bodyStyle={{ padding: "12px 18px", flex: 1, display: "flex", flexDirection: "column" }}
                 >
                     <Tabs
-                        defaultActiveKey="1"
+                        activeKey={activeTab}
                         items={items}
                         onChange={handleTabsChange}
+                        style={{ flex: 1 }}
                     />
-                </div>
+                </Card>
             </Content>
         </AuthenticatedLayout>
     );

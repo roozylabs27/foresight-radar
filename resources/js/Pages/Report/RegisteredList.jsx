@@ -1,22 +1,33 @@
-import PrioritizingChart from "@/Components/PrioritizingChart";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+﻿import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
 import {
     Layout,
     theme,
-    Breadcrumb,
-    Tabs,
-    Row,
-    Col,
-    Space,
     DatePicker,
     Select,
+    Button,
+    Tag,
+    Tooltip,
+    Card,
+    Typography,
 } from "antd";
-import Title from "antd/es/typography/Title";
+import {
+    FilterOutlined,
+    CalendarOutlined,
+    AppstoreOutlined,
+    ClockCircleOutlined,
+    FlagOutlined,
+    CheckCircleOutlined,
+    ReloadOutlined,
+    UnorderedListOutlined,
+} from "@ant-design/icons";
 import { useState } from "react";
 import dayjs from "dayjs";
 import OverallStatus from "@/Components/OverallStatus";
-import { TikTokOutlined } from "@ant-design/icons";
+
+const { Title } = Typography;
+const { Content } = Layout;
+const { RangePicker } = DatePicker;
 
 export default function RegisteredList({
     auth,
@@ -27,10 +38,8 @@ export default function RegisteredList({
     time_horizons,
 }) {
     const {
-        token: { colorBgContainer, borderRadiusLG },
+        token: { borderRadiusLG },
     } = theme.useToken();
-    const { Content } = Layout;
-    const { RangePicker } = DatePicker;
 
     const [defaultDate, setDefaultDate] = useState([
         dayjs().startOf("month"),
@@ -38,14 +47,12 @@ export default function RegisteredList({
     ]);
     const [loading, setLoading] = useState(false);
     const [newDate, setNewDate] = useState(null);
-    const [selectDimension, setSelectDimension] = useState(null);
     const [selectedData, setSelectedData] = useState({
         dimension: null,
         time_horizon: null,
         priority: null,
         status_action: null,
     });
-    const [display, setDisplay] = useState("block");
 
     const handleRangePickerChange = (dates) => {
         if (dates && dates.length === 2) {
@@ -65,184 +72,219 @@ export default function RegisteredList({
     };
 
     const handleSelectChange = (field, value) => {
-        setSelectedData({ ...selectedData, [field]: value != undefined ? value : null });
+        setSelectedData((prev) => ({
+            ...prev,
+            [field]: value !== undefined ? value : null,
+        }));
     };
+
+    const handleResetFilter = () => {
+        const start = dayjs().startOf("month");
+        const end = dayjs().endOf("month");
+        setDefaultDate([start, end]);
+        setNewDate({ date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")] });
+        setSelectedData({
+            dimension: null,
+            time_horizon: null,
+            priority: null,
+            status_action: null,
+        });
+    };
+
+    const isFiltered =
+        !!newDate ||
+        Object.values(selectedData).some((val) => val !== null && val !== undefined);
 
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    {title}
-                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <UnorderedListOutlined style={{ color: "#1677ff", fontSize: 18 }} />
+                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
+                        {title}
+                    </Title>
+                    <Tag
+                        color="blue"
+                        bordered={false}
+                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
+                    >
+                        Register & Audit Log
+                    </Tag>
+                </div>
             }
         >
             <Head title={title} />
 
             <Content
                 style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    minHeight: 100,
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
+                    padding: "12px 18px 8px",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "calc(100vh - 104px)",
+                    boxSizing: "border-box",
                 }}
             >
-                <Row gutter={16} style={{ marginBottom: "10px" }}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Title level={5}>Filter</Title>
-                    </Col>
-                </Row>
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Date Period :
+                {/* Compact Single-Row Filter Toolbar */}
+                <div className="radar-filter-bar">
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            flexWrap: "wrap",
+                            flex: 1,
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                color: "#1677ff",
+                                fontWeight: 600,
+                                fontSize: 13,
+                            }}
+                        >
+                            <FilterOutlined />
+                            <span>Filter Analisis:</span>
+                        </div>
+
+                        {/* Periode */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>
+                                <CalendarOutlined style={{ marginRight: 2 }} />
+                                Periode:
+                            </span>
                             <RangePicker
                                 value={defaultDate}
                                 disabled={loading}
                                 onChange={handleRangePickerChange}
                                 format="YYYY-MM-DD"
-                                style={{ width: "100%" }}
+                                style={{ width: 220 }}
+                                size="middle"
                             />
-                        </Space>
-                    </Col>
-                    <Col
-                        style={{
-                            display,
-                        }}
-                        xs={24}
-                        sm={12}
-                        md={8}
-                        lg={6}
-                    >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Dimension :
-                            <Select
-                                style={{ width: "100%" }}
-                                disabled={loading}
-                                placeholder="Select a dimension"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                onChange={(value) =>
-                                    handleSelectChange("dimension", value)
-                                }
-                                options={dimensions}
-                            />
-                        </Space>
-                    </Col>
-                    <Col
-                        style={{
-                            display,
-                        }}
-                        xs={24}
-                        sm={12}
-                        md={8}
-                        lg={6}
-                    >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Time Horizon :
-                            <Select
-                                style={{ width: "100%" }}
-                                disabled={loading}
-                                placeholder="Select a time horizon"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                onChange={(value) =>
-                                    handleSelectChange("time_horizon", value)
-                                }
-                                options={time_horizons}
-                            />
-                        </Space>
-                    </Col>
-                    <Col
-                        style={{
-                            display,
-                        }}
-                        xs={24}
-                        sm={12}
-                        md={8}
-                        lg={6}
-                    >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Priority :
-                            <Select
-                                style={{ width: "100%" }}
-                                disabled={loading}
-                                placeholder="Select a priority"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                onChange={(value) =>
-                                    handleSelectChange("priority", value)
-                                }
-                                options={priorities}
-                            />
-                        </Space>
-                    </Col>
-                    <Col
-                        style={{
-                            display,
-                        }}
-                        xs={24}
-                        sm={12}
-                        md={8}
-                        lg={6}
-                    >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Status Action :
-                            <Select
-                                style={{ width: "100%" }}
-                                disabled={loading}
-                                placeholder="Select a status action"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                onChange={(value) =>
-                                    handleSelectChange("status_action", value)
-                                }
-                                options={status_actions}
-                            />
-                        </Space>
-                    </Col>
-                </Row>
-            </Content>
+                        </div>
 
-            <Content
-                style={{
-                    margin: "24px 16px 0",
-                }}
-            >
-                <div
+                        {/* Dimensi */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>
+                                <AppstoreOutlined style={{ marginRight: 2 }} />
+                                Dimensi:
+                            </span>
+                            <Select
+                                style={{ width: 165 }}
+                                disabled={loading}
+                                placeholder="Semua Dimensi"
+                                value={selectedData?.dimension}
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) => handleSelectChange("dimension", value)}
+                                options={dimensions}
+                                size="middle"
+                            />
+                        </div>
+
+                        {/* Time Horizon */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>
+                                <ClockCircleOutlined style={{ marginRight: 2 }} />
+                                Horizon:
+                            </span>
+                            <Select
+                                style={{ width: 145 }}
+                                disabled={loading}
+                                placeholder="Semua Horizon"
+                                value={selectedData?.time_horizon}
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) => handleSelectChange("time_horizon", value)}
+                                options={time_horizons}
+                                size="middle"
+                            />
+                        </div>
+
+                        {/* Priority */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>
+                                <FlagOutlined style={{ marginRight: 2 }} />
+                                Prioritas:
+                            </span>
+                            <Select
+                                style={{ width: 140 }}
+                                disabled={loading}
+                                placeholder="Semua Prioritas"
+                                value={selectedData?.priority}
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) => handleSelectChange("priority", value)}
+                                options={priorities}
+                                size="middle"
+                            />
+                        </div>
+
+                        {/* Status Action */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>
+                                <CheckCircleOutlined style={{ marginRight: 2 }} />
+                                Status:
+                            </span>
+                            <Select
+                                style={{ width: 140 }}
+                                disabled={loading}
+                                placeholder="Semua Status"
+                                value={selectedData?.status_action}
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                                }
+                                allowClear
+                                onChange={(value) => handleSelectChange("status_action", value)}
+                                options={status_actions}
+                                size="middle"
+                            />
+                        </div>
+                    </div>
+
+                    {isFiltered && (
+                        <Tooltip title="Kembalikan filter ke kondisi awal">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<ReloadOutlined />}
+                                onClick={handleResetFilter}
+                                style={{ color: "#ff4d4f", fontSize: 12 }}
+                            >
+                                Reset Filter
+                            </Button>
+                        </Tooltip>
+                    )}
+                </div>
+
+                <Card
+                    bordered={false}
                     style={{
-                        paddingBlock: 10,
-                        paddingInline: 24,
-                        minHeight: 360,
-                        background: colorBgContainer,
                         borderRadius: borderRadiusLG,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
                     }}
+                    bodyStyle={{ padding: "16px 20px", flex: 1, display: "flex", flexDirection: "column" }}
                 >
                     <OverallStatus
                         loading={loading}
                         setLoading={setLoading}
                         selectedData={selectedData}
-                        permissions={auth.permissions}
+                        permissions={auth?.permissions || []}
                         date={newDate}
                     />
-                </div>
+                </Card>
             </Content>
         </AuthenticatedLayout>
     );

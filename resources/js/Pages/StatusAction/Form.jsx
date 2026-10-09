@@ -25,7 +25,7 @@ const FormStatusAction = forwardRef(
                     <div
                         style={{
                             height: "500px",
-                            overflowY: "scroll",
+                            overflowY: "auto",
                             paddingRight: "25px",
                             paddingTop: "10px",
                         }}
@@ -44,6 +44,7 @@ const FormStatusAction = forwardRef(
                         disabled={loading}
                         initialValues={initialValues}
                         layout="vertical"
+                        requiredMark={true}
                         onFinish={onFinish}
                     >
                         <Row gutter={12}>

@@ -1,103 +1,154 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Link, useForm, usePage } from '@inertiajs/react';
-import { Transition } from '@headlessui/react';
+import React from "react";
+import { Form, Input, Button, Alert, Space, Typography, message } from "antd";
+import { UserOutlined, MailOutlined, SaveOutlined } from "@ant-design/icons";
+import { Link, useForm, usePage } from "@inertiajs/react";
 
-export default function UpdateProfileInformation({ mustVerifyEmail, status, className = '' }) {
+const { Title, Text } = Typography;
+
+export default function UpdateProfileInformation({
+    mustVerifyEmail,
+    status,
+    className = "",
+}) {
     const user = usePage().props.auth.user;
 
-    const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
-        name: user.name,
-        email: user.email,
-    });
+    const { data, setData, patch, errors, processing, recentlySuccessful } =
+        useForm({
+            name: user?.name || "",
+            email: user?.email || "",
+        });
 
-    const submit = (e) => {
-        e.preventDefault();
-
-        patch(route('profile.update'));
+    const onFinish = () => {
+        patch(route("profile.update"), {
+            onSuccess: () => {
+                message.success("Informasi profil berhasil disimpan.");
+            },
+        });
     };
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">Profile Information</h2>
+        <div className={className}>
+            <div style={{ marginBottom: 20 }}>
+                <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
+                    Informasi Profil
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                    Perbarui nama lengkap dan alamat email akun organisasi Anda.
+                </Text>
+            </div>
 
-                <p className="mt-1 text-sm text-gray-600">
-                    Update your account's profile information and email address.
-                </p>
-            </header>
+            {recentlySuccessful && (
+                <Alert
+                    message="Perubahan profil Anda telah berhasil disimpan."
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 20 }}
+                />
+            )}
 
-            <form onSubmit={submit} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
-
-                    <TextInput
-                        id="name"
-                        className="mt-1 block w-full"
+            <Form
+                layout="vertical"
+                requiredMark={true}
+                onFinish={onFinish}
+                initialValues={{
+                    name: data.name,
+                    email: data.email,
+                }}
+            >
+                <Form.Item
+                    label="Nama Lengkap"
+                    validateStatus={errors.name ? "error" : ""}
+                    help={errors.name}
+                    rules={[
+                        {
+                            required: true,
+                            message: "Nama lengkap wajib diisi.",
+                        },
+                    ]}
+                >
+                    <Input
+                        size="large"
+                        prefix={<UserOutlined style={{ color: "#8c8c8c" }} />}
+                        placeholder="Masukkan nama lengkap"
                         value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                        isFocused
-                        autoComplete="name"
+                        onChange={(e) => setData("name", e.target.value)}
                     />
+                </Form.Item>
 
-                    <InputError className="mt-2" message={errors.name} />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
+                <Form.Item
+                    label="Alamat Email"
+                    validateStatus={errors.email ? "error" : ""}
+                    help={errors.email}
+                    rules={[
+                        {
+                            required: true,
+                            message: "Alamat email wajib diisi.",
+                        },
+                        {
+                            type: "email",
+                            message: "Format alamat email tidak valid.",
+                        },
+                    ]}
+                >
+                    <Input
+                        size="large"
                         type="email"
-                        className="mt-1 block w-full"
+                        prefix={<MailOutlined style={{ color: "#8c8c8c" }} />}
+                        placeholder="nama@organisasi.id"
                         value={data.email}
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
-                        autoComplete="username"
+                        onChange={(e) => setData("email", e.target.value)}
                     />
+                </Form.Item>
 
-                    <InputError className="mt-2" message={errors.email} />
-                </div>
-
-                {mustVerifyEmail && user.email_verified_at === null && (
-                    <div>
-                        <p className="text-sm mt-2 text-gray-800">
-                            Your email address is unverified.
-                            <Link
-                                href={route('verification.send')}
-                                method="post"
-                                as="button"
-                                className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            >
-                                Click here to re-send the verification email.
-                            </Link>
-                        </p>
-
-                        {status === 'verification-link-sent' && (
-                            <div className="mt-2 font-medium text-sm text-green-600">
-                                A new verification link has been sent to your email address.
-                            </div>
-                        )}
-                    </div>
+                {mustVerifyEmail && user?.email_verified_at === null && (
+                    <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 20 }}
+                        message="Verifikasi Email Diperlukan"
+                        description={
+                            <Space orientation="vertical" style={{ width: "100%", marginTop: 8 }}>
+                                <Text style={{ fontSize: 13 }}>
+                                    Alamat email Anda belum diverifikasi.
+                                </Text>
+                                <Link
+                                    href={route("verification.send")}
+                                    method="post"
+                                    as="button"
+                                    style={{
+                                        color: "#1677ff",
+                                        background: "none",
+                                        border: "none",
+                                        padding: 0,
+                                        cursor: "pointer",
+                                        textDecoration: "underline",
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Klik di sini untuk mengirim ulang email verifikasi.
+                                </Link>
+                                {status === "verification-link-sent" && (
+                                    <Text orientation="block" style={{ color: "#52c41a", fontWeight: 500 }}>
+                                        Tautan verifikasi baru telah dikirim ke alamat email Anda.
+                                    </Text>
+                                )}
+                            </Space>
+                        }
+                    />
                 )}
 
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
-
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
+                <Form.Item orientation="horizontal" style={{ marginBottom: 0, marginTop: 12 }}>
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        size="large"
+                        icon={<SaveOutlined />}
+                        loading={processing}
                     >
-                        <p className="text-sm text-gray-600">Saved.</p>
-                    </Transition>
-                </div>
-            </form>
-        </section>
+                        Simpan Perubahan
+                    </Button>
+                </Form.Item>
+            </Form>
+        </div>
     );
 }

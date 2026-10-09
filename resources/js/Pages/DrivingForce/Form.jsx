@@ -51,6 +51,7 @@ const FormDrivingForce = forwardRef(
                 disabled={loading}
                 initialValues={initialValues}
                 layout="vertical"
+                requiredMark={true}
                 onFinish={onFinish}
             >
                 <Form.Item

@@ -1,113 +1,173 @@
-import { useRef } from 'react';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { useForm } from '@inertiajs/react';
-import { Transition } from '@headlessui/react';
+import React, { useRef } from "react";
+import { Form, Input, Button, Alert, Typography, message } from "antd";
+import { LockOutlined, SaveOutlined } from "@ant-design/icons";
+import { useForm } from "@inertiajs/react";
 
-export default function UpdatePasswordForm({ className = '' }) {
-    const passwordInput = useRef();
-    const currentPasswordInput = useRef();
+const { Title, Text } = Typography;
 
-    const { data, setData, errors, put, reset, processing, recentlySuccessful } = useForm({
-        current_password: '',
-        password: '',
-        password_confirmation: '',
+export default function UpdatePasswordForm({ className = "" }) {
+    const [form] = Form.useForm();
+    const currentPasswordInput = useRef(null);
+
+    const {
+        data,
+        setData,
+        errors,
+        put,
+        reset,
+        processing,
+        recentlySuccessful,
+    } = useForm({
+        current_password: "",
+        password: "",
+        password_confirmation: "",
     });
 
-    const updatePassword = (e) => {
-        e.preventDefault();
-
-        put(route('password.update'), {
+    const onFinish = () => {
+        put(route("password.update"), {
             preserveScroll: true,
-            onSuccess: () => reset(),
-            onError: (errors) => {
-                if (errors.password) {
-                    reset('password', 'password_confirmation');
-                    passwordInput.current.focus();
+            onSuccess: () => {
+                reset();
+                form.resetFields();
+                message.success("Kata sandi berhasil diperbarui.");
+            },
+            onError: (errs) => {
+                if (errs.password) {
+                    reset("password", "password_confirmation");
+                    form.setFieldsValue({
+                        password: "",
+                        password_confirmation: "",
+                    });
                 }
-
-                if (errors.current_password) {
-                    reset('current_password');
-                    currentPasswordInput.current.focus();
+                if (errs.current_password) {
+                    reset("current_password");
+                    form.setFieldsValue({
+                        current_password: "",
+                    });
                 }
             },
         });
     };
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">Update Password</h2>
+        <div className={className}>
+            <div style={{ marginBottom: 20 }}>
+                <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
+                    Perbarui Kata Sandi
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                    Pastikan akun Anda menggunakan kata sandi yang kuat dan aman.
+                </Text>
+            </div>
 
-                <p className="mt-1 text-sm text-gray-600">
-                    Ensure your account is using a long, random password to stay secure.
-                </p>
-            </header>
+            {recentlySuccessful && (
+                <Alert
+                    message="Kata sandi Anda telah berhasil diperbarui."
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 20 }}
+                />
+            )}
 
-            <form onSubmit={updatePassword} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel htmlFor="current_password" value="Current Password" />
-
-                    <TextInput
-                        id="current_password"
+            <Form
+                form={form}
+                layout="vertical"
+                requiredMark={true}
+                onFinish={onFinish}
+            >
+                <Form.Item
+                    label="Kata Sandi Saat Ini"
+                    validateStatus={errors.current_password ? "error" : ""}
+                    help={errors.current_password}
+                    rules={[
+                        {
+                            required: true,
+                            message: "Kata sandi saat ini wajib diisi.",
+                        },
+                    ]}
+                >
+                    <Input.Password
                         ref={currentPasswordInput}
+                        size="large"
+                        prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
+                        placeholder="Masukkan kata sandi saat ini"
                         value={data.current_password}
-                        onChange={(e) => setData('current_password', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="current-password"
+                        onChange={(e) =>
+                            setData("current_password", e.target.value)
+                        }
                     />
+                </Form.Item>
 
-                    <InputError message={errors.current_password} className="mt-2" />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="password" value="New Password" />
-
-                    <TextInput
-                        id="password"
-                        ref={passwordInput}
+                <Form.Item
+                    label="Kata Sandi Baru"
+                    validateStatus={errors.password ? "error" : ""}
+                    help={errors.password}
+                    rules={[
+                        {
+                            required: true,
+                            message: "Kata sandi baru wajib diisi.",
+                        },
+                        {
+                            min: 8,
+                            message: "Kata sandi minimal 8 karakter.",
+                        },
+                    ]}
+                >
+                    <Input.Password
+                        size="large"
+                        prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
+                        placeholder="Minimal 8 karakter"
                         value={data.password}
-                        onChange={(e) => setData('password', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
+                        onChange={(e) => setData("password", e.target.value)}
                     />
+                </Form.Item>
 
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
-
-                    <TextInput
-                        id="password_confirmation"
+                <Form.Item
+                    label="Konfirmasi Kata Sandi Baru"
+                    validateStatus={
+                        errors.password_confirmation ? "error" : ""
+                    }
+                    help={errors.password_confirmation}
+                    rules={[
+                        {
+                            required: true,
+                            message: "Konfirmasi kata sandi wajib diisi.",
+                        },
+                        ({ getFieldValue }) => ({
+                            validator(_, value) {
+                                if (!value || data.password === value) {
+                                    return Promise.resolve();
+                                }
+                                return Promise.reject(
+                                    new Error("Konfirmasi kata sandi tidak cocok!")
+                                );
+                            },
+                        }),
+                    ]}
+                >
+                    <Input.Password
+                        size="large"
+                        prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
+                        placeholder="Ulangi kata sandi baru"
                         value={data.password_confirmation}
-                        onChange={(e) => setData('password_confirmation', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
+                        onChange={(e) =>
+                            setData("password_confirmation", e.target.value)
+                        }
                     />
+                </Form.Item>
 
-                    <InputError message={errors.password_confirmation} className="mt-2" />
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
-
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
+                <Form.Item style={{ marginBottom: 0, marginTop: 12 }}>
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        size="large"
+                        icon={<SaveOutlined />}
+                        loading={processing}
                     >
-                        <p className="text-sm text-gray-600">Saved.</p>
-                    </Transition>
-                </div>
-            </form>
-        </section>
+                        Simpan Kata Sandi
+                    </Button>
+                </Form.Item>
+            </Form>
+        </div>
     );
 }

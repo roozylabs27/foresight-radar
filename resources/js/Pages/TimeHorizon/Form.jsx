@@ -8,8 +8,6 @@ const FormTimeHorizon = forwardRef(
             form.setFieldsValue(initialValues);
         }, [initialValues, form]);
 
-        console.log(initialValues)
-
         // Expose form submit function to parent component
         useImperativeHandle(ref, () => ({
             submit: () => {
@@ -27,6 +25,7 @@ const FormTimeHorizon = forwardRef(
                 disabled={loading}
                 initialValues={initialValues}
                 layout="vertical"
+                requiredMark={true}
                 onFinish={onFinish}
             >
                 <Form.Item

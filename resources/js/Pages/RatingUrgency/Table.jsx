@@ -12,7 +12,17 @@ import {
     Tag,
     theme,
     Typography,
+    Card,
+    Tooltip,
+    Button,
 } from "antd";
+import {
+    FireOutlined,
+    FilterOutlined,
+    CalendarOutlined,
+    AppstoreOutlined,
+    ReloadOutlined,
+} from "@ant-design/icons";
 import { Content } from "antd/es/layout/layout";
 import dayjs from "dayjs";
 import qs from "qs";
@@ -279,101 +289,179 @@ export default function TableRatingUrgency({ auth, title, dimensions }) {
         }
     };
 
+    const handleResetFilter = () => {
+        const start = dayjs().startOf("month");
+        const end = dayjs().endOf("month");
+        setDefaultDate([start, end]);
+        setTableParams((prev) => ({
+            ...prev,
+            page: 1,
+            pagination: { ...prev.pagination, current: 1 },
+            date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")],
+            dimension: null,
+        }));
+    };
+
+    const isFiltered = !!tableParams.dimension;
+
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    {title}
-                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <FireOutlined style={{ color: "#1677ff", fontSize: 18 }} />
+                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
+                        {title}
+                    </Title>
+                    <Tag
+                        color="blue"
+                        bordered={false}
+                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
+                    >
+                        Urgency Scoring
+                    </Tag>
+                </div>
             }
         >
             <Head title={title} />
 
             <Content
                 style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    minHeight: 100,
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
+                    padding: "12px 18px 8px",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "calc(100vh - 104px)",
+                    boxSizing: "border-box",
                 }}
             >
-                <Row gutter={16} style={{ marginBottom: "10px" }}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Title level={5}>Filter</Title>
-                    </Col>
-                </Row>
-                <Row gutter={16}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Date Period :
+                {/* Compact Single-Row Filter Toolbar */}
+                <div className="radar-filter-bar">
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 14,
+                            flexWrap: "wrap",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                color: "#1677ff",
+                                fontWeight: 600,
+                                fontSize: 13,
+                            }}
+                        >
+                            <FilterOutlined />
+                            <span>Filter Analisis:</span>
+                        </div>
+
+                        {/* Periode Tanggal */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
+                                style={{
+                                    fontSize: 12,
+                                    color: "#6b7280",
+                                    fontWeight: 500,
+                                }}
+                            >
+                                <CalendarOutlined style={{ marginRight: 4 }} />
+                                Periode:
+                            </span>
                             <RangePicker
                                 value={defaultDate}
                                 disabled={loading}
                                 onChange={handleRangePickerChange}
                                 format="YYYY-MM-DD"
-                                style={{ width: "100%" }}
+                                style={{ width: 230 }}
+                                size="middle"
                             />
-                        </Space>
-                    </Col>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Dimension :
+                        </div>
+
+                        {/* Dimensi */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
+                                style={{
+                                    fontSize: 12,
+                                    color: "#6b7280",
+                                    fontWeight: 500,
+                                }}
+                            >
+                                <AppstoreOutlined style={{ marginRight: 4 }} />
+                                Dimensi:
+                            </span>
                             <Select
-                                style={{ width: "100%" }}
+                                style={{ width: 210 }}
                                 disabled={loading}
-                                placeholder="Select a dimension"
+                                placeholder="Semua Dimensi"
                                 filterOption={(input, option) =>
                                     (option?.label ?? "")
                                         .toLowerCase()
                                         .includes(input.toLowerCase())
                                 }
                                 allowClear
+                                value={tableParams.dimension}
                                 onChange={(value) =>
                                     handleSelectChange("dimension", value)
                                 }
                                 options={dimensions}
+                                size="middle"
                             />
-                        </Space>
-                    </Col>
-                </Row>
-            </Content>
-
-            <Content
-                style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
-                }}
-            >
-                <Row gutter={16} align="top" style={{ padding: "5px" }}>
-                    <Col xs={24} sm={12} md={16}>
-                        <Title level={4}>{title} List</Title>
-                    </Col>
-                </Row>
-                <Table
-                    columns={columns}
-                    dataSource={data}
-                    bordered
-                    loading={loading}
-                    onChange={handleTableChange}
-                    rowKey={(record) => record.id}
-                    pagination={tableParams.pagination}
-                    title={() => (
-                        <div
-                            style={{ textAlign: "center", fontWeight: "bold" }}
-                        >
-                            RATING OF URGENCY
-                            {tableParams?.dimension
-                                ? ` ▶ ${showActiveDimension(
-                                      tableParams.dimension
-                                  )}`
-                                : " ▶ OVERALL"}
                         </div>
+                    </div>
+
+                    {isFiltered && (
+                        <Tooltip title="Kembalikan filter ke kondisi awal">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<ReloadOutlined />}
+                                onClick={handleResetFilter}
+                                style={{ color: "#ff4d4f", fontSize: 12 }}
+                            >
+                                Reset Filter
+                            </Button>
+                        </Tooltip>
                     )}
-                />
+                </div>
+
+                <Card
+                    bordered={false}
+                    style={{
+                        borderRadius: borderRadiusLG,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                    }}
+                    bodyStyle={{ padding: "16px 20px", flex: 1, display: "flex", flexDirection: "column" }}
+                >
+                    <Table
+                        columns={columns}
+                        dataSource={data}
+                        bordered
+                        size="middle"
+                        loading={loading}
+                        onChange={handleTableChange}
+                        rowKey={(record) => record.id}
+                        pagination={tableParams.pagination}
+                        scroll={{ x: "max-content", y: 440 }}
+                        title={() => (
+                            <div
+                                style={{ textAlign: "center", fontWeight: 600, color: "#1f1f1f" }}
+                            >
+                                RATING OF URGENCY
+                                {tableParams?.dimension
+                                    ? ` ▶ ${showActiveDimension(
+                                          tableParams.dimension
+                                      )}`
+                                    : " ▶ OVERALL"}
+                            </div>
+                        )}
+                    />
+                </Card>
             </Content>
         </AuthenticatedLayout>
     );

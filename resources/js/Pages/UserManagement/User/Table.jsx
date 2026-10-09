@@ -1,10 +1,14 @@
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+﻿import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import {
     MoreOutlined,
     DeleteOutlined,
     EditOutlined,
     BarChartOutlined,
     PlusOutlined,
+    UserOutlined,
+    FilterOutlined,
+    CalendarOutlined,
+    ReloadOutlined,
 } from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
@@ -25,6 +29,8 @@ import {
     DatePicker,
     message,
     Popconfirm,
+    Card,
+    Tooltip,
 } from "antd";
 import axios from "axios";
 import qs from "qs";
@@ -339,6 +345,21 @@ export default function TableUser({ auth, title, roles }) {
         }
     };
 
+    const handleResetFilter = () => {
+        const start = dayjs().startOf("month");
+        const end = dayjs().endOf("month");
+        setDefaultDate([start, end]);
+        setTableParams((prev) => ({
+            ...prev,
+            page: 1,
+            pagination: { ...prev.pagination, current: 1 },
+            date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")],
+            search: "",
+        }));
+    };
+
+    const isFiltered = !!tableParams.search;
+
     const handleCancelModal = () => {
         setErrors({});
         formRef.current.reset();
@@ -350,91 +371,150 @@ export default function TableUser({ auth, title, roles }) {
         <AuthenticatedLayout
             auth={auth}
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    {title}
-                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <UserOutlined style={{ color: "#1677ff", fontSize: 18 }} />
+                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
+                        {title}
+                    </Title>
+                    <Tag
+                        color="blue"
+                        bordered={false}
+                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
+                    >
+                        Access & Roles
+                    </Tag>
+                </div>
             }
         >
             <Head title={title} />
 
             <Content
                 style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    minHeight: "auto",
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
+                    padding: "12px 18px 8px",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "calc(100vh - 104px)",
+                    boxSizing: "border-box",
                 }}
             >
-                <Row gutter={16} style={{ marginBottom: "10px" }}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Title level={5}>Filter</Title>
-                    </Col>
-                </Row>
-                <Row gutter={16}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Date Period :
+                {/* Compact Single-Row Filter Toolbar */}
+                <div className="radar-filter-bar">
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 14,
+                            flexWrap: "wrap",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                color: "#1677ff",
+                                fontWeight: 600,
+                                fontSize: 13,
+                            }}
+                        >
+                            <FilterOutlined />
+                            <span>Filter Analisis:</span>
+                        </div>
+
+                        {/* Periode Tanggal */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
+                                style={{
+                                    fontSize: 12,
+                                    color: "#6b7280",
+                                    fontWeight: 500,
+                                }}
+                            >
+                                <CalendarOutlined style={{ marginRight: 4 }} />
+                                Periode:
+                            </span>
                             <RangePicker
                                 value={defaultDate}
                                 disabled={loading}
                                 onChange={handleRangePickerChange}
                                 format="YYYY-MM-DD"
-                                style={{ width: "100%" }}
+                                style={{ width: 230 }}
+                                size="middle"
                             />
-                        </Space>
-                    </Col>
-                </Row>
-            </Content>
+                        </div>
+                    </div>
 
-            <Content
-                style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
-                }}
-            >
-                <Row gutter={16} align="top" style={{ padding: "5px" }}>
-                    <Col xs={24} sm={12} md={16}>
-                        <Title level={4}>{title} List</Title>
-                    </Col>
-                    <Col
-                        xs={24}
-                        sm={12}
-                        md={8}
-                        offset={0}
-                        style={{ textAlign: "right" }}
-                    >
-                        <Space direction="vertical">
+                    {isFiltered && (
+                        <Tooltip title="Kembalikan filter ke kondisi awal">
                             <Button
-                                disabled={loading}
-                                type="primary"
-                                onClick={handleCreateButton}
+                                type="text"
+                                size="small"
+                                icon={<ReloadOutlined />}
+                                onClick={handleResetFilter}
+                                style={{ color: "#ff4d4f", fontSize: 12 }}
                             >
-                                <PlusOutlined />
-                                Create User
+                                Reset Filter
                             </Button>
-                            <Search
-                                placeholder="input search text"
-                                allowClear
-                                disabled={loading}
-                                onSearch={handleSearchChange}
-                                style={{ width: "100%" }}
-                            />
-                        </Space>
-                    </Col>
-                </Row>
-                <Table
-                    dataSource={data}
-                    rowKey={(record) => record.id}
-                    columns={columns}
-                    pagination={tableParams.pagination}
-                    scroll={{ x: "max-content", y: 420 }}
-                    loading={loading}
-                    size="small"
-                    onChange={handleTableChange}
-                />
+                        </Tooltip>
+                    )}
+                </div>
+
+                <Card
+                    bordered={false}
+                    style={{
+                        borderRadius: borderRadiusLG,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                    }}
+                    bodyStyle={{ padding: "16px 20px", flex: 1, display: "flex", flexDirection: "column" }}
+                >
+                    <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+                        <Col>
+                            <Title level={5} style={{ margin: 0 }}>
+                                {title} List
+                            </Title>
+                        </Col>
+                        <Col>
+                            <Space size={10}>
+                                <Search
+                                    placeholder="Cari pengguna..."
+                                    allowClear
+                                    disabled={loading}
+                                    value={tableParams.search}
+                                    onSearch={handleSearchChange}
+                                    onChange={(e) => {
+                                        if (e.target.value === "") {
+                                            handleSearchChange("");
+                                        }
+                                    }}
+                                    style={{ width: 220 }}
+                                    size="middle"
+                                />
+                                <Button
+                                    disabled={loading}
+                                    type="primary"
+                                    icon={<PlusOutlined />}
+                                    onClick={handleCreateButton}
+                                >
+                                    Tambah Pengguna
+                                </Button>
+                            </Space>
+                        </Col>
+                    </Row>
+
+                    <Table
+                        dataSource={data}
+                        rowKey={(record) => record.id}
+                        columns={columns}
+                        pagination={tableParams.pagination}
+                        scroll={{ x: "max-content", y: 440 }}
+                        loading={loading}
+                        size="middle"
+                        onChange={handleTableChange}
+                    />
+                </Card>
             </Content>
 
             <Dialog
