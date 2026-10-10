@@ -1,4 +1,4 @@
-﻿import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import {
     MoreOutlined,
     DeleteOutlined,
@@ -6,9 +6,6 @@ import {
     BarChartOutlined,
     PlusOutlined,
     UserOutlined,
-    FilterOutlined,
-    CalendarOutlined,
-    ReloadOutlined,
 } from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
@@ -26,7 +23,6 @@ import {
     Input,
     Select,
     Button,
-    DatePicker,
     message,
     Popconfirm,
     Card,
@@ -34,7 +30,6 @@ import {
 } from "antd";
 import axios from "axios";
 import qs from "qs";
-import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import Dialog from "@/Components/Dialog";
 import FormUser from "./Form";
@@ -47,24 +42,16 @@ export default function TableUser({ auth, title, roles }) {
     const { Content } = Layout;
     const { Title } = Typography;
     const { Search } = Input;
-    const { RangePicker } = DatePicker;
 
     // Table
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [defaultDate, setDefaultDate] = useState([
-        dayjs().startOf("month"),
-        dayjs().endOf("month"),
-    ]);
     const [tableParams, setTableParams] = useState({
         pagination: {
             current: 1,
             pageSize: 10,
         },
-        date: [
-            dayjs().startOf("month").format("YYYY-MM-DD"),
-            dayjs().endOf("month").format("YYYY-MM-DD"),
-        ],
+        search: "",
     });
 
     // Modal
@@ -80,10 +67,7 @@ export default function TableUser({ auth, title, roles }) {
     }, [
         tableParams.pagination?.pageSize,
         tableParams.pagination?.current,
-        tableParams?.date,
         tableParams?.search,
-        tableParams?.dimension,
-        tableParams?.status,
     ]);
 
     const getParams = (params) => {
@@ -235,34 +219,9 @@ export default function TableUser({ auth, title, roles }) {
         });
     };
 
-    const handleRangePickerChange = (dates) => {
-        if (dates && dates.length === 2) {
-            const formattedDates = dates.map((date) =>
-                date.format("YYYY-MM-DD")
-            );
-
-            setDefaultDate(dates);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: formattedDates,
-            }));
-        } else {
-            const newStartDate = dayjs().startOf("month").format("YYYY-MM-DD");
-            const newEndDate = dayjs().endOf("month").format("YYYY-MM-DD");
-
-            setDefaultDate([dayjs(newStartDate), dayjs(newEndDate)]);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: [newStartDate, newEndDate],
-            }));
-        }
-    };
-
     const handleTableChange = (pagination, filters, sorter) => {
         setTableParams({
             pagination,
-            date: tableParams.date,
-            dimension: tableParams.dimension,
             search: tableParams.search,
         });
 
@@ -346,19 +305,12 @@ export default function TableUser({ auth, title, roles }) {
     };
 
     const handleResetFilter = () => {
-        const start = dayjs().startOf("month");
-        const end = dayjs().endOf("month");
-        setDefaultDate([start, end]);
         setTableParams((prev) => ({
             ...prev,
-            page: 1,
             pagination: { ...prev.pagination, current: 1 },
-            date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")],
             search: "",
         }));
     };
-
-    const isFiltered = !!tableParams.search;
 
     const handleCancelModal = () => {
         setErrors({});
@@ -397,68 +349,6 @@ export default function TableUser({ auth, title, roles }) {
                     boxSizing: "border-box",
                 }}
             >
-                {/* Compact Single-Row Filter Toolbar */}
-                <div className="radar-filter-bar">
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 14,
-                            flexWrap: "wrap",
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                                color: "#1677ff",
-                                fontWeight: 600,
-                                fontSize: 13,
-                            }}
-                        >
-                            <FilterOutlined />
-                            <span>Filter Analisis:</span>
-                        </div>
-
-                        {/* Periode Tanggal */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                <CalendarOutlined style={{ marginRight: 4 }} />
-                                Periode:
-                            </span>
-                            <RangePicker
-                                value={defaultDate}
-                                disabled={loading}
-                                onChange={handleRangePickerChange}
-                                format="YYYY-MM-DD"
-                                style={{ width: 230 }}
-                                size="middle"
-                            />
-                        </div>
-                    </div>
-
-                    {isFiltered && (
-                        <Tooltip title="Kembalikan filter ke kondisi awal">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<ReloadOutlined />}
-                                onClick={handleResetFilter}
-                                style={{ color: "#ff4d4f", fontSize: 12 }}
-                            >
-                                Reset Filter
-                            </Button>
-                        </Tooltip>
-                    )}
-                </div>
-
                 <Card
                     bordered={false}
                     style={{

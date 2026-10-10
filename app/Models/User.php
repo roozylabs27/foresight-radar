@@ -68,11 +68,10 @@ class User extends Authenticatable
 
     public static function filter()
     {
-        $pagination = request('pagination.pageSize');
+        $pagination = request('pagination.pageSize', 10);
         $search = request('search');
         $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
+        $has_date = is_array($date_range) && count($date_range) === 2 && !empty($date_range[0]) && !empty($date_range[1]);
 
         if (in_array('developer', auth()->user()->roles->pluck('name')->toArray())) {
             $users = self::query()->with('roles', function ($q) {
@@ -93,14 +92,17 @@ class User extends Authenticatable
         }
 
         $users = $users->when($search, function ($q) use ($search) {
-            $q->where('name', 'LIKE',  $search . '%')
-                ->orWhere('email', 'LIKE', $search . '%');
+            $q->where(function ($sub) use ($search) {
+                $sub->where('name', 'LIKE',  $search . '%')
+                    ->orWhere('email', 'LIKE', $search . '%');
+            });
         })
-            ->where('created_at', '>=', $date_start)
-            ->where('created_at', '<=', $date_end)
+            ->when($has_date, function ($q) use ($date_range) {
+                $q->where('created_at', '>=', $date_range[0] . ' 00:00:00')
+                    ->where('created_at', '<=', $date_range[1] . ' 23:59:59');
+            })
             ->orderBy('created_at', 'desc')
             ->paginate($pagination);
-
 
         return new UserCollection($users);
     }
