@@ -63,16 +63,7 @@ class StatusActionController extends Controller
 
             $driving_force_rating->status_action_id = $request['status_action_id'];
 
-            if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis >= 6) {
-                $driving_force_rating->priority_id = 1;
-            } else if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis <= 5) {
-                $driving_force_rating->priority_id = 2;
-            } else if ($driving_force_rating->impact_analysis <= 5 && $driving_force_rating->uncertainty_analysis >= 6) {
-                $driving_force_rating->priority_id = 2;
-            } else {
-                $driving_force_rating->priority_id = 3;
-            }
-
+            $driving_force_rating->priority_id = $driving_force_rating->calculatePriority() ?? $driving_force_rating->priority_id;
             $driving_force_rating->save();
 
             $action_reason = new ActionReason();

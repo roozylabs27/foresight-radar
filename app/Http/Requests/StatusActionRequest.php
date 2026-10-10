@@ -22,8 +22,8 @@ class StatusActionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status_action_id' => ['required'],
-            'reason' => ['required'],
+            'status_action_id' => ['required', 'exists:status_actions,id'],
+            'reason' => ['required', 'string', 'max:1000'],
         ];
     }
 }

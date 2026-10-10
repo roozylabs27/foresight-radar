@@ -49,31 +49,26 @@ class RatingUrgencyController extends Controller
 
     public function create(Request $request, DrivingForceRating $driving_force_rating)
     {
+        $validated = $request->validate([
+            'type' => ['required', 'string', 'in:impact,uncertainty'],
+            'value' => ['required', 'integer', 'between:1,10'],
+        ]);
+
         try {
-            DB::transaction(function () use ($request, $driving_force_rating) {
-                if ($request['type'] == 'uncertainty') {
-                    $driving_force_rating->uncertainty_analysis = $request['value'];
+            DB::transaction(function () use ($validated, $driving_force_rating) {
+                if ($validated['type'] == 'uncertainty') {
+                    $driving_force_rating->uncertainty_analysis = $validated['value'];
                 } else {
-                    $driving_force_rating->impact_analysis = $request['value'];
+                    $driving_force_rating->impact_analysis = $validated['value'];
                 }
 
-                // Calculate priority if both analyses are present
-                if ($driving_force_rating->impact_analysis !== null && $driving_force_rating->uncertainty_analysis !== null) {
-                    if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis >= 6) {
-                        $driving_force_rating->priority_id = 1;
-                    } elseif ($driving_force_rating->impact_analysis >= 6 || $driving_force_rating->uncertainty_analysis >= 6) {
-                        $driving_force_rating->priority_id = 2;
-                    } else {
-                        $driving_force_rating->priority_id = 3;
-                    }
-                }
-
+                $driving_force_rating->priority_id = $driving_force_rating->calculatePriority() ?? $driving_force_rating->priority_id;
                 $driving_force_rating->save();
             });
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($request['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')
+                'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($validated['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')
             ];
         } catch (\Throwable $th) {
             Log::error('Rating urgency update failed', [

@@ -55,7 +55,15 @@ class DrivingForceService
         $dimension = $params['dimension'] ?? null;
         $status = $params['status'] ?? null;
 
-        $drivingForces = DrivingForce::with(['dimension', 'created_by_user', 'updated_by_user'])
+        $drivingForces = DrivingForce::with([
+            'dimension',
+            'created_by_user',
+            'updated_by_user',
+            'pic_user',
+            'source_signal.source',
+            'supporting_signals.source',
+            'rating',
+        ])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('keyword', 'LIKE', $search . '%')

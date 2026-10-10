@@ -22,7 +22,7 @@ class TimeHorizonRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'time_horizon_id' => ['required']
+            'time_horizon_id' => ['required', 'exists:time_horizons,id']
         ];
     }
 }

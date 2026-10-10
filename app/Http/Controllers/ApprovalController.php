@@ -48,15 +48,47 @@ class ApprovalController extends Controller
 
     public function create(Request $request, DrivingForce $driving_force)
     {
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:APPROVED,CLOSED,REJECTED,PENDING'],
+            'text' => ['nullable', 'string'],
+            'remark' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($validated['status'] === 'APPROVED') {
+            if (!$driving_force->relationLoaded('rating')) {
+                $driving_force->load('rating');
+            }
+            if (!$driving_force->rating || is_null($driving_force->rating->status_action_id)) {
+                return response()->json([
+                    'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                    'errors' => 'Cannot approve a driving force without an assigned Status of Action.',
+                    'message' => 'Cannot approve a driving force without an assigned Status of Action.'
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        try {
+            $driving_force->transitionTo($validated['status']);
+        } catch (\App\Exceptions\InvalidStateTransitionException $e) {
+            return response()->json([
+                'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                'errors' => $e->getMessage(),
+                'message' => $e->getMessage(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         try {
             DB::beginTransaction();
-            if($request->status == 'CLOSED') {
+            if ($validated['status'] == 'CLOSED') {
                 $driving_force->closed_at = now();
             }
-            if($request->status == 'APPROVED') {
+            if ($validated['status'] == 'APPROVED') {
                 $driving_force->approved_at = now();
             }
-            $driving_force->status = $request->status;
+            if ($validated['status'] == 'REJECTED') {
+                $driving_force->remark = $validated['remark'] ?? null;
+                $driving_force->approved_at = null;
+            }
             $driving_force->save();
 
             DB::commit();

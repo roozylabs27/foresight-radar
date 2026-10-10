@@ -125,4 +125,28 @@ class RatingUrgencyTest extends TestCase
         // Both < 6, should be priority 3 (Low)
         $this->assertEquals(3, $this->rating->priority_id);
     }
+
+    public function test_rating_value_must_be_between_1_and_10(): void
+    {
+        $responseLow = $this->actingAs($this->admin)->postJson(
+            "/rating-urgency/{$this->rating->uuid}",
+            ['type' => 'impact', 'value' => 0]
+        );
+        $responseLow->assertStatus(422);
+
+        $responseHigh = $this->actingAs($this->admin)->postJson(
+            "/rating-urgency/{$this->rating->uuid}",
+            ['type' => 'impact', 'value' => 11]
+        );
+        $responseHigh->assertStatus(422);
+    }
+
+    public function test_rating_type_must_be_valid(): void
+    {
+        $response = $this->actingAs($this->admin)->postJson(
+            "/rating-urgency/{$this->rating->uuid}",
+            ['type' => 'unsupported_type', 'value' => 5]
+        );
+        $response->assertStatus(422);
+    }
 }
