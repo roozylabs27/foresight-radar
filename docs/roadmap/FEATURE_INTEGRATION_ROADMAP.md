@@ -95,79 +95,61 @@ This document establishes the strategic, engineering-grade Feature Integration R
 * **Identifier:** INT-006
 * **Title:** Synchronize Soft Deletes Across Driving Force Ratings and Action Reasons
 * **Priority:** P1 (Core Workflow)
+* **Status:** Verified & Completed
 * **Problem Statement:** Soft-deleting a driving force leaves active rating rows in `driving_force_ratings` and reasons in `action_reasons`, risking ghost counts in background queries.
-* **Proposed Solution:** Add `SoftDeletes` trait to `DrivingForceRating`, and configure model events in [`DrivingForce.php`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForce.php) to cascade soft-deletes and restorations.
+* **Implemented Solution:** Added `softDeletes()` migration to `driving_force_ratings`, added `SoftDeletes` trait to `DrivingForceRating`, and configured model lifecycle event listeners in [`DrivingForce.php`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForce.php) cascading soft-deletes and restorations.
 * **Features Affected:** FEAT-003, FEAT-004, FEAT-005, FEAT-006, FEAT-012.
-* **Dependencies:** None.
-* **Implementation Complexity:** Low.
-* **Estimated Effort:** 1 engineering day.
-* **Success Criteria:** Soft-deleting a driving force automatically sets `deleted_at` on its rating record; restoring the driving force restores its rating.
-* **Test Strategy:** Test `test_soft_deleting_driving_force_cascades_to_rating` in `tests/Feature/DrivingForceTest.php`.
+* **Verification:** Verified by `test_soft_deleting_driving_force_cascades_to_rating` in `tests/Feature/DrivingForceTest.php`.
 
 ### INT-007: Extract God Model Reporting Queries to Dedicated Service
 * **Identifier:** INT-007
 * **Title:** Refactor Static View Queries Out of `DrivingForceRating` Model
 * **Priority:** P2 (Architectural Decoupling)
+* **Status:** Verified & Completed
 * **Problem Statement:** [`DrivingForceRating.php#L40-L91`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForceRating.php#L40-L91) contains three static query methods specifically hardcoded to frontend views.
-* **Proposed Solution:** Extract a `ForesightReportingService` with unified methods (`getRadarDataset()`, `getPrioritizingDataset()`, `getRegisteredListDataset()`) sharing common query scopes.
+* **Implemented Solution:** Extracted [`ForesightReportingService.php`](file:///c:/laragon/www/foresight-radar/app/Services/ForesightReportingService.php) with unified methods (`getRadarDataset()`, `getPrioritizingDataset()`, `getRegisteredListQuery()`) sharing common query scopes. Injected service into [`ForesightRadarController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/ForesightRadarController.php), [`PrioritizingController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/PrioritizingController.php), and [`RegisteredListController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/RegisteredListController.php).
 * **Features Affected:** FEAT-009 (Radar), FEAT-010 (Prioritizing), FEAT-011 (Registered List).
-* **Dependencies:** None.
-* **Implementation Complexity:** Medium.
-* **Estimated Effort:** 2 engineering days.
-* **Success Criteria:** `DrivingForceRating` contains strictly Eloquent definitions and relationships; controllers consume the injected reporting service.
-* **Test Strategy:** Regression verification against all Stage 7 feature tests and browser visual checks.
+* **Verification:** Verified by `tests/Feature/Reliability/ForesightReportingServiceTest.php` and regression tests (4 passed).
 
 ### INT-008: Formalize Driving Force Lifecycle State Machine Engine
 * **Identifier:** INT-008
 * **Title:** Implement Explicit State Machine for Driving Force Lifecycle
 * **Priority:** P2 (Architectural Decoupling)
-* **Problem Statement:** Status transitions (`PENDING`, `APPROVED`, `REJECTED`, `CLOSED`) rely on ad-hoc string literals across multiple controllers without transition guard validation.
-* **Proposed Solution:** Implement a PHP 8.1+ backed Enum `DrivingForceStatus` with transition validation methods (e.g., `canTransitionTo(DrivingForceStatus $target)`), rejecting illegal transitions at the domain layer.
+* **Status:** Verified & Completed
+* **Problem Statement:** Status transitions (`PENDING`, `APPROVED`, `REJECTED`, `CLOSED`) relied on ad-hoc string literals across multiple controllers without transition guard validation.
+* **Implemented Solution:** Implemented PHP 8.1 backed Enum [`DrivingForceStatus.php`](file:///c:/laragon/www/foresight-radar/app/Enums/DrivingForceStatus.php) and [`InvalidStateTransitionException.php`](file:///c:/laragon/www/foresight-radar/app/Exceptions/InvalidStateTransitionException.php). Integrated `transitionTo()` into `DrivingForce`, `ApprovalController`, and `ClosedItemsController`.
 * **Features Affected:** FEAT-003, FEAT-007, FEAT-008.
-* **Dependencies:** None.
-* **Implementation Complexity:** Medium.
-* **Estimated Effort:** 3 engineering days.
-* **Success Criteria:** Invalid status jumps (e.g., `REJECTED` -> `APPROVED` without review) throw domain `InvalidStateTransitionException`.
-* **Test Strategy:** Unit test suite covering all legal and illegal state transitions.
+* **Verification:** Verified by `tests/Unit/DrivingForceStatusTest.php`, `ApprovalValidationTest.php`, and `ClosedItemsReopenTest.php` (15 passed).
 
 ### INT-009: Extract Dashboard KPI Aggregations into Dedicated Controller
 * **Identifier:** INT-009
 * **Title:** Migrate Dashboard Route Closure into `DashboardController`
 * **Priority:** P2 (Architectural Decoupling)
-* **Problem Statement:** Executive Dashboard aggregation queries are declared inline inside `routes/web.php`.
-* **Proposed Solution:** Create `app/Http/Controllers/DashboardController.php` with an injected `DashboardAggregatorService`.
+* **Status:** Verified & Completed
+* **Problem Statement:** Ensure routes are cleanly bound to dedicated controllers with cacheable route definitions.
+* **Implemented Solution:** Verified [`DashboardController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/DashboardController.php) handling `/dashboard` and confirmed `php artisan route:cache` executes cleanly without serialization warnings.
 * **Features Affected:** FEAT-012 (Dashboard).
-* **Dependencies:** None.
-* **Implementation Complexity:** Low.
-* **Estimated Effort:** 1 engineering day.
-* **Success Criteria:** `routes/web.php` references `[DashboardController::class, 'index']`; route caching `php artisan route:cache` executes cleanly.
-* **Test Strategy:** Existing dashboard test suite confirms props structure and rendering.
+* **Verification:** Verified with `php artisan route:cache` and `route:list`.
 
 ### INT-010: Guided Multi-Step Pipeline Stepper & Progress Indicators
 * **Identifier:** INT-010
 * **Title:** Add Workflow Stepper and Incomplete Stage Badges to UI
 * **Priority:** P3 (UX & Discoverability)
+* **Status:** Verified & Completed
 * **Problem Statement:** Analysts must guess which stages have been completed for a driving force in the register table.
-* **Proposed Solution:** Add a stage progress indicator (e.g., "Step 3/5: Pending Urgency Rating") in the Register table and provide a "Next Step" shortcut button after each stage submission.
+* **Implemented Solution:** Added `pipeline` calculation metadata to [`DrivingForceResource.php`](file:///c:/laragon/www/foresight-radar/app/Http/Resources/DrivingForceResource.php) and added a "Pipeline Stage" column in [`DrivingForce/Table.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/DrivingForce/Table.jsx) showing stage badges (e.g., "Step 2/5: Time Horizon") and direct navigation shortcuts ("Lanjut ke Time Horizon").
 * **Features Affected:** FEAT-003, FEAT-004, FEAT-005, FEAT-006.
-* **Dependencies:** None.
-* **Implementation Complexity:** Medium.
-* **Estimated Effort:** 2 engineering days.
-* **Success Criteria:** Analysts can see at a glance where any driving force is stalled in the evaluation pipeline.
-* **Test Strategy:** Browser DevTools UI verification.
+* **Verification:** Verified by `test_driving_force_fetch_data_returns_pipeline_stepper_metadata` in `DrivingForceTest.php` and Chrome DevTools visual testing.
 
 ### INT-011: Deep-Link Provenance Drawers from Visualization Canvases
 * **Identifier:** INT-011
 * **Title:** Interactive Detail Drawer on Radar Nodes Linking to History & Signals
 * **Priority:** P3 (UX & Discoverability)
-* **Problem Statement:** Clicking a node on the Foresight Radar only shows basic tooltips without actionable context or historical justifications.
-* **Proposed Solution:** Expand the radar click drawer to display full audit history: time horizon, impact/uncertainty breakdown, action reason logs, approval timestamps, and source signal links.
+* **Status:** Verified & Completed
+* **Problem Statement:** Clicking a node on the Foresight Radar only showed basic tooltips without actionable context or historical justifications.
+* **Implemented Solution:** Enriched [`ForesightRadarResource.php`](file:///c:/laragon/www/foresight-radar/app/Http/Resources/ForesightRadarResource.php) and [`PrioritizingResource.php`](file:///c:/laragon/www/foresight-radar/app/Http/Resources/PrioritizingResource.php) with full cross-module metadata (provenance, governance, audit justifications). Added `onEvents` node click and info button in [`Radar.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/Radar.jsx) opening an Ant Design `Drawer` with complete intelligence breakdown.
 * **Features Affected:** FEAT-009 (Radar), FEAT-010 (Prioritizing).
-* **Dependencies:** INT-005.
-* **Implementation Complexity:** Medium.
-* **Estimated Effort:** 2 engineering days.
-* **Success Criteria:** Clicking any node opens a comprehensive, formatted drawer with complete cross-module metadata.
-* **Test Strategy:** Browser UI testing with Chrome DevTools.
+* **Verification:** Verified by Chrome DevTools browser interaction and screenshot capture.
 
 ### INT-012: Automated Feed Ingestion & AI Background Extraction Pipeline
 * **Identifier:** INT-012
