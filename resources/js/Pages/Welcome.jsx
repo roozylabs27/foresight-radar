@@ -26,7 +26,7 @@ import {
 const { Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
-export default function Welcome({ auth }) {
+export default function Welcome({ auth, canRegister = true }) {
     const user = auth?.user;
 
     return (
@@ -136,14 +136,16 @@ export default function Welcome({ auth }) {
                                         Masuk
                                     </Button>
                                 </Link>
-                                <Link href={route("register")}>
-                                    <Button
-                                        type="primary"
-                                        icon={<UserAddOutlined />}
-                                    >
-                                        Daftar Akun
-                                    </Button>
-                                </Link>
+                                {canRegister && (
+                                    <Link href={route("register")}>
+                                        <Button
+                                            type="primary"
+                                            icon={<UserAddOutlined />}
+                                        >
+                                            Daftar Akun
+                                        </Button>
+                                    </Link>
+                                )}
                             </>
                         )}
                     </Space>
@@ -219,14 +221,16 @@ export default function Welcome({ auth }) {
                                             Mulai Sekarang
                                         </Button>
                                     </Link>
-                                    <Link href={route("register")}>
-                                        <Button
-                                            size="large"
-                                            style={{ height: 48, padding: "0 28px", fontSize: 15 }}
-                                        >
-                                            Registrasi Akun Baru
-                                        </Button>
-                                    </Link>
+                                    {canRegister && (
+                                        <Link href={route("register")}>
+                                            <Button
+                                                size="large"
+                                                style={{ height: 48, padding: "0 28px", fontSize: 15 }}
+                                            >
+                                                Registrasi Akun Baru
+                                            </Button>
+                                        </Link>
+                                    )}
                                 </>
                             )}
                         </Space>

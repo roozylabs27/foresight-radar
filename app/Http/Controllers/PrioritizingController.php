@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dimension;
-use App\Models\DrivingForceRating;
+use App\Services\ForesightReportingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -21,13 +21,13 @@ class PrioritizingController extends Controller
         });
         $title = "Prioritizing";
 
-        return Inertia::render('Report/Prioritizing', compact('dimensions' , 'title'));
+        return Inertia::render('Report/Prioritizing', compact('dimensions', 'title'));
     }
 
-    public function prioritizing()
+    public function prioritizing(ForesightReportingService $reportingService)
     {
         try {
-            $result = DrivingForceRating::prioritizing();
+            $result = $reportingService->getPrioritizingDataset();
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {

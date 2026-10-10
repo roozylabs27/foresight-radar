@@ -1,4 +1,4 @@
-﻿import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import {
     MoreOutlined,
     DeleteOutlined,
@@ -10,6 +10,7 @@ import {
     CalendarOutlined,
     AppstoreOutlined,
     ReloadOutlined,
+    RollbackOutlined,
 } from "@ant-design/icons";
 import { Head } from "@inertiajs/react";
 import {
@@ -32,6 +33,8 @@ import {
     Popconfirm,
     Card,
     Tooltip,
+    Modal,
+    Form,
 } from "antd";
 import axios from "axios";
 import qs from "qs";
@@ -202,6 +205,66 @@ export default function TableClosedItems({ auth, title, dimensions }) {
             width: 60,
         },
     ];
+
+    const { user, permissions } = auth;
+
+    const [reopenModalOpen, setReopenModalOpen] = useState(false);
+    const [selectedRecord, setSelectedRecord] = useState(null);
+    const [submittingReopen, setSubmittingReopen] = useState(false);
+    const [reopenForm] = Form.useForm();
+
+    const handleOpenReopenModal = (record) => {
+        setSelectedRecord(record);
+        reopenForm.resetFields();
+        setReopenModalOpen(true);
+    };
+
+    const handleReopenSubmit = async (values) => {
+        if (!selectedRecord) return;
+        setSubmittingReopen(true);
+        try {
+            const response = await axios.post(
+                route("closed-items.reopen", selectedRecord.id),
+                { reason: values.reason }
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success(response.data.message);
+                setReopenModalOpen(false);
+                reopenForm.resetFields();
+                fetchData();
+            } else {
+                message.error("Failed to reopen item");
+            }
+        } catch (error) {
+            message.error(error.response?.data?.errors || `Error: ${error.message}`);
+        } finally {
+            setSubmittingReopen(false);
+        }
+    };
+
+    const columnReopenBtn = (text, record) => {
+        return (
+            <Button
+                type="primary"
+                shape="round"
+                icon={<RollbackOutlined />}
+                onClick={() => handleOpenReopenModal(record)}
+            >
+                Reopen
+            </Button>
+        );
+    };
+
+    if (permissions && permissions.includes("create-approval-items")) {
+        columns.push({
+            title: "",
+            key: "operation",
+            align: "center",
+            render: columnReopenBtn,
+            width: 70,
+        });
+    }
 
     const handleSearchChange = (value) => {
         setTableParams({
@@ -454,6 +517,47 @@ export default function TableClosedItems({ auth, title, dimensions }) {
                         onChange={handleTableChange}
                     />
                 </Card>
+
+                <Modal
+                    title={`Reopen Driving Force: ${selectedRecord?.keyword || ""}`}
+                    open={reopenModalOpen}
+                    onCancel={() => setReopenModalOpen(false)}
+                    footer={null}
+                    destroyOnClose
+                >
+                    <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
+                        Mengaktifkan kembali driving force akan mengembalikan statusnya ke <strong>PENDING</strong> pada tahap evaluasi dan mencatat justifikasi perubahan pada riwayat audit.
+                    </p>
+                    <Form
+                        form={reopenForm}
+                        layout="vertical"
+                        onFinish={handleReopenSubmit}
+                    >
+                        <Form.Item
+                            name="reason"
+                            label="Alasan Pengaktifan Kembali (Justifikasi)"
+                            rules={[
+                                { required: true, message: "Harap masukkan alasan pengaktifan kembali." },
+                                { min: 5, message: "Alasan minimal 5 karakter." },
+                            ]}
+                        >
+                            <Input.TextArea
+                                rows={4}
+                                placeholder="Contoh: Perubahan lanskap regulasi Q4 memicu kebutuhan analisis ulang..."
+                                maxLength={1000}
+                                showCount
+                            />
+                        </Form.Item>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+                            <Button onClick={() => setReopenModalOpen(false)}>
+                                Batal
+                            </Button>
+                            <Button type="primary" htmlType="submit" loading={submittingReopen} icon={<RollbackOutlined />}>
+                                Aktifkan Kembali
+                            </Button>
+                        </div>
+                    </Form>
+                </Modal>
             </Content>
         </AuthenticatedLayout>
     );

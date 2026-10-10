@@ -1,4 +1,4 @@
-﻿import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import {
     MoreOutlined,
     DeleteOutlined,
@@ -10,8 +10,11 @@ import {
     AppstoreOutlined,
     ReloadOutlined,
     RadarChartOutlined,
+    ThunderboltOutlined,
+    GlobalOutlined,
+    ArrowRightOutlined,
 } from "@ant-design/icons";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import {
     Layout,
     theme,
@@ -32,6 +35,9 @@ import {
     Popconfirm,
     Card,
     Tooltip,
+    Drawer,
+    List,
+    Badge,
 } from "antd";
 import axios from "axios";
 import qs from "qs";
@@ -128,8 +134,26 @@ export default function TableDrivingForce({ auth, title , dimensions, users }) {
         }
     };
 
+    // Drawer for Signals Provenance
+    const [signalsDrawerOpen, setSignalsDrawerOpen] = useState(false);
+    const [selectedDrivingForceSignals, setSelectedDrivingForceSignals] = useState(null);
+
+    const handleViewSignals = (record) => {
+        setSelectedDrivingForceSignals(record);
+        setSignalsDrawerOpen(true);
+    };
+
     const columnAction = (text, record) => {
         const actions = [
+            {
+                key: "signals",
+                label: (
+                    <Flex gap="middle" vertical={false}>
+                        <ThunderboltOutlined style={{ color: "#1677ff" }} />
+                        Sinyal Asal ({record.signals_count || 0})
+                    </Flex>
+                ),
+            },
             {
                 key: "edit",
                 label: (
@@ -203,6 +227,71 @@ export default function TableDrivingForce({ auth, title , dimensions, users }) {
             width: 60,
         },
         {
+            title: "Signals",
+            dataIndex: "signals_count",
+            align: "center",
+            width: 70,
+            render: (count, record) => {
+                if (!count || count === 0) {
+                    return <Tag color="default" style={{ fontSize: 11, borderRadius: 10 }}>Direct</Tag>;
+                }
+                return (
+                    <Tag
+                        color="blue"
+                        style={{ cursor: "pointer", fontSize: 11, borderRadius: 10 }}
+                        onClick={() => handleViewSignals(record)}
+                    >
+                        <ThunderboltOutlined style={{ marginRight: 4 }} />
+                        {count} sinyal
+                    </Tag>
+                );
+            },
+        },
+        {
+            title: "Pipeline Stage",
+            dataIndex: "pipeline",
+            align: "center",
+            width: 140,
+            render: (pipeline) => {
+                if (!pipeline) return null;
+
+                return (
+                    <Flex vertical align="center" gap={4}>
+                        <Tag
+                            color={pipeline.badge_color}
+                            style={{
+                                fontSize: 11,
+                                borderRadius: 10,
+                                margin: 0,
+                                fontWeight: 500,
+                            }}
+                        >
+                            {pipeline.label}
+                        </Tag>
+                        {pipeline.next_url && (
+                            <Link href={pipeline.next_url}>
+                                <Button
+                                    type="link"
+                                    size="small"
+                                    style={{
+                                        padding: 0,
+                                        height: "auto",
+                                        fontSize: 11,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 2,
+                                    }}
+                                >
+                                    <span>Lanjut ke {pipeline.next_label}</span>
+                                    <ArrowRightOutlined style={{ fontSize: 10 }} />
+                                </Button>
+                            </Link>
+                        )}
+                    </Flex>
+                );
+            },
+        },
+        {
             title: "",
             key: "operation",
             fixed: "right",
@@ -214,6 +303,9 @@ export default function TableDrivingForce({ auth, title , dimensions, users }) {
 
     const handleDropdownClick = (key, record) => {
         switch (key) {
+            case "signals":
+                handleViewSignals(record);
+                break;
             case "edit":
                 setOpen(true);
                 setLoading(true);
@@ -586,6 +678,101 @@ export default function TableDrivingForce({ auth, title , dimensions, users }) {
                     onFinish={handleFormSubmit}
                 />
             </Dialog>
+
+            <Drawer
+                title={
+                    <Space>
+                        <ThunderboltOutlined style={{ color: "#1677ff" }} />
+                        <span>Originating Intelligence: {selectedDrivingForceSignals?.keyword}</span>
+                    </Space>
+                }
+                width={560}
+                open={signalsDrawerOpen}
+                onClose={() => setSignalsDrawerOpen(false)}
+            >
+                {(!selectedDrivingForceSignals?.signals_count || selectedDrivingForceSignals.signals_count === 0) ? (
+                    <div style={{ padding: "32px 16px", textAlign: "center", color: "#8c8c8c" }}>
+                        <p style={{ fontSize: 15, fontWeight: 500, marginBottom: 8 }}>Tidak ada sinyal terhubung</p>
+                        <p style={{ fontSize: 13 }}>Driving force ini dibuat secara manual tanpa melalui promosi sinyal lemah eksternal.</p>
+                    </div>
+                ) : (
+                    <div>
+                        {selectedDrivingForceSignals.source_signal && (
+                            <Card
+                                size="small"
+                                title={
+                                    <Space>
+                                        <Tag color="purple">Primary Origin Signal</Tag>
+                                        <span style={{ fontWeight: 600 }}>{selectedDrivingForceSignals.source_signal.title}</span>
+                                    </Space>
+                                }
+                                style={{ marginBottom: 16, borderColor: "#d3adf7" }}
+                            >
+                                <p style={{ color: "#4b5563", fontSize: 13, marginBottom: 12 }}>
+                                    {selectedDrivingForceSignals.source_signal.summary}
+                                </p>
+                                {selectedDrivingForceSignals.source_signal.source_url && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                                        <GlobalOutlined style={{ color: "#1677ff" }} />
+                                        <span style={{ color: "#6b7280" }}>Sumber:</span>
+                                        <a
+                                            href={selectedDrivingForceSignals.source_signal.source_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ color: "#1677ff", wordBreak: "break-all" }}
+                                        >
+                                            {selectedDrivingForceSignals.source_signal.source_title || selectedDrivingForceSignals.source_signal.source_url}
+                                        </a>
+                                    </div>
+                                )}
+                            </Card>
+                        )}
+
+                        {selectedDrivingForceSignals.supporting_signals?.length > 0 && (
+                            <div>
+                                <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 12 }}>
+                                    Supporting Evidence Signals ({selectedDrivingForceSignals.supporting_signals.length})
+                                </Typography.Title>
+                                <List
+                                    dataSource={selectedDrivingForceSignals.supporting_signals}
+                                    renderItem={(item) => (
+                                        <List.Item style={{ padding: "10px 0" }}>
+                                            <Card size="small" style={{ width: "100%" }}>
+                                                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>
+                                                    {item.title}
+                                                </div>
+                                                {item.summary && (
+                                                    <p style={{ color: "#4b5563", fontSize: 13, marginBottom: 8 }}>
+                                                        {item.summary}
+                                                    </p>
+                                                )}
+                                                {item.notes && (
+                                                    <p style={{ fontStyle: "italic", color: "#6b7280", fontSize: 12, marginBottom: 8 }}>
+                                                        Catatan: {item.notes}
+                                                    </p>
+                                                )}
+                                                {item.source_url && (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                                                        <GlobalOutlined style={{ color: "#1677ff" }} />
+                                                        <a
+                                                            href={item.source_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            style={{ color: "#1677ff", wordBreak: "break-all" }}
+                                                        >
+                                                            {item.source_title || item.source_url}
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </Card>
+                                        </List.Item>
+                                    )}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Drawer>
         </AuthenticatedLayout>
     );
 }

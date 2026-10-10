@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dimension;
-use App\Models\DrivingForceRating;
+use App\Services\ForesightReportingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -24,10 +24,10 @@ class ForesightRadarController extends Controller
         return Inertia::render('Report/ForesightRadar', compact('dimensions', 'title'));
     }
 
-    public function foresight_radar()
+    public function foresight_radar(ForesightReportingService $reportingService)
     {
         try {
-            $result = DrivingForceRating::foresight_radar();
+            $result = $reportingService->getRadarDataset();
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {

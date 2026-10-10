@@ -14,6 +14,7 @@ import {
     FileExcelOutlined,
     DotChartOutlined,
     InsertRowAboveOutlined,
+    ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
     Layout,
@@ -31,9 +32,13 @@ import { Link, usePage } from "@inertiajs/react";
 
 const { Header, Footer, Sider } = Layout;
 
-export default function Authenticated({ auth, header, children }) {
+export default function Authenticated({ auth, user: propUser, header, children }) {
+    const pageProps = usePage().props;
     const { url } = usePage();
-    const { user, permissions = [] } = auth || {};
+    const effectiveAuth = auth || pageProps.auth || {};
+    const user = effectiveAuth.user || propUser;
+    const permissions = effectiveAuth.permissions || [];
+    const role = effectiveAuth.role;
 
     const [items] = useState([
         {
@@ -41,6 +46,12 @@ export default function Authenticated({ auth, header, children }) {
             icon: <DashboardOutlined />,
             key: "/dashboard",
             permission: "view-dashboard",
+        },
+        {
+            label: <Link href={route("signals.index")}>Signal Ingestion</Link>,
+            icon: <ThunderboltOutlined />,
+            key: "/signals",
+            permission: "view-signal",
         },
         {
             label: <Link href={route("driving-force.")}>Driving Force</Link>,
@@ -167,7 +178,11 @@ export default function Authenticated({ auth, header, children }) {
     ];
 
     const filteredItems = items.filter(
-        (item) => !item.permission || permissions.includes(item.permission)
+        (item) =>
+            !item.permission ||
+            role === "developer" ||
+            role === "super-admin" ||
+            permissions.includes(item.permission)
     );
 
     const {

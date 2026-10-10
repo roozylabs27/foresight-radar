@@ -168,6 +168,7 @@ const OverallStatus = ({ loading, setLoading, date, selectedData, permissions = 
             title: "",
             dataIndex: "no",
             align: "center",
+            width: 50,
         },
         {
             title: "DRIVING FORCE",

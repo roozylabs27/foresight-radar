@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Resources\OverallStatusCollection;
 use App\Http\Resources\OverallStatusResource;
 use App\Models\Dimension;
-use App\Models\DrivingForceRating;
 use App\Models\Priority;
 use App\Models\StatusAction;
 use App\Models\TimeHorizon;
+use App\Services\ForesightReportingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -47,12 +47,11 @@ class RegisteredListController extends Controller
         return Inertia::render('Report/RegisteredList', compact('dimensions', 'title', 'priorities', 'status_actions', 'time_horizons'));
     }
 
-    public function registered_list()
+    public function registered_list(ForesightReportingService $reportingService)
     {
         try {
-
             $pagination = request('pagination.pageSize');
-            $registered_list = DrivingForceRating::registered_list()->paginate($pagination);
+            $registered_list = $reportingService->getRegisteredListQuery()->paginate($pagination);
             $result = new OverallStatusCollection($registered_list);
 
             return response()->json($result, Response::HTTP_OK);
@@ -64,10 +63,10 @@ class RegisteredListController extends Controller
         }
     }
 
-    public function export_data()
+    public function export_data(ForesightReportingService $reportingService)
     {
         try {
-            $query = DrivingForceRating::registered_list();
+            $query = $reportingService->getRegisteredListQuery();
 
             return response()->stream(function () use ($query) {
                 echo '[';

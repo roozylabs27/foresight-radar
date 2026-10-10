@@ -13,10 +13,17 @@ import {
     Tooltip,
     Badge,
     Button,
+    Drawer,
+    Descriptions,
+    Typography,
+    List,
 } from "antd";
 import {
     FullscreenOutlined,
     FullscreenExitOutlined,
+    InfoCircleOutlined,
+    ThunderboltOutlined,
+    LinkOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -206,6 +213,8 @@ export default function Radar({ loading, setLoading, date, selectData }) {
     const [data, setData] = useState([]);
     const [activeRowKey, setActiveRowKey] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
     const echartsRef = useRef(null);
 
     // Support ESC key to exit fullscreen mode
@@ -284,6 +293,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 horizon: horizonName,
                 statusAction: p.status_action,
                 symbol: p.symbol || "circle",
+                rawItem: p,
                 itemStyle: {
                     color: pColor,
                     borderColor: "#ffffff",
@@ -294,6 +304,13 @@ export default function Radar({ loading, setLoading, date, selectData }) {
             };
         });
     }, [dispersedData]);
+
+    const handleChartClick = (params) => {
+        if (params && params.data && params.data.rawItem) {
+            setSelectedItem(params.data.rawItem);
+            setDrawerOpen(true);
+        }
+    };
 
     // Highlight marker when table row is hovered
     const handleRowMouseEnter = (record) => {
@@ -523,7 +540,7 @@ export default function Radar({ loading, setLoading, date, selectData }) {
         {
             title: "Priority",
             dataIndex: "priority",
-            width: 90,
+            width: 80,
             align: "center",
             render: (priority) => (
                 <Tag
@@ -538,6 +555,26 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                 >
                     {priority}
                 </Tag>
+            ),
+        },
+        {
+            title: "",
+            key: "view",
+            width: 36,
+            align: "center",
+            render: (_, record) => (
+                <Tooltip title="Detail & Provenance">
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<InfoCircleOutlined style={{ color: "#1677ff", fontSize: 13 }} />}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedItem(record);
+                            setDrawerOpen(true);
+                        }}
+                    />
+                </Tooltip>
             ),
         },
     ];
@@ -574,8 +611,13 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                                 `radar-table-row ${record.no === activeRowKey ? "row-active" : ""}`
                             }
                             onRow={(record) => ({
+                                onClick: () => {
+                                    setSelectedItem(record);
+                                    setDrawerOpen(true);
+                                },
                                 onMouseEnter: () => handleRowMouseEnter(record),
                                 onMouseLeave: () => handleRowMouseLeave(),
+                                style: { cursor: "pointer" },
                             })}
                             locale={{
                                 emptyText: (
@@ -648,11 +690,15 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                                         ref={echartsRef}
                                         notMerge={true}
                                         option={options}
+                                        onEvents={{
+                                            click: handleChartClick,
+                                        }}
                                         style={{
                                             height: isFullscreen
                                                 ? "calc(100vh - 200px)"
                                                 : "500px",
                                             width: "100%",
+                                            cursor: "pointer",
                                         }}
                                     />
 
@@ -711,6 +757,156 @@ export default function Radar({ loading, setLoading, date, selectData }) {
                     </Card>
                 </Col>
             </Row>
+
+            <Drawer
+                title={
+                    selectedItem ? (
+                        <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span style={{ fontSize: 16, fontWeight: 700 }}>
+                                    #{selectedItem.no} {selectedItem.keyword}
+                                </span>
+                                <Tag color={getPriorityTagColor(selectedItem.priority)}>
+                                    {selectedItem.priority} Priority
+                                </Tag>
+                            </div>
+                            <Space size={6} wrap style={{ marginTop: 4 }}>
+                                <Tag color="blue">{selectedItem.dimension}</Tag>
+                                {selectedItem.status_action && (
+                                    <Tag color="cyan">
+                                        Action: {selectedItem.status_action}
+                                        {selectedItem.status_action_name ? ` (${selectedItem.status_action_name})` : ""}
+                                    </Tag>
+                                )}
+                                <Tag color="geekblue">
+                                    {selectedItem.time_horizon || (selectedItem.horizon === 1 ? "Short Term" : selectedItem.horizon === 2 ? "Mid Term" : "Long Term")}
+                                </Tag>
+                            </Space>
+                        </Space>
+                    ) : (
+                        "Signal Details"
+                    )
+                }
+                placement="right"
+                width={560}
+                onClose={() => setDrawerOpen(false)}
+                open={drawerOpen}
+            >
+                {selectedItem && (
+                    <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                        {/* Description */}
+                        <div>
+                            <Typography.Text type="secondary" style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                                Description
+                            </Typography.Text>
+                            <p style={{ marginTop: 4, color: "#374151", fontSize: 13, lineHeight: 1.6 }}>
+                                {selectedItem.description || "No description provided."}
+                            </p>
+                        </div>
+
+                        {/* Analysis and Governance Breakdown */}
+                        <Descriptions
+                            title={<span style={{ fontSize: 14 }}>Governance & Urgency Evaluation</span>}
+                            bordered
+                            size="small"
+                            column={2}
+                        >
+                            <Descriptions.Item label="PIC">
+                                {selectedItem.pic || "-"}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Approved At">
+                                {selectedItem.approved_at || "-"}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Impact Score">
+                                {selectedItem.impact_analysis ?? "-"} / 10
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Uncertainty Score">
+                                {selectedItem.uncertainty_analysis ?? "-"} / 10
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Status of Action" span={2}>
+                                {selectedItem.status_action
+                                    ? `${selectedItem.status_action} ${selectedItem.status_action_name ? `(${selectedItem.status_action_name})` : ""}`
+                                    : "Not assigned"}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Action Justification" span={2}>
+                                {selectedItem.reason || "None recorded"}
+                            </Descriptions.Item>
+                        </Descriptions>
+
+                        {/* Signal Provenance & Evidence */}
+                        <div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                                <Typography.Title level={5} style={{ margin: 0, fontSize: 14 }}>
+                                    <ThunderboltOutlined style={{ marginRight: 6, color: "#1677ff" }} />
+                                    Signal Provenance ({selectedItem.signals_count || 0})
+                                </Typography.Title>
+                            </div>
+
+                            {selectedItem.source_signal ? (
+                                <Card size="small" style={{ borderRadius: 8, borderColor: "#d9d9d9", marginBottom: 12 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                                        <Typography.Text strong style={{ fontSize: 13 }}>
+                                            {selectedItem.source_signal.title}
+                                        </Typography.Text>
+                                        <Tag color="purple" style={{ fontSize: 11 }}>Source Origin</Tag>
+                                    </div>
+                                    <Typography.Paragraph ellipsis={{ rows: 2 }} style={{ color: "#4b5563", fontSize: 12, marginBottom: 8 }}>
+                                        {selectedItem.source_signal.summary}
+                                    </Typography.Paragraph>
+                                    {selectedItem.source_signal.evidence_quote && (
+                                        <div style={{ backgroundColor: "#f9fafb", borderLeft: "3px solid #1677ff", padding: "6px 10px", marginBottom: 8, fontStyle: "italic", fontSize: 12, color: "#374151" }}>
+                                            "{selectedItem.source_signal.evidence_quote}"
+                                        </div>
+                                    )}
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#6b7280" }}>
+                                        <span>Sumber: <b>{selectedItem.source_signal.source_title || "Unknown"}</b></span>
+                                        {selectedItem.source_signal.source_url && (
+                                            <a
+                                                href={selectedItem.source_signal.source_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                                            >
+                                                Buka Artikel <LinkOutlined />
+                                            </a>
+                                        )}
+                                    </div>
+                                </Card>
+                            ) : null}
+
+                            {selectedItem.supporting_signals && selectedItem.supporting_signals.length > 0 && (
+                                <List
+                                    size="small"
+                                    header={<span style={{ fontWeight: 600, fontSize: 12 }}>Supporting Evidence</span>}
+                                    bordered
+                                    dataSource={selectedItem.supporting_signals}
+                                    renderItem={(sig) => (
+                                        <List.Item>
+                                            <div style={{ width: "100%" }}>
+                                                <div style={{ fontWeight: 600, fontSize: 12 }}>{sig.title}</div>
+                                                <div style={{ fontSize: 11, color: "#6b7280" }}>{sig.summary}</div>
+                                                {sig.source_url && (
+                                                    <a href={sig.source_url} target="_blank" rel="noreferrer" style={{ fontSize: 11 }}>
+                                                        {sig.source_title || "Link"} <LinkOutlined />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </List.Item>
+                                    )}
+                                />
+                            )}
+
+                            {(!selectedItem.source_signal && (!selectedItem.supporting_signals || selectedItem.supporting_signals.length === 0)) && (
+                                <Card size="small" style={{ backgroundColor: "#f9fafb", borderRadius: 8 }}>
+                                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                        Driving force ini diinput langsung oleh analis tanpa tautan sinyal mentah.
+                                    </Typography.Text>
+                                </Card>
+                            )}
+                        </div>
+                    </Space>
+                )}
+            </Drawer>
         </div>
     );
 }

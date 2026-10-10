@@ -32,7 +32,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::get("/", "index")->can('view-dashboard');
     });
 
-    Route::prefix('visualization')->name('visualization.')->group(function() {
+    Route::prefix('visualization')->middleware('throttle:60,1')->name('visualization.')->group(function() {
         Route::prefix("/prioritizing")->name('prioritizing.')->group(function() {
             Route::get("/", [PrioritizingController::class, 'index'])->can('view-prioritizing');
             Route::get("/get-data", [PrioritizingController::class, 'prioritizing'])->name('get-data')->can('view-prioritizing');
@@ -51,6 +51,12 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         });
     });
 
+    Route::prefix("signals")->controller(App\Http\Controllers\SignalIngestionController::class)->name("signals.")->group(function () {
+        Route::get("/", "index")->name('index')->can('view-signal');
+        Route::get("/fetch", "fetch_signals")->name('fetch')->can('view-signal');
+        Route::post("/ingest", "ingest")->name('ingest')->can('create-signal')->middleware('throttle:15,1');
+        Route::post("/{signal}/review", "review")->name('review')->can('review-signal');
+    });
 
     Route::prefix("driving-force")->controller(App\Http\Controllers\DrivingForceController::class)->name("driving-force.")->group(function () {
         Route::get("/", "index")->can('view-driving-force');
@@ -87,6 +93,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
     Route::prefix("closed-items")->controller(App\Http\Controllers\ClosedItemsController::class)->name("closed-items.")->group(function () {
         Route::get("/", "index")->can('view-closed-items');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-closed-items');
+        Route::post("/{driving_force}/reopen", "reopen")->name('reopen')->can('create-approval-items');
     });
 
     Route::prefix('user-management')->name('user-management.')->group(function () {

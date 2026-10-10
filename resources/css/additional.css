@@ -162,5 +162,7 @@
     box-sizing: border-box !important;
 }
 
-
-
+/* Table Header Enhancements */
+.ant-table-thead > tr > th {
+    white-space: nowrap;
+}

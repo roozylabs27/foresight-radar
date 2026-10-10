@@ -99,8 +99,10 @@ export default function TableStatusAction({
 
             if (response.status == 200) {
                 setTimeout(() => {
+                    const currentPage = response.data.meta?.current_page || 1;
+                    const perPage = response.data.meta?.per_page || 10;
                     const newData = response.data.data.map((d, i) => ({
-                        no: i + 1,
+                        no: (currentPage - 1) * perPage + i + 1,
                         ...d,
                     }));
                     setData(newData);
@@ -217,7 +219,7 @@ export default function TableStatusAction({
             title: "No",
             dataIndex: "no",
             key: "no",
-            width: 10,
+            width: 70,
             align: "center",
         },
         {
@@ -243,7 +245,7 @@ export default function TableStatusAction({
             key: "operation",
             fixed: "right",
             align: "right",
-            width: 20,
+            width: 60,
             render: columnAction,
         },
     ];
