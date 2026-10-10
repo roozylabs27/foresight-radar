@@ -6,6 +6,8 @@ services:
     container_name: laravel_app
     volumes:
       - .:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - ./docker/php/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf
     networks:
       - laravel
 

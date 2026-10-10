@@ -23,3 +23,4 @@ yarn-error.log
 /public/docs
 /docs/superpowers
 /audit
+/.config

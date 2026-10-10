@@ -28,6 +28,9 @@ COPY . .
 
 COPY --from=frontend /app/public/build /var/www/public/build
 
+COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
+COPY docker/php/zz-docker.conf /usr/local/etc/php-fpm.d/zz-docker.conf
+
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 USER www-data
