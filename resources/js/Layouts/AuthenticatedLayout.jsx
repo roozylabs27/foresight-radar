@@ -205,6 +205,7 @@ export default function Authenticated({ auth, user: propUser, header, children }
                     borderRadius: 8,
                     fontFamily:
                         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                    colorTextSecondary: "#595959",
                 },
             }}
         >
@@ -303,7 +304,7 @@ export default function Authenticated({ auth, user: propUser, header, children }
                     placement="left"
                     open={mobileDrawerOpen}
                     onClose={() => setMobileDrawerOpen(false)}
-                    bodyStyle={{ padding: 0 }}
+                    styles={{ body: { padding: 0 } }}
                     width={260}
                     closable={false}
                 >
