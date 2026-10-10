@@ -203,7 +203,6 @@ function RegisterContent({ errors: serverErrors }) {
                                 style={{ marginBottom: 16 }}
                             >
                                 <Input
-                                    id="name"
                                     prefix={
                                         <UserOutlined
                                             style={{
@@ -233,7 +232,6 @@ function RegisterContent({ errors: serverErrors }) {
                                 style={{ marginBottom: 16 }}
                             >
                                 <Input
-                                    id="email"
                                     prefix={
                                         <MailOutlined
                                             style={{
@@ -262,7 +260,6 @@ function RegisterContent({ errors: serverErrors }) {
                                 style={{ marginBottom: 16 }}
                             >
                                 <Input.Password
-                                    id="password"
                                     prefix={
                                         <LockOutlined
                                             style={{
@@ -298,7 +295,6 @@ function RegisterContent({ errors: serverErrors }) {
                                 style={{ marginBottom: 24 }}
                             >
                                 <Input.Password
-                                    id="password_confirmation"
                                     prefix={
                                         <LockOutlined
                                             style={{

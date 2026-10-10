@@ -206,7 +206,6 @@ function LoginContent({ errors: serverErrors }) {
                                 ]}
                             >
                                 <Input
-                                    id="email"
                                     prefix={
                                         <UserOutlined
                                             style={{
@@ -231,7 +230,6 @@ function LoginContent({ errors: serverErrors }) {
                                 ]}
                             >
                                 <Input.Password
-                                    id="password"
                                     prefix={
                                         <LockOutlined
                                             style={{
