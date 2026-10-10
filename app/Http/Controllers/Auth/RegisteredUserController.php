@@ -21,6 +21,10 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
+        if (!config('auth.allow_registration', true)) {
+            abort(403, 'Public account registration is restricted. Please contact your system administrator.');
+        }
+
         return Inertia::render('Auth/Register');
     }
 
@@ -31,6 +35,10 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (!config('auth.allow_registration', true)) {
+            abort(403, 'Public account registration is restricted. Please contact your system administrator.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
