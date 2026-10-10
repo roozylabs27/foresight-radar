@@ -304,13 +304,6 @@ export default function TableUser({ auth, title, roles }) {
         }
     };
 
-    const handleResetFilter = () => {
-        setTableParams((prev) => ({
-            ...prev,
-            pagination: { ...prev.pagination, current: 1 },
-            search: "",
-        }));
-    };
 
     const handleCancelModal = () => {
         setErrors({});

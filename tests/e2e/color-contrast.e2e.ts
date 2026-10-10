@@ -12,20 +12,13 @@ test.describe('WCAG 2.1 AA Color Contrast Remediation (A11Y-002)', () => {
     await expect(browser).toHaveURL(/\/visualization\/foresight-radar|\/dashboard/, { timeout: 45000 });
 
     // Verify secondary subtitle color is #595959 (rgb(89, 89, 89))
-    const subtitle = typeof browser.$ === 'function' ? await browser.$('span:has-text("Strategic Intel")') : null;
-    if (subtitle) {
-      const color = await subtitle.evaluate((el: HTMLElement) => window.getComputedStyle(el).color);
-      expect(color).toBe('rgb(89, 89, 89)');
-    } else {
-      const color = await browser.evaluate(() => {
-        const spans = Array.from(document.querySelectorAll('span'));
-        const el = spans.find((s) => s.textContent?.includes('Strategic Intel'));
-        return el ? window.getComputedStyle(el).color : null;
-      });
-      if (color) {
-        expect(color).toBe('rgb(89, 89, 89)');
-      }
-    }
+    const color = await browser.evaluate(() => {
+      const spans = Array.from(document.querySelectorAll('span'));
+      const el = spans.find((s) => s.textContent?.includes('Strategic Intel'));
+      return el ? window.getComputedStyle(el).color : null;
+    });
+    expect(color).not.toBeNull();
+    expect(color).toBe('rgb(89, 89, 89)');
 
     // Verify .custom-green-button has compliant dark green background (#2e7d32 = rgb(46, 125, 50))
     const greenBtnStyle = await browser.evaluate(() => {
@@ -53,8 +46,8 @@ test.describe('WCAG 2.1 AA Color Contrast Remediation (A11Y-002)', () => {
       }
       return null;
     });
-    if (tagHoverBg) {
-      expect(tagHoverBg.includes('#b25900') || tagHoverBg.includes('rgb(178, 89, 0)')).toBe(true);
-    }
+    expect(tagHoverBg).not.toBeNull();
+    expect(tagHoverBg).toBeDefined();
+    expect(tagHoverBg!.includes('#b25900') || tagHoverBg!.includes('rgb(178, 89, 0)')).toBe(true);
   });
 });

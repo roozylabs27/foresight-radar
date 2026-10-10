@@ -32,5 +32,6 @@ test.describe('Responsive Mobile Navigation Drawer (RESP-001)', () => {
     // Verify clicking a navigation link navigates and auto-closes drawer
     await screen.getByText('Driving Force').tap();
     await expect(browser).toHaveURL(/\/driving-force/, { timeout: 30000 });
+    await expect(drawer).toBeHidden();
   });
 });
