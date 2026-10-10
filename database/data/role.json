@@ -31,7 +31,10 @@
             "edit-role",
             "delete-role",
             "view-permission",
-            "view-log"
+            "view-log",
+            "view-signal",
+            "create-signal",
+            "review-signal"
         ]
     },
     {
@@ -66,7 +69,10 @@
             "edit-role",
             "delete-role",
             "view-permission",
-            "view-log"
+            "view-log",
+            "view-signal",
+            "create-signal",
+            "review-signal"
         ]
     },
     {
@@ -90,7 +96,10 @@
             "create-status-action",
             "view-approval-items",
             "create-approval-items",
-            "view-closed-items"
+            "view-closed-items",
+            "view-signal",
+            "create-signal",
+            "review-signal"
         ]
     },
     {
@@ -103,7 +112,9 @@
             "export-registered-list",
             "view-foresight-radar",
             "view-approval-items",
-            "view-closed-items"
+            "create-approval-items",
+            "view-closed-items",
+            "view-signal"
         ]
     }
 ]

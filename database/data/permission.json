@@ -143,5 +143,20 @@
         "name": "view-log",
         "description": "permission for access log list page",
         "category": "log"
+    },
+    {
+        "name": "view-signal",
+        "description": "permission for access signal ingestion page",
+        "category": "signal"
+    },
+    {
+        "name": "create-signal",
+        "description": "permission for ingesting external sources into signals",
+        "category": "signal"
+    },
+    {
+        "name": "review-signal",
+        "description": "permission for reviewing and converting signals",
+        "category": "signal"
     }
 ]
