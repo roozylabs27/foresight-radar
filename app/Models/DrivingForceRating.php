@@ -11,10 +11,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DrivingForceRating extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'uuid',
@@ -60,6 +61,26 @@ class DrivingForceRating extends Model
         return $this->belongsTo(Priority::class, 'priority_id');
     }
 
+    public function calculatePriority(): ?int
+    {
+        if ($this->impact_analysis === null || $this->uncertainty_analysis === null) {
+            return null;
+        }
+
+        if ($this->impact_analysis >= 6 && $this->uncertainty_analysis >= 6) {
+            $priorityName = 'High';
+            $fallbackId = 1;
+        } elseif ($this->impact_analysis >= 6 || $this->uncertainty_analysis >= 6) {
+            $priorityName = 'Medium';
+            $fallbackId = 2;
+        } else {
+            $priorityName = 'Low';
+            $fallbackId = 3;
+        }
+
+        return Priority::where('name', $priorityName)->value('id') ?? $fallbackId;
+    }
+
     public function getRouteKeyName()
     {
         return 'uuid';
@@ -67,113 +88,21 @@ class DrivingForceRating extends Model
 
     protected static function resolveDateRange(): array
     {
-        $date_range = request('date');
-        if (!empty($date_range) && is_array($date_range) && count($date_range) >= 2 && !empty($date_range[0]) && !empty($date_range[1])) {
-            return [
-                $date_range[0] . ' 00:00:00',
-                $date_range[1] . ' 23:59:59',
-            ];
-        }
-
-        return [
-            \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d 00:00:00'),
-            \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d 23:59:59'),
-        ];
+        return app(\App\Services\ForesightReportingService::class)->resolveDateRange();
     }
 
     public static function prioritizing()
     {
-        [$date_start, $date_end] = self::resolveDateRange();
-        $dimension = request('dimension');
-
-        $prioritizing = self::with('driving_force')
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->whereHas('driving_force', function ($q) use ($dimension) {
-                    $q->where('dimension_id', $dimension);
-                });
-            })
-            ->has('driving_force')
-            ->whereHas('driving_force', function ($q) {
-                $q->where('status', 'APPROVED');
-            })
-            ->where('created_at', '>=', $date_start)
-            ->whereNotNull('status_action_id')
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'DESC')
-            ->get();
-
-        return PrioritizingResource::collection($prioritizing);
+        return app(\App\Services\ForesightReportingService::class)->getPrioritizingDataset();
     }
 
     public static function registered_list()
     {
-        $dimension = request('dimension');
-        $time_horizon = request('time_horizon');
-        $priority = request('priority');
-        $status_action = request('status_action');
-        [$date_start, $date_end] = self::resolveDateRange();
-
-        $registered_list = self::with(['driving_force' => function ($q) {
-            $q->orderBy('dimension_id', 'ASC');
-        }, 'action_reasons' => function ($q) {
-            $q->whereIn('id', function ($query) {
-                $query->selectRaw('MAX(id)')
-                    ->from('action_reasons')
-                    ->groupBy('driving_force_rating_id')
-                    ->orderBy('date', 'DESC');
-            });
-        }, 'status_action' => function ($q) {
-            $q->select('id', 'code');
-        }],)
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->whereHas('driving_force', function ($q) use ($dimension) {
-                    $q->where('dimension_id', $dimension);
-                });
-            })
-            ->when($time_horizon, function ($q) use ($time_horizon) {
-                $q->where('time_horizon_id', $time_horizon);
-            })
-            ->when($priority, function ($q) use ($priority) {
-                $q->where('priority_id', $priority);
-            })
-            ->when($status_action, function ($q) use ($status_action) {
-                $q->where('status_action_id', $status_action);
-            })
-            ->has('driving_force')
-            ->whereHas('driving_force', function ($q) {
-                $q->where('status', 'APPROVED');
-            })
-            ->whereNotNull('status_action_id')
-            ->where('created_at', '>=', $date_start)
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'ASC');
-
-        return $registered_list;
+        return app(\App\Services\ForesightReportingService::class)->getRegisteredListQuery();
     }
 
     public static function foresight_radar()
     {
-        [$date_start, $date_end] = self::resolveDateRange();
-        $dimension = request('dimension');
-
-        $overall_status = self::with(['driving_force' => function ($q) {
-            $q->orderBy('dimension_id', 'ASC');
-        }])
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->whereHas('driving_force', function ($q) use ($dimension) {
-                    $q->where('dimension_id', $dimension);
-                });
-            })
-            ->has('driving_force')
-            ->whereHas('driving_force', function ($q) {
-                $q->where('status', 'APPROVED');
-            })
-            ->where('created_at', '>=', $date_start)
-            ->whereNotNull('status_action_id')
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'ASC')
-            ->get();
-
-        return ForesightRadarResource::collection($overall_status);
+        return app(\App\Services\ForesightReportingService::class)->getRadarDataset();
     }
 }

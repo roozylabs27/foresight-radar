@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -36,6 +37,21 @@ class DrivingForce extends Model
         'approved_at',
         'closed_at'
     ];
+
+    protected static function booted()
+    {
+        static::deleting(function ($drivingForce) {
+            if ($drivingForce->isForceDeleting()) {
+                $drivingForce->rating()->withTrashed()->forceDelete();
+            } else {
+                $drivingForce->rating()->delete();
+            }
+        });
+
+        static::restoring(function ($drivingForce) {
+            $drivingForce->rating()->withTrashed()->restore();
+        });
+    }
 
     public function dimension(): BelongsTo
     {
@@ -62,6 +78,18 @@ class DrivingForce extends Model
         return $this->hasOne(DrivingForceRating::class);
     }
 
+    public function source_signal(): HasOne
+    {
+        return $this->hasOne(Signal::class, 'created_driving_force_id');
+    }
+
+    public function supporting_signals(): BelongsToMany
+    {
+        return $this->belongsToMany(Signal::class, 'signal_driving_force')
+            ->withPivot('notes')
+            ->withTimestamps();
+    }
+
     public function createdAt(): Attribute
     {
         return Attribute::make(
@@ -81,6 +109,19 @@ class DrivingForce extends Model
         return Attribute::make(
             get: fn ($value) => $value ? Carbon::parse($value)->translatedFormat('D, d F Y') : null
         );
+    }
+
+    public function getStatusEnum(): \App\Enums\DrivingForceStatus
+    {
+        $statusStr = $this->status ?? 'PENDING';
+        return \App\Enums\DrivingForceStatus::tryFrom($statusStr) ?? \App\Enums\DrivingForceStatus::PENDING;
+    }
+
+    public function transitionTo(\App\Enums\DrivingForceStatus|string $targetStatus): self
+    {
+        $targetEnum = $this->getStatusEnum()->validateTransitionTo($targetStatus);
+        $this->status = $targetEnum->value;
+        return $this;
     }
 
     public function getRouteKeyName()
