@@ -3,6 +3,7 @@ import {
     LogoutOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
+    MenuOutlined,
     DownOutlined,
     DashboardOutlined,
     RadarChartOutlined,
@@ -27,6 +28,8 @@ import {
     FloatButton,
     Avatar,
     ConfigProvider,
+    Drawer,
+    Grid,
 } from "antd";
 import { Link, usePage } from "@inertiajs/react";
 
@@ -189,7 +192,10 @@ export default function Authenticated({ auth, user: propUser, header, children }
         token: { colorBgContainer },
     } = theme.useToken();
 
+    const screens = Grid.useBreakpoint();
+    const isMobile = typeof screens.lg !== "undefined" && !screens.lg;
     const [collapsed, setCollapsed] = useState(false);
+    const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
     return (
         <ConfigProvider
@@ -205,7 +211,7 @@ export default function Authenticated({ auth, user: propUser, header, children }
             <Layout style={{ minHeight: "100vh" }}>
                 <Sider
                     breakpoint="lg"
-                    collapsedWidth="64"
+                    collapsedWidth={0}
                     theme="light"
                     width={240}
                     collapsed={collapsed}
@@ -218,18 +224,97 @@ export default function Authenticated({ auth, user: propUser, header, children }
                         height: "100vh",
                         overflowY: "auto",
                         zIndex: 20,
+                        display: isMobile ? "none" : "block",
                     }}
+                >
+                    {!isMobile && (
+                        <>
+                            <div
+                                style={{
+                                    height: 64,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: collapsed ? "center" : "flex-start",
+                                    padding: collapsed ? "0" : "0 18px",
+                                    gap: 12,
+                                    borderBottom: "1px solid #f0f0f0",
+                                    transition: "all 0.2s",
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 8,
+                                        background:
+                                            "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        boxShadow: "0 2px 8px rgba(22, 119, 255, 0.35)",
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <RadarChartOutlined
+                                        style={{ color: "#fff", fontSize: 20 }}
+                                    />
+                                </div>
+                                {!collapsed && (
+                                    <div style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
+                                        <span
+                                            style={{
+                                                fontSize: 15,
+                                                fontWeight: 700,
+                                                color: "#001529",
+                                                letterSpacing: "-0.2px",
+                                                display: "block",
+                                                lineHeight: 1.2,
+                                            }}
+                                        >
+                                            Foresight Radar
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontSize: 11,
+                                                color: "#595959",
+                                                fontWeight: 500,
+                                                letterSpacing: "0.5px",
+                                                textTransform: "uppercase",
+                                            }}
+                                        >
+                                            Strategic Intel
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <Menu
+                                theme="light"
+                                mode="inline"
+                                selectedKeys={[url]}
+                                items={filteredItems}
+                                style={{ borderRight: "none", marginTop: 8 }}
+                            />
+                        </>
+                    )}
+                </Sider>
+
+                {/* Mobile Navigation Drawer */}
+                <Drawer
+                    placement="left"
+                    open={mobileDrawerOpen}
+                    onClose={() => setMobileDrawerOpen(false)}
+                    bodyStyle={{ padding: 0 }}
+                    width={260}
+                    closable={false}
                 >
                     <div
                         style={{
                             height: 64,
                             display: "flex",
                             alignItems: "center",
-                            justifyContent: collapsed ? "center" : "flex-start",
-                            padding: collapsed ? "0" : "0 18px",
+                            padding: "0 18px",
                             gap: 12,
                             borderBottom: "1px solid #f0f0f0",
-                            transition: "all 0.2s",
                         }}
                     >
                         <div
@@ -250,42 +335,42 @@ export default function Authenticated({ auth, user: propUser, header, children }
                                 style={{ color: "#fff", fontSize: 20 }}
                             />
                         </div>
-                        {!collapsed && (
-                            <div style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
-                                <span
-                                    style={{
-                                        fontSize: 15,
-                                        fontWeight: 700,
-                                        color: "#001529",
-                                        letterSpacing: "-0.2px",
-                                        display: "block",
-                                        lineHeight: 1.2,
-                                    }}
-                                >
-                                    Foresight Radar
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: 11,
-                                        color: "#8c8c8c",
-                                        fontWeight: 500,
-                                        letterSpacing: "0.5px",
-                                        textTransform: "uppercase",
-                                    }}
-                                >
-                                    Strategic Intel
-                                </span>
-                            </div>
-                        )}
+                        <div style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
+                            <span
+                                style={{
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    color: "#001529",
+                                    letterSpacing: "-0.2px",
+                                    display: "block",
+                                    lineHeight: 1.2,
+                                }}
+                            >
+                                Foresight Radar
+                            </span>
+                            <span
+                                style={{
+                                    fontSize: 11,
+                                    color: "#595959",
+                                    fontWeight: 500,
+                                    letterSpacing: "0.5px",
+                                    textTransform: "uppercase",
+                                    marginTop: 2,
+                                }}
+                            >
+                                Strategic Intel
+                            </span>
+                        </div>
                     </div>
                     <Menu
                         theme="light"
                         mode="inline"
                         selectedKeys={[url]}
                         items={filteredItems}
+                        onClick={() => setMobileDrawerOpen(false)}
                         style={{ borderRight: "none", marginTop: 8 }}
                     />
-                </Sider>
+                </Drawer>
                 <Layout>
                     <Header
                         style={{
@@ -305,13 +390,21 @@ export default function Authenticated({ auth, user: propUser, header, children }
                             <Button
                                 type="text"
                                 icon={
-                                    collapsed ? (
+                                    isMobile ? (
+                                        <MenuOutlined />
+                                    ) : collapsed ? (
                                         <MenuUnfoldOutlined />
                                     ) : (
                                         <MenuFoldOutlined />
                                     )
                                 }
-                                onClick={() => setCollapsed(!collapsed)}
+                                onClick={() => {
+                                    if (isMobile) {
+                                        setMobileDrawerOpen(!mobileDrawerOpen);
+                                    } else {
+                                        setCollapsed(!collapsed);
+                                    }
+                                }}
                                 style={{
                                     fontSize: 16,
                                     width: 40,
@@ -321,9 +414,13 @@ export default function Authenticated({ auth, user: propUser, header, children }
                                     justifyContent: "center",
                                 }}
                                 aria-label={
-                                    collapsed
-                                        ? "Buka menu navigasi"
-                                        : "Tutup menu navigasi"
+                                    isMobile
+                                        ? (mobileDrawerOpen
+                                            ? "Tutup menu navigasi"
+                                            : "Buka menu navigasi")
+                                        : (collapsed
+                                            ? "Buka menu navigasi"
+                                            : "Tutup menu navigasi")
                                 }
                             />
                             {header && (
