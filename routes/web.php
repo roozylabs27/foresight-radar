@@ -30,6 +30,7 @@ Route::get('/', function () {
 Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
     Route::prefix("/dashboard")->controller(App\Http\Controllers\DashboardController::class)->name('dashboard.')->group(function () {
         Route::get("/", "index")->can('view-dashboard');
+        Route::get("/reasoning-data", "reasoning_data")->name('reasoning-data')->can('view-dashboard');
     });
 
     Route::prefix('visualization')->middleware('throttle:60,1')->name('visualization.')->group(function() {

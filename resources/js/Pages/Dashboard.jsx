@@ -1,5 +1,7 @@
-﻿import PrioritizingChart from "@/Components/PrioritizingChart";
+import PrioritizingChart from "@/Components/PrioritizingChart";
 import Radar from "@/Components/Radar";
+import ExecutiveOverview from "@/Components/ExecutiveOverview";
+import EdaCharts from "@/Components/EdaCharts";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
 import {
@@ -21,8 +23,9 @@ import {
     DashboardOutlined,
     ReloadOutlined,
 } from "@ant-design/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dayjs from "dayjs";
+import axios from "axios";
 import OverallStatus from "@/Components/OverallStatus";
 
 const { Title } = Typography;
@@ -42,31 +45,60 @@ export default function Dashboard({ auth, dimensions }) {
     const [newDate, setNewDate] = useState(null);
     const [selectData, setSelectData] = useState(null);
     const [activeTab, setActiveTab] = useState("1");
+    const [reasoningData, setReasoningData] = useState(null);
+    const [reasoningLoading, setReasoningLoading] = useState(false);
+
+    const fetchReasoningData = async () => {
+        setReasoningLoading(true);
+        try {
+            const params = {};
+            if (selectData?.dimension) {
+                params.dimension = selectData.dimension;
+            }
+            if (newDate?.date) {
+                params.date = newDate.date;
+            }
+            const response = await axios.get("/dashboard/reasoning-data", { params });
+            setReasoningData(response.data);
+        } catch (error) {
+            console.error("Failed to load executive reasoning data:", error);
+        } finally {
+            setReasoningLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchReasoningData();
+    }, [newDate?.date, selectData?.dimension]);
 
     const items = [
         {
             key: "1",
+            label: "Executive Overview",
+            children: (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                    <ExecutiveOverview
+                        loading={reasoningLoading}
+                        reasoningData={reasoningData}
+                    />
+                    <EdaCharts
+                        loading={reasoningLoading}
+                        edaFrequency={reasoningData?.eda_frequency || []}
+                        edaTrend={reasoningData?.eda_trend || []}
+                    />
+                </div>
+            ),
+        },
+        {
+            key: "2",
             label: "Prioritizing",
-            children: activeTab === "1" && (
+            children: activeTab === "2" && (
                 <PrioritizingChart
                     loading={loading}
                     setLoading={setLoading}
                     date={newDate}
                     selectData={selectData}
                     dimensions={dimensions}
-                />
-            ),
-        },
-        {
-            key: "2",
-            label: "Registered List",
-            children: activeTab === "2" && (
-                <OverallStatus
-                    loading={loading}
-                    setLoading={setLoading}
-                    selectedData={selectData}
-                    date={newDate}
-                    permissions={auth?.permissions || []}
                 />
             ),
         },
@@ -79,6 +111,19 @@ export default function Dashboard({ auth, dimensions }) {
                     setLoading={setLoading}
                     date={newDate}
                     selectData={selectData}
+                />
+            ),
+        },
+        {
+            key: "4",
+            label: "Registered List",
+            children: activeTab === "4" && (
+                <OverallStatus
+                    loading={loading}
+                    setLoading={setLoading}
+                    selectedData={selectData}
+                    date={newDate}
+                    permissions={auth?.permissions || []}
                 />
             ),
         },

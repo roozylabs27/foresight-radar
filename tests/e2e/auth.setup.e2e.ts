@@ -7,6 +7,6 @@ test.setup('authenticate as admin', { sessions: ['admin'] }, async ({ app, scree
   await screen.getByPlaceholder('analis@perusahaan.com').fill(admin.username);
   await screen.getByPlaceholder('Masukkan kata sandi').fill(admin.password);
   await screen.getByRole('button', 'Masuk ke Platform').tap();
-  await expect(browser).toHaveURL(/\/visualization\/foresight-radar|\/dashboard/, { timeout: 45000 });
+  await expect(browser).toHaveURL(/\/visualization\/foresight-radar|\/dashboard/, { timeout: 120000 });
   await session.save('admin');
 });

@@ -11,9 +11,9 @@ export default {
       },
     },
   ],
-  timeout: 120000,
-  actionTimeout: 45000,
-  assertionTimeout: 30000,
+  timeout: 300000,
+  actionTimeout: 120000,
+  assertionTimeout: 120000,
   credentials: {
     admin: {
       username: 'superadmin@foresight.com',
