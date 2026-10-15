@@ -1,236 +1,246 @@
-import React, { useEffect, useState } from "react";
-import ReactEcharts from "echarts-for-react";
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import qs from "qs";
-import { Row, Col, Table, message, Skeleton } from "antd";
-import dayjs from "dayjs";
+import { toast } from "sonner";
+import {
+    CartesianGrid,
+    ResponsiveContainer,
+    Scatter,
+    ScatterChart,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
-const PrioritizingChart = ({
-    loading,
-    setLoading,
-    date,
-    selectData,
-    dimensions,
-}) => {
-    const getParams = (params) => {
-        return {
-            ...params,
-        };
-    };
-    const [positions, setPositions] = useState([]);
-    const [tableParams, setTableParams] = useState({
-        date: [
-            dayjs().startOf("month").format("YYYY-MM-DD"),
-            dayjs().endOf("month").format("YYYY-MM-DD"),
-        ],
-    });
-    const [data, setData] = useState(null);
-    const [option, setOption] = useState({
-        title: {
-            text: "Matrix of Uncertainty and Impact Analysis",
-            left: "center",
-            top: 10,
-        },
-        legend: {
-            data: ["High Priority", "Medium Priority", "Low Priority"],
-            left: 10,
-        },
-        tooltip: {
-            show: false,
-        },
-        xAxis: {
-            type: "category",
-            name: "IMPACT ANALYSIS",
-            data: Array.from({ length: 10 }, (_, i) => i + 1),
-            nameLocation: "middle",
-            nameGap: 25,
-            splitLine: {
-                show: true,
-            },
-        },
-        yAxis: {
-            type: "category",
-            name: "UNCERTAINTY ANALYSIS",
-            data: Array.from({ length: 10 }, (_, i) => i + 1),
-            nameLocation: "middle",
-            nameGap: 25,
-            splitLine: {
-                show: true,
-            },
-        },
-        grid: {
-            top: 60,
-            bottom: 50,
-            left: 50,
-            right: 10,
-        },
-        series: [
-            {
-                name: "Prioritizing",
-                type: "scatter",
-                data: positions,
-                symbolSize: 40,
-                label: {
-                    show: true,
-                    formatter: "{@[2]}",
-                    color: "#fff",
-                },
-                itemStyle: {
-                    color: function (params) {
-                        const x = params.value[0];
-                        const y = params.value[1];
-                        if (x >= 5 && y >= 5) {
-                            return "#ff4d4f"; // High priority (red)
-                        } else if ((x >= 5 && y <= 4) || (y >= 5 && x <= 4)) {
-                            return "#faad14"; // Medium priority (yellow)
-                        } else {
-                            return "#52c41a"; // Low priority (green)
-                        }
-                    },
-                },
-            },
-        ],
-    });
+import { currentMonth } from "@/Components/AnalysisFilters";
+import DataTable from "@/Components/DataTable";
+import DimensionChip from "@/Components/DimensionChip";
+import { Skeleton } from "@/Components/ui/skeleton";
+import { statusBadge } from "@/Components/StatusBadge";
 
-    useEffect(() => {
-        fetchData();
-    }, [date, selectData]);
+const SCALE = Array.from({ length: 10 }, (_, index) => index + 1);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                `${route("visualization.prioritizing.get-data")}?${qs.stringify(
-                    getParams({
-                        ...tableParams,
-                        date : date != null ? date.date : tableParams.date,
-                        dimension: selectData ? selectData.dimension : null
-                    })
-                )}`
-            );
-
-            if (response.status == 200) {
-                setTimeout(() => {
-                    const newPositions = response.data.map((d, i) => {
-                        d.position.push(i + 1);
-                        return d.position;
-                    });
-                    const newData = response.data.map((d, i) => ({
-                        no: i + 1,
-                        ...d,
-                    }));
-
-                    const adjustedPositions =
-                        adjustOverlappingPositions(newPositions);
-
-                    setPositions(adjustedPositions);
-                    setData(newData);
-                    setTableParams({
-                        ...tableParams,
-                    });
-                    setOption((prevOption) => ({
-                        ...prevOption,
-                        series: [
-                            {
-                                ...prevOption.series[0],
-                                data: adjustedPositions,
-                            },
-                        ],
-                    }));
-
-                    setLoading(false);
-                }, 500);
-            } else {
-                message.error(`Error: ${error.message}`);
-                setLoading(false);
-            }
-        } catch (error) {
-            // TODO: Handling error
-            message.error(`Error: ${error.message}`);
-            setLoading(false);
-        }
-    };
-
-    const adjustOverlappingPositions = (positions) => {
-        const adjustedPositions = [];
-        const seen = new Map();
-
-        positions.forEach((pos) => {
-            let [x, y, id] = pos;
-            const key = `${x}-${y}`;
-            if (seen.has(key)) {
-                seen.get(key).push(id);
-            } else {
-                seen.set(key, [id]);
-                adjustedPositions.push([x, y, id]);
-            }
-        });
-
-        // Convert seen map to adjusted positions
-        return adjustedPositions.map((pos) => {
-            const key = `${pos[0]}-${pos[1]}`;
-            const ids = seen.get(key);
-            return [pos[0], pos[1], ids];
-        });
-    };
-
-    const columns = [
-        {
-            title: "No",
-            dataIndex: "no",
-            key: "no",
-            width: 10,
-            align: "center",
-        },
-        {
-            title: "Keyword",
-            dataIndex: "keyword",
-            key: "keyword",
-            width: 250,
-        },
-    ];
-
-    const showActiveDimension = (dimension) => {
-        if (dimension != null) {
-            const { label } = dimensions.find((d) => d.value === dimension);
-
-            return label.toUpperCase();
-        }
-
-        return "OVERALL";
-    };
-    return (
-        <Row gutter={16} style={{ margin: 0, alignItems: "stretch" }}>
-            <Col xs={24} lg={8}>
-                <Table
-                    columns={columns}
-                    dataSource={data}
-                    bordered
-                    size="middle"
-                    loading={loading}
-                    rowKey={(record) => record.no}
-                    pagination={false}
-                    scroll={{ y: 440 }}
-                    title={() => (
-                        <div
-                            style={{ textAlign: "center", fontWeight: 600, color: "#1f1f1f" }}
-                        >
-                            {selectData
-                                ? `${showActiveDimension(selectData.dimension)}`
-                                : "OVERALL"}
-                        </div>
-                    )}
-                />
-            </Col>
-            <Col xs={24} lg={16}>
-                <Skeleton active loading={loading}>
-                    <ReactEcharts
-                        option={option}
-                        style={{ height: "480px", width: "100%" }}
-                    />
-                </Skeleton>
-            </Col>
-        </Row>
-    );
+// Bubble colours follow the priority tokens; the label uses primary-foreground,
+// which contrasts with these fills in both themes.
+const PRIORITIES = {
+    high: { label: "High Priority", fill: "var(--danger)" },
+    medium: { label: "Medium Priority", fill: "var(--warning)" },
+    low: { label: "Low Priority", fill: "var(--success)" },
 };
 
-export default PrioritizingChart;
+// Quadrant of the matrix, as the original chart coloured it: both scores at 6+
+// is high, one of them is medium, neither is low.
+function quadrant(impact, uncertainty) {
+    const highImpact = impact >= 6;
+    const highUncertainty = uncertainty >= 6;
+    if (highImpact && highUncertainty) return "high";
+    return highImpact || highUncertainty ? "medium" : "low";
+}
+
+/** One bubble per matrix cell, holding the row numbers of every item in it. */
+function groupByCell(items) {
+    const cells = new Map();
+    items.forEach((item) => {
+        const key = `${item.impact_analysis}-${item.uncertainty_analysis}`;
+        if (!cells.has(key)) {
+            cells.set(key, {
+                x: item.impact_analysis,
+                y: item.uncertainty_analysis,
+                priority: quadrant(item.impact_analysis, item.uncertainty_analysis),
+                items: [],
+            });
+        }
+        cells.get(key).items.push(item);
+    });
+    return [...cells.values()];
+}
+
+function Bubble({ cx, cy, payload }) {
+    const numbers = payload.items.map((item) => item.no).join(",");
+    const radius = Math.min(26, 16 + numbers.length * 1.5);
+
+    return (
+        <g>
+            <circle cx={cx} cy={cy} r={radius} fill={PRIORITIES[payload.priority].fill} />
+            <text
+                x={cx}
+                y={cy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={11}
+                fontWeight={600}
+                fill="var(--primary-foreground)"
+            >
+                {numbers}
+            </text>
+        </g>
+    );
+}
+
+function BubbleTooltip({ active, payload }) {
+    const cell = payload?.[0]?.payload;
+    if (!active || !cell) return null;
+
+    return (
+        <div className="max-w-64 rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+            <p className="m-0 mb-1 font-semibold">
+                Impact {cell.x} · Uncertainty {cell.y}
+            </p>
+            <ul className="m-0 list-none p-0">
+                {cell.items.map((item) => (
+                    <li key={item.no}>
+                        {item.no}. {item.keyword}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+const columns = [
+    {
+        accessorKey: "no",
+        header: "No",
+        meta: { align: "center", width: "56px", className: "tabular-nums text-muted-foreground" },
+    },
+    {
+        accessorKey: "keyword",
+        header: "Keyword",
+        meta: { className: "font-medium text-foreground" },
+    },
+    {
+        accessorKey: "impact_analysis",
+        header: "Impact",
+        meta: { align: "center", className: "tabular-nums" },
+    },
+    {
+        accessorKey: "uncertainty_analysis",
+        header: "Uncertainty",
+        meta: { align: "center", className: "tabular-nums" },
+    },
+];
+
+/**
+ * Uncertainty × impact matrix of approved driving forces, with the numbered
+ * item list beside it. `date` is `{ date: [start, end] }` (defaults to this
+ * month) and `selectData` may hold a `dimension` id. `setLoading` mirrors the
+ * loading state for a parent with its own indicator.
+ */
+export default function PrioritizingChart({ date, selectData, dimensions = [], setLoading }) {
+    const [items, setItems] = useState([]);
+    const [loading, setLocalLoading] = useState(true);
+
+    const dimension = selectData?.dimension ?? null;
+    const range = date?.date ?? currentMonth();
+    const queryKey = qs.stringify({ date: range, dimension: dimension ?? undefined });
+
+    useEffect(() => {
+        const controller = new AbortController();
+        setLocalLoading(true);
+        axios
+            .get(`${route("visualization.prioritizing.get-data")}?${queryKey}`, { signal: controller.signal })
+            .then((response) => {
+                const rows = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+                setItems(rows.map((row, index) => ({ ...row, no: index + 1 })));
+                setLocalLoading(false);
+            })
+            .catch((error) => {
+                if (axios.isCancel(error)) return;
+                toast.error("Gagal memuat data prioritas.", {
+                    description: error.response?.data?.message ?? error.message,
+                });
+                setLocalLoading(false);
+            });
+        return () => controller.abort();
+    }, [queryKey]);
+
+    useEffect(() => {
+        setLoading?.(loading);
+    }, [loading, setLoading]);
+
+    const cells = useMemo(() => groupByCell(items), [items]);
+    const scope = dimensions.find((item) => String(item.value) === String(dimension))?.label;
+
+    return (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <section aria-label="Daftar item prioritas" className="flex min-w-0 flex-col gap-2">
+                <div className="flex items-center gap-2">
+                    {scope ? <DimensionChip name={scope} /> : <span className={statusBadge()}>OVERALL</span>}
+                    <span className="text-xs text-muted-foreground">{items.length} item</span>
+                </div>
+                <DataTable
+                    columns={columns}
+                    data={items}
+                    loading={loading}
+                    getRowId={(row) => String(row.no)}
+                    caption="Daftar item pada matriks prioritas"
+                    className="max-h-[480px] overflow-y-auto"
+                />
+            </section>
+
+            <section
+                aria-label="Matrix of Uncertainty and Impact Analysis"
+                className="flex min-w-0 flex-col gap-2 rounded-lg border border-solid border-border bg-card p-4"
+            >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="m-0 text-sm font-semibold text-foreground">Matrix of Uncertainty and Impact Analysis</h3>
+                    <ul className="m-0 flex list-none flex-wrap gap-3 p-0 text-xs text-muted-foreground">
+                        {Object.entries(PRIORITIES).map(([key, priority]) => (
+                            <li key={key} className="flex items-center gap-1.5">
+                                <span aria-hidden="true" className="size-2.5 rounded-full" style={{ backgroundColor: priority.fill }} />
+                                {priority.label}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                {loading ? (
+                    <Skeleton className="h-[440px] w-full" />
+                ) : (
+                    // The item list beside the chart carries the same data for screen readers.
+                    <div aria-hidden="true" className="h-[440px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 12 }}>
+                                <CartesianGrid stroke="var(--border)" />
+                                <XAxis
+                                    type="number"
+                                    dataKey="x"
+                                    domain={[0.5, 10.5]}
+                                    ticks={SCALE}
+                                    tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                                    stroke="var(--border)"
+                                    label={{
+                                        value: "IMPACT ANALYSIS",
+                                        position: "insideBottom",
+                                        offset: -16,
+                                        fill: "var(--muted-foreground)",
+                                        fontSize: 12,
+                                    }}
+                                />
+                                <YAxis
+                                    type="number"
+                                    dataKey="y"
+                                    domain={[0.5, 10.5]}
+                                    ticks={SCALE}
+                                    tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                                    stroke="var(--border)"
+                                    label={{
+                                        value: "UNCERTAINTY ANALYSIS",
+                                        angle: -90,
+                                        position: "insideLeft",
+                                        offset: 4,
+                                        fill: "var(--muted-foreground)",
+                                        fontSize: 12,
+                                        style: { textAnchor: "middle" },
+                                    }}
+                                />
+                                <Tooltip content={<BubbleTooltip />} cursor={false} isAnimationActive={false} />
+                                <Scatter data={cells} shape={<Bubble />} isAnimationActive={false} />
+                            </ScatterChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+            </section>
+        </div>
+    );
+}

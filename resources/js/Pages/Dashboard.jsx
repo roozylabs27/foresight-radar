@@ -1,314 +1,112 @@
+import { useEffect, useState } from "react";
+import { Head } from "@inertiajs/react";
+import axios from "axios";
+import qs from "qs";
+import { toast } from "sonner";
+import { GaugeIcon } from "lucide-react";
+
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import AnalysisFilterBar, { filterParam, useAnalysisFilters } from "@/Components/AnalysisFilters";
+import EdaCharts from "@/Components/EdaCharts";
+import ExecutiveOverview from "@/Components/ExecutiveOverview";
+import OverallStatus from "@/Components/OverallStatus";
 import PrioritizingChart from "@/Components/PrioritizingChart";
 import Radar from "@/Components/Radar";
-import ExecutiveOverview from "@/Components/ExecutiveOverview";
-import EdaCharts from "@/Components/EdaCharts";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head } from "@inertiajs/react";
-import {
-    Layout,
-    theme,
-    Tabs,
-    DatePicker,
-    Select,
-    Card,
-    Typography,
-    Button,
-    Tag,
-    Tooltip,
-} from "antd";
-import {
-    FilterOutlined,
-    CalendarOutlined,
-    AppstoreOutlined,
-    DashboardOutlined,
-    ReloadOutlined,
-} from "@ant-design/icons";
-import { useEffect, useState } from "react";
-import dayjs from "dayjs";
-import axios from "axios";
-import OverallStatus from "@/Components/OverallStatus";
+import { statusBadge } from "@/Components/StatusBadge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
+import { cn } from "@/lib/utils";
 
-const { Title } = Typography;
-const { Content } = Layout;
-const { RangePicker } = DatePicker;
+const TABS = [
+    { value: "overview", label: "Executive Overview" },
+    { value: "prioritizing", label: "Prioritizing" },
+    { value: "radar", label: "Foresight Radar" },
+    { value: "registered", label: "Registered List" },
+];
 
-export default function Dashboard({ auth, dimensions }) {
-    const {
-        token: { borderRadiusLG },
-    } = theme.useToken();
-
-    const [defaultDate, setDefaultDate] = useState([
-        dayjs().startOf("month"),
-        dayjs().endOf("month"),
-    ]);
-    const [loading, setLoading] = useState(false);
-    const [newDate, setNewDate] = useState(null);
-    const [selectData, setSelectData] = useState(null);
-    const [activeTab, setActiveTab] = useState("1");
-    const [reasoningData, setReasoningData] = useState(null);
-    const [reasoningLoading, setReasoningLoading] = useState(false);
-
-    const fetchReasoningData = async () => {
-        setReasoningLoading(true);
-        try {
-            const params = {};
-            if (selectData?.dimension) {
-                params.dimension = selectData.dimension;
-            }
-            if (newDate?.date) {
-                params.date = newDate.date;
-            }
-            const response = await axios.get("/dashboard/reasoning-data", { params });
-            setReasoningData(response.data);
-        } catch (error) {
-            console.error("Failed to load executive reasoning data:", error);
-        } finally {
-            setReasoningLoading(false);
-        }
-    };
+/** Executive reasoning metrics (/dashboard/reasoning-data) for the current filters. */
+function useReasoningData(params) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const queryKey = qs.stringify(params);
 
     useEffect(() => {
-        fetchReasoningData();
-    }, [newDate?.date, selectData?.dimension]);
-
-    const items = [
-        {
-            key: "1",
-            label: "Executive Overview",
-            children: (
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                    <ExecutiveOverview
-                        loading={reasoningLoading}
-                        reasoningData={reasoningData}
-                    />
-                    <EdaCharts
-                        loading={reasoningLoading}
-                        edaFrequency={reasoningData?.eda_frequency || []}
-                        edaTrend={reasoningData?.eda_trend || []}
-                    />
-                </div>
-            ),
-        },
-        {
-            key: "2",
-            label: "Prioritizing",
-            children: activeTab === "2" && (
-                <PrioritizingChart
-                    loading={loading}
-                    setLoading={setLoading}
-                    date={newDate}
-                    selectData={selectData}
-                    dimensions={dimensions}
-                />
-            ),
-        },
-        {
-            key: "3",
-            label: "Foresight Radar",
-            children: activeTab === "3" && (
-                <Radar
-                    loading={loading}
-                    setLoading={setLoading}
-                    date={newDate}
-                    selectData={selectData}
-                />
-            ),
-        },
-        {
-            key: "4",
-            label: "Registered List",
-            children: activeTab === "4" && (
-                <OverallStatus
-                    loading={loading}
-                    setLoading={setLoading}
-                    selectedData={selectData}
-                    date={newDate}
-                    permissions={auth?.permissions || []}
-                />
-            ),
-        },
-    ];
-
-    const handleTabsChange = (key) => {
+        const controller = new AbortController();
         setLoading(true);
-        setActiveTab(key);
-    };
+        axios
+            .get(`/dashboard/reasoning-data?${queryKey}`, { signal: controller.signal })
+            .then((response) => {
+                setData(response.data);
+                setLoading(false);
+            })
+            .catch((error) => {
+                if (axios.isCancel(error)) return;
+                toast.error("Gagal memuat executive overview.", {
+                    description: error.response?.data?.message ?? error.message,
+                });
+                setLoading(false);
+            });
+        return () => controller.abort();
+    }, [queryKey]);
 
-    const handleRangePickerChange = (dates) => {
-        if (dates && dates.length === 2) {
-            const formattedDates = dates.map((date) =>
-                date.format("YYYY-MM-DD")
-            );
+    return { data, loading };
+}
 
-            setDefaultDate(dates);
-            setNewDate({ date: formattedDates });
-        } else {
-            const newStartDate = dayjs().startOf("month").format("YYYY-MM-DD");
-            const newEndDate = dayjs().endOf("month").format("YYYY-MM-DD");
+export default function Dashboard({ auth, dimensions = [] }) {
+    const filters = useAnalysisFilters(dimensions);
+    const [tab, setTab] = useState("overview");
 
-            setDefaultDate([dayjs(newStartDate), dayjs(newEndDate)]);
-            setNewDate({ date: [newStartDate, newEndDate] });
-        }
-    };
-
-    const handleSelectChange = (field, value) => {
-        setSelectData({
-            [field]: value !== undefined ? value : null,
-        });
-    };
-
-    const handleResetFilter = () => {
-        const start = dayjs().startOf("month");
-        const end = dayjs().endOf("month");
-        setDefaultDate([start, end]);
-        setNewDate({ date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")] });
-        setSelectData(null);
-    };
-
-    const isFiltered = !!selectData?.dimension || !!newDate;
+    const dimension = filterParam(filters.dimension) ?? null;
+    const date = { date: filters.period };
+    const selectData = { dimension };
+    const reasoning = useReasoningData(filters.params);
 
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <DashboardOutlined style={{ color: "#1677ff", fontSize: 18 }} />
-                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
-                        Dashboard
-                    </Title>
-                    <Tag
-                        color="blue"
-                        bordered={false}
-                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
-                    >
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <GaugeIcon aria-hidden="true" className="text-lg text-primary" />
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">Dashboard</h1>
+                    <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Executive Overview
-                    </Tag>
+                    </span>
                 </div>
             }
         >
             <Head title="Dashboard" />
 
-            <Content
-                style={{
-                    padding: "12px 18px 8px",
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: "calc(100vh - 104px)",
-                    boxSizing: "border-box",
-                }}
-            >
-                {/* Compact Single-Row Filter Toolbar */}
-                <div className="radar-filter-bar">
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 14,
-                            flexWrap: "wrap",
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                                color: "#1677ff",
-                                fontWeight: 600,
-                                fontSize: 13,
-                            }}
-                        >
-                            <FilterOutlined />
-                            <span>Filter Analisis:</span>
-                        </div>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:px-6 lg:py-5">
+                <AnalysisFilterBar filters={filters} dimensions={dimensions} />
 
-                        {/* Periode Tanggal */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                <CalendarOutlined style={{ marginRight: 4 }} />
-                                Periode:
-                            </span>
-                            <RangePicker
-                                value={defaultDate}
-                                disabled={loading}
-                                onChange={handleRangePickerChange}
-                                format="YYYY-MM-DD"
-                                style={{ width: 230 }}
-                                size="middle"
-                            />
-                        </div>
+                {/* Inactive tabs unmount, so only the open view fetches its data. */}
+                <Tabs value={tab} onValueChange={setTab} className="gap-4">
+                    <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
+                        {TABS.map((item) => (
+                            <TabsTrigger key={item.value} value={item.value} className="px-3 py-1.5">
+                                {item.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
 
-                        {/* Dimensi STEEP */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                <AppstoreOutlined style={{ marginRight: 4 }} />
-                                Dimensi:
-                            </span>
-                            <Select
-                                style={{ width: 210 }}
-                                disabled={loading}
-                                placeholder="Semua Dimensi"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                value={selectData?.dimension}
-                                onChange={(value) =>
-                                    handleSelectChange("dimension", value)
-                                }
-                                options={dimensions}
-                                size="middle"
-                            />
-                        </div>
-                    </div>
-
-                    {isFiltered && (
-                        <Tooltip title="Kembalikan filter ke kondisi awal">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<ReloadOutlined />}
-                                onClick={handleResetFilter}
-                                style={{ color: "#ff4d4f", fontSize: 12 }}
-                            >
-                                Reset Filter
-                            </Button>
-                        </Tooltip>
-                    )}
-                </div>
-
-                <Card
-                    bordered={false}
-                    style={{
-                        borderRadius: borderRadiusLG,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                    }}
-                    bodyStyle={{ padding: "12px 18px", flex: 1, display: "flex", flexDirection: "column" }}
-                >
-                    <Tabs
-                        activeKey={activeTab}
-                        items={items}
-                        onChange={handleTabsChange}
-                        style={{ flex: 1 }}
-                    />
-                </Card>
-            </Content>
+                    <TabsContent value="overview" className="flex flex-col gap-4">
+                        <ExecutiveOverview loading={reasoning.loading} reasoningData={reasoning.data} />
+                        <EdaCharts
+                            loading={reasoning.loading}
+                            edaFrequency={reasoning.data?.eda_frequency ?? []}
+                            edaTrend={reasoning.data?.eda_trend ?? []}
+                        />
+                    </TabsContent>
+                    <TabsContent value="prioritizing">
+                        <PrioritizingChart date={date} selectData={selectData} dimensions={dimensions} />
+                    </TabsContent>
+                    <TabsContent value="radar">
+                        <Radar date={date} selectData={selectData} />
+                    </TabsContent>
+                    <TabsContent value="registered">
+                        <OverallStatus date={date} selectedData={selectData} permissions={auth?.permissions ?? []} />
+                    </TabsContent>
+                </Tabs>
+            </main>
         </AuthenticatedLayout>
     );
 }
