@@ -1,119 +1,83 @@
-import React, { useState } from "react";
-import GuestLayout from "@/Layouts/GuestLayout";
-import { Head, Link, router } from "@inertiajs/react";
-import { Alert, Button, Flex, Form, Input, Typography, theme } from "antd";
-import { ArrowLeftOutlined, MailOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { Head, Link } from "@inertiajs/react";
+import { Controller } from "react-hook-form";
+import { z } from "zod";
+import { ArrowLeftIcon, LoaderCircleIcon, MailIcon } from "lucide-react";
 
-const { Title, Paragraph } = Typography;
+import AuthAlert from "@/Components/auth/AuthAlert";
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import GuestLayout, { GuestHeading } from "@/Layouts/GuestLayout";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaPost } from "@/lib/inertia-submit";
 
-export default function ForgotPassword({ status, errors: serverErrors }) {
+const schema = z.object({
+    email: z.string().trim().min(1, "Harap masukkan email kerja Anda!").email("Format email tidak valid!"),
+});
+
+export default function ForgotPassword({ status, errors: serverErrors = {} }) {
     const [loading, setLoading] = useState(false);
-    const { token } = theme.useToken();
 
-    const onFinish = (values) => {
-        setLoading(true);
-
-        router.post(route("password.email"), values, {
-            onError: () => {
-                setLoading(false);
-            },
-            onFinish: () => {
-                setLoading(false);
-            },
-        });
-    };
+    const { control, submit } = useDialogForm({
+        schema,
+        defaultValues: { email: "" },
+        ids: { email: "email" },
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaPost(route("password.email"), values).finally(() => setLoading(false));
+        },
+    });
 
     return (
         <GuestLayout>
-            <Head title="Lupa Kata Sandi - Foresight Radar" />
-
-            <Title level={3} style={{ marginBottom: 8, color: "#0f172a" }}>
-                Lupa Kata Sandi?
-            </Title>
-            <Paragraph type="secondary" style={{ marginBottom: 24, fontSize: 14 }}>
+            <Head title="Lupa Kata Sandi" />
+            <GuestHeading title="Lupa Kata Sandi?">
                 Masukkan alamat email yang terdaftar. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.
-            </Paragraph>
+            </GuestHeading>
 
             {status && (
-                <Alert
-                    message={status}
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 20 }}
-                />
+                <AuthAlert tone="success" className="mb-5">
+                    {status}
+                </AuthAlert>
+            )}
+            {serverErrors.email && (
+                <AuthAlert tone="error" className="mb-5">
+                    {serverErrors.email}
+                </AuthAlert>
             )}
 
-            {serverErrors?.email && (
-                <Alert
-                    message={serverErrors.email}
-                    type="error"
-                    showIcon
-                    style={{ marginBottom: 20 }}
-                />
-            )}
-
-            <Form
-                name="forgot_password"
-                layout="vertical"
-                onFinish={onFinish}
-                requiredMark={true}
-                size="large"
-                disabled={loading}
-            >
-                <Form.Item
-                    name="email"
-                    label="Email Kerja"
-                    rules={[
-                        {
-                            required: true,
-                            message: "Harap masukkan email kerja Anda!",
-                        },
-                        {
-                            type: "email",
-                            message: "Format email tidak valid!",
-                        },
-                    ]}
-                >
-                    <Input
-                        id="email"
-                        prefix={
-                            <MailOutlined
-                                style={{ color: token.colorTextSecondary }}
+            <form noValidate onSubmit={submit}>
+                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                    <Controller
+                        name="email"
+                        control={control}
+                        render={(props) => (
+                            <AuthInput
+                                id="email"
+                                label="Email Kerja"
+                                icon={MailIcon}
+                                type="email"
+                                placeholder="analis@perusahaan.com"
+                                autoComplete="email"
+                                autoFocus
+                                {...rhfInputProps(props)}
                             />
-                        }
-                        placeholder="analis@perusahaan.com"
-                        autoComplete="email"
-                        autoFocus
+                        )}
                     />
-                </Form.Item>
-
-                <Form.Item style={{ marginTop: 24, marginBottom: 16 }}>
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={loading}
-                        block
-                    >
+                    <Button type="submit" className="h-11 w-full" aria-busy={loading || undefined}>
+                        {loading && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
                         Kirim Tautan Reset Kata Sandi
                     </Button>
-                </Form.Item>
-
-                <Flex justify="center" style={{ marginTop: 12 }}>
                     <Link
                         href={route("login")}
-                        style={{
-                            fontSize: 14,
-                            color: token.colorTextSecondary,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                        }}
+                        className="mx-auto inline-flex items-center gap-1.5 rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     >
-                        <ArrowLeftOutlined style={{ fontSize: 12 }} />
+                        <ArrowLeftIcon aria-hidden="true" className="text-xs" />
                         Kembali ke Halaman Masuk
                     </Link>
-                </Flex>
-            </Form>
+                </fieldset>
+            </form>
         </GuestLayout>
     );
 }

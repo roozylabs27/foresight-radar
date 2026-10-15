@@ -1,26 +1,15 @@
-import React, { useState } from "react";
-import { Head, Link, router } from "@inertiajs/react";
-import {
-    Alert,
-    Button,
-    Carousel,
-    Checkbox,
-    Col,
-    ConfigProvider,
-    Flex,
-    Form,
-    Input,
-    Row,
-    Typography,
-    theme,
-} from "antd";
-import {
-    LockOutlined,
-    RadarChartOutlined,
-    UserOutlined,
-} from "@ant-design/icons";
+import { useState } from "react";
+import { Head, Link } from "@inertiajs/react";
+import { Controller } from "react-hook-form";
+import { z } from "zod";
+import { LoaderCircleIcon, LockIcon, UserIcon } from "lucide-react";
 
-const { Title, Text, Paragraph } = Typography;
+import AuthAlert from "@/Components/auth/AuthAlert";
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import AuthSplitLayout from "@/Components/auth/AuthSplitLayout";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaPost } from "@/lib/inertia-submit";
 
 const SLIDES = [
     {
@@ -40,264 +29,110 @@ const SLIDES = [
     },
 ];
 
-function LoginContent({ errors: serverErrors }) {
+const schema = z.object({
+    email: z.string().trim().min(1, "Harap masukkan email kerja Anda!").email("Format email tidak valid!"),
+    password: z.string().min(1, "Harap masukkan kata sandi Anda!"),
+    remember: z.boolean(),
+});
+
+export default function Login({ errors: serverErrors = {} }) {
     const [loading, setLoading] = useState(false);
-    const { token } = theme.useToken();
 
-    const onFinish = (values) => {
-        setLoading(true);
-
-        router.post(route("login"), values, {
-            onError: () => {
-                setLoading(false);
-            },
-            onFinish: () => {
-                setLoading(false);
-            },
-        });
-    };
+    const { control, submit, setValue } = useDialogForm({
+        schema,
+        defaultValues: { email: "", password: "", remember: false },
+        ids: { email: "email", password: "password" },
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaPost(route("login"), values, {
+                onError: () => setValue("password", ""),
+            }).finally(() => setLoading(false));
+        },
+    });
 
     return (
-        <>
+        <AuthSplitLayout slides={SLIDES}>
             <Head title="Masuk ke Foresight Radar" />
 
-            <Row className="login-desktop-fixed" style={{ minHeight: "100vh", margin: 0, overflowX: "hidden" }}>
-                {/* Left Column: Brand Showcase & Carousel (50% on lg, 100% on xs) */}
-                <Col
-                    xs={24}
-                    lg={12}
-                    style={{
-                        backgroundColor: "#001529",
-                        color: "#ffffff",
-                        padding: "56px 48px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        minHeight: 420,
-                    }}
-                >
-                    {/* Brand Header */}
-                    <Flex align="center" gap={14}>
-                        <RadarChartOutlined
-                            style={{
-                                fontSize: 36,
-                                color: token.colorPrimary,
-                            }}
-                        />
-                        <Flex vertical>
-                            <Title
-                                level={4}
-                                style={{
-                                    color: "#ffffff",
-                                    margin: 0,
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                Foresight Radar
-                            </Title>
-                            <Text
-                                style={{
-                                    color: "rgba(255, 255, 255, 0.65)",
-                                    fontSize: 12,
-                                    letterSpacing: 0.8,
-                                    textTransform: "uppercase",
-                                }}
-                            >
-                                Strategic Radar Platform
-                            </Text>
-                        </Flex>
-                    </Flex>
+            <h1 className="m-0 text-[28px] leading-tight font-bold tracking-[-0.01em] text-foreground">
+                Masuk ke Foresight Radar
+            </h1>
+            <p className="m-0 mt-2 mb-8 text-sm text-muted-foreground">
+                Silakan masukkan email dan kata sandi Anda untuk mengakses sistem.
+            </p>
 
-                    {/* Middle Carousel Showcase */}
-                    <div style={{ maxWidth: 480, margin: "40px 0" }}>
-                        <Carousel autoplay autoplaySpeed={5000}>
-                            {SLIDES.map((slide, idx) => (
-                                <div key={idx}>
-                                    <div style={{ minHeight: 150, paddingBottom: 24 }}>
-                                        <Title
-                                            level={2}
-                                            style={{
-                                                color: "#ffffff",
-                                                marginBottom: 16,
-                                                lineHeight: 1.25,
-                                            }}
-                                        >
-                                            {slide.title}
-                                        </Title>
-                                        <Paragraph
-                                            style={{
-                                                color: "rgba(255, 255, 255, 0.8)",
-                                                fontSize: 16,
-                                                lineHeight: 1.6,
-                                            }}
-                                        >
-                                            {slide.description}
-                                        </Paragraph>
-                                    </div>
-                                </div>
-                            ))}
-                        </Carousel>
-                    </div>
+            {serverErrors.email && (
+                <AuthAlert tone="error" className="mb-6">
+                    {serverErrors.email}
+                </AuthAlert>
+            )}
 
-                    {/* Footer Copyright */}
-                    <Text
-                        style={{
-                            color: "rgba(255, 255, 255, 0.45)",
-                            fontSize: 13,
-                        }}
-                    >
-                        © 2026 Foresight Radar. Hak cipta dilindungi.
-                    </Text>
-                </Col>
-
-                {/* Right Column: Ant Design Login Form (50% on lg, 100% on xs) */}
-                <Col
-                    xs={24}
-                    lg={12}
-                    style={{
-                        backgroundColor: token.colorBgContainer,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "56px 24px",
-                    }}
-                >
-                    <div style={{ width: "100%", maxWidth: 380 }}>
-                        <Title level={2} style={{ marginBottom: 8 }}>
-                            Masuk ke Foresight Radar
-                        </Title>
-                        <Paragraph
-                            type="secondary"
-                            style={{ marginBottom: 32 }}
-                        >
-                            Silakan masukkan email dan kata sandi Anda untuk mengakses sistem.
-                        </Paragraph>
-
-                        {serverErrors?.email && (
-                            <Alert
-                                message={serverErrors.email}
-                                type="error"
-                                showIcon
-                                style={{ marginBottom: 24 }}
+            <form noValidate onSubmit={submit}>
+                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                    <Controller
+                        name="email"
+                        control={control}
+                        render={(props) => (
+                            <AuthInput
+                                id="email"
+                                label="Email Kerja"
+                                icon={UserIcon}
+                                type="email"
+                                placeholder="analis@perusahaan.com"
+                                autoComplete="email"
+                                autoFocus
+                                {...rhfInputProps(props)}
                             />
                         )}
-
-                        <Form
-                            name="login"
-                            layout="vertical"
-                            disabled={loading}
-                            initialValues={{ remember: false }}
-                            onFinish={onFinish}
-                            requiredMark={true}
-                            size="large"
-                        >
-                            <Form.Item
-                                name="email"
-                                label="Email Kerja"
-                                rules={[
-                                    {
-                                        required: true,
-                                        message: "Harap masukkan email kerja Anda!",
-                                    },
-                                    {
-                                        type: "email",
-                                        message: "Format email tidak valid!",
-                                    },
-                                ]}
-                            >
-                                <Input
-                                    prefix={
-                                        <UserOutlined
-                                            style={{
-                                                color: token.colorTextSecondary,
-                                            }}
-                                        />
-                                    }
-                                    placeholder="analis@perusahaan.com"
-                                    autoComplete="email"
-                                    autoFocus
-                                />
-                            </Form.Item>
-
-                            <Form.Item
-                                name="password"
+                    />
+                    <Controller
+                        name="password"
+                        control={control}
+                        render={(props) => (
+                            <AuthInput
+                                id="password"
                                 label="Kata Sandi"
-                                rules={[
-                                    {
-                                        required: true,
-                                        message: "Harap masukkan kata sandi Anda!",
-                                    },
-                                ]}
-                            >
-                                <Input.Password
-                                    prefix={
-                                        <LockOutlined
-                                            style={{
-                                                color: token.colorTextSecondary,
-                                            }}
-                                        />
-                                    }
-                                    placeholder="Masukkan kata sandi"
-                                    autoComplete="current-password"
-                                />
-                            </Form.Item>
+                                icon={LockIcon}
+                                type="password"
+                                placeholder="Masukkan kata sandi"
+                                autoComplete="current-password"
+                                {...rhfInputProps(props)}
+                            />
+                        )}
+                    />
 
-                            <Flex
-                                justify="space-between"
-                                align="center"
-                                style={{ marginBottom: 24 }}
-                            >
-                                <Form.Item
-                                    name="remember"
-                                    valuePropName="checked"
-                                    noStyle
-                                >
-                                    <Checkbox>Ingat saya</Checkbox>
-                                </Form.Item>
-                                <Link
-                                    href={route("password.request")}
-                                    style={{ fontSize: 14 }}
-                                >
-                                    Lupa kata sandi?
-                                </Link>
-                            </Flex>
-
-                            <Form.Item style={{ marginBottom: 0 }}>
-                                <Button
-                                    type="primary"
-                                    htmlType="submit"
-                                    loading={loading}
-                                    block
-                                >
-                                    Masuk ke Platform
-                                </Button>
-                            </Form.Item>
-                        </Form>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                        <Controller
+                            name="remember"
+                            control={control}
+                            render={({ field }) => (
+                                <label className="flex cursor-pointer items-center gap-2 text-foreground">
+                                    <input
+                                        type="checkbox"
+                                        name={field.name}
+                                        checked={field.value}
+                                        onChange={(event) => field.onChange(event.target.checked)}
+                                        className="size-4 accent-primary"
+                                    />
+                                    Ingat saya
+                                </label>
+                            )}
+                        />
+                        <Link
+                            href={route("password.request")}
+                            className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        >
+                            Lupa kata sandi?
+                        </Link>
                     </div>
-                </Col>
-            </Row>
-        </>
-    );
-}
 
-export default function Login(props) {
-    return (
-        <ConfigProvider
-            theme={{
-                token: {
-                    colorPrimary: "#1677ff",
-                    borderRadius: 6,
-                },
-                components: {
-                    Carousel: {
-                        dotActiveWidth: 24,
-                        dotWidth: 8,
-                        dotHeight: 4,
-                    },
-                },
-            }}
-        >
-            <LoginContent {...props} />
-        </ConfigProvider>
+                    <Button type="submit" className="h-11 w-full" aria-busy={loading || undefined}>
+                        {loading && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
+                        Masuk ke Platform
+                    </Button>
+                </fieldset>
+            </form>
+        </AuthSplitLayout>
     );
 }

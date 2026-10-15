@@ -1,154 +1,109 @@
-import React from "react";
-import { Form, Input, Button, Alert, Space, Typography, message } from "antd";
-import { UserOutlined, MailOutlined, SaveOutlined } from "@ant-design/icons";
-import { Link, useForm, usePage } from "@inertiajs/react";
+import { useState } from "react";
+import { Link, usePage } from "@inertiajs/react";
+import { Controller } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { LoaderCircleIcon, MailIcon, SaveIcon, UserIcon } from "lucide-react";
 
-const { Title, Text } = Typography;
+import AuthAlert from "@/Components/auth/AuthAlert";
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaVisit } from "@/lib/inertia-submit";
+import SectionHeading from "./SectionHeading";
 
-export default function UpdateProfileInformation({
-    mustVerifyEmail,
-    status,
-    className = "",
-}) {
+const schema = z.object({
+    name: z.string().trim().min(1, "Nama lengkap wajib diisi."),
+    email: z.string().trim().min(1, "Alamat email wajib diisi.").email("Format alamat email tidak valid."),
+});
+
+export default function UpdateProfileInformation({ mustVerifyEmail, status }) {
     const user = usePage().props.auth.user;
+    const [loading, setLoading] = useState(false);
 
-    const { data, setData, patch, errors, processing, recentlySuccessful } =
-        useForm({
-            name: user?.name || "",
-            email: user?.email || "",
-        });
-
-    const onFinish = () => {
-        patch(route("profile.update"), {
-            onSuccess: () => {
-                message.success("Informasi profil berhasil disimpan.");
-            },
-        });
-    };
+    const { control, submit } = useDialogForm({
+        schema,
+        defaultValues: { name: user?.name || "", email: user?.email || "" },
+        ids: { name: "profile-name", email: "profile-email" },
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaVisit("patch", route("profile.update"), values, {
+                preserveScroll: true,
+                onSuccess: () => toast.success("Informasi profil berhasil disimpan."),
+            }).finally(() => setLoading(false));
+        },
+    });
 
     return (
-        <div className={className}>
-            <div style={{ marginBottom: 20 }}>
-                <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
-                    Informasi Profil
-                </Title>
-                <Text type="secondary" style={{ fontSize: 13 }}>
-                    Perbarui nama lengkap dan alamat email akun organisasi Anda.
-                </Text>
-            </div>
+        <section aria-labelledby="profile-information-heading">
+            <SectionHeading
+                id="profile-information-heading"
+                title="Informasi Profil"
+                description="Perbarui nama lengkap dan alamat email akun organisasi Anda."
+            />
 
-            {recentlySuccessful && (
-                <Alert
-                    message="Perubahan profil Anda telah berhasil disimpan."
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 20 }}
-                />
-            )}
-
-            <Form
-                layout="vertical"
-                requiredMark={true}
-                onFinish={onFinish}
-                initialValues={{
-                    name: data.name,
-                    email: data.email,
-                }}
-            >
-                <Form.Item
-                    label="Nama Lengkap"
-                    validateStatus={errors.name ? "error" : ""}
-                    help={errors.name}
-                    rules={[
-                        {
-                            required: true,
-                            message: "Nama lengkap wajib diisi.",
-                        },
-                    ]}
-                >
-                    <Input
-                        size="large"
-                        prefix={<UserOutlined style={{ color: "#8c8c8c" }} />}
-                        placeholder="Masukkan nama lengkap"
-                        value={data.name}
-                        onChange={(e) => setData("name", e.target.value)}
+            <form noValidate onSubmit={submit}>
+                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                    <Controller
+                        name="name"
+                        control={control}
+                        render={(props) => (
+                            <AuthInput
+                                id="profile-name"
+                                label="Nama Lengkap"
+                                icon={UserIcon}
+                                placeholder="Masukkan nama lengkap"
+                                autoComplete="name"
+                                {...rhfInputProps(props)}
+                            />
+                        )}
                     />
-                </Form.Item>
-
-                <Form.Item
-                    label="Alamat Email"
-                    validateStatus={errors.email ? "error" : ""}
-                    help={errors.email}
-                    rules={[
-                        {
-                            required: true,
-                            message: "Alamat email wajib diisi.",
-                        },
-                        {
-                            type: "email",
-                            message: "Format alamat email tidak valid.",
-                        },
-                    ]}
-                >
-                    <Input
-                        size="large"
-                        type="email"
-                        prefix={<MailOutlined style={{ color: "#8c8c8c" }} />}
-                        placeholder="nama@organisasi.id"
-                        value={data.email}
-                        onChange={(e) => setData("email", e.target.value)}
+                    <Controller
+                        name="email"
+                        control={control}
+                        render={(props) => (
+                            <AuthInput
+                                id="profile-email"
+                                label="Alamat Email"
+                                icon={MailIcon}
+                                type="email"
+                                placeholder="nama@organisasi.id"
+                                autoComplete="email"
+                                {...rhfInputProps(props)}
+                            />
+                        )}
                     />
-                </Form.Item>
 
-                {mustVerifyEmail && user?.email_verified_at === null && (
-                    <Alert
-                        type="warning"
-                        showIcon
-                        style={{ marginBottom: 20 }}
-                        message="Verifikasi Email Diperlukan"
-                        description={
-                            <Space orientation="vertical" style={{ width: "100%", marginTop: 8 }}>
-                                <Text style={{ fontSize: 13 }}>
-                                    Alamat email Anda belum diverifikasi.
-                                </Text>
+                    {mustVerifyEmail && user?.email_verified_at === null && (
+                        <AuthAlert tone="warning" title="Verifikasi Email Diperlukan">
+                            <div className="flex flex-col items-start gap-2">
+                                <p className="m-0 text-[13px]">Alamat email Anda belum diverifikasi.</p>
                                 <Link
                                     href={route("verification.send")}
                                     method="post"
                                     as="button"
-                                    style={{
-                                        color: "#1677ff",
-                                        background: "none",
-                                        border: "none",
-                                        padding: 0,
-                                        cursor: "pointer",
-                                        textDecoration: "underline",
-                                        fontWeight: 500,
-                                    }}
+                                    className="cursor-pointer rounded-sm border-0 bg-transparent p-0 text-left text-[13px] font-medium text-primary underline underline-offset-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 >
                                     Klik di sini untuk mengirim ulang email verifikasi.
                                 </Link>
                                 {status === "verification-link-sent" && (
-                                    <Text orientation="block" style={{ color: "#52c41a", fontWeight: 500 }}>
+                                    <p className="m-0 text-[13px] font-medium text-success">
                                         Tautan verifikasi baru telah dikirim ke alamat email Anda.
-                                    </Text>
+                                    </p>
                                 )}
-                            </Space>
-                        }
-                    />
-                )}
+                            </div>
+                        </AuthAlert>
+                    )}
 
-                <Form.Item orientation="horizontal" style={{ marginBottom: 0, marginTop: 12 }}>
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        size="large"
-                        icon={<SaveOutlined />}
-                        loading={processing}
-                    >
-                        Simpan Perubahan
-                    </Button>
-                </Form.Item>
-            </Form>
-        </div>
+                    <div>
+                        <Button type="submit" className="h-10" aria-busy={loading || undefined}>
+                            {loading ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <SaveIcon aria-hidden="true" />}
+                            Simpan Perubahan
+                        </Button>
+                    </div>
+                </fieldset>
+            </form>
+        </section>
     );
 }

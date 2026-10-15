@@ -1,309 +1,176 @@
-import React from "react";
 import { Head, Link } from "@inertiajs/react";
 import {
-    Result,
-    Button,
-    ConfigProvider,
-    Space,
-    Typography,
-    Card,
-} from "antd";
-import {
-    HomeOutlined,
-    ArrowLeftOutlined,
-    LoginOutlined,
-    ReloadOutlined,
-    RadarChartOutlined,
-} from "@ant-design/icons";
+    ArrowLeftIcon,
+    BanIcon,
+    CircleAlertIcon,
+    ClockIcon,
+    FileSearchIcon,
+    HouseIcon,
+    LogInIcon,
+    RotateCwIcon,
+    TriangleAlertIcon,
+    WrenchIcon,
+} from "lucide-react";
 
-const { Text, Paragraph } = Typography;
+import BrandMark from "@/Components/BrandMark";
+import { Button } from "@/Components/ui/button";
+import { cn } from "@/lib/utils";
+
+const TONES = {
+    warning: "bg-warning-soft text-warning",
+    danger: "bg-danger-soft text-danger",
+    info: "bg-accent text-primary",
+};
 
 const ERROR_DETAILS = {
     403: {
-        status: "403",
         title: "403 — Akses Ditolak",
         heading: "Hak Akses Tidak Memadai",
         description:
             "Anda tidak memiliki izin yang diperlukan untuk mengakses halaman atau sumber daya ini. Hubungi administrator jika Anda memerlukan akses.",
-        badgeColor: "#faad14",
+        icon: BanIcon,
+        tone: "warning",
     },
     404: {
-        status: "404",
         title: "404 — Halaman Tidak Ditemukan",
         heading: "Halaman Tidak Ditemukan",
         description:
             "Tautan yang Anda tuju mungkin salah, telah dipindahkan, atau tidak lagi tersedia dalam sistem Foresight Radar.",
-        badgeColor: "#ff4d4f",
+        icon: FileSearchIcon,
+        tone: "danger",
     },
     419: {
-        status: "warning",
         title: "419 — Sesi Kedaluwarsa",
         heading: "Sesi Autentikasi Kedaluwarsa",
         description:
             "Token keamanan atau sesi kerja Anda telah berakhir karena tidak ada aktivitas. Silakan muat ulang halaman atau masuk kembali.",
-        badgeColor: "#faad14",
+        icon: ClockIcon,
+        tone: "warning",
     },
     500: {
-        status: "500",
         title: "500 — Kesalahan Server",
         heading: "Kendala Sistem Internal",
         description:
             "Terjadi kendala teknis tak terduga pada server kami saat memproses permintaan Anda. Tim kami telah mencatat insiden ini.",
-        badgeColor: "#f5222d",
+        icon: TriangleAlertIcon,
+        tone: "danger",
     },
     503: {
-        status: "503",
         title: "503 — Pemeliharaan Sistem",
         heading: "Layanan Sedang Dipelihara",
         description:
             "Platform Foresight Radar sedang menjalani peningkatan atau pemeliharaan berkala. Silakan kembali dalam beberapa saat.",
-        badgeColor: "#1677ff",
+        icon: WrenchIcon,
+        tone: "info",
     },
 };
 
 export default function ErrorPage({ status = 404, message: customMessage, auth }) {
     const error = ERROR_DETAILS[status] || {
-        status: "error",
         title: `${status} — Kesalahan Terjadi`,
         heading: "Terjadi Kendala",
         description:
             customMessage ||
             "Permintaan Anda tidak dapat diproses saat ini. Silakan coba kembali beberapa saat lagi.",
-        badgeColor: "#ff4d4f",
+        icon: CircleAlertIcon,
+        tone: "danger",
     };
+    const StatusIcon = error.icon;
 
     const isAuthenticated = Boolean(auth?.user);
+    const homeHref = isAuthenticated ? "/dashboard" : "/login";
+
+    const goBack = () => {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.href = homeHref;
+        }
+    };
 
     return (
-        <ConfigProvider
-            theme={{
-                token: {
-                    colorPrimary: "#1677ff",
-                    borderRadius: 8,
-                    fontFamily:
-                        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-                },
-            }}
-        >
+        <div className="flex min-h-svh flex-col bg-background font-sans text-foreground">
             <Head title={error.title} />
 
-            <div
-                style={{
-                    minHeight: "100vh",
-                    backgroundColor: "#f5f7fa",
-                    display: "flex",
-                    flexDirection: "column",
-                }}
-            >
-                {/* Brand Navigation Bar */}
-                <header
-                    style={{
-                        height: 64,
-                        backgroundColor: "#ffffff",
-                        borderBottom: "1px solid #f0f0f0",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "0 24px",
-                    }}
-                >
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div
-                            style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 8,
-                                background:
-                                    "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: "0 2px 8px rgba(22, 119, 255, 0.35)",
-                            }}
-                        >
-                            <RadarChartOutlined
-                                style={{ color: "#ffffff", fontSize: 20 }}
-                            />
-                        </div>
-                        <div>
-                            <span
-                                style={{
-                                    fontSize: 15,
-                                    fontWeight: 700,
-                                    color: "#001529",
-                                    display: "block",
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                Foresight Radar
-                            </span>
-                            <span
-                                style={{
-                                    fontSize: 11,
-                                    color: "#8c8c8c",
-                                    fontWeight: 500,
-                                    letterSpacing: "0.5px",
-                                    textTransform: "uppercase",
-                                }}
-                            >
-                                Strategic Intel
-                            </span>
-                        </div>
+            <header className="flex h-16 items-center justify-between gap-3 border-0 border-b border-solid border-border bg-card px-4 sm:px-6">
+                <div className="flex min-w-0 items-center gap-3">
+                    <BrandMark />
+                    <div className="flex min-w-0 flex-col">
+                        <span className="text-[15px] leading-tight font-bold text-foreground">Foresight Radar</span>
+                        <span className="text-[11px] font-medium tracking-[0.05em] text-subtle-foreground uppercase">
+                            Strategic Intel
+                        </span>
                     </div>
+                </div>
 
-                    <div>
-                        {isAuthenticated ? (
-                            <Link href="/dashboard">
-                                <Button type="default" icon={<HomeOutlined />}>
-                                    Dashboard
-                                </Button>
+                {isAuthenticated ? (
+                    <Button asChild variant="outline">
+                        <Link href="/dashboard">
+                            <HouseIcon aria-hidden="true" />
+                            Dashboard
+                        </Link>
+                    </Button>
+                ) : (
+                    <Button asChild>
+                        <Link href="/login">
+                            <LogInIcon aria-hidden="true" />
+                            Masuk
+                        </Link>
+                    </Button>
+                )}
+            </header>
+
+            <main className="flex flex-1 items-center justify-center p-4 sm:p-6">
+                <div className="w-full max-w-[580px] rounded-lg border border-solid border-border bg-card px-6 pt-10 pb-6 text-center shadow-[0_4px_20px_rgb(11_27_51/0.06)] sm:px-10">
+                    <span
+                        aria-hidden="true"
+                        className={cn("mx-auto flex size-16 items-center justify-center rounded-full text-[30px]", TONES[error.tone])}
+                    >
+                        <StatusIcon />
+                    </span>
+
+                    <h1 className="mt-5 mb-0 text-2xl font-bold text-foreground">{error.heading}</h1>
+                    <p className="mx-auto mt-3 mb-0 max-w-[460px] text-sm leading-relaxed text-muted-foreground">
+                        {customMessage || error.description}
+                    </p>
+
+                    <div className="mt-8 flex flex-wrap justify-center gap-3">
+                        <Button asChild size="lg" className="min-w-[150px]">
+                            <Link href={homeHref}>
+                                {isAuthenticated ? <HouseIcon aria-hidden="true" /> : <LogInIcon aria-hidden="true" />}
+                                {isAuthenticated ? "Ke Dashboard" : "Masuk Akun"}
                             </Link>
-                        ) : (
-                            <Link href="/login">
-                                <Button type="primary" icon={<LoginOutlined />}>
-                                    Masuk
-                                </Button>
-                            </Link>
+                        </Button>
+                        <Button size="lg" variant="outline" className="min-w-[150px]" onClick={goBack}>
+                            <ArrowLeftIcon aria-hidden="true" />
+                            Halaman Sebelumnya
+                        </Button>
+                        {status === 419 && (
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                className="min-w-[150px]"
+                                onClick={() => window.location.reload()}
+                            >
+                                <RotateCwIcon aria-hidden="true" />
+                                Muat Ulang
+                            </Button>
                         )}
                     </div>
-                </header>
 
-                {/* Main Error Body */}
-                <main
-                    style={{
-                        flex: 1,
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "24px",
-                    }}
-                >
-                    <Card
-                        style={{
-                            maxWidth: 580,
-                            width: "100%",
-                            margin: "0 auto",
-                            borderRadius: 12,
-                            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)",
-                            border: "1px solid #ebeef5",
-                            textAlign: "center",
-                        }}
-                    >
-                        <Result
-                            status={error.status}
-                            title={
-                                <span
-                                    style={{
-                                        fontSize: 24,
-                                        fontWeight: 700,
-                                        color: "#1f1f1f",
-                                    }}
-                                >
-                                    {error.heading}
-                                </span>
-                            }
-                            subTitle={
-                                <Paragraph
-                                    style={{
-                                        fontSize: 14,
-                                        color: "#595959",
-                                        marginTop: 8,
-                                        lineHeight: 1.6,
-                                    }}
-                                >
-                                    {customMessage || error.description}
-                                </Paragraph>
-                            }
-                            extra={
-                                <Space size="middle" wrap style={{ justifyContent: "center" }}>
-                                    {isAuthenticated ? (
-                                        <Link href="/dashboard">
-                                            <Button
-                                                type="primary"
-                                                icon={<HomeOutlined />}
-                                                size="large"
-                                                style={{ minWidth: 150 }}
-                                            >
-                                                Ke Dashboard
-                                            </Button>
-                                        </Link>
-                                    ) : (
-                                        <Link href="/login">
-                                            <Button
-                                                type="primary"
-                                                icon={<LoginOutlined />}
-                                                size="large"
-                                                style={{ minWidth: 150 }}
-                                            >
-                                                Masuk Akun
-                                            </Button>
-                                        </Link>
-                                    )}
+                    <p className="mt-8 mb-0 border-0 border-t border-solid border-border pt-4 text-xs text-muted-foreground">
+                        Kode Status HTTP:{" "}
+                        <code className="rounded-sm bg-muted px-1.5 py-0.5 font-mono font-semibold text-foreground">
+                            {status}
+                        </code>{" "}
+                        | Foresight Radar Strategic Intelligence System
+                    </p>
+                </div>
+            </main>
 
-                                    <Button
-                                        size="large"
-                                        icon={<ArrowLeftOutlined />}
-                                        onClick={() => {
-                                            if (window.history.length > 1) {
-                                                window.history.back();
-                                            } else {
-                                                window.location.href = isAuthenticated
-                                                    ? "/dashboard"
-                                                    : "/login";
-                                            }
-                                        }}
-                                        style={{ minWidth: 150 }}
-                                    >
-                                        Halaman Sebelumnya
-                                    </Button>
-
-                                    {status === 419 && (
-                                        <Button
-                                            size="large"
-                                            icon={<ReloadOutlined />}
-                                            onClick={() => window.location.reload()}
-                                            style={{ minWidth: 150 }}
-                                        >
-                                            Muat Ulang
-                                        </Button>
-                                    )}
-                                </Space>
-                            }
-                        />
-
-                        <div
-                            style={{
-                                marginTop: 24,
-                                paddingTop: 16,
-                                borderTop: "1px solid #f0f0f0",
-                            }}
-                        >
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                Kode Status HTTP:{" "}
-                                <Text code strong>
-                                    {status}
-                                </Text>{" "}
-                                | Foresight Radar Strategic Intelligence System
-                            </Text>
-                        </div>
-                    </Card>
-                </main>
-
-                {/* Footer */}
-                <footer
-                    style={{
-                        textAlign: "center",
-                        padding: "16px 24px",
-                        color: "#8c8c8c",
-                        fontSize: 12,
-                        borderTop: "1px solid #f0f0f0",
-                        backgroundColor: "#ffffff",
-                    }}
-                >
-                    Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.
-                </footer>
-            </div>
-        </ConfigProvider>
+            <footer className="border-0 border-t border-solid border-border bg-card px-6 py-4 text-center text-xs text-muted-foreground">
+                Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.
+            </footer>
+        </div>
     );
 }

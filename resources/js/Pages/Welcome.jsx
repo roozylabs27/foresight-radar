@@ -1,405 +1,161 @@
-import React from "react";
-import { Link, Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import {
-    Layout,
-    Row,
-    Col,
-    Button,
-    Card,
-    Typography,
-    Space,
-    Tag,
-    ConfigProvider,
-} from "antd";
-import {
-    RadarChartOutlined,
-    FieldTimeOutlined,
-    DotChartOutlined,
-    SafetyCertificateOutlined,
-    ArrowRightOutlined,
-    LoginOutlined,
-    UserAddOutlined,
-    DashboardOutlined,
-    CompassOutlined,
-} from "@ant-design/icons";
+    ArrowRightIcon,
+    CalendarClockIcon,
+    ChartScatterIcon,
+    CompassIcon,
+    GaugeIcon,
+    LogInIcon,
+    RadarIcon,
+    ShieldCheckIcon,
+    UserPlusIcon,
+} from "lucide-react";
 
-const { Header, Content, Footer } = Layout;
-const { Title, Text, Paragraph } = Typography;
+import BrandMark from "@/Components/BrandMark";
+import { Button } from "@/Components/ui/button";
+
+const FEATURES = [
+    {
+        icon: CalendarClockIcon,
+        color: "var(--chart-1)",
+        title: "3 Time Horizons",
+        text: "Klasifikasi sinyal masa depan dalam Horizon 1 (Jangka Pendek), Horizon 2 (Menengah), dan Horizon 3 (Transformasi Jangka Panjang).",
+    },
+    {
+        icon: RadarIcon,
+        color: "var(--chart-2)",
+        title: "Radar Multi-Dimensi",
+        text: "Visualisasi polar 360° yang mencakup dimensi Sosial, Teknologi, Ekonomi, Regulasi, dan Lingkungan secara terintegrasi.",
+    },
+    {
+        icon: ChartScatterIcon,
+        color: "var(--chart-3)",
+        title: "Prioritizing Matrix",
+        text: "Korelasi terukur antara rating urgensi dan status tindakan untuk memastikan alokasi sumber daya tepat sasaran.",
+    },
+    {
+        icon: ShieldCheckIcon,
+        color: "var(--chart-4)",
+        title: "Governance & Approval",
+        text: "Alur verifikasi dan persetujuan terstruktur dari kontributor hingga strategic committee untuk kredibilitas data.",
+    },
+];
 
 export default function Welcome({ auth, canRegister = true }) {
     const user = auth?.user;
 
     return (
-        <ConfigProvider
-            theme={{
-                token: {
-                    colorPrimary: "#1677ff",
-                    borderRadius: 8,
-                    fontFamily:
-                        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-                },
-            }}
-        >
+        <div className="flex min-h-svh flex-col bg-background font-sans text-foreground">
             <Head title="Foresight Radar - Strategic Horizon Scanning" />
 
-            <Layout
-                style={{
-                    minHeight: "100vh",
-                    background:
-                        "radial-gradient(ellipse at 50% 0%, #f0f7ff 0%, #ffffff 70%)",
-                }}
-            >
-                <Header
-                    style={{
-                        background: "rgba(255, 255, 255, 0.9)",
-                        backdropFilter: "blur(8px)",
-                        borderBottom: "1px solid #f0f0f0",
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 100,
-                        padding: "0 32px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        height: 68,
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 8,
-                                background:
-                                    "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: "0 2px 8px rgba(22, 119, 255, 0.35)",
-                            }}
-                        >
-                            <RadarChartOutlined
-                                style={{ color: "#fff", fontSize: 20 }}
-                            />
-                        </div>
-                        <div>
-                            <span
-                                style={{
-                                    fontSize: 16,
-                                    fontWeight: 700,
-                                    color: "#001529",
-                                    letterSpacing: "-0.3px",
-                                    display: "block",
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                Foresight Radar
-                            </span>
-                            <span
-                                style={{
-                                    fontSize: 10,
-                                    color: "#8c8c8c",
-                                    fontWeight: 600,
-                                    letterSpacing: "0.8px",
-                                    textTransform: "uppercase",
-                                }}
-                            >
-                                Strategic Horizon Scanning
-                            </span>
-                        </div>
+            <header className="sticky top-0 z-10 flex h-[68px] items-center justify-between gap-3 border-0 border-b border-solid border-border bg-card/90 px-4 backdrop-blur-sm sm:px-8">
+                <div className="flex min-w-0 items-center gap-3">
+                    <BrandMark />
+                    <div className="flex min-w-0 flex-col">
+                        <span className="text-base leading-tight font-bold tracking-[-0.01em] text-foreground">
+                            Foresight Radar
+                        </span>
+                        <span className="hidden text-[10px] font-semibold tracking-[0.08em] text-subtle-foreground uppercase sm:block">
+                            Strategic Horizon Scanning
+                        </span>
                     </div>
+                </div>
 
-                    <Space size="middle">
-                        {user ? (
+                <nav aria-label="Akun" className="flex shrink-0 items-center gap-2 sm:gap-3">
+                    {user ? (
+                        <Button asChild>
                             <Link href={route("dashboard.")}>
-                                <Button
-                                    type="primary"
-                                    icon={<DashboardOutlined />}
-                                    size="middle"
-                                >
-                                    Buka Dashboard
-                                </Button>
+                                <GaugeIcon aria-hidden="true" />
+                                Buka Dashboard
                             </Link>
+                        </Button>
+                    ) : (
+                        <>
+                            <Button asChild variant="outline">
+                                <Link href={route("login")}>
+                                    <LogInIcon aria-hidden="true" />
+                                    Masuk
+                                </Link>
+                            </Button>
+                            {canRegister && (
+                                <Button asChild>
+                                    <Link href={route("register")}>
+                                        <UserPlusIcon aria-hidden="true" />
+                                        Daftar Akun
+                                    </Link>
+                                </Button>
+                            )}
+                        </>
+                    )}
+                </nav>
+            </header>
+
+            <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-12 sm:px-6">
+                <section className="mx-auto mb-14 flex max-w-[820px] flex-col items-center text-center">
+                    <span className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1 text-xs font-semibold tracking-[0.04em] text-primary uppercase">
+                        <CompassIcon aria-hidden="true" />
+                        Sistem Intelijen Strategis Organisasi
+                    </span>
+
+                    <h1 className="m-0 mb-5 text-[clamp(28px,4vw,44px)] leading-tight font-extrabold tracking-[-0.02em] text-foreground">
+                        Navigasi Ketidakpastian Masa Depan dengan Foresight Radar
+                    </h1>
+
+                    <p className="m-0 mb-8 max-w-[680px] text-base leading-relaxed text-muted-foreground">
+                        Platform horizon scanning cerdas untuk mendeteksi sinyal lemah (weak signals), menganalisis
+                        megatrend, dan memetakan driving forces ke dalam matriks prioritas aksi berbasis bukti.
+                    </p>
+
+                    <div className="flex flex-wrap justify-center gap-3">
+                        {user ? (
+                            <Button asChild size="lg" className="h-12 px-8 text-[15px]">
+                                <Link href={route("dashboard.")}>
+                                    <GaugeIcon aria-hidden="true" />
+                                    Akses Dashboard Utama
+                                </Link>
+                            </Button>
                         ) : (
                             <>
-                                <Link href={route("login")}>
-                                    <Button
-                                        type="default"
-                                        icon={<LoginOutlined />}
-                                    >
-                                        Masuk
-                                    </Button>
-                                </Link>
-                                {canRegister && (
-                                    <Link href={route("register")}>
-                                        <Button
-                                            type="primary"
-                                            icon={<UserAddOutlined />}
-                                        >
-                                            Daftar Akun
-                                        </Button>
+                                <Button asChild size="lg" className="h-12 px-8 text-[15px]">
+                                    <Link href={route("login")}>
+                                        Mulai Sekarang
+                                        <ArrowRightIcon aria-hidden="true" />
                                     </Link>
+                                </Button>
+                                {canRegister && (
+                                    <Button asChild size="lg" variant="outline" className="h-12 px-7 text-[15px]">
+                                        <Link href={route("register")}>Registrasi Akun Baru</Link>
+                                    </Button>
                                 )}
                             </>
                         )}
-                    </Space>
-                </Header>
-
-                <Content style={{ padding: "48px 24px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
-                    <div style={{ textAlign: "center", maxWidth: 820, margin: "0 auto 60px" }}>
-                        <Tag
-                            color="blue"
-                            icon={<CompassOutlined />}
-                            style={{
-                                padding: "4px 14px",
-                                borderRadius: 16,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                                marginBottom: 20,
-                            }}
-                        >
-                            Sistem Intelijen Strategis Organisasi
-                        </Tag>
-
-                        <Title
-                            level={1}
-                            style={{
-                                fontSize: "clamp(28px, 4vw, 44px)",
-                                fontWeight: 800,
-                                color: "#001529",
-                                letterSpacing: "-0.8px",
-                                lineHeight: 1.2,
-                                marginBottom: 20,
-                            }}
-                        >
-                            Navigasi Ketidakpastian Masa Depan dengan Foresight Radar
-                        </Title>
-
-                        <Paragraph
-                            style={{
-                                fontSize: 16,
-                                color: "#595959",
-                                lineHeight: 1.6,
-                                maxWidth: 680,
-                                margin: "0 auto 32px",
-                            }}
-                        >
-                            Platform horizon scanning cerdas untuk mendeteksi sinyal lemah
-                            (weak signals), menganalisis megatrend, dan memetakan driving forces
-                            ke dalam matriks prioritas aksi berbasis bukti.
-                        </Paragraph>
-
-                        <Space size="middle" wrap style={{ justifyContent: "center" }}>
-                            {user ? (
-                                <Link href={route("dashboard.")}>
-                                    <Button
-                                        type="primary"
-                                        size="large"
-                                        icon={<DashboardOutlined />}
-                                        style={{ height: 48, padding: "0 32px", fontSize: 15 }}
-                                    >
-                                        Akses Dashboard Utama
-                                    </Button>
-                                </Link>
-                            ) : (
-                                <>
-                                    <Link href={route("login")}>
-                                        <Button
-                                            type="primary"
-                                            size="large"
-                                            icon={<ArrowRightOutlined />}
-                                            style={{ height: 48, padding: "0 32px", fontSize: 15 }}
-                                        >
-                                            Mulai Sekarang
-                                        </Button>
-                                    </Link>
-                                    {canRegister && (
-                                        <Link href={route("register")}>
-                                            <Button
-                                                size="large"
-                                                style={{ height: 48, padding: "0 28px", fontSize: 15 }}
-                                            >
-                                                Registrasi Akun Baru
-                                            </Button>
-                                        </Link>
-                                    )}
-                                </>
-                            )}
-                        </Space>
                     </div>
+                </section>
 
-                    <Row gutter={[24, 24]}>
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card
-                                bordered={false}
-                                hoverable
-                                style={{
-                                    height: "100%",
-                                    borderRadius: 12,
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-                                    borderTop: "3px solid #1677ff",
-                                }}
+                <ul className="m-0 grid list-none gap-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
+                    {FEATURES.map(({ icon: Icon, color, title, text }) => (
+                        <li
+                            key={title}
+                            className="flex flex-col rounded-lg border border-t-[3px] border-solid border-border bg-card p-6"
+                            style={{ borderTopColor: color }}
+                        >
+                            <span
+                                aria-hidden="true"
+                                className="mb-4 flex size-11 items-center justify-center rounded-md text-[22px]"
+                                style={{ color, backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}
                             >
-                                <div
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: 10,
-                                        background: "#e6f4ff",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        marginBottom: 16,
-                                    }}
-                                >
-                                    <FieldTimeOutlined
-                                        style={{ fontSize: 22, color: "#1677ff" }}
-                                    />
-                                </div>
-                                <Title level={4} style={{ fontSize: 16, marginBottom: 8 }}>
-                                    3 Time Horizons
-                                </Title>
-                                <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5 }}>
-                                    Klasifikasi sinyal masa depan dalam Horizon 1 (Jangka Pendek),
-                                    Horizon 2 (Menengah), dan Horizon 3 (Transformasi Jangka Panjang).
-                                </Text>
-                            </Card>
-                        </Col>
+                                <Icon />
+                            </span>
+                            <h2 className="m-0 mb-2 text-base font-semibold text-foreground">{title}</h2>
+                            <p className="m-0 text-[13px] leading-normal text-muted-foreground">{text}</p>
+                        </li>
+                    ))}
+                </ul>
+            </main>
 
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card
-                                bordered={false}
-                                hoverable
-                                style={{
-                                    height: "100%",
-                                    borderRadius: 12,
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-                                    borderTop: "3px solid #52c41a",
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: 10,
-                                        background: "#f6ffed",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        marginBottom: 16,
-                                    }}
-                                >
-                                    <RadarChartOutlined
-                                        style={{ fontSize: 22, color: "#52c41a" }}
-                                    />
-                                </div>
-                                <Title level={4} style={{ fontSize: 16, marginBottom: 8 }}>
-                                    Radar Multi-Dimensi
-                                </Title>
-                                <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5 }}>
-                                    Visualisasi polar 360° yang mencakup dimensi Sosial, Teknologi,
-                                    Ekonomi, Regulasi, dan Lingkungan secara terintegrasi.
-                                </Text>
-                            </Card>
-                        </Col>
-
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card
-                                bordered={false}
-                                hoverable
-                                style={{
-                                    height: "100%",
-                                    borderRadius: 12,
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-                                    borderTop: "3px solid #fa8c16",
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: 10,
-                                        background: "#fff7e6",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        marginBottom: 16,
-                                    }}
-                                >
-                                    <DotChartOutlined
-                                        style={{ fontSize: 22, color: "#fa8c16" }}
-                                    />
-                                </div>
-                                <Title level={4} style={{ fontSize: 16, marginBottom: 8 }}>
-                                    Prioritizing Matrix
-                                </Title>
-                                <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5 }}>
-                                    Korelasi terukur antara rating urgensi dan status tindakan untuk
-                                    memastikan alokasi sumber daya tepat sasaran.
-                                </Text>
-                            </Card>
-                        </Col>
-
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card
-                                bordered={false}
-                                hoverable
-                                style={{
-                                    height: "100%",
-                                    borderRadius: 12,
-                                    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-                                    borderTop: "3px solid #722ed1",
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: 10,
-                                        background: "#f9f0ff",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        marginBottom: 16,
-                                    }}
-                                >
-                                    <SafetyCertificateOutlined
-                                        style={{ fontSize: 22, color: "#722ed1" }}
-                                    />
-                                </div>
-                                <Title level={4} style={{ fontSize: 16, marginBottom: 8 }}>
-                                    Governance & Approval
-                                </Title>
-                                <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5 }}>
-                                    Alur verifikasi dan persetujuan terstruktur dari kontributor
-                                    hingga strategic committee untuk kredibilitas data.
-                                </Text>
-                            </Card>
-                        </Col>
-                    </Row>
-                </Content>
-
-                <Footer
-                    style={{
-                        textAlign: "center",
-                        background: "#ffffff",
-                        borderTop: "1px solid #f0f0f0",
-                        color: "#8c8c8c",
-                        fontSize: 13,
-                        padding: "24px 32px",
-                    }}
-                >
-                    Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning System. All Rights Reserved.
-                </Footer>
-            </Layout>
-        </ConfigProvider>
+            <footer className="border-0 border-t border-solid border-border bg-card px-6 py-6 text-center text-[13px] text-muted-foreground">
+                Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning System. All Rights Reserved.
+            </footer>
+        </div>
     );
 }

@@ -1,128 +1,96 @@
-import React, { useRef, useState } from "react";
-import { Form, Input, Button, Modal, Typography, Alert, Space } from "antd";
-import {
-    DeleteOutlined,
-    LockOutlined,
-    ExclamationCircleOutlined,
-} from "@ant-design/icons";
-import { useForm } from "@inertiajs/react";
+import { useState } from "react";
+import { Controller } from "react-hook-form";
+import { z } from "zod";
+import { LockIcon, Trash2Icon } from "lucide-react";
 
-const { Title, Text, Paragraph } = Typography;
+import AuthAlert from "@/Components/auth/AuthAlert";
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import FormDialog from "@/Components/FormDialog";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaVisit } from "@/lib/inertia-submit";
+import SectionHeading from "./SectionHeading";
 
-export default function DeleteUserForm({ className = "" }) {
-    const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
-    const passwordInput = useRef(null);
+const FORM_ID = "delete-account-form";
 
-    const {
-        data,
-        setData,
-        delete: destroy,
-        processing,
-        reset,
-        errors,
-    } = useForm({
-        password: "",
+const schema = z.object({
+    password: z.string().min(1, "Kata sandi wajib diisi untuk konfirmasi."),
+});
+
+export default function DeleteUserForm() {
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const form = useDialogForm({
+        schema,
+        defaultValues: { password: "" },
+        ids: { password: "delete-account-password" },
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaVisit("delete", route("profile.destroy"), values, {
+                preserveScroll: true,
+                onSuccess: () => setOpen(false),
+                onError: () => form.setValue("password", ""),
+            }).finally(() => setLoading(false));
+        },
     });
 
-    const confirmUserDeletion = () => {
-        setConfirmingUserDeletion(true);
-    };
-
-    const deleteUser = () => {
-        destroy(route("profile.destroy"), {
-            preserveScroll: true,
-            onSuccess: () => closeModal(),
-            onError: () => passwordInput.current?.focus(),
-            onFinish: () => reset(),
-        });
-    };
-
-    const closeModal = () => {
-        setConfirmingUserDeletion(false);
-        reset();
+    const close = () => {
+        setOpen(false);
+        form.reset();
     };
 
     return (
-        <div className={className}>
-            <div style={{ marginBottom: 16 }}>
-                <Title level={4} style={{ margin: 0, color: "#cf1322" }}>
-                    Hapus Akun Pengguna
-                </Title>
-                <Paragraph type="secondary" style={{ fontSize: 13, marginTop: 4 }}>
-                    Setelah akun Anda dihapus, semua sumber daya dan data terkait akan
-                    dihapus secara permanen. Harap unduh data atau informasi yang ingin
-                    Anda simpan sebelum melanjutkan.
-                </Paragraph>
-            </div>
+        <section aria-labelledby="delete-account-heading">
+            <SectionHeading
+                id="delete-account-heading"
+                title="Hapus Akun Pengguna"
+                className="text-danger"
+                description="Setelah akun Anda dihapus, semua sumber daya dan data terkait akan dihapus secara permanen. Harap unduh data atau informasi yang ingin Anda simpan sebelum melanjutkan."
+            />
 
-            <Button
-                danger
-                type="primary"
-                icon={<DeleteOutlined />}
-                onClick={confirmUserDeletion}
-            >
+            <Button variant="destructive" className="h-10" onClick={() => setOpen(true)}>
+                <Trash2Icon aria-hidden="true" />
                 Hapus Akun Ini
             </Button>
 
-            <Modal
-                title={
-                    <Space>
-                        <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
-                        <span>Konfirmasi Penghapusan Akun</span>
-                    </Space>
-                }
-                open={confirmingUserDeletion}
-                onCancel={closeModal}
-                footer={[
-                    <Button key="cancel" onClick={closeModal} disabled={processing}>
-                        Batal
-                    </Button>,
-                    <Button
-                        key="delete"
-                        danger
-                        type="primary"
-                        loading={processing}
-                        onClick={deleteUser}
-                    >
-                        Hapus Akun Secara Permanen
-                    </Button>,
-                ]}
+            <FormDialog
+                title="Konfirmasi Penghapusan Akun"
+                description="Masukkan kata sandi Anda saat ini untuk mengonfirmasi bahwa Anda ingin menghapus akun ini."
+                open={open}
+                onCancel={close}
+                formId={FORM_ID}
+                btnText="Hapus Akun Secara Permanen"
+                btnVariant="destructive"
+                cancelText="Batal"
+                loading={loading}
+                width={520}
             >
-                <Alert
-                    type="error"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                    message="Peringatan Tindakan Tidak Dapat Dibatalkan"
-                    description="Semua data dan hak akses Anda di Foresight Radar akan dihapus secara permanen."
-                />
-                <Text style={{ fontSize: 13, display: "block", marginBottom: 12 }}>
-                    Masukkan kata sandi Anda saat ini untuk mengonfirmasi bahwa Anda ingin
-                    menghapus akun ini:
-                </Text>
-                <Form layout="vertical" requiredMark={true}>
-                    <Form.Item
-                        label="Kata Sandi Akun"
-                        validateStatus={errors.password ? "error" : ""}
-                        help={errors.password}
-                        rules={[
-                            {
-                                required: true,
-                                message: "Kata sandi wajib diisi untuk konfirmasi.",
-                            },
-                        ]}
-                    >
-                        <Input.Password
-                            ref={passwordInput}
-                            prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
-                            size="large"
-                            placeholder="Masukkan kata sandi Anda"
-                            value={data.password}
-                            onChange={(e) => setData("password", e.target.value)}
-                            onPressEnter={deleteUser}
+                <form id={FORM_ID} noValidate onSubmit={form.submit}>
+                    <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0 pb-1">
+                        <AuthAlert tone="error" title="Peringatan Tindakan Tidak Dapat Dibatalkan">
+                            Semua data dan hak akses Anda di Foresight Radar akan dihapus secara permanen.
+                        </AuthAlert>
+                        <Controller
+                            name="password"
+                            control={form.control}
+                            render={(props) => (
+                                <AuthInput
+                                    id="delete-account-password"
+                                    label="Kata Sandi Akun"
+                                    icon={LockIcon}
+                                    type="password"
+                                    placeholder="Masukkan kata sandi Anda"
+                                    autoComplete="current-password"
+                                    autoFocus
+                                    {...rhfInputProps(props)}
+                                />
+                            )}
                         />
-                    </Form.Item>
-                </Form>
-            </Modal>
-        </div>
+                    </fieldset>
+                </form>
+            </FormDialog>
+        </section>
     );
 }

@@ -1,173 +1,97 @@
-import React, { useRef } from "react";
-import { Form, Input, Button, Alert, Typography, message } from "antd";
-import { LockOutlined, SaveOutlined } from "@ant-design/icons";
-import { useForm } from "@inertiajs/react";
+import { useState } from "react";
+import { Controller } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { LoaderCircleIcon, LockIcon, SaveIcon } from "lucide-react";
 
-const { Title, Text } = Typography;
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaVisit } from "@/lib/inertia-submit";
+import SectionHeading from "./SectionHeading";
 
-export default function UpdatePasswordForm({ className = "" }) {
-    const [form] = Form.useForm();
-    const currentPasswordInput = useRef(null);
+const EMPTY = { current_password: "", password: "", password_confirmation: "" };
 
-    const {
-        data,
-        setData,
-        errors,
-        put,
-        reset,
-        processing,
-        recentlySuccessful,
-    } = useForm({
-        current_password: "",
-        password: "",
-        password_confirmation: "",
+const schema = z
+    .object({
+        current_password: z.string().min(1, "Kata sandi saat ini wajib diisi."),
+        password: z.string().min(1, "Kata sandi baru wajib diisi.").min(8, "Kata sandi minimal 8 karakter."),
+        password_confirmation: z.string().min(1, "Konfirmasi kata sandi wajib diisi."),
+    })
+    .refine((values) => !values.password_confirmation || values.password === values.password_confirmation, {
+        path: ["password_confirmation"],
+        message: "Konfirmasi kata sandi tidak cocok!",
     });
 
-    const onFinish = () => {
-        put(route("password.update"), {
-            preserveScroll: true,
-            onSuccess: () => {
-                reset();
-                form.resetFields();
-                message.success("Kata sandi berhasil diperbarui.");
-            },
-            onError: (errs) => {
-                if (errs.password) {
-                    reset("password", "password_confirmation");
-                    form.setFieldsValue({
-                        password: "",
-                        password_confirmation: "",
-                    });
-                }
-                if (errs.current_password) {
-                    reset("current_password");
-                    form.setFieldsValue({
-                        current_password: "",
-                    });
-                }
-            },
-        });
-    };
+const FIELDS = [
+    ["current_password", "Kata Sandi Saat Ini", "Masukkan kata sandi saat ini", "current-password"],
+    ["password", "Kata Sandi Baru", "Minimal 8 karakter", "new-password"],
+    ["password_confirmation", "Konfirmasi Kata Sandi Baru", "Ulangi kata sandi baru", "new-password"],
+];
+
+export default function UpdatePasswordForm() {
+    const [loading, setLoading] = useState(false);
+
+    const form = useDialogForm({
+        schema,
+        defaultValues: EMPTY,
+        ids: Object.fromEntries(FIELDS.map(([name]) => [name, `profile-${name}`])),
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaVisit("put", route("password.update"), values, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    form.reset(EMPTY);
+                    toast.success("Kata sandi berhasil diperbarui.");
+                },
+                onError: (errors) => {
+                    if (errors.password) {
+                        form.setValue("password", "");
+                        form.setValue("password_confirmation", "");
+                    }
+                    if (errors.current_password) form.setValue("current_password", "");
+                },
+            }).finally(() => setLoading(false));
+        },
+    });
 
     return (
-        <div className={className}>
-            <div style={{ marginBottom: 20 }}>
-                <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
-                    Perbarui Kata Sandi
-                </Title>
-                <Text type="secondary" style={{ fontSize: 13 }}>
-                    Pastikan akun Anda menggunakan kata sandi yang kuat dan aman.
-                </Text>
-            </div>
+        <section aria-labelledby="update-password-heading">
+            <SectionHeading
+                id="update-password-heading"
+                title="Perbarui Kata Sandi"
+                description="Pastikan akun Anda menggunakan kata sandi yang kuat dan aman."
+            />
 
-            {recentlySuccessful && (
-                <Alert
-                    message="Kata sandi Anda telah berhasil diperbarui."
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 20 }}
-                />
-            )}
-
-            <Form
-                form={form}
-                layout="vertical"
-                requiredMark={true}
-                onFinish={onFinish}
-            >
-                <Form.Item
-                    label="Kata Sandi Saat Ini"
-                    validateStatus={errors.current_password ? "error" : ""}
-                    help={errors.current_password}
-                    rules={[
-                        {
-                            required: true,
-                            message: "Kata sandi saat ini wajib diisi.",
-                        },
-                    ]}
-                >
-                    <Input.Password
-                        ref={currentPasswordInput}
-                        size="large"
-                        prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
-                        placeholder="Masukkan kata sandi saat ini"
-                        value={data.current_password}
-                        onChange={(e) =>
-                            setData("current_password", e.target.value)
-                        }
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    label="Kata Sandi Baru"
-                    validateStatus={errors.password ? "error" : ""}
-                    help={errors.password}
-                    rules={[
-                        {
-                            required: true,
-                            message: "Kata sandi baru wajib diisi.",
-                        },
-                        {
-                            min: 8,
-                            message: "Kata sandi minimal 8 karakter.",
-                        },
-                    ]}
-                >
-                    <Input.Password
-                        size="large"
-                        prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
-                        placeholder="Minimal 8 karakter"
-                        value={data.password}
-                        onChange={(e) => setData("password", e.target.value)}
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    label="Konfirmasi Kata Sandi Baru"
-                    validateStatus={
-                        errors.password_confirmation ? "error" : ""
-                    }
-                    help={errors.password_confirmation}
-                    rules={[
-                        {
-                            required: true,
-                            message: "Konfirmasi kata sandi wajib diisi.",
-                        },
-                        ({ getFieldValue }) => ({
-                            validator(_, value) {
-                                if (!value || data.password === value) {
-                                    return Promise.resolve();
-                                }
-                                return Promise.reject(
-                                    new Error("Konfirmasi kata sandi tidak cocok!")
-                                );
-                            },
-                        }),
-                    ]}
-                >
-                    <Input.Password
-                        size="large"
-                        prefix={<LockOutlined style={{ color: "#8c8c8c" }} />}
-                        placeholder="Ulangi kata sandi baru"
-                        value={data.password_confirmation}
-                        onChange={(e) =>
-                            setData("password_confirmation", e.target.value)
-                        }
-                    />
-                </Form.Item>
-
-                <Form.Item style={{ marginBottom: 0, marginTop: 12 }}>
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        size="large"
-                        icon={<SaveOutlined />}
-                        loading={processing}
-                    >
-                        Simpan Kata Sandi
-                    </Button>
-                </Form.Item>
-            </Form>
-        </div>
+            <form noValidate onSubmit={form.submit}>
+                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                    {FIELDS.map(([name, label, placeholder, autoComplete]) => (
+                        <Controller
+                            key={name}
+                            name={name}
+                            control={form.control}
+                            render={(props) => (
+                                <AuthInput
+                                    id={`profile-${name}`}
+                                    label={label}
+                                    icon={LockIcon}
+                                    type="password"
+                                    placeholder={placeholder}
+                                    autoComplete={autoComplete}
+                                    {...rhfInputProps(props)}
+                                />
+                            )}
+                        />
+                    ))}
+                    <div>
+                        <Button type="submit" className="h-10" aria-busy={loading || undefined}>
+                            {loading ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <SaveIcon aria-hidden="true" />}
+                            Simpan Kata Sandi
+                        </Button>
+                    </div>
+                </fieldset>
+            </form>
+        </section>
     );
 }

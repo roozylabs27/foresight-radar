@@ -1,76 +1,48 @@
-import React, { useState } from "react";
-import GuestLayout from "@/Layouts/GuestLayout";
+import { useState } from "react";
 import { Head, router } from "@inertiajs/react";
-import { Alert, Button, Flex, Typography } from "antd";
-import { LogoutOutlined, SendOutlined } from "@ant-design/icons";
+import { LoaderCircleIcon, LogOutIcon, SendIcon } from "lucide-react";
 
-const { Title, Paragraph } = Typography;
+import AuthAlert from "@/Components/auth/AuthAlert";
+import GuestLayout, { GuestHeading } from "@/Layouts/GuestLayout";
+import { Button } from "@/Components/ui/button";
 
 export default function VerifyEmail({ status }) {
     const [loading, setLoading] = useState(false);
 
-    const submit = (e) => {
-        e.preventDefault();
+    const resend = (event) => {
+        event.preventDefault();
         setLoading(true);
-
-        router.post(
-            route("verification.send"),
-            {},
-            {
-                onFinish: () => {
-                    setLoading(false);
-                },
-            }
-        );
-    };
-
-    const logout = (e) => {
-        e.preventDefault();
-        router.post(route("logout"));
+        router.post(route("verification.send"), {}, { onFinish: () => setLoading(false) });
     };
 
     return (
         <GuestLayout>
-            <Head title="Verifikasi Email - Foresight Radar" />
-
-            <Title level={3} style={{ marginBottom: 8, color: "#0f172a" }}>
-                Verifikasi Alamat Email
-            </Title>
-            <Paragraph type="secondary" style={{ marginBottom: 20, fontSize: 14 }}>
-                Terima kasih telah bergabung di Foresight Radar. Silakan verifikasi email Anda dengan mengklik tautan yang telah kami kirimkan.
-            </Paragraph>
+            <Head title="Verifikasi Email" />
+            <GuestHeading title="Verifikasi Alamat Email">
+                Terima kasih telah bergabung di Foresight Radar. Silakan verifikasi email Anda dengan mengklik tautan yang
+                telah kami kirimkan.
+            </GuestHeading>
 
             {status === "verification-link-sent" && (
-                <Alert
-                    message="Tautan verifikasi baru telah berhasil dikirim ke alamat email Anda."
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 24 }}
-                />
+                <AuthAlert tone="success" className="mb-5">
+                    Tautan verifikasi baru telah berhasil dikirim ke alamat email Anda.
+                </AuthAlert>
             )}
 
-            <form onSubmit={submit}>
-                <Flex vertical gap={12} style={{ marginTop: 24 }}>
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={loading}
-                        icon={<SendOutlined />}
-                        block
-                        size="large"
-                    >
-                        Kirim Ulang Email Verifikasi
-                    </Button>
-
-                    <Button
-                        type="default"
-                        onClick={logout}
-                        icon={<LogoutOutlined />}
-                        block
-                    >
-                        Keluar (Logout)
-                    </Button>
-                </Flex>
+            <form onSubmit={resend} className="flex flex-col gap-3">
+                <Button type="submit" className="h-11 w-full" disabled={loading} aria-busy={loading || undefined}>
+                    {loading ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <SendIcon aria-hidden="true" />}
+                    Kirim Ulang Email Verifikasi
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-input"
+                    onClick={() => router.post(route("logout"))}
+                >
+                    <LogOutIcon aria-hidden="true" />
+                    Keluar (Logout)
+                </Button>
             </form>
         </GuestLayout>
     );

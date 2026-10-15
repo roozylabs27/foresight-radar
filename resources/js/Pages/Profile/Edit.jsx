@@ -1,29 +1,20 @@
-import React from "react";
+import { Head, Link } from "@inertiajs/react";
+import { ChevronRightIcon, HouseIcon, MailIcon, ShieldCheckIcon, UserIcon } from "lucide-react";
+
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { Badge } from "@/Components/ui/badge";
+import { cn } from "@/lib/utils";
 import DeleteUserForm from "./Partials/DeleteUserForm";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm";
-import { Head } from "@inertiajs/react";
-import {
-    Layout,
-    Card,
-    Row,
-    Col,
-    Avatar,
-    Typography,
-    Tag,
-    Space,
-    Breadcrumb,
-} from "antd";
-import {
-    UserOutlined,
-    MailOutlined,
-    SafetyCertificateOutlined,
-    HomeOutlined,
-} from "@ant-design/icons";
 
-const { Content } = Layout;
-const { Title, Text } = Typography;
+function ProfileCard({ className, children }) {
+    return (
+        <div className={cn("rounded-lg border border-solid border-border bg-card p-5 text-card-foreground lg:p-6", className)}>
+            {children}
+        </div>
+    );
+}
 
 export default function Edit({ auth, mustVerifyEmail, status }) {
     const user = auth?.user;
@@ -33,145 +24,69 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
         <AuthenticatedLayout
             auth={auth}
             header={
-                <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
-                    Pengaturan Profil
-                </Title>
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <UserIcon aria-hidden="true" className="text-lg text-primary" />
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">Pengaturan Profil</h1>
+                </div>
             }
         >
             <Head title="Profil Pengguna" />
 
-            <Content
-                style={{
-                    padding: "24px 24px",
-                    maxWidth: 1200,
-                    width: "100%",
-                    margin: "0 auto",
-                }}
-            >
-                <Breadcrumb
-                    style={{ marginBottom: 20 }}
-                    items={[
-                        {
-                            href: route("dashboard."),
-                            title: (
-                                <>
-                                    <HomeOutlined />
-                                    <span>Dashboard</span>
-                                </>
-                            ),
-                        },
-                        {
-                            title: "Profil Pengguna",
-                        },
-                    ]}
-                />
+            <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 p-4 lg:px-6 lg:py-5">
+                <nav aria-label="Breadcrumb">
+                    <ol className="m-0 flex list-none items-center gap-2 p-0 text-sm text-muted-foreground">
+                        <li>
+                            <Link
+                                href={route("dashboard.")}
+                                className="inline-flex items-center gap-1.5 rounded-sm text-muted-foreground no-underline outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            >
+                                <HouseIcon aria-hidden="true" />
+                                Dashboard
+                            </Link>
+                        </li>
+                        <li aria-hidden="true">
+                            <ChevronRightIcon className="text-[10px]" />
+                        </li>
+                        <li aria-current="page" className="text-foreground">
+                            Profil Pengguna
+                        </li>
+                    </ol>
+                </nav>
 
-                <Row gutter={[24, 24]}>
-                    <Col xs={24} md={8}>
-                        <Card
-                            bordered={false}
-                            style={{
-                                borderRadius: 12,
-                                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                                textAlign: "center",
-                                position: "sticky",
-                                top: 88,
-                            }}
+                <div className="grid items-start gap-5 md:grid-cols-3">
+                    <ProfileCard className="flex flex-col items-center gap-3 py-8 text-center md:sticky md:top-20">
+                        <span
+                            aria-hidden="true"
+                            className="flex size-20 items-center justify-center rounded-full bg-primary text-[32px] font-semibold text-primary-foreground"
                         >
-                            <div style={{ padding: "16px 0" }}>
-                                <Avatar
-                                    size={80}
-                                    style={{
-                                        backgroundColor: "#1677ff",
-                                        fontSize: 32,
-                                        fontWeight: 600,
-                                        boxShadow:
-                                            "0 4px 12px rgba(22, 119, 255, 0.3)",
-                                        marginBottom: 16,
-                                    }}
-                                >
-                                    {user?.name
-                                        ? user.name.charAt(0).toUpperCase()
-                                        : "U"}
-                                </Avatar>
+                            {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+                        </span>
+                        <div className="flex min-w-0 max-w-full flex-col items-center gap-1">
+                            <h2 className="m-0 max-w-full truncate text-lg font-bold text-foreground">{user?.name}</h2>
+                            <p className="m-0 flex max-w-full items-center gap-1.5 text-[13px] text-muted-foreground">
+                                <MailIcon aria-hidden="true" />
+                                <span className="truncate">{user?.email}</span>
+                            </p>
+                        </div>
+                        <Badge variant="secondary" className="px-2.5 py-1 text-xs">
+                            <ShieldCheckIcon aria-hidden="true" />
+                            Peran: {roleName}
+                        </Badge>
+                    </ProfileCard>
 
-                                <Title level={4} style={{ margin: 0 }}>
-                                    {user?.name}
-                                </Title>
-                                <Space
-                                    align="center"
-                                    style={{
-                                        marginTop: 4,
-                                        marginBottom: 12,
-                                        color: "#8c8c8c",
-                                    }}
-                                >
-                                    <MailOutlined style={{ fontSize: 13 }} />
-                                    <Text type="secondary" style={{ fontSize: 13 }}>
-                                        {user?.email}
-                                    </Text>
-                                </Space>
-
-                                <div>
-                                    <Tag
-                                        icon={<SafetyCertificateOutlined />}
-                                        color="blue"
-                                        style={{
-                                            padding: "2px 10px",
-                                            borderRadius: 12,
-                                            fontWeight: 500,
-                                        }}
-                                    >
-                                        Peran: {roleName}
-                                    </Tag>
-                                </div>
-                            </div>
-                        </Card>
-                    </Col>
-
-                    <Col xs={24} md={16}>
-                        <Space
-                            direction="vertical"
-                            size="large"
-                            style={{ width: "100%" }}
-                        >
-                            <Card
-                                bordered={false}
-                                style={{
-                                    borderRadius: 12,
-                                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                                }}
-                            >
-                                <UpdateProfileInformationForm
-                                    mustVerifyEmail={mustVerifyEmail}
-                                    status={status}
-                                />
-                            </Card>
-
-                            <Card
-                                bordered={false}
-                                style={{
-                                    borderRadius: 12,
-                                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                                }}
-                            >
-                                <UpdatePasswordForm />
-                            </Card>
-
-                            <Card
-                                bordered={false}
-                                style={{
-                                    borderRadius: 12,
-                                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                                    border: "1px solid #ffccc7",
-                                }}
-                            >
-                                <DeleteUserForm />
-                            </Card>
-                        </Space>
-                    </Col>
-                </Row>
-            </Content>
+                    <div className="flex min-w-0 flex-col gap-5 md:col-span-2">
+                        <ProfileCard>
+                            <UpdateProfileInformationForm mustVerifyEmail={mustVerifyEmail} status={status} />
+                        </ProfileCard>
+                        <ProfileCard>
+                            <UpdatePasswordForm />
+                        </ProfileCard>
+                        <ProfileCard className="border-danger/40">
+                            <DeleteUserForm />
+                        </ProfileCard>
+                    </div>
+                </div>
+            </main>
         </AuthenticatedLayout>
     );
 }
