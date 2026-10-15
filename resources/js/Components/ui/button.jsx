@@ -37,17 +37,23 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}) {
+// forwardRef because React 18 drops `ref` on plain function components, and Radix
+// triggers (`<PopoverTrigger asChild><Button>`) need it to anchor their content.
+const Button = React.forwardRef(function Button(
+  {
+    className,
+    variant = "default",
+    size = "default",
+    asChild = false,
+    ...props
+  },
+  ref
+) {
   const Comp = asChild ? Slot.Root : "button"
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       data-variant={variant}
       data-size={size}
@@ -55,6 +61,6 @@ function Button({
       {...props}
     />
   )
-}
+})
 
 export { Button, buttonVariants }

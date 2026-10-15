@@ -18,7 +18,7 @@ function resolveTheme(theme) {
 
 /**
  * Toggles the `.dark` class on <html> for the shadcn/Tailwind tokens.
- * Defaults to light until the antd pages are migrated, since antd is not dark-aware.
+ * Defaults to light: the UI has no theme switch yet.
  */
 export function ThemeProvider({ children, defaultTheme = "light" }) {
     const [theme, setThemeState] = useState(() => readStoredTheme(defaultTheme));

@@ -1,6 +1,6 @@
 import { useId, useMemo } from "react";
 import { rowPaginationFeature, rowSortingFeature, tableFeatures, useTable } from "@tanstack/react-table";
-import { CaretDownOutlined, CaretUpOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
 
 import { Button } from "@/Components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
@@ -12,6 +12,20 @@ export { useServerTable } from "@/hooks/use-server-table";
 
 const features = tableFeatures({ rowPaginationFeature, rowSortingFeature });
 const ALIGN = { left: "text-left", center: "text-center", right: "text-right" };
+
+/**
+ * `meta.rowSpan` helper: merges consecutive rows with the same `key` value,
+ * like antd's onCell rowSpan for a grouped first column.
+ */
+export function spanEqual(key) {
+    return (index, records) => {
+        const value = records[index]?.[key];
+        if (index > 0 && records[index - 1]?.[key] === value) return 0;
+        let span = 1;
+        while (records[index + span]?.[key] === value) span += 1;
+        return span;
+    };
+}
 
 // Sorting is opt-in per column, grouped columns included.
 function withSortingOff(columns) {
@@ -25,8 +39,8 @@ function withSortingOff(columns) {
 function SortIcon({ direction }) {
     return (
         <span aria-hidden="true" className="inline-flex flex-col text-[9px] leading-[7px]">
-            <CaretUpOutlined className={direction === "asc" ? "text-primary" : "text-subtle-foreground/50"} />
-            <CaretDownOutlined className={direction === "desc" ? "text-primary" : "text-subtle-foreground/50"} />
+            <ChevronUpIcon className={direction === "asc" ? "text-primary" : "text-subtle-foreground/50"} />
+            <ChevronDownIcon className={direction === "desc" ? "text-primary" : "text-subtle-foreground/50"} />
         </span>
     );
 }
@@ -92,7 +106,7 @@ function Pagination({ table, rowCount, pageSizeOptions, loading }) {
                         disabled={loading || !table.getCanPreviousPage()}
                         onClick={() => table.previousPage()}
                     >
-                        <LeftOutlined aria-hidden="true" />
+                        <ChevronLeftIcon aria-hidden="true" />
                     </Button>
                     <Button
                         variant="outline"
@@ -102,7 +116,7 @@ function Pagination({ table, rowCount, pageSizeOptions, loading }) {
                         disabled={loading || !table.getCanNextPage()}
                         onClick={() => table.nextPage()}
                     >
-                        <RightOutlined aria-hidden="true" />
+                        <ChevronRightIcon aria-hidden="true" />
                     </Button>
                 </div>
             </div>
@@ -118,7 +132,10 @@ function Pagination({ table, rowCount, pageSizeOptions, loading }) {
  * unless a column sets `enableSorting: true`, because most endpoints sort on
  * the server by a fixed order. Extra per-column options go in `meta`:
  * `align` ("left" | "center" | "right"), `width` (CSS value), `className`,
- * `headerClassName`. Nested `columns` render as grouped header rows.
+ * `headerClassName`, `rowSpan` (see `spanEqual`). Nested `columns` render as
+ * grouped header rows.
+ * `onRowHover(record | null)` and `rowClassName(record)` support linked views
+ * (e.g. highlighting a chart marker for the hovered row).
  */
 export default function DataTable({
     columns,
@@ -134,6 +151,8 @@ export default function DataTable({
     emptyMessage = "Tidak ada data.",
     pageSizeOptions = [10, 20, 50, 100],
     onRowClick,
+    onRowHover,
+    rowClassName,
     className,
 }) {
     const tableColumns = useMemo(() => withSortingOff(columns), [columns]);
@@ -159,6 +178,7 @@ export default function DataTable({
     const spanned = new Set();
 
     const rows = table.getRowModel().rows;
+    const records = rows.map((row) => row.original);
     const leafCount = table.getAllLeafColumns().length;
     const showSkeleton = loading && rows.length === 0;
 
@@ -237,14 +257,25 @@ export default function DataTable({
                         <TableRow
                             key={row.id}
                             onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                            className={cn(onRowClick && "cursor-pointer")}
+                            onMouseEnter={onRowHover ? () => onRowHover(row.original) : undefined}
+                            onMouseLeave={onRowHover ? () => onRowHover(null) : undefined}
+                            className={cn(onRowClick && "cursor-pointer", rowClassName?.(row.original))}
                         >
                             {row.getAllCells().map((cell) => {
                                 const meta = cell.column.columnDef.meta ?? {};
+                                // meta.rowSpan(index, records) merges cells down; 0 means covered by the row above.
+                                const rowSpan = meta.rowSpan?.(row.index, records);
+                                if (rowSpan === 0) return null;
                                 return (
                                     <TableCell
                                         key={cell.id}
-                                        className={cn("px-4 py-3 whitespace-normal", ALIGN[meta.align], meta.className)}
+                                        rowSpan={rowSpan > 1 ? rowSpan : undefined}
+                                        className={cn(
+                                            "px-4 py-3 whitespace-normal",
+                                            rowSpan > 1 && "border-r align-top",
+                                            ALIGN[meta.align],
+                                            meta.className
+                                        )}
                                     >
                                         <table.FlexRender cell={cell} />
                                     </TableCell>

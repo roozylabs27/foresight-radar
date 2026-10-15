@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LoadingOutlined } from "@ant-design/icons";
+import { LoaderCircleIcon } from "lucide-react";
 
 import {
     AlertDialog,
@@ -12,6 +12,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/Components/ui/alert-dialog";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 
 /**
  * Replacement for antd Popconfirm. Pass the trigger as `children`, or control it
@@ -33,6 +34,7 @@ export default function ConfirmDialog({
     const [openState, setOpenState] = useState(false);
     const [pending, setPending] = useState(false);
     const open = openProp ?? openState;
+    const returnFocus = useReturnFocus(open);
 
     const setOpen = (next) => {
         if (pending) return;
@@ -57,7 +59,7 @@ export default function ConfirmDialog({
     return (
         <AlertDialog open={open} onOpenChange={setOpen}>
             {children && <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>}
-            <AlertDialogContent>
+            <AlertDialogContent onCloseAutoFocus={returnFocus}>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{title}</AlertDialogTitle>
                     {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
@@ -70,7 +72,7 @@ export default function ConfirmDialog({
                         aria-busy={pending || undefined}
                         onClick={handleConfirm}
                     >
-                        {pending && <LoadingOutlined aria-hidden="true" />}
+                        {pending && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
                         {confirmText}
                     </AlertDialogAction>
                 </AlertDialogFooter>

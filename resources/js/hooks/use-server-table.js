@@ -17,8 +17,26 @@ import { toast } from "sonner";
  * `params` are the page's filters; changing them goes back to page 1. The query
  * carries both `page`/`results` and the antd-era `pagination[current|pageSize]`
  * the services read, plus `sortField` and `sortOrder` ("ascend" | "descend").
+ *
+ * For an endpoint that returns a plain Laravel paginator (`data`, `total`,
+ * `current_page`, `per_page` at the top level), pass `select: fromPaginator`;
+ * `pageSizeParam` adds the page size under the name the endpoint reads.
  */
-export function useServerTable({ url, params = {}, initialPageSize = 10, initialSorting = [] }) {
+export function fromPaginator(body) {
+    return {
+        data: body?.data ?? [],
+        meta: { total: body?.total, current_page: body?.current_page, per_page: body?.per_page },
+    };
+}
+
+export function useServerTable({
+    url,
+    params = {},
+    initialPageSize = 10,
+    initialSorting = [],
+    select = (body) => body,
+    pageSizeParam,
+}) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: initialPageSize });
     const [sorting, setSorting] = useState(initialSorting);
     const [rows, setRows] = useState([]);
@@ -48,6 +66,7 @@ export function useServerTable({ url, params = {}, initialPageSize = 10, initial
             page: pagination.pageIndex + 1,
             results: pagination.pageSize,
             pagination: { current: pagination.pageIndex + 1, pageSize: pagination.pageSize },
+            ...(pageSizeParam && { [pageSizeParam]: pagination.pageSize }),
             ...(sort && { sortField: sort.id, sortOrder: sort.desc ? "descend" : "ascend" }),
         };
 
@@ -56,7 +75,7 @@ export function useServerTable({ url, params = {}, initialPageSize = 10, initial
             .get(`${url}?${qs.stringify(query)}`, { signal: controller.signal })
             .then((response) => {
                 if (id !== requestId.current) return;
-                const { data = [], meta = {} } = response.data ?? {};
+                const { data = [], meta = {} } = select(response.data) ?? {};
                 setRows(data);
                 setRowCount(meta.total ?? data.length);
                 setError(null);

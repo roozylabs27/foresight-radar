@@ -1,7 +1,7 @@
 import { useState } from "react";
 import dayjs from "dayjs";
 import { id as idLocale } from "react-day-picker/locale";
-import { CalendarOutlined } from "@ant-design/icons";
+import { CalendarIcon, ChevronDownIcon } from "lucide-react";
 
 import { Button } from "@/Components/ui/button";
 import { Calendar } from "@/Components/ui/calendar";
@@ -77,14 +77,18 @@ export default function DateRangePicker({
                     variant="outline"
                     disabled={disabled}
                     aria-label={accessibleName}
+                    // Same box as SelectTrigger so it lines up with the selects in a FilterBar.
                     className={cn(
-                        "h-[38px] justify-start gap-2 border-input bg-card px-3 font-mono text-[13px] font-medium",
-                        !(from && to) && "font-sans text-muted-foreground",
+                        "h-9 justify-between gap-2 border-input bg-card px-3 text-sm font-normal tabular-nums hover:bg-card hover:text-foreground",
+                        !(from && to) && "text-muted-foreground",
                         className
                     )}
                 >
-                    <CalendarOutlined aria-hidden="true" className="text-subtle-foreground" />
-                    {text}
+                    <span className="flex min-w-0 items-center gap-2">
+                        <CalendarIcon aria-hidden="true" className="text-subtle-foreground" />
+                        <span className="truncate">{text}</span>
+                    </span>
+                    <ChevronDownIcon aria-hidden="true" className="size-4 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent align={align} className="w-auto p-0">

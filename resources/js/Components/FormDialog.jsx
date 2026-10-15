@@ -1,5 +1,4 @@
-import { ConfigProvider } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
+import { LoaderCircleIcon } from "lucide-react";
 
 import { Button } from "@/Components/ui/button";
 import {
@@ -10,20 +9,15 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/Components/ui/dialog";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { cn } from "@/lib/utils";
 
-function popupContainer(trigger) {
-    return trigger?.closest('[data-slot="dialog-content"]') ?? document.body;
-}
-
 /**
- * Replacement for Components/Dialog.jsx (antd Modal) with the same props.
+ * Form dialog: title, scrollable body and a Cancel / submit footer.
  *
  * - `onOk` runs from the submit button. Pass `formId` instead to make it a native
  *   submit button for a <form id={formId}> in `children` (react-hook-form).
- * - Width: `width` in px like before, or `className` (e.g. "sm:max-w-2xl").
- * - antd popups inside `children` render within the dialog, because Radix blocks
- *   pointer events outside a modal dialog. Drop that once the forms are migrated.
+ * - Width: `width` in px, or `className` (e.g. "sm:max-w-2xl").
  */
 export default function FormDialog({
     title,
@@ -35,12 +29,15 @@ export default function FormDialog({
     onOk,
     formId,
     btnText = isEditMode ? "Save Changes" : "Submit",
+    btnVariant = "default",
     cancelText = "Cancel",
     loading = false,
     width,
     className,
     children,
 }) {
+    const returnFocus = useReturnFocus(open);
+
     const handleOpenChange = (next) => {
         if (loading) return;
         onOpenChange?.(next);
@@ -54,6 +51,7 @@ export default function FormDialog({
                 className={cn("max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]", className)}
                 style={width ? { maxWidth: `min(${width}px, calc(100% - 2rem))` } : undefined}
                 onInteractOutside={(event) => loading && event.preventDefault()}
+                onCloseAutoFocus={returnFocus}
             >
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
@@ -65,9 +63,7 @@ export default function FormDialog({
                 </DialogHeader>
 
                 <div className="-mx-6 overflow-y-auto px-6">
-                    <ConfigProvider getPopupContainer={popupContainer}>
-                        {children}
-                    </ConfigProvider>
+                    {children}
                 </div>
 
                 <DialogFooter>
@@ -76,12 +72,13 @@ export default function FormDialog({
                     </Button>
                     <Button
                         type={formId ? "submit" : "button"}
+                        variant={btnVariant}
                         form={formId}
                         disabled={loading}
                         aria-busy={loading || undefined}
                         onClick={formId ? undefined : onOk}
                     >
-                        {loading && <LoadingOutlined aria-hidden="true" />}
+                        {loading && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
                         {btnText}
                     </Button>
                 </DialogFooter>

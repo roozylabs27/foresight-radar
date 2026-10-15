@@ -1,10 +1,5 @@
 import { cn } from "@/lib/utils";
 
-/*
- * No data-slot on these wrappers: pages still put antd controls inside them,
- * so borders and margins are set with explicit utilities instead of the reset.
- */
-
 /** Card-style row of filter fields; wraps on narrow screens. `meta` sits on the right. */
 export default function FilterBar({ label = "Filter", meta, actions, className, children }) {
     return (
