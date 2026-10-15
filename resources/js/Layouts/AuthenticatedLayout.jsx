@@ -1,186 +1,196 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { Link, usePage } from "@inertiajs/react";
+import { ConfigProvider } from "antd";
 import {
+    AppstoreOutlined,
+    BarChartOutlined,
+    CheckCircleOutlined,
+    ClockCircleOutlined,
+    DashboardOutlined,
+    DownOutlined,
+    FileDoneOutlined,
+    InboxOutlined,
     LogoutOutlined,
     MenuFoldOutlined,
-    MenuUnfoldOutlined,
     MenuOutlined,
-    DownOutlined,
-    DashboardOutlined,
+    MenuUnfoldOutlined,
     RadarChartOutlined,
-    UsergroupAddOutlined,
-    FieldTimeOutlined,
-    StarOutlined,
-    UserOutlined,
-    FileProtectOutlined,
-    FileExcelOutlined,
-    DotChartOutlined,
-    InsertRowAboveOutlined,
     ThunderboltOutlined,
+    UnorderedListOutlined,
+    UserOutlined,
+    WifiOutlined,
 } from "@ant-design/icons";
-import {
-    Layout,
-    Menu,
-    theme,
-    Flex,
-    Button,
-    Dropdown,
-    Space,
-    FloatButton,
-    Avatar,
-    ConfigProvider,
-    Drawer,
-    Grid,
-} from "antd";
-import { Link, usePage } from "@inertiajs/react";
 
-const { Header, Footer, Sider } = Layout;
+import BrandMark from "@/Components/BrandMark";
+import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
+import { Button } from "@/Components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/Components/ui/dropdown-menu";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/Components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/Components/ui/tooltip";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { antdTheme } from "@/lib/antdTheme";
+import { cn } from "@/lib/utils";
+
+const COLLAPSED_KEY = "foresight-sidebar-collapsed";
+
+const NAV_ITEMS = [
+    { label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: AppstoreOutlined, permission: "view-dashboard" },
+    { label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiOutlined, permission: "view-signal" },
+    { label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ThunderboltOutlined, permission: "view-driving-force" },
+    { label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockCircleOutlined, permission: "view-time-horizon" },
+    { label: "Rating of Urgency", route: "rating-urgency.", match: "/rating-urgency", icon: DashboardOutlined, permission: "view-rating-urgency" },
+    { label: "Status of Action", route: "status-action.", match: "/status-action", icon: CheckCircleOutlined, permission: "view-status-action" },
+    { label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileDoneOutlined, permission: "view-approval-items" },
+    { label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxOutlined, permission: "view-closed-items" },
+    { label: "User Management", route: "user-management.user.", match: "/user-management", icon: UserOutlined, permission: "view-user" },
+    { label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: BarChartOutlined, permission: "view-prioritizing" },
+    { label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: UnorderedListOutlined, permission: "view-registered-list" },
+    { label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarChartOutlined, permission: "view-foresight-radar" },
+];
+
+function readCollapsed() {
+    try {
+        return window.localStorage.getItem(COLLAPSED_KEY) === "1";
+    } catch {
+        return false;
+    }
+}
+
+function writeCollapsed(value) {
+    try {
+        window.localStorage.setItem(COLLAPSED_KEY, value ? "1" : "0");
+    } catch {
+        // Storage can be unavailable (private mode); the state still applies on this page.
+    }
+}
+
+function isActive(url, match) {
+    const path = url.split("?")[0];
+    return path === match || path.startsWith(`${match}/`);
+}
+
+function Brand({ collapsed = false }) {
+    return (
+        <div className={cn("flex min-w-0 items-center gap-3", collapsed && "justify-center")}>
+            <BrandMark />
+            {/* A div, not a span: color-contrast.e2e reads the first span containing "Strategic Intel". */}
+            <div className={cn("flex min-w-0 flex-col", collapsed && "sr-only")}>
+                <span className="truncate text-[15px] leading-5 font-semibold text-sidebar-foreground">
+                    Foresight Radar
+                </span>
+                <span className="text-[11px] leading-4 font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
+                    Strategic Intel
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function NavList({ items, url, collapsed = false, onNavigate }) {
+    return (
+        <ul className="flex flex-col gap-0.5">
+            {items.map((item) => {
+                const active = isActive(url, item.match);
+                const Icon = item.icon;
+                const link = (
+                    <Link
+                        href={route(item.route)}
+                        onClick={onNavigate}
+                        aria-current={active ? "page" : undefined}
+                        aria-label={collapsed ? item.label : undefined}
+                        className={cn(
+                            "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm outline-none transition-colors",
+                            "focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/50",
+                            active
+                                ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
+                                : "font-medium text-muted-foreground hover:bg-muted hover:text-sidebar-foreground",
+                            collapsed && "justify-center px-0"
+                        )}
+                    >
+                        <Icon aria-hidden="true" className="shrink-0 text-base leading-none" />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                );
+
+                return (
+                    <li key={item.match}>
+                        {collapsed ? (
+                            <Tooltip>
+                                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                                <TooltipContent side="right" sideOffset={8}>
+                                    {item.label}
+                                </TooltipContent>
+                            </Tooltip>
+                        ) : (
+                            link
+                        )}
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
+function UserMenu({ user }) {
+    const name = user?.name || "Pengguna";
+    const initial = name.charAt(0).toUpperCase();
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-11 gap-2.5 pr-2 pl-1">
+                    <Avatar>
+                        <AvatarFallback className="bg-accent font-semibold text-primary">
+                            {initial}
+                        </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden max-w-40 truncate font-medium sm:inline">{name}</span>
+                    <DownOutlined aria-hidden="true" className="text-[10px] text-subtle-foreground" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="flex flex-col gap-0.5">
+                    <span className="truncate text-sm font-semibold">{name}</span>
+                    {user?.email && (
+                        <span className="truncate text-xs font-normal text-muted-foreground">
+                            {user.email}
+                        </span>
+                    )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link href={route("profile.edit")}>
+                        <UserOutlined aria-hidden="true" />
+                        <span>Profil Pengguna</span>
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" asChild>
+                    <Link href={route("logout")} method="post" as="button" type="button" className="w-full">
+                        <LogoutOutlined aria-hidden="true" />
+                        <span>Keluar (Logout)</span>
+                    </Link>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
 
 export default function Authenticated({ auth, user: propUser, header, children }) {
-    const pageProps = usePage().props;
-    const { url } = usePage();
-    const effectiveAuth = auth || pageProps.auth || {};
+    const page = usePage();
+    const effectiveAuth = auth || page.props.auth || {};
     const user = effectiveAuth.user || propUser;
     const permissions = effectiveAuth.permissions || [];
     const role = effectiveAuth.role;
 
-    const [items] = useState([
-        {
-            label: <Link href={route("dashboard.")}>Dashboard</Link>,
-            icon: <DashboardOutlined />,
-            key: "/dashboard",
-            permission: "view-dashboard",
-        },
-        {
-            label: <Link href={route("signals.index")}>Signal Ingestion</Link>,
-            icon: <ThunderboltOutlined />,
-            key: "/signals",
-            permission: "view-signal",
-        },
-        {
-            label: <Link href={route("driving-force.")}>Driving Force</Link>,
-            icon: <RadarChartOutlined />,
-            key: "/driving-force",
-            permission: "view-driving-force",
-        },
-        {
-            label: <Link href={route("time-horizon.")}>Time Horizon</Link>,
-            icon: <FieldTimeOutlined />,
-            key: "/time-horizon",
-            permission: "view-time-horizon",
-        },
-        {
-            label: <Link href={route("rating-urgency.")}>Rating of Urgency</Link>,
-            icon: <StarOutlined />,
-            key: "/rating-urgency",
-            permission: "view-rating-urgency",
-        },
-        {
-            label: <Link href={route("status-action.")}>Status of Action</Link>,
-            icon: <FieldTimeOutlined />,
-            key: "/status-action",
-            permission: "view-status-action",
-        },
-        {
-            label: <Link href={route("approval-items.")}>Approval Items</Link>,
-            icon: <FileProtectOutlined />,
-            key: "/approval-items",
-            permission: "view-approval-items",
-        },
-        {
-            label: <Link href={route("closed-items.")}>Closed Items</Link>,
-            icon: <FileExcelOutlined />,
-            key: "/closed-items",
-            permission: "view-closed-items",
-        },
-        {
-            label: "User Management",
-            icon: <UsergroupAddOutlined />,
-            key: "/user-management",
-            permission: "view-user",
-            children: [
-                {
-                    key: "/user-management/user",
-                    label: (
-                        <Link href={route("user-management.user.")}>User</Link>
-                    ),
-                },
-            ],
-        },
-        {
-            label: (
-                <Link href={route("visualization.prioritizing.")}>
-                    Prioritizing
-                </Link>
-            ),
-            icon: <DotChartOutlined />,
-            key: "/visualization/prioritizing",
-            permission: "view-prioritizing",
-        },
-        {
-            label: (
-                <Link href={route("visualization.registered-list.")}>
-                    Registered List
-                </Link>
-            ),
-            icon: <InsertRowAboveOutlined />,
-            key: "/visualization/registered-list",
-            permission: "view-registered-list",
-        },
-        {
-            label: (
-                <Link href={route("visualization.foresight-radar.")}>
-                    Foresight Radar
-                </Link>
-            ),
-            icon: <RadarChartOutlined />,
-            key: "/visualization/foresight-radar",
-            permission: "view-foresight-radar",
-        },
-    ]);
-
-    const actions = [
-        {
-            key: "profile",
-            label: (
-                <Link href={route("profile.edit")}>
-                    <Flex gap="small" align="center">
-                        <UserOutlined />
-                        <span>Profil Pengguna</span>
-                    </Flex>
-                </Link>
-            ),
-        },
-        {
-            type: "divider",
-        },
-        {
-            key: "logout",
-            danger: true,
-            label: (
-                <Link
-                    href={route("logout")}
-                    method="post"
-                    as="button"
-                    type="button"
-                    style={{
-                        width: "100%",
-                        textAlign: "left",
-                        background: "none",
-                        border: "none",
-                        padding: 0,
-                        cursor: "pointer",
-                    }}
-                >
-                    <Flex gap="small" align="center">
-                        <LogoutOutlined />
-                        <span>Keluar (Logout)</span>
-                    </Flex>
-                </Link>
-            ),
-        },
-    ];
-
-    const filteredItems = items.filter(
+    const items = NAV_ITEMS.filter(
         (item) =>
             !item.permission ||
             role === "developer" ||
@@ -188,308 +198,104 @@ export default function Authenticated({ auth, user: propUser, header, children }
             permissions.includes(item.permission)
     );
 
-    const {
-        token: { colorBgContainer },
-    } = theme.useToken();
+    const isDesktop = useMediaQuery("(min-width: 1024px)");
+    const [collapsed, setCollapsed] = useState(readCollapsed);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
-    const screens = Grid.useBreakpoint();
-    const isMobile = typeof screens.lg !== "undefined" && !screens.lg;
-    const [collapsed, setCollapsed] = useState(false);
-    const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+    const navOpen = isDesktop ? !collapsed : mobileOpen;
+    const toggleNav = () => {
+        if (isDesktop) {
+            writeCollapsed(!collapsed);
+            setCollapsed(!collapsed);
+        } else {
+            setMobileOpen(!mobileOpen);
+        }
+    };
+    const ToggleIcon = !isDesktop ? MenuOutlined : collapsed ? MenuUnfoldOutlined : MenuFoldOutlined;
 
     return (
-        <ConfigProvider
-            theme={{
-                token: {
-                    colorPrimary: "#1677ff",
-                    borderRadius: 8,
-                    fontFamily:
-                        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-                    colorTextSecondary: "#595959",
-                },
-            }}
-        >
-            <Layout style={{ minHeight: "100vh" }}>
-                <Sider
-                    breakpoint="lg"
-                    collapsedWidth={0}
-                    theme="light"
-                    width={240}
-                    collapsed={collapsed}
-                    collapsible
-                    trigger={null}
-                    style={{
-                        borderRight: "1px solid #f0f0f0",
-                        position: "sticky",
-                        top: 0,
-                        height: "100vh",
-                        overflowY: "auto",
-                        zIndex: 20,
-                        display: isMobile ? "none" : "block",
-                    }}
-                >
-                    {!isMobile && (
-                        <>
+        <ConfigProvider theme={antdTheme}>
+            <TooltipProvider>
+                <div className="flex min-h-svh bg-background font-sans text-foreground">
+                    {isDesktop && (
+                        <aside
+                            data-slot="sidebar"
+                            aria-label="Navigasi utama"
+                            className={cn(
+                                "sticky top-0 z-20 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 motion-reduce:transition-none",
+                                collapsed ? "w-[72px]" : "w-60"
+                            )}
+                        >
                             <div
-                                style={{
-                                    height: 64,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: collapsed ? "center" : "flex-start",
-                                    padding: collapsed ? "0" : "0 18px",
-                                    gap: 12,
-                                    borderBottom: "1px solid #f0f0f0",
-                                    transition: "all 0.2s",
-                                }}
+                                className={cn(
+                                    "flex h-16 shrink-0 items-center border-b border-sidebar-border",
+                                    collapsed ? "justify-center px-2" : "px-5"
+                                )}
                             >
-                                <div
-                                    style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: 8,
-                                        background:
-                                            "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        boxShadow: "0 2px 8px rgba(22, 119, 255, 0.35)",
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <RadarChartOutlined
-                                        style={{ color: "#fff", fontSize: 20 }}
-                                    />
+                                <Brand collapsed={collapsed} />
+                            </div>
+                            <nav className="flex-1 overflow-y-auto px-3 py-4">
+                                <NavList items={items} url={page.url} collapsed={collapsed} />
+                            </nav>
+                        </aside>
+                    )}
+
+                    {!isDesktop && (
+                        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                            <SheetContent
+                                side="left"
+                                showCloseButton={false}
+                                className="w-[280px] gap-0 bg-sidebar sm:max-w-[280px]"
+                            >
+                                <SheetTitle className="sr-only">Navigasi utama</SheetTitle>
+                                <SheetDescription className="sr-only">
+                                    Pilih halaman Foresight Radar yang ingin dibuka.
+                                </SheetDescription>
+                                <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border pr-3 pl-5">
+                                    <Brand />
+                                    <SheetClose asChild>
+                                        <Button variant="ghost" size="icon" aria-label="Tutup menu navigasi">
+                                            <MenuFoldOutlined aria-hidden="true" />
+                                        </Button>
+                                    </SheetClose>
                                 </div>
-                                {!collapsed && (
-                                    <div style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
-                                        <span
-                                            style={{
-                                                fontSize: 15,
-                                                fontWeight: 700,
-                                                color: "#001529",
-                                                letterSpacing: "-0.2px",
-                                                display: "block",
-                                                lineHeight: 1.2,
-                                            }}
-                                        >
-                                            Foresight Radar
-                                        </span>
-                                        <span
-                                            style={{
-                                                fontSize: 11,
-                                                color: "#595959",
-                                                fontWeight: 500,
-                                                letterSpacing: "0.5px",
-                                                textTransform: "uppercase",
-                                            }}
-                                        >
-                                            Strategic Intel
-                                        </span>
+                                <nav aria-label="Navigasi utama" className="flex-1 overflow-y-auto px-3 py-4">
+                                    <NavList items={items} url={page.url} onNavigate={() => setMobileOpen(false)} />
+                                </nav>
+                            </SheetContent>
+                        </Sheet>
+                    )}
+
+                    <div className="flex min-w-0 flex-1 flex-col">
+                        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-solid border-border bg-card px-4 lg:px-5">
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={toggleNav}
+                                    aria-expanded={navOpen}
+                                    aria-label={navOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
+                                    className="size-11 shrink-0 border-input bg-card"
+                                >
+                                    <ToggleIcon aria-hidden="true" className="text-base" />
+                                </Button>
+                                {header && (
+                                    <div className="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap">
+                                        {header}
                                     </div>
                                 )}
                             </div>
-                            <Menu
-                                theme="light"
-                                mode="inline"
-                                selectedKeys={[url]}
-                                items={filteredItems}
-                                style={{ borderRight: "none", marginTop: 8 }}
-                            />
-                        </>
-                    )}
-                </Sider>
+                            <UserMenu user={user} />
+                        </header>
 
-                {/* Mobile Navigation Drawer */}
-                <Drawer
-                    placement="left"
-                    open={mobileDrawerOpen}
-                    onClose={() => setMobileDrawerOpen(false)}
-                    styles={{ body: { padding: 0 } }}
-                    width={260}
-                    closable={false}
-                >
-                    <div
-                        style={{
-                            height: 64,
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "0 18px",
-                            gap: 12,
-                            borderBottom: "1px solid #f0f0f0",
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 8,
-                                background:
-                                    "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: "0 2px 8px rgba(22, 119, 255, 0.35)",
-                                flexShrink: 0,
-                            }}
-                        >
-                            <RadarChartOutlined
-                                style={{ color: "#fff", fontSize: 20 }}
-                            />
-                        </div>
-                        <div style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
-                            <span
-                                style={{
-                                    fontSize: 15,
-                                    fontWeight: 700,
-                                    color: "#001529",
-                                    letterSpacing: "-0.2px",
-                                    display: "block",
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                Foresight Radar
-                            </span>
-                            <span
-                                style={{
-                                    fontSize: 11,
-                                    color: "#595959",
-                                    fontWeight: 500,
-                                    letterSpacing: "0.5px",
-                                    textTransform: "uppercase",
-                                    marginTop: 2,
-                                }}
-                            >
-                                Strategic Intel
-                            </span>
-                        </div>
+                        {children}
+
+                        <footer className="mt-auto px-6 py-2.5 text-center text-xs text-subtle-foreground">
+                            Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.
+                        </footer>
                     </div>
-                    <Menu
-                        theme="light"
-                        mode="inline"
-                        selectedKeys={[url]}
-                        items={filteredItems}
-                        onClick={() => setMobileDrawerOpen(false)}
-                        style={{ borderRight: "none", marginTop: 8 }}
-                    />
-                </Drawer>
-                <Layout>
-                    <Header
-                        style={{
-                            padding: "0 20px",
-                            background: colorBgContainer,
-                            borderBottom: "1px solid #f0f0f0",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            height: 64,
-                            position: "sticky",
-                            top: 0,
-                            zIndex: 10,
-                        }}
-                    >
-                        <Flex align="center" gap="middle">
-                            <Button
-                                type="text"
-                                icon={
-                                    isMobile ? (
-                                        <MenuOutlined />
-                                    ) : collapsed ? (
-                                        <MenuUnfoldOutlined />
-                                    ) : (
-                                        <MenuFoldOutlined />
-                                    )
-                                }
-                                onClick={() => {
-                                    if (isMobile) {
-                                        setMobileDrawerOpen(!mobileDrawerOpen);
-                                    } else {
-                                        setCollapsed(!collapsed);
-                                    }
-                                }}
-                                style={{
-                                    fontSize: 16,
-                                    width: 40,
-                                    height: 40,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                }}
-                                aria-label={
-                                    isMobile
-                                        ? (mobileDrawerOpen
-                                            ? "Tutup menu navigasi"
-                                            : "Buka menu navigasi")
-                                        : (collapsed
-                                            ? "Buka menu navigasi"
-                                            : "Tutup menu navigasi")
-                                }
-                            />
-                            {header && (
-                                <div style={{ display: "flex", alignItems: "center" }}>
-                                    {header}
-                                </div>
-                            )}
-                        </Flex>
-                        <Dropdown
-                            placement="bottomRight"
-                            menu={{
-                                items: actions,
-                            }}
-                            trigger={["click"]}
-                        >
-                            <Button
-                                type="text"
-                                style={{
-                                    height: 44,
-                                    padding: "4px 10px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 10,
-                                }}
-                            >
-                                <Avatar
-                                    size="small"
-                                    style={{
-                                        backgroundColor: "#1677ff",
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    {user?.name
-                                        ? user.name.charAt(0).toUpperCase()
-                                        : "U"}
-                                </Avatar>
-                                <span
-                                    style={{
-                                        fontWeight: 500,
-                                        color: "#262626",
-                                        maxWidth: 160,
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        whiteSpace: "nowrap",
-                                    }}
-                                >
-                                    {user?.name}
-                                </span>
-                                <DownOutlined
-                                    style={{ fontSize: 10, color: "#8c8c8c" }}
-                                />
-                            </Button>
-                        </Dropdown>
-                    </Header>
-                    {children}
-                    <Footer
-                        style={{
-                            textAlign: "center",
-                            color: "#8c8c8c",
-                            fontSize: 12,
-                            padding: "10px 24px",
-                        }}
-                    >
-                        Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.
-                    </Footer>
-                </Layout>
-                <FloatButton.BackTop />
-            </Layout>
+                </div>
+            </TooltipProvider>
         </ConfigProvider>
     );
 }
