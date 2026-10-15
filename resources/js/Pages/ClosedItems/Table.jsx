@@ -1,564 +1,167 @@
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import {
-    MoreOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    BarChartOutlined,
-    PlusOutlined,
-    InboxOutlined,
-    FilterOutlined,
-    CalendarOutlined,
-    AppstoreOutlined,
-    ReloadOutlined,
-    RollbackOutlined,
-} from "@ant-design/icons";
+import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
-import {
-    Layout,
-    theme,
-    Breadcrumb,
-    Table,
-    Tag,
-    Dropdown,
-    Space,
-    Flex,
-    Row,
-    Col,
-    Typography,
-    Input,
-    Select,
-    Button,
-    DatePicker,
-    message,
-    Popconfirm,
-    Card,
-    Tooltip,
-    Modal,
-    Form,
-} from "antd";
 import axios from "axios";
-import qs from "qs";
-import dayjs from "dayjs";
-import { useEffect, useRef, useState } from "react";
-import Dialog from "@/Components/Dialog";
+import { toast } from "sonner";
+import { InboxOutlined, RollbackOutlined } from "@ant-design/icons";
 
-export default function TableClosedItems({ auth, title, dimensions }) {
-    // Import
-    const {
-        token: { colorBgContainer, borderRadiusLG },
-    } = theme.useToken();
-    const { Content } = Layout;
-    const { Title } = Typography;
-    const { Search } = Input;
-    const { RangePicker } = DatePicker;
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import AnalysisFilterBar, { useAnalysisFilters } from "@/Components/AnalysisFilters";
+import DataTable, { useServerTable } from "@/Components/DataTable";
+import DimensionChip from "@/Components/DimensionChip";
+import FormDialog from "@/Components/FormDialog";
+import { reviewColumns, StatusWithDate } from "@/Components/ReviewColumns";
+import SearchInput from "@/Components/SearchInput";
+import { statusBadge } from "@/Components/StatusBadge";
+import { Button } from "@/Components/ui/button";
+import { cn } from "@/lib/utils";
+import FormReopen from "./Form";
 
-    // Table
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [defaultDate, setDefaultDate] = useState([
-        dayjs().startOf("month"),
-        dayjs().endOf("month"),
-    ]);
-    const [tableParams, setTableParams] = useState({
-        pagination: {
-            current: 1,
-            pageSize: 10,
-        },
-        date: [
-            dayjs().startOf("month").format("YYYY-MM-DD"),
-            dayjs().endOf("month").format("YYYY-MM-DD"),
-        ],
+const FORM_ID = "reopen-form";
+
+export default function TableClosedItems({ auth, title, dimensions = [] }) {
+    const listHeadingId = useId();
+    // The reopen route is gated by the same permission as approving.
+    const canReopen = (auth?.permissions ?? []).includes("create-approval-items");
+
+    const filters = useAnalysisFilters(dimensions);
+    const { activeDimension } = filters;
+    const [search, setSearch] = useState("");
+    const table = useServerTable({
+        url: route("closed-items.fetch-data"),
+        params: { ...filters.params, search: search || undefined },
     });
 
-    // Modal
-    const formRef = useRef(null);
-    const [errors, setErrors] = useState({});
-    const [open, setOpen] = useState(false);
-    const [titleModal, setTitleModal] = useState("");
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [initialValues, setInitialValues] = useState({});
-
-    useEffect(() => {
-        fetchData();
-    }, [
-        tableParams.pagination?.pageSize,
-        tableParams.pagination?.current,
-        tableParams?.date,
-        tableParams?.search,
-        tableParams?.dimension,
-    ]);
-
-    const getParams = (params) => {
-        return {
-            results: params.pagination?.pageSize,
-            page: params.pagination?.current,
-            ...params,
-        };
-    };
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                `${route("closed-items.fetch-data")}?${qs.stringify(
-                    getParams(tableParams)
-                )}`
-            );
-
-            if (response.status == 200) {
-                setTimeout(() => {
-                    setData(response.data.data);
-                    setTableParams({
-                        ...tableParams,
-                        pagination: {
-                            pageSize: response.data.meta.per_page,
-                            current: response.data.meta.current_page,
-                            total: response.data.meta.total,
-                        },
-                    });
-                    setLoading(false);
-                }, 500);
-            } else {
-                message.error(`Error: ${error.message}`);
-                setLoading(false);
-            }
-        } catch (error) {
-            // TODO: Handling error
-            message.error(`Error: ${error.message}`);
-            setLoading(false);
-        }
-    };
-
-    const columnStatus = (text, record) => {
-        const status = text.toLowerCase();
-        return <Tag color="error">{status} - {record.closed_at}</Tag>;
-    };
-
-    const columns = [
-        {
-            title: "Date Created",
-            dataIndex: "date_created",
-            width: 100,
-        },
-        {
-            title: "Dimension",
-            align: "center",
-            dataIndex: "dimension",
-            width: 100,
-        },
-        {
-            title: "Keyword",
-            dataIndex: "keyword",
-            width: 50,
-        },
-        {
-            title: "Description",
-            dataIndex: "description",
-            width: 100,
-        },
-        {
-            title: "Personal In Charge",
-            dataIndex: "pic",
-            align: "center",
-            width: 60,
-        },
-        {
-            title: "Time Horizon",
-            dataIndex: "time_horizon",
-            align: "center",
-            width: 60,
-        },
-        {
-            title: "Priority",
-            dataIndex: "priority",
-            align: "center",
-            width: 60,
-        },
-        {
-            title: "Uncertainty",
-            dataIndex: "uncertainty_analysis",
-            align: "center",
-            width: 60,
-        },
-        {
-            title: "Impact",
-            dataIndex: "impact_analysis",
-            align: "center",
-            width: 60,
-        },
-        {
-            title: "Status",
-            dataIndex: "status",
-            align: "center",
-            width: 60,
-            render: columnStatus
-        },
-        {
-            title: "Status Action",
-            align: "center",
-            dataIndex: "status_action",
-            width: 60,
-        },
-        {
-            title: "Reason",
-            dataIndex: "reason",
-            width: 60,
-        },
-    ];
-
-    const { user, permissions } = auth;
-
-    const [reopenModalOpen, setReopenModalOpen] = useState(false);
-    const [selectedRecord, setSelectedRecord] = useState(null);
-    const [submittingReopen, setSubmittingReopen] = useState(false);
-    const [reopenForm] = Form.useForm();
-
-    const handleOpenReopenModal = (record) => {
-        setSelectedRecord(record);
-        reopenForm.resetFields();
-        setReopenModalOpen(true);
-    };
-
-    const handleReopenSubmit = async (values) => {
-        if (!selectedRecord) return;
-        setSubmittingReopen(true);
-        try {
-            const response = await axios.post(
-                route("closed-items.reopen", selectedRecord.id),
-                { reason: values.reason }
-            );
-
-            if (response.status === 200 || response.status === 201) {
-                message.success(response.data.message);
-                setReopenModalOpen(false);
-                reopenForm.resetFields();
-                fetchData();
-            } else {
-                message.error("Failed to reopen item");
-            }
-        } catch (error) {
-            message.error(error.response?.data?.errors || `Error: ${error.message}`);
-        } finally {
-            setSubmittingReopen(false);
-        }
-    };
-
-    const columnReopenBtn = (text, record) => {
-        return (
-            <Button
-                type="primary"
-                shape="round"
-                icon={<RollbackOutlined />}
-                onClick={() => handleOpenReopenModal(record)}
-            >
-                Reopen
-            </Button>
-        );
-    };
-
-    if (permissions && permissions.includes("create-approval-items")) {
-        columns.push({
-            title: "",
-            key: "operation",
-            align: "center",
-            render: columnReopenBtn,
-            width: 70,
-        });
-    }
-
-    const handleSearchChange = (value) => {
-        setTableParams({
-            ...tableParams,
-            page: 1,
-            pagination: {
-                pageSize: 10,
-                current: 1,
-            },
-            search: value,
-        });
-    };
-
-    const handleRangePickerChange = (dates) => {
-        if (dates && dates.length === 2) {
-            const formattedDates = dates.map((date) =>
-                date.format("YYYY-MM-DD")
-            );
-
-            setDefaultDate(dates);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: formattedDates,
-            }));
-        } else {
-            const newStartDate = dayjs().startOf("month").format("YYYY-MM-DD");
-            const newEndDate = dayjs().endOf("month").format("YYYY-MM-DD");
-
-            setDefaultDate([dayjs(newStartDate), dayjs(newEndDate)]);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: [newStartDate, newEndDate],
-            }));
-        }
-    };
-
-    const handleSelectChange = (field, value) => {
-        setTableParams({
-            ...tableParams,
-            page: 1,
-            pagination: {
-                pageSize: 10,
-                current: 1,
-            },
-            [field]: value,
-        });
-    };
-
-    const handleTableChange = (pagination, filters, sorter) => {
-        setTableParams({
-            pagination,
-            date: tableParams.date,
-            dimension: tableParams.dimension,
-            search: tableParams.search,
-        });
-
-        if (pagination.pageSize !== tableParams.pagination?.pageSize) {
-            setData([]);
-        }
-    };
-
-    const handleCreateSignal = () => {
-        setOpen(true);
-        setTitleModal("Create Signal Changes");
-        setInitialValues({});
-    };
-
     const handleResetFilter = () => {
-        const start = dayjs().startOf("month");
-        const end = dayjs().endOf("month");
-        setDefaultDate([start, end]);
-        setTableParams((prev) => ({
-            ...prev,
-            page: 1,
-            pagination: { ...prev.pagination, current: 1 },
-            date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")],
-            dimension: null,
-            search: "",
-        }));
+        filters.reset();
+        setSearch("");
     };
 
-    const isFiltered = !!tableParams.dimension || !!tableParams.search;
+    // Reopen dialog
+    const [formOpen, setFormOpen] = useState(false);
+    const [selected, setSelected] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    const openReopen = (record) => {
+        setSelected(record);
+        setFormOpen(true);
+    };
+
+    const handleReopen = async ({ reason }) => {
+        setSubmitting(true);
+        try {
+            const response = await axios.post(route("closed-items.reopen", selected.id), { reason });
+            toast.success(response.data.message);
+            setFormOpen(false);
+            table.reload();
+        } catch (error) {
+            const errors = error.response?.data?.errors;
+            // 422 is either the validation bag or a state-transition message string.
+            if (error.response?.status === 422 && errors && typeof errors === "object") {
+                toast.error("Validation failed", { description: "Periksa kembali isian yang ditandai." });
+                return errors;
+            }
+            toast.error("Failed to reopen item", {
+                description: typeof errors === "string" ? errors : (error.response?.data?.message ?? error.message),
+            });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const columns = useMemo(
+        () => [
+            ...reviewColumns({
+                status: (record) => <StatusWithDate status={record.status} date={record.closed_at} />,
+            }),
+            ...(canReopen
+                ? [
+                      {
+                          id: "actions",
+                          header: () => <span className="sr-only">Aksi</span>,
+                          meta: { align: "center" },
+                          cell: ({ row }) => (
+                              <Button
+                                  size="sm"
+                                  onClick={() => openReopen(row.original)}
+                                  aria-label={`Reopen ${row.original.keyword}`}
+                                  className="rounded-full"
+                              >
+                                  <RollbackOutlined aria-hidden="true" />
+                                  Reopen
+                              </Button>
+                          ),
+                      },
+                  ]
+                : []),
+        ],
+        [canReopen]
+    );
 
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <InboxOutlined style={{ color: "#1677ff", fontSize: 18 }} />
-                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
-                        {title}
-                    </Title>
-                    <Tag
-                        color="blue"
-                        bordered={false}
-                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
-                    >
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <InboxOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
+                    <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Archive Repository
-                    </Tag>
+                    </span>
                 </div>
             }
         >
             <Head title={title} />
 
-            <Content
-                style={{
-                    padding: "12px 18px 8px",
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: "calc(100vh - 104px)",
-                    boxSizing: "border-box",
-                }}
-            >
-                {/* Compact Single-Row Filter Toolbar */}
-                <div className="radar-filter-bar">
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 14,
-                            flexWrap: "wrap",
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                                color: "#1677ff",
-                                fontWeight: 600,
-                                fontSize: 13,
-                            }}
-                        >
-                            <FilterOutlined />
-                            <span>Filter Analisis:</span>
-                        </div>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:px-6 lg:py-5">
+                <AnalysisFilterBar
+                    filters={filters}
+                    dimensions={dimensions}
+                    isFiltered={filters.isFiltered || search !== ""}
+                    onReset={handleResetFilter}
+                />
 
-                        {/* Periode Tanggal */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                <CalendarOutlined style={{ marginRight: 4 }} />
-                                Periode:
-                            </span>
-                            <RangePicker
-                                value={defaultDate}
-                                disabled={loading}
-                                onChange={handleRangePickerChange}
-                                format="YYYY-MM-DD"
-                                style={{ width: 230 }}
-                                size="middle"
-                            />
+                <section aria-labelledby={listHeadingId} className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 id={listHeadingId} className="m-0 text-base font-semibold text-foreground">
+                                Daftar Arsip
+                            </h2>
+                            {activeDimension ? (
+                                <DimensionChip name={activeDimension.label} />
+                            ) : (
+                                <span className={statusBadge()}>Overall</span>
+                            )}
                         </div>
-
-                        {/* Dimensi */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                <AppstoreOutlined style={{ marginRight: 4 }} />
-                                Dimensi:
-                            </span>
-                            <Select
-                                style={{ width: 210 }}
-                                disabled={loading}
-                                placeholder="Semua Dimensi"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                value={tableParams.dimension}
-                                onChange={(value) =>
-                                    handleSelectChange("dimension", value)
-                                }
-                                options={dimensions}
-                                size="middle"
-                            />
-                        </div>
+                        <SearchInput
+                            value={search}
+                            onSearch={setSearch}
+                            label="Cari data arsip"
+                            placeholder="Cari data arsip..."
+                            className="w-full sm:w-[260px]"
+                        />
                     </div>
 
-                    {isFiltered && (
-                        <Tooltip title="Kembalikan filter ke kondisi awal">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<ReloadOutlined />}
-                                onClick={handleResetFilter}
-                                style={{ color: "#ff4d4f", fontSize: 12 }}
-                            >
-                                Reset Filter
-                            </Button>
-                        </Tooltip>
-                    )}
-                </div>
-
-                <Card
-                    bordered={false}
-                    style={{
-                        borderRadius: borderRadiusLG,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                    }}
-                    bodyStyle={{ padding: "16px 20px", flex: 1, display: "flex", flexDirection: "column" }}
-                >
-                    <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-                        <Col>
-                            <Title level={5} style={{ margin: 0 }}>
-                                {title} List
-                            </Title>
-                        </Col>
-                        <Col>
-                            <Search
-                                placeholder="Cari data arsip..."
-                                allowClear
-                                disabled={loading}
-                                value={tableParams.search}
-                                onSearch={handleSearchChange}
-                                onChange={(e) => {
-                                    if (e.target.value === "") {
-                                        handleSearchChange("");
-                                    }
-                                }}
-                                style={{ width: 240 }}
-                                size="middle"
-                            />
-                        </Col>
-                    </Row>
-
-                    <Table
-                        dataSource={data}
-                        rowKey={(record) => record.id}
+                    <DataTable
                         columns={columns}
-                        pagination={tableParams.pagination}
-                        scroll={{ x: "max-content", y: 440 }}
-                        loading={loading}
-                        size="middle"
-                        onChange={handleTableChange}
+                        {...table.tableProps}
+                        getRowId={(row) => row.id}
+                        caption="Daftar driving force yang ditutup"
                     />
-                </Card>
+                </section>
+            </main>
 
-                <Modal
-                    title={`Reopen Driving Force: ${selectedRecord?.keyword || ""}`}
-                    open={reopenModalOpen}
-                    onCancel={() => setReopenModalOpen(false)}
-                    footer={null}
-                    destroyOnClose
-                >
-                    <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
-                        Mengaktifkan kembali driving force akan mengembalikan statusnya ke <strong>PENDING</strong> pada tahap evaluasi dan mencatat justifikasi perubahan pada riwayat audit.
-                    </p>
-                    <Form
-                        form={reopenForm}
-                        layout="vertical"
-                        onFinish={handleReopenSubmit}
-                    >
-                        <Form.Item
-                            name="reason"
-                            label="Alasan Pengaktifan Kembali (Justifikasi)"
-                            rules={[
-                                { required: true, message: "Harap masukkan alasan pengaktifan kembali." },
-                                { min: 5, message: "Alasan minimal 5 karakter." },
-                            ]}
-                        >
-                            <Input.TextArea
-                                rows={4}
-                                placeholder="Contoh: Perubahan lanskap regulasi Q4 memicu kebutuhan analisis ulang..."
-                                maxLength={1000}
-                                showCount
-                            />
-                        </Form.Item>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-                            <Button onClick={() => setReopenModalOpen(false)}>
-                                Batal
-                            </Button>
-                            <Button type="primary" htmlType="submit" loading={submittingReopen} icon={<RollbackOutlined />}>
-                                Aktifkan Kembali
-                            </Button>
-                        </div>
-                    </Form>
-                </Modal>
-            </Content>
+            <FormDialog
+                title={`Reopen Driving Force: ${selected?.keyword ?? ""}`}
+                open={formOpen}
+                onOpenChange={setFormOpen}
+                formId={FORM_ID}
+                btnText="Aktifkan Kembali"
+                cancelText="Batal"
+                loading={submitting}
+                width={520}
+            >
+                <FormReopen id={FORM_ID} loading={submitting} onSubmit={handleReopen} />
+            </FormDialog>
         </AuthenticatedLayout>
     );
 }

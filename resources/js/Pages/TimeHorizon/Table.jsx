@@ -1,508 +1,184 @@
-import Dialog from "@/Components/Dialog";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import {
-    BarChartOutlined,
-    EditOutlined,
-    MoreOutlined,
-    ClockCircleOutlined,
-    FilterOutlined,
-    CalendarOutlined,
-    AppstoreOutlined,
-    ReloadOutlined,
-} from "@ant-design/icons";
+import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
-import {
-    Col,
-    DatePicker,
-    Dropdown,
-    Flex,
-    message,
-    Row,
-    Select,
-    Space,
-    Table,
-    theme,
-    Typography,
-    Card,
-    Tag,
-    Tooltip,
-    Button,
-} from "antd";
-import { Content } from "antd/es/layout/layout";
-import dayjs from "dayjs";
-import qs from "qs";
-import { useEffect, useRef, useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { CheckOutlined, ClockCircleOutlined } from "@ant-design/icons";
+
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import DataTable, { useServerTable } from "@/Components/DataTable";
+import AnalysisFilterBar, { useAnalysisFilters } from "@/Components/AnalysisFilters";
+import DimensionChip from "@/Components/DimensionChip";
+import FormDialog from "@/Components/FormDialog";
+import { statusBadge } from "@/Components/StatusBadge";
+import { Button } from "@/Components/ui/button";
+import { cn } from "@/lib/utils";
 import FormTimeHorizon from "./Form";
 
-export default function TableTimeHorizon({ auth, title, dimensions, time_horizons }) {
-    // Import
-    const {
-        token: { colorBgContainer, borderRadiusLG },
-    } = theme.useToken();
-    const { RangePicker } = DatePicker;
-    const { Title } = Typography;
+const FORM_ID = "time-horizon-form";
 
-    // Table
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [defaultDate, setDefaultDate] = useState([
-        dayjs().startOf("month"),
-        dayjs().endOf("month"),
-    ]);
-    const [tableParams, setTableParams] = useState({
-        pagination: {
-            current: 1,
-            pageSize: 10,
-        },
-        date: [
-            dayjs().startOf("month").format("YYYY-MM-DD"),
-            dayjs().endOf("month").format("YYYY-MM-DD"),
-        ],
-    });
+// TimeHorizonResource marks the chosen horizon with "✔" in one of these fields.
+const HORIZONS = [
+    { key: "short_term", header: "SHORT TERM", label: "Short term", tint: "bg-horizon-short", cellTint: "bg-horizon-short/35" },
+    { key: "mid_term", header: "MID TERM", label: "Mid term", tint: "bg-horizon-mid", cellTint: "bg-horizon-mid/35" },
+    { key: "long_term", header: "LONG TERM", label: "Long term", tint: "bg-horizon-long", cellTint: "bg-horizon-long/35" },
+];
 
-    // Modal
-    const formRef = useRef(null);
-    const [errors, setErrors] = useState({});
-    const [open, setOpen] = useState(false);
-    const [titleModal, setTitleModal] = useState("");
-    const [initialValues, setInitialValues] = useState({});
+function HorizonMark({ checked, label }) {
+    if (!checked) return null;
 
-    useEffect(() => {
-        fetchData();
-    }, [
-        tableParams.pagination?.pageSize,
-        tableParams.pagination?.current,
-        tableParams?.date,
-        tableParams?.dimension,
-    ]);
+    return (
+        <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <CheckOutlined aria-hidden="true" />
+            <span className="sr-only">{label}</span>
+        </span>
+    );
+}
 
-    const getParams = (params) => {
-        return {
-            results: params.pagination?.pageSize,
-            page: params.pagination?.current,
-            ...params,
-        };
-    };
+export default function TableTimeHorizon({ auth, title, dimensions = [], time_horizons = [] }) {
+    const listHeadingId = useId();
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                `${route("time-horizon.fetch-data")}?${qs.stringify(
-                    getParams(tableParams)
-                )}`
-            );
+    const filters = useAnalysisFilters(dimensions);
+    const { activeDimension } = filters;
+    const table = useServerTable({ url: route("time-horizon.fetch-data"), params: filters.params });
 
-            if (response.status == 200) {
-                setTimeout(() => {
-                    const currentPage = response.data.meta?.current_page || 1;
-                    const perPage = response.data.meta?.per_page || 10;
-                    const newData = response.data.data.map((d, i) => ({
-                        no: (currentPage - 1) * perPage + i + 1,
-                        ...d,
-                    }));
-                    setData(newData);
-                    setTableParams({
-                        ...tableParams,
-                        pagination: {
-                            pageSize: response.data.meta.per_page,
-                            current: response.data.meta.current_page,
-                            total: response.data.meta.total,
-                        },
-                    });
-                    setLoading(false);
-                }, 500);
-            } else {
-                message.error(`Error: ${error.message}`);
-                setLoading(false);
-            }
-        } catch (error) {
-            // TODO: Handling error
-            message.error(`Error: ${error.message}`);
-            setLoading(false);
-        }
-    };
+    // Set time horizon dialog
+    const [formOpen, setFormOpen] = useState(false);
+    const [selected, setSelected] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleRangePickerChange = (dates) => {
-        if (dates && dates.length === 2) {
-            const formattedDates = dates.map((date) =>
-                date.format("YYYY-MM-DD")
-            );
-
-            setDefaultDate(dates);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: formattedDates,
-            }));
-        } else {
-            const newStartDate = dayjs().startOf("month").format("YYYY-MM-DD");
-            const newEndDate = dayjs().endOf("month").format("YYYY-MM-DD");
-
-            setDefaultDate([dayjs(newStartDate), dayjs(newEndDate)]);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: [newStartDate, newEndDate],
-            }));
-        }
-    };
-
-    const handleDropdownClick = (key, record) => {
-        switch (key) {
-            case "calculate":
-                setOpen(true);
-                setLoading(true);
-                setTimeout(() => {
-                    setLoading(false);
-                }, 500);
-                setTitleModal(`Set Time Horizon - ${record.keyword}`);
-                setInitialValues(record);
-                break;
-            default:
-                return;
-        }
-    };
-
-    const handleSelectChange = (field, value) => {
-        setTableParams({
-            ...tableParams,
-            page: 1,
-            pagination: {
-                pageSize: 10,
-                current: 1,
-            },
-            [field]: value,
-        });
-    };
-
-    const columnAction = (text, record) => {
-        const actions = [
-            {
-                key: "calculate",
-                label: (
-                    <Flex gap="middle" vertical={false}>
-                        <BarChartOutlined />
-                        Set Time Horizon
-                    </Flex>
-                ),
-            },
-        ];
-
-        return (
-            <Dropdown
-                placement="topLeft"
-                menu={{
-                    items: actions,
-                    onClick: ({ key }) => handleDropdownClick(key, record),
-                }}
-                trigger={["hover"]}
-            >
-                <a onClick={(e) => e.preventDefault()}>
-                    <Space>
-                        <MoreOutlined />
-                    </Space>
-                </a>
-            </Dropdown>
-        );
-    };
-
-    const columns = [
-        {
-            title: "No",
-            dataIndex: "no",
-            key: "no",
-            width: 70,
-            align: "center",
-        },
-        {
-            title: "Keyword",
-            dataIndex: "keyword",
-            key: "keyword",
-            width: 250,
-        },
-        {
-            title: "SHORT TERM",
-            dataIndex: "short_term",
-            key: "short_term",
-            align: "center",
-        },
-        {
-            title: "MID TERM",
-            dataIndex: "mid_term",
-            key: "mid_term",
-            align: "center",
-        },
-        {
-            title: "LONG TERM",
-            dataIndex: "long_term",
-            key: "long_term",
-            align: "center",
-        },
-        {
-            title: "",
-            key: "operation",
-            fixed: "right",
-            align: "right",
-            width: 60,
-            render: columnAction,
-        },
-    ];
-
-    const showActiveDimension = (dimension) => {
-        const { label } = dimensions.find((d) => d.value === dimension);
-
-        return label.toUpperCase();
-    };
-
-    const handleOkModal = () => {
-        if (formRef?.current) {
-            setErrors({});
-            formRef.current.submit();
-        }
-    };
-
-    const handleCancelModal = () => {
-        if (formRef?.current) {
-            setErrors({});
-            formRef.current.reset();
-        }
-        setOpen(false);
-    };
-
-    const handleTableChange = (pagination, filters, sorter) => {
-        setTableParams({
-            pagination,
-            date: tableParams.date,
-            dimension: tableParams.dimension,
-        });
-
-        if (pagination.pageSize !== tableParams.pagination?.pageSize) {
-            setData([]);
-        }
+    const openForm = (record) => {
+        setSelected(record);
+        setFormOpen(true);
     };
 
     const handleFormSubmit = async (values) => {
-        setLoading(true);
-
+        setSubmitting(true);
         try {
-            const response = await axios.post(route("time-horizon.create", initialValues.id), values);
-
-            if (response.status === 200 || response.status === 201) {
-                message.success(
-                    response.data.message
-                );
-                setOpen(false);
-                fetchData(); // Refresh the table data
-            } else {
-                message.error(
-                    `Failed to create time horizon`
-                );
-            }
+            const response = await axios.post(route("time-horizon.create", selected.id), values);
+            toast.success(response.data.message);
+            setFormOpen(false);
+            table.reload();
         } catch (error) {
-            // TODO: Handling error
-            if (error.response.status === 422) {
-                setErrors(error.response.data.errors);
-                message.error(`Error: validation failed`);
-            } else {
-                message.error(error)
+            if (error.response?.status === 422) {
+                toast.error("Validation failed", { description: "Periksa kembali isian yang ditandai." });
+                return error.response.data.errors;
             }
+            toast.error("Failed to set time horizon", {
+                description: error.response?.data?.message ?? error.message,
+            });
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 
-    const handleResetFilter = () => {
-        const start = dayjs().startOf("month");
-        const end = dayjs().endOf("month");
-        setDefaultDate([start, end]);
-        setTableParams((prev) => ({
-            ...prev,
-            page: 1,
-            pagination: { ...prev.pagination, current: 1 },
-            date: [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")],
-            dimension: null,
-        }));
-    };
+    const { pageIndex, pageSize } = table.pagination;
 
-    const isFiltered = !!tableParams.dimension;
+    const columns = useMemo(
+        () => [
+            {
+                id: "no",
+                header: "No",
+                meta: { align: "center", width: "64px", className: "tabular-nums text-muted-foreground" },
+                cell: ({ row }) => pageIndex * pageSize + row.index + 1,
+            },
+            {
+                accessorKey: "keyword",
+                header: "Keyword",
+                meta: { className: "min-w-[200px] font-medium text-foreground" },
+            },
+            {
+                accessorKey: "dimension",
+                header: "Dimension",
+                cell: ({ getValue }) => <DimensionChip name={getValue()} />,
+            },
+            ...HORIZONS.map((horizon) => ({
+                accessorKey: horizon.key,
+                header: horizon.header,
+                meta: {
+                    align: "center",
+                    width: "128px",
+                    headerClassName: cn(horizon.tint, "text-foreground"),
+                    className: horizon.cellTint,
+                },
+                cell: ({ getValue }) => <HorizonMark checked={!!getValue()} label={horizon.label} />,
+            })),
+            {
+                id: "actions",
+                header: () => <span className="sr-only">Aksi</span>,
+                meta: { align: "right", width: "150px" },
+                cell: ({ row }) => (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openForm(row.original)}
+                        aria-label={`Set Time Horizon untuk ${row.original.keyword}`}
+                        className="border-input"
+                    >
+                        <ClockCircleOutlined aria-hidden="true" />
+                        Set Horizon
+                    </Button>
+                ),
+            },
+        ],
+        [pageIndex, pageSize]
+    );
 
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <ClockCircleOutlined style={{ color: "#1677ff", fontSize: 18 }} />
-                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
-                        {title}
-                    </Title>
-                    <Tag
-                        color="blue"
-                        bordered={false}
-                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
-                    >
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <ClockCircleOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
+                    <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Horizon Assessment
-                    </Tag>
+                    </span>
                 </div>
             }
         >
             <Head title={title} />
 
-            <Content
-                style={{
-                    padding: "12px 18px 8px",
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: "calc(100vh - 104px)",
-                    boxSizing: "border-box",
-                }}
-            >
-                {/* Compact Single-Row Filter Toolbar */}
-                <div className="radar-filter-bar">
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 14,
-                            flexWrap: "wrap",
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                                color: "#1677ff",
-                                fontWeight: 600,
-                                fontSize: 13,
-                            }}
-                        >
-                            <FilterOutlined />
-                            <span>Filter Analisis:</span>
-                        </div>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:px-6 lg:py-5">
+                <AnalysisFilterBar filters={filters} dimensions={dimensions} />
 
-                        {/* Periode Tanggal */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                <CalendarOutlined style={{ marginRight: 4 }} />
-                                Periode:
-                            </span>
-                            <RangePicker
-                                value={defaultDate}
-                                disabled={loading}
-                                onChange={handleRangePickerChange}
-                                format="YYYY-MM-DD"
-                                style={{ width: 230 }}
-                                size="middle"
-                            />
-                        </div>
-
-                        {/* Dimensi */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                <AppstoreOutlined style={{ marginRight: 4 }} />
-                                Dimensi:
-                            </span>
-                            <Select
-                                style={{ width: 210 }}
-                                disabled={loading}
-                                placeholder="Semua Dimensi"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                value={tableParams.dimension}
-                                onChange={(value) =>
-                                    handleSelectChange("dimension", value)
-                                }
-                                options={dimensions}
-                                size="middle"
-                            />
-                        </div>
+                <section aria-labelledby={listHeadingId} className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h2 id={listHeadingId} className="m-0 text-base font-semibold text-foreground">
+                            Horizon per Driving Force
+                        </h2>
+                        {activeDimension ? (
+                            <DimensionChip name={activeDimension.label} />
+                        ) : (
+                            <span className={statusBadge()}>Overall</span>
+                        )}
                     </div>
 
-                    {isFiltered && (
-                        <Tooltip title="Kembalikan filter ke kondisi awal">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<ReloadOutlined />}
-                                onClick={handleResetFilter}
-                                style={{ color: "#ff4d4f", fontSize: 12 }}
-                            >
-                                Reset Filter
-                            </Button>
-                        </Tooltip>
-                    )}
-                </div>
-
-                <Card
-                    bordered={false}
-                    style={{
-                        borderRadius: borderRadiusLG,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                    }}
-                    bodyStyle={{ padding: "16px 20px", flex: 1, display: "flex", flexDirection: "column" }}
-                >
-                    <Table
+                    <DataTable
                         columns={columns}
-                        dataSource={data}
-                        bordered
-                        size="middle"
-                        loading={loading}
-                        rowKey={(record) => record.id}
-                        onChange={handleTableChange}
-                        pagination={tableParams.pagination}
-                        scroll={{ x: "max-content", y: 440 }}
-                        title={() => (
-                            <div
-                                style={{ textAlign: "center", fontWeight: 600, color: "#1f1f1f" }}
-                            >
-                                TIME HORIZON
-                                {tableParams?.dimension
-                                    ? ` ▶ ${showActiveDimension(
-                                          tableParams.dimension
-                                      )}`
-                                    : " ▶ OVERALL"}
-                            </div>
-                        )}
+                        {...table.tableProps}
+                        getRowId={(row) => String(row.id)}
+                        caption={`Time horizon ${activeDimension ? activeDimension.label : "overall"}`}
                     />
-                </Card>
-            </Content>
+                </section>
+            </main>
 
-            <Dialog
-                title={titleModal}
-                open={open}
-                loading={loading}
+            <FormDialog
+                title={`Set Time Horizon - ${selected?.keyword ?? ""}`}
+                open={formOpen}
+                onOpenChange={setFormOpen}
+                formId={FORM_ID}
                 btnText="Set"
-                onOk={handleOkModal}
-                onCancel={handleCancelModal}
+                loading={submitting}
+                width={560}
             >
                 <FormTimeHorizon
-                    ref={formRef}
-                    isEditMode={false}
-                    initialValues={initialValues}
-                    errors={errors}
+                    id={FORM_ID}
+                    initialValues={selected ?? {}}
                     time_horizons={time_horizons}
-                    loading={loading}
-                    onFinish={handleFormSubmit}
+                    loading={submitting}
+                    onSubmit={handleFormSubmit}
                 />
-            </Dialog>
+            </FormDialog>
         </AuthenticatedLayout>
     );
 }

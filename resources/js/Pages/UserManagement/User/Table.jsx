@@ -1,423 +1,231 @@
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import {
-    MoreOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    BarChartOutlined,
-    PlusOutlined,
-    UserOutlined,
-} from "@ant-design/icons";
+import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
-import {
-    Layout,
-    theme,
-    Breadcrumb,
-    Table,
-    Tag,
-    Dropdown,
-    Space,
-    Flex,
-    Row,
-    Col,
-    Typography,
-    Input,
-    Select,
-    Button,
-    message,
-    Popconfirm,
-    Card,
-    Tooltip,
-} from "antd";
 import axios from "axios";
-import qs from "qs";
-import { useEffect, useRef, useState } from "react";
-import Dialog from "@/Components/Dialog";
+import { toast } from "sonner";
+import { DeleteOutlined, EditOutlined, MoreOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
+
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import ConfirmDialog from "@/Components/ConfirmDialog";
+import DataTable, { useServerTable } from "@/Components/DataTable";
+import FormDialog from "@/Components/FormDialog";
+import SearchInput from "@/Components/SearchInput";
+import { statusBadge } from "@/Components/StatusBadge";
+import { Button, buttonVariants } from "@/Components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/Components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import FormUser from "./Form";
 
-export default function TableUser({ auth, title, roles }) {
-    // Import
-    const {
-        token: { colorBgContainer, borderRadiusLG },
-    } = theme.useToken();
-    const { Content } = Layout;
-    const { Title } = Typography;
-    const { Search } = Input;
+const FORM_ID = "user-form";
 
-    // Table
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [tableParams, setTableParams] = useState({
-        pagination: {
-            current: 1,
-            pageSize: 10,
-        },
-        search: "",
+function RowActions({ record, onEdit, onDelete }) {
+    return (
+        // Non-modal so the dialogs opened from it get focus and pointer events cleanly.
+        <DropdownMenu modal={false}>
+            {/* Native trigger, not <Button asChild>: the ui Button has no forwardRef on React 18. */}
+            <DropdownMenuTrigger
+                aria-label={`Aksi untuk ${record.name}`}
+                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+                <MoreOutlined aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-36">
+                <DropdownMenuItem onSelect={() => onEdit(record)}>
+                    <EditOutlined aria-hidden="true" />
+                    Edit
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => onDelete(record)}>
+                    <DeleteOutlined aria-hidden="true" />
+                    Delete
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
+
+export default function TableUser({ auth, title, roles = [] }) {
+    const listHeadingId = useId();
+
+    const [search, setSearch] = useState("");
+    const table = useServerTable({
+        url: route("user-management.user.fetch-data"),
+        params: { search: search || undefined },
     });
 
-    // Modal
-    const formRef = useRef(null);
-    const [errors, setErrors] = useState({});
-    const [open, setOpen] = useState(false);
-    const [titleModal, setTitleModal] = useState("");
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [initialValues, setInitialValues] = useState({});
+    // Create / edit dialog
+    const [formOpen, setFormOpen] = useState(false);
+    const [editing, setEditing] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        fetchData();
-    }, [
-        tableParams.pagination?.pageSize,
-        tableParams.pagination?.current,
-        tableParams?.search,
-    ]);
-
-    const getParams = (params) => {
-        return {
-            results: params.pagination?.pageSize,
-            page: params.pagination?.current,
-            ...params,
-        };
+    const openCreate = () => {
+        setEditing(null);
+        setFormOpen(true);
     };
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                `${route("user-management.user.fetch-data")}?${qs.stringify(
-                    getParams(tableParams)
-                )}`
-            );
-
-            if (response.status == 200) {
-                setTimeout(() => {
-                    setData(response.data.data);
-                    setTableParams({
-                        ...tableParams,
-                        pagination: {
-                            pageSize: response.data.meta.per_page,
-                            current: response.data.meta.current_page,
-                            total: response.data.meta.total,
-                        },
-                    });
-                    setLoading(false);
-                }, 500);
-            } else {
-                message.error(`Error: ${error.message}`);
-                setLoading(false);
-            }
-        } catch (error) {
-            // TODO: Handling error
-            message.error(`Error: ${error.message}`);
-            setLoading(false);
-        }
-    };
-
-    const columnAction = (text, record) => {
-        const actions = [
-            {
-                key: "edit",
-                label: (
-                    <Flex gap="middle" vertical={false}>
-                        <EditOutlined />
-                        Edit
-                    </Flex>
-                ),
-            },
-            {
-                key: "delete",
-                label: (
-                    <Popconfirm
-                        title="Delete user"
-                        description="Are you sure to delete this user ?"
-                        onConfirm={() => handleDeleteButton(record)}
-                        okText="Yes"
-                        cancelText="No"
-                    >
-                        <Flex gap="middle" vertical={false}>
-                            <DeleteOutlined />
-                            Delete
-                        </Flex>
-                    </Popconfirm>
-                ),
-            },
-        ];
-
-        return (
-            <Dropdown
-                placement="topLeft"
-                menu={{
-                    items: actions,
-                    onClick: ({ key }) => handleDropdownClick(key, record),
-                }}
-                trigger={["hover"]}
-            >
-                <a onClick={(e) => e.preventDefault()}>
-                    <Space>
-                        <MoreOutlined />
-                    </Space>
-                </a>
-            </Dropdown>
-        );
-    };
-
-    const columns = [
-        {
-            title: "Date Created",
-            dataIndex: "date_created",
-            width: 100,
-        },
-        {
-            title: "Name",
-            dataIndex: "name",
-            width: 100,
-        },
-        {
-            title: "Email",
-            dataIndex: "email",
-            width: 150,
-        },
-        {
-            title: "Role/Division",
-            dataIndex: "role",
-            width: 150,
-        },
-        {
-            title: "",
-            key: "operation",
-            fixed: "right",
-            align: "right",
-            width: 20,
-            render: columnAction,
-        },
-    ];
-
-    const handleDropdownClick = (key, record) => {
-        switch (key) {
-            case "edit":
-                setOpen(true);
-                setLoading(true);
-                setTimeout(() => {
-                    setLoading(false);
-                }, 500);
-                setTitleModal(`Update User - ${record.name}`);
-                setIsEditMode(true);
-                setInitialValues(record);
-                break;
-            default:
-                return;
-        }
-    };
-
-    const handleSearchChange = (value) => {
-        setTableParams({
-            ...tableParams,
-            page: 1,
-            pagination: {
-                pageSize: 10,
-                current: 1,
-            },
-            search: value,
-        });
-    };
-
-    const handleTableChange = (pagination, filters, sorter) => {
-        setTableParams({
-            pagination,
-            search: tableParams.search,
-        });
-
-        if (pagination.pageSize !== tableParams.pagination?.pageSize) {
-            setData([]);
-        }
-    };
-
-    const handleCreateButton = () => {
-        setOpen(true);
-        setTitleModal("Create User");
-        setInitialValues({});
-    };
-
-    const handleDeleteButton = async (record) => {
-        setLoading(true);
-
-        try {
-            const response = await axios.delete(
-                route("user-management.user.delete", `${record.id}`)
-            );
-
-            if (response.status === 200 || response.status === 201) {
-                message.success(response.data.message);
-                fetchData(); // Refresh the table data
-            } else {
-                message.error(`Failed to delete user ${record.name}`);
-            }
-        } catch (error) {
-            if (error.response.status === 422) {
-                setErrors(error.response.data.errors);
-            }
-            message.error(`Error: validation failed`);
-        } finally {
-            setLoading(false);
-        }
+    const openEdit = (record) => {
+        setEditing(record);
+        setFormOpen(true);
     };
 
     const handleFormSubmit = async (values) => {
-        setLoading(true);
-
+        setSubmitting(true);
         try {
-            const response = isEditMode
-                ? await axios.put(
-                      route(
-                          "user-management.user.update",
-                          `${initialValues.id}`
-                      ),
-                      values
-                  )
-                : await axios.post(
-                      route("user-management.user.create"),
-                      values
-                  );
+            // UserRequest applies the create rules (password, name length) only when `type` is "create".
+            const response = editing
+                ? await axios.put(route("user-management.user.update", editing.id), values)
+                : await axios.post(route("user-management.user.create"), { ...values, type: "create" });
 
-            if (response.status === 200 || response.status === 201) {
-                message.success(response.data.message);
-                setOpen(false);
-                fetchData(); // Refresh the table data
-            } else {
-                message.error(
-                    `Failed to ${isEditMode ? "update" : "create"} user`
-                );
-            }
+            toast.success(response.data.message);
+            setFormOpen(false);
+            table.reload();
         } catch (error) {
-            // TODO: Handling error
-            if (error.response.status === 422) {
-                setErrors(error.response.data.errors);
-                message.error(`Error: validation failed`);
+            if (error.response?.status === 422) {
+                toast.error("Validation failed", { description: "Periksa kembali isian yang ditandai." });
+                return error.response.data.errors;
             }
+            toast.error(`Failed to ${editing ? "update" : "create"} user`, {
+                description: error.response?.data?.message ?? error.message,
+            });
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 
-    const handleOkModal = () => {
-        if (formRef.current) {
-            setErrors({});
-            formRef.current.submit();
+    // Delete; the target stays set while the dialog animates closed.
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+
+    const confirmDelete = (record) => {
+        setDeleteTarget(record);
+        setDeleteOpen(true);
+    };
+
+    const handleDelete = async () => {
+        try {
+            const response = await axios.delete(route("user-management.user.delete", deleteTarget.id));
+            toast.success(response.data.message);
+            table.reload();
+        } catch (error) {
+            toast.error(`Failed to delete user ${deleteTarget.name}`, {
+                description: error.response?.data?.message ?? error.message,
+            });
+            throw error;
         }
     };
 
-
-    const handleCancelModal = () => {
-        setErrors({});
-        formRef.current.reset();
-        setIsEditMode(false);
-        setOpen(false);
-    };
+    const columns = useMemo(
+        () => [
+            {
+                accessorKey: "date_created",
+                header: "Date Created",
+                meta: { className: "whitespace-nowrap" },
+            },
+            {
+                accessorKey: "name",
+                header: "Name",
+                meta: { className: "font-medium text-foreground" },
+            },
+            {
+                accessorKey: "email",
+                header: "Email",
+                meta: { className: "text-muted-foreground" },
+            },
+            {
+                accessorKey: "role",
+                header: "Role/Division",
+                cell: ({ getValue }) => (
+                    <span className={cn(statusBadge(), "bg-accent text-primary")}>{getValue() || "-"}</span>
+                ),
+            },
+            {
+                id: "actions",
+                header: () => <span className="sr-only">Aksi</span>,
+                meta: { align: "right", width: "56px" },
+                cell: ({ row }) => <RowActions record={row.original} onEdit={openEdit} onDelete={confirmDelete} />,
+            },
+        ],
+        []
+    );
 
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <UserOutlined style={{ color: "#1677ff", fontSize: 18 }} />
-                    <Title level={4} style={{ margin: 0, color: "#1f1f1f" }}>
-                        {title}
-                    </Title>
-                    <Tag
-                        color="blue"
-                        bordered={false}
-                        style={{ fontSize: 11, fontWeight: 600, borderRadius: 10 }}
-                    >
-                        Access & Roles
-                    </Tag>
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <UserOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
+                    <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
+                        Access &amp; Roles
+                    </span>
                 </div>
             }
         >
             <Head title={title} />
 
-            <Content
-                style={{
-                    padding: "12px 18px 8px",
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: "calc(100vh - 104px)",
-                    boxSizing: "border-box",
-                }}
-            >
-                <Card
-                    bordered={false}
-                    style={{
-                        borderRadius: borderRadiusLG,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                    }}
-                    bodyStyle={{ padding: "16px 20px", flex: 1, display: "flex", flexDirection: "column" }}
-                >
-                    <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-                        <Col>
-                            <Title level={5} style={{ margin: 0 }}>
-                                {title} List
-                            </Title>
-                        </Col>
-                        <Col>
-                            <Space size={10}>
-                                <Search
-                                    placeholder="Cari pengguna..."
-                                    allowClear
-                                    disabled={loading}
-                                    value={tableParams.search}
-                                    onSearch={handleSearchChange}
-                                    onChange={(e) => {
-                                        if (e.target.value === "") {
-                                            handleSearchChange("");
-                                        }
-                                    }}
-                                    style={{ width: 220 }}
-                                    size="middle"
-                                />
-                                <Button
-                                    disabled={loading}
-                                    type="primary"
-                                    icon={<PlusOutlined />}
-                                    onClick={handleCreateButton}
-                                >
-                                    Tambah Pengguna
-                                </Button>
-                            </Space>
-                        </Col>
-                    </Row>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:px-6 lg:py-5">
+                <section aria-labelledby={listHeadingId} className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h2 id={listHeadingId} className="m-0 text-base font-semibold text-foreground">
+                            Daftar Pengguna
+                        </h2>
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                            <SearchInput
+                                value={search}
+                                onSearch={setSearch}
+                                label="Cari pengguna"
+                                placeholder="Cari pengguna..."
+                                className="flex-1 sm:w-[240px] sm:flex-none"
+                            />
+                            <Button onClick={openCreate}>
+                                <PlusOutlined aria-hidden="true" />
+                                Tambah Pengguna
+                            </Button>
+                        </div>
+                    </div>
 
-                    <Table
-                        dataSource={data}
-                        rowKey={(record) => record.id}
+                    <DataTable
                         columns={columns}
-                        pagination={tableParams.pagination}
-                        scroll={{ x: "max-content", y: 440 }}
-                        loading={loading}
-                        size="middle"
-                        onChange={handleTableChange}
+                        {...table.tableProps}
+                        getRowId={(row) => row.id}
+                        caption="Daftar pengguna"
                     />
-                </Card>
-            </Content>
+                </section>
+            </main>
 
-            <Dialog
-                title={titleModal}
-                open={open}
-                loading={loading}
-                isEditMode={isEditMode}
-                onOk={handleOkModal}
-                onCancel={handleCancelModal}
+            <FormDialog
+                title={editing ? `Update User - ${editing.name}` : "Create User"}
+                open={formOpen}
+                onOpenChange={setFormOpen}
+                isEditMode={!!editing}
+                formId={FORM_ID}
+                loading={submitting}
+                width={520}
             >
                 <FormUser
-                    ref={formRef}
-                    isEditMode={isEditMode}
-                    initialValues={initialValues}
+                    id={FORM_ID}
+                    isEditMode={!!editing}
+                    initialValues={editing ?? {}}
                     roles={roles}
-                    errors={errors}
-                    loading={loading}
-                    onFinish={handleFormSubmit}
+                    loading={submitting}
+                    onSubmit={handleFormSubmit}
                 />
-            </Dialog>
+            </FormDialog>
+
+            <ConfirmDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                title="Delete user"
+                description={`Are you sure to delete ${deleteTarget?.name ?? "this user"}? This can't be undone.`}
+                confirmText="Delete"
+                cancelText="Cancel"
+                onConfirm={handleDelete}
+            />
         </AuthenticatedLayout>
     );
 }
