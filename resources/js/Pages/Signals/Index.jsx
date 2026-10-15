@@ -1,611 +1,460 @@
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import {
-    FileTextOutlined,
-    CheckCircleOutlined,
-    CloseCircleOutlined,
-    LinkOutlined,
-    PlusCircleOutlined,
-    SearchOutlined,
-    ThunderboltOutlined,
-    AuditOutlined,
-    EyeOutlined,
-    InfoCircleOutlined,
-    CloudUploadOutlined,
-} from "@ant-design/icons";
+import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
-import {
-    Layout,
-    theme,
-    Breadcrumb,
-    Table,
-    Tag,
-    Space,
-    Row,
-    Col,
-    Typography,
-    Input,
-    Select,
-    Button,
-    DatePicker,
-    message,
-    Modal,
-    Card,
-    Tooltip,
-    Tabs,
-    Form,
-    Badge,
-    Descriptions,
-    Divider,
-    Alert,
-} from "antd";
 import axios from "axios";
-import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+    CirclePlusIcon,
+    CircleXIcon,
+    ClipboardCheckIcon,
+    CloudUploadIcon,
+    EyeIcon,
+    LinkIcon,
+    ZapIcon,
+} from "lucide-react";
 
-const { Content } = Layout;
-const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { FilterSelect, filterParam } from "@/Components/AnalysisFilters";
+import DataTable, { useServerTable } from "@/Components/DataTable";
+import DetailList, { DetailItem } from "@/Components/DetailList";
+import DimensionChip from "@/Components/DimensionChip";
+import FilterBar, { FilterField } from "@/Components/FilterBar";
+import FormDialog from "@/Components/FormDialog";
+import PageHeader from "@/Components/PageHeader";
+import SearchInput from "@/Components/SearchInput";
+import StatusBadge, { statusBadge } from "@/Components/StatusBadge";
+import { Button } from "@/Components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/Components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
+import { fromPaginator } from "@/hooks/use-server-table";
+import { useReturnFocus } from "@/hooks/use-return-focus";
+import { cn } from "@/lib/utils";
+import IngestForm from "./IngestForm";
+import ReviewForm, { REVIEW_ACTIONS } from "./ReviewForm";
 
-export default function SignalIndex({ auth, title, dimensions, timeHorizons, existingDrivingForces }) {
-    const {
-        token: { colorBgContainer, borderRadiusLG },
-    } = theme.useToken();
+const REVIEW_FORM_ID = "signal-review-form";
 
-    const [activeTab, setActiveTab] = useState("review");
-    const [ingestForm] = Form.useForm();
-    const [ingesting, setIngesting] = useState(false);
+const STATUS_OPTIONS = [
+    { value: "PENDING", label: "Review Status: Pending" },
+    { value: "ACCEPTED", label: "Review Status: Accepted" },
+    { value: "REJECTED", label: "Review Status: Rejected" },
+    { value: "ALL", label: "All Statuses" },
+];
 
-    // Review Table State
-    const [signals, setSignals] = useState([]);
-    const [loadingSignals, setLoadingSignals] = useState(false);
-    const [statusFilter, setStatusFilter] = useState("PENDING");
-    const [dimensionFilter, setDimensionFilter] = useState(null);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+// review_status values; ACCEPTED uses the approved tone.
+const STATUS_BADGES = {
+    PENDING: { status: "pending", label: "Pending" },
+    ACCEPTED: { status: "approved", label: "Accepted" },
+    REJECTED: { status: "rejected", label: "Rejected" },
+};
 
-    // Modals
-    const [inspectSignal, setInspectSignal] = useState(null);
-    const [actionModal, setActionModal] = useState({ open: false, type: null, signal: null });
-    const [actionForm] = Form.useForm();
-    const [actionSubmitting, setActionSubmitting] = useState(false);
+const confidence = (signal) => Math.round((signal.confidence_score || 0.8) * 100);
 
-    const fetchSignals = async () => {
-        setLoadingSignals(true);
+function errorMessage(error, fallback) {
+    const errors = error.response?.data?.errors;
+    return typeof errors === "string" ? errors : (error.response?.data?.message ?? fallback);
+}
+
+function SignalCell({ signal }) {
+    return (
+        <div className="flex min-w-[260px] flex-col gap-1.5">
+            <span className="text-sm font-semibold text-foreground">{signal.title}</span>
+            {signal.summary && <p className="m-0 line-clamp-2 text-xs text-muted-foreground">{signal.summary}</p>}
+            {signal.evidence_quote && (
+                <blockquote className="m-0 border-0 border-l-[3px] border-solid border-primary bg-muted/60 px-2.5 py-1.5 text-xs text-foreground italic">
+                    “{signal.evidence_quote}”
+                </blockquote>
+            )}
+        </div>
+    );
+}
+
+function ActionButtons({ signal, onInspect, onAction }) {
+    return (
+        <div className="flex min-w-[150px] flex-col gap-1.5">
+            <Button size="sm" variant="outline" className="justify-start border-input" onClick={() => onInspect(signal)}>
+                <EyeIcon aria-hidden="true" />
+                Inspect
+            </Button>
+            {signal.review_status === "PENDING" && (
+                <>
+                    <Button size="sm" className="justify-start" onClick={() => onAction("accept_create", signal)}>
+                        <CirclePlusIcon aria-hidden="true" />
+                        Accept as New DF
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="justify-start border-input"
+                        onClick={() => onAction("accept_link", signal)}
+                    >
+                        <LinkIcon aria-hidden="true" />
+                        Link to DF
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="justify-start border-destructive/50 text-destructive hover:bg-danger-soft hover:text-destructive"
+                        onClick={() => onAction("reject", signal)}
+                    >
+                        <CircleXIcon aria-hidden="true" />
+                        Reject
+                    </Button>
+                </>
+            )}
+        </div>
+    );
+}
+
+function InspectDialog({ signal, open, onOpenChange }) {
+    const returnFocus = useReturnFocus(open);
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent
+                onCloseAutoFocus={returnFocus}
+                className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-[720px]"
+            >
+                <DialogHeader>
+                    <DialogTitle>Signal Inspection &amp; Provenance</DialogTitle>
+                    <DialogDescription className="sr-only">Detail, bukti, dan asal sinyal kandidat.</DialogDescription>
+                </DialogHeader>
+                {signal && (
+                    <div className="-mx-6 overflow-y-auto px-6">
+                        <DetailList className="sm:grid-cols-2">
+                            <DetailItem label="Signal Title" className="sm:col-span-2">
+                                <span className="font-semibold">{signal.title}</span>
+                            </DetailItem>
+                            <DetailItem label="Summary" className="sm:col-span-2">
+                                {signal.summary}
+                            </DetailItem>
+                            <DetailItem label="Significance" className="sm:col-span-2">
+                                {signal.significance || "N/A"}
+                            </DetailItem>
+                            <DetailItem label="Verbatim Evidence Quote" className="sm:col-span-2">
+                                <code className="block rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap">
+                                    “{signal.evidence_quote}”
+                                </code>
+                            </DetailItem>
+                            <DetailItem label="Dimension">
+                                <DimensionChip name={signal.dimension?.name || "General"} />
+                            </DetailItem>
+                            <DetailItem label="Estimated Horizon">
+                                {signal.suggested_time_horizon?.name || "Unassigned"}
+                            </DetailItem>
+                            <DetailItem label="Scoring Estimates">
+                                Impact: {signal.preliminary_impact ?? "N/A"} | Uncertainty:{" "}
+                                {signal.preliminary_uncertainty ?? "N/A"}
+                            </DetailItem>
+                            <DetailItem label="Confidence">
+                                {confidence(signal)}% ({signal.confidence_rationale || "Algorithmic heuristic"})
+                            </DetailItem>
+                            <DetailItem label="Source Title" className="sm:col-span-2">
+                                {signal.source?.title || "N/A"}
+                            </DetailItem>
+                            {signal.source?.url && (
+                                <DetailItem label="Source URL" className="sm:col-span-2">
+                                    <a
+                                        href={signal.source.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="break-all text-primary underline-offset-4 hover:underline"
+                                    >
+                                        {signal.source.url}
+                                    </a>
+                                </DetailItem>
+                            )}
+                            <DetailItem label="Content SHA-256 Hash" className="sm:col-span-2">
+                                <code className="font-mono text-[11px] break-all">{signal.source?.content_hash || "N/A"}</code>
+                            </DetailItem>
+                            {signal.rejection_reason && (
+                                <DetailItem label="Rejection Reason" className="sm:col-span-2">
+                                    <span className="text-destructive">{signal.rejection_reason}</span>
+                                </DetailItem>
+                            )}
+                        </DetailList>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+export default function SignalIndex({ auth, title, dimensions = [], existingDrivingForces = [] }) {
+    const statusFieldId = useId();
+    const [tab, setTab] = useState("review");
+
+    // Review queue
+    const [status, setStatus] = useState("PENDING");
+    const [dimension, setDimension] = useState("all");
+    const [search, setSearch] = useState("");
+
+    const table = useServerTable({
+        url: route("signals.fetch"),
+        params: { status, dimension: filterParam(dimension), search: search || undefined },
+        select: fromPaginator,
+        pageSizeParam: "pageSize",
+    });
+
+    // Inspect
+    const [inspected, setInspected] = useState(null);
+    const [inspectOpen, setInspectOpen] = useState(false);
+    const openInspect = (signal) => {
+        setInspected(signal);
+        setInspectOpen(true);
+    };
+
+    // Review action
+    const [review, setReview] = useState(null);
+    const [reviewOpen, setReviewOpen] = useState(false);
+    const [reviewing, setReviewing] = useState(false);
+
+    const openReview = (action, signal) => {
+        setReview({ action, signal });
+        setReviewOpen(true);
+    };
+
+    const handleReview = async (values) => {
+        setReviewing(true);
         try {
-            const params = {
-                page: pagination.current,
-                pageSize: pagination.pageSize,
-                status: statusFilter,
-                dimension: dimensionFilter,
-                search: searchTerm || undefined,
-            };
-            const response = await axios.get("/signals/fetch", { params });
-            setSignals(response.data.data || []);
-            setPagination((prev) => ({
-                ...prev,
-                total: response.data.total || 0,
-            }));
+            const response = await axios.post(`/signals/${review.signal.uuid}/review`, { action: review.action, ...values });
+            toast.success(response.data.message || "Review action processed.");
+            setReviewOpen(false);
+            table.reload();
         } catch (error) {
-            message.error("Failed to load candidate signals.");
+            const errors = error.response?.data?.errors;
+            if (error.response?.status === 422 && errors && typeof errors === "object") {
+                toast.error("Validation failed", { description: "Periksa kembali isian yang ditandai." });
+                return errors;
+            }
+            toast.error("Action failed to execute.", { description: errorMessage(error, error.message) });
         } finally {
-            setLoadingSignals(false);
+            setReviewing(false);
         }
     };
 
-    useEffect(() => {
-        fetchSignals();
-    }, [statusFilter, dimensionFilter, pagination.current, pagination.pageSize]);
+    // Ingest
+    const [ingesting, setIngesting] = useState(false);
 
-    const handleSearch = () => {
-        setPagination((prev) => ({ ...prev, current: 1 }));
-        fetchSignals();
-    };
-
-    // Ingest Handler
-    const handleIngest = async (values) => {
+    const handleIngest = async (payload) => {
         setIngesting(true);
         try {
-            const payload = {
-                title: values.title,
-                content: values.content,
-                url: values.url || null,
-                publisher: values.publisher || null,
-                published_at: values.published_at ? values.published_at.format("YYYY-MM-DD") : null,
-            };
-            const res = await axios.post("/signals/ingest", payload);
-            message.success(res.data.message || "Content ingested successfully.");
-            ingestForm.resetFields();
-            setActiveTab("review");
-            setStatusFilter("PENDING");
-            fetchSignals();
-        } catch (err) {
-            const errText = err.response?.data?.errors?.content?.[0] || err.response?.data?.errors || "Ingestion failed.";
-            message.error(typeof errText === "string" ? errText : "Validation error on submission.");
+            const response = await axios.post("/signals/ingest", payload);
+            toast.success(response.data.message || "Content ingested successfully.");
+            setTab("review");
+            setStatus("PENDING");
+            table.reload();
+            return true;
+        } catch (error) {
+            const errors = error.response?.data?.errors;
+            if (error.response?.status === 422 && errors && typeof errors === "object") {
+                toast.error("Validation failed", { description: "Periksa kembali isian yang ditandai." });
+                return errors;
+            }
+            toast.error("Ingestion failed.", { description: errorMessage(error, error.message) });
+            return undefined;
         } finally {
             setIngesting(false);
         }
     };
 
-    // Review Action Handlers
-    const openActionModal = (type, signal) => {
-        setActionModal({ open: true, type, signal });
-        actionForm.resetFields();
-        if (type === "accept_create") {
-            actionForm.setFieldsValue({
-                title: signal.title,
-                summary: signal.summary,
-                dimension_id: signal.dimension_id,
-            });
-        }
-    };
-
-    const handleActionSubmit = async (values) => {
-        if (!actionModal.signal) return;
-        setActionSubmitting(true);
-        try {
-            const payload = {
-                action: actionModal.type,
-                ...values,
-            };
-            const res = await axios.post(`/signals/${actionModal.signal.uuid}/review`, payload);
-            message.success(res.data.message || "Review action processed.");
-            setActionModal({ open: false, type: null, signal: null });
-            fetchSignals();
-        } catch (err) {
-            message.error(err.response?.data?.errors || "Action failed to execute.");
-        } finally {
-            setActionSubmitting(false);
-        }
-    };
-
-    const columns = [
-        {
-            title: "Signal Title & Evidence",
-            dataIndex: "title",
-            key: "title",
-            width: "35%",
-            render: (text, record) => (
-                <Space direction="vertical" size={4} style={{ width: "100%" }}>
-                    <Text strong style={{ fontSize: "14px" }}>{text}</Text>
-                    <Paragraph ellipsis={{ rows: 2 }} type="secondary" style={{ marginBottom: 4, fontSize: "12px" }}>
-                        {record.summary}
-                    </Paragraph>
-                    <Card
-                        size="small"
-                        style={{
-                            background: "#f9fafb",
-                            borderLeft: "3px solid #1677ff",
-                            borderRadius: "4px",
-                        }}
-                        bodyStyle={{ padding: "6px 10px" }}
-                    >
-                        <Text style={{ fontSize: "12px", fontStyle: "italic" }}>
-                            "{record.evidence_quote}"
-                        </Text>
-                    </Card>
-                </Space>
-            ),
-        },
-        {
-            title: "Taxonomy & Origin",
-            key: "dimension",
-            width: "18%",
-            render: (_, record) => (
-                <Space direction="vertical" size={2}>
-                    <Tag color="blue">{record.dimension?.name || "Unassigned"}</Tag>
-                    {record.suggested_time_horizon && (
-                        <Tag color="purple">{record.suggested_time_horizon.name}</Tag>
-                    )}
-                    <Text type="secondary" style={{ fontSize: "11px" }}>
-                        Source: {record.source?.publisher || record.source?.title || "Manual entry"}
-                    </Text>
-                </Space>
-            ),
-        },
-        {
-            title: "Assessment & Confidence",
-            key: "assessment",
-            width: "18%",
-            render: (_, record) => {
-                const confPercent = Math.round((record.confidence_score || 0.8) * 100);
-                return (
-                    <Space direction="vertical" size={2}>
-                        <Space>
-                            <Badge
-                                status={confPercent >= 80 ? "success" : "warning"}
-                                text={<Text style={{ fontSize: "12px" }}>{confPercent}% confidence</Text>}
-                            />
-                        </Space>
-                        <Text type="secondary" style={{ fontSize: "11px" }}>
-                            Est. Impact: <Text strong>{record.preliminary_impact ?? "N/A"}</Text> | Uncertainty: <Text strong>{record.preliminary_uncertainty ?? "N/A"}</Text>
-                        </Text>
-                        <Tag color={record.is_ai_generated ? "cyan" : "default"} style={{ fontSize: "10px" }}>
-                            {record.is_ai_generated ? "AI Candidate" : "Human Extracted"}
-                        </Tag>
-                    </Space>
-                );
+    const columns = useMemo(
+        () => [
+            {
+                accessorKey: "title",
+                header: "Signal Title & Evidence",
+                cell: ({ row }) => <SignalCell signal={row.original} />,
             },
-        },
-        {
-            title: "Status",
-            dataIndex: "review_status",
-            key: "review_status",
-            width: "12%",
-            render: (status) => {
-                const colors = { PENDING: "gold", ACCEPTED: "green", REJECTED: "red" };
-                return <Tag color={colors[status] || "default"}>{status}</Tag>;
+            {
+                id: "taxonomy",
+                header: "Taxonomy & Origin",
+                cell: ({ row }) => {
+                    const signal = row.original;
+                    return (
+                        <div className="flex min-w-[150px] flex-col items-start gap-1.5">
+                            <DimensionChip name={signal.dimension?.name || "Unassigned"} />
+                            {signal.suggested_time_horizon && (
+                                <span className={cn(statusBadge(), "bg-accent text-primary")}>
+                                    {signal.suggested_time_horizon.name}
+                                </span>
+                            )}
+                            <span className="text-[11px] text-muted-foreground">
+                                Source: {signal.source?.publisher || signal.source?.title || "Manual entry"}
+                            </span>
+                        </div>
+                    );
+                },
             },
-        },
-        {
-            title: "Action",
-            key: "action",
-            width: "17%",
-            render: (_, record) => (
-                <Space direction="vertical" size={4}>
-                    <Button
-                        size="small"
-                        icon={<EyeOutlined />}
-                        onClick={() => setInspectSignal(record)}
-                        style={{ width: "100%", textAlign: "left" }}
-                    >
-                        Inspect
-                    </Button>
-                    {record.review_status === "PENDING" && (
-                        <>
-                            <Button
-                                size="small"
-                                type="primary"
-                                icon={<PlusCircleOutlined />}
-                                onClick={() => openActionModal("accept_create", record)}
-                                style={{ width: "100%", textAlign: "left" }}
-                            >
-                                Accept as New DF
-                            </Button>
-                            <Button
-                                size="small"
-                                icon={<LinkOutlined />}
-                                onClick={() => openActionModal("accept_link", record)}
-                                style={{ width: "100%", textAlign: "left" }}
-                            >
-                                Link to DF
-                            </Button>
-                            <Button
-                                size="small"
-                                danger
-                                icon={<CloseCircleOutlined />}
-                                onClick={() => openActionModal("reject", record)}
-                                style={{ width: "100%", textAlign: "left" }}
-                            >
-                                Reject
-                            </Button>
-                        </>
-                    )}
-                </Space>
-            ),
-        },
-    ];
+            {
+                id: "assessment",
+                header: "Assessment & Confidence",
+                cell: ({ row }) => {
+                    const signal = row.original;
+                    const percent = confidence(signal);
+                    return (
+                        <div className="flex min-w-[170px] flex-col items-start gap-1.5 text-xs">
+                            <span className="flex items-center gap-1.5 font-medium text-foreground">
+                                <span
+                                    aria-hidden="true"
+                                    className={cn("size-2 rounded-full", percent >= 80 ? "bg-success" : "bg-warning")}
+                                />
+                                {percent}% confidence
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                                Est. Impact: <b className="text-foreground">{signal.preliminary_impact ?? "N/A"}</b> |
+                                Uncertainty: <b className="text-foreground">{signal.preliminary_uncertainty ?? "N/A"}</b>
+                            </span>
+                            <span className={cn(statusBadge(), signal.is_ai_generated && "bg-accent text-primary")}>
+                                {signal.is_ai_generated ? "AI Candidate" : "Human Extracted"}
+                            </span>
+                        </div>
+                    );
+                },
+            },
+            {
+                accessorKey: "review_status",
+                header: "Status",
+                cell: ({ getValue }) => {
+                    const badge = STATUS_BADGES[getValue()];
+                    return <StatusBadge status={badge?.status ?? getValue()} label={badge?.label} />;
+                },
+            },
+            {
+                id: "actions",
+                header: "Action",
+                cell: ({ row }) => <ActionButtons signal={row.original} onInspect={openInspect} onAction={openReview} />,
+            },
+        ],
+        []
+    );
+
+    const reviewConfig = review ? REVIEW_ACTIONS[review.action] : null;
 
     return (
-        <AuthenticatedLayout auth={auth}>
+        <AuthenticatedLayout
+            auth={auth}
+            header={
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <ZapIcon aria-hidden="true" className="text-lg text-primary" />
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
+                </div>
+            }
+        >
             <Head title={title} />
-            <Content style={{ margin: "24px 16px 0" }}>
-                <Breadcrumb
-                    items={[
-                        { title: "Home" },
-                        { title: "Strategic Foresight" },
-                        { title: "Signal Ingestion & Review" },
-                    ]}
-                    style={{ marginBottom: "16px" }}
+
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:px-6 lg:py-5">
+                <PageHeader
+                    as="h2"
+                    icon={<ZapIcon />}
+                    title="Signal-to-Insight Workspace"
+                    description="Ingest external publications and review evidence-backed candidate signals before formal repository graduation."
                 />
 
-                <Card
-                    style={{
-                        background: colorBgContainer,
-                        borderRadius: borderRadiusLG,
-                    }}
-                >
-                    <Row justify="space-between" align="middle" style={{ marginBottom: "16px" }}>
-                        <Col>
-                            <Title level={4} style={{ margin: 0 }}>
-                                <ThunderboltOutlined style={{ marginRight: 8, color: "#1677ff" }} />
-                                Signal-to-Insight Workspace
-                            </Title>
-                            <Text type="secondary">
-                                Ingest external publications and review evidence-backed candidate signals before formal repository graduation.
-                            </Text>
-                        </Col>
-                    </Row>
+                <Tabs value={tab} onValueChange={setTab} className="gap-4">
+                    <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
+                        <TabsTrigger value="review" className="px-3 py-1.5">
+                            <ClipboardCheckIcon aria-hidden="true" />
+                            Candidate Review Queue
+                        </TabsTrigger>
+                        <TabsTrigger value="ingest" className="px-3 py-1.5">
+                            <CloudUploadIcon aria-hidden="true" />
+                            Ingest Source Document / URL
+                        </TabsTrigger>
+                    </TabsList>
 
-                    <Tabs
-                        activeKey={activeTab}
-                        onChange={setActiveTab}
-                        items={[
-                            {
-                                key: "review",
-                                label: (
-                                    <span>
-                                        <AuditOutlined style={{ marginRight: 6 }} />
-                                        Candidate Review Queue
-                                    </span>
-                                ),
-                                children: (
-                                    <>
-                                        {/* Filters Bar */}
-                                        <Row gutter={[16, 16]} style={{ marginBottom: "16px" }} align="middle">
-                                            <Col xs={24} sm={8} md={6}>
-                                                <Select
-                                                    value={statusFilter}
-                                                    onChange={setStatusFilter}
-                                                    style={{ width: "100%" }}
-                                                    options={[
-                                                        { value: "PENDING", label: "Review Status: Pending" },
-                                                        { value: "ACCEPTED", label: "Review Status: Accepted" },
-                                                        { value: "REJECTED", label: "Review Status: Rejected" },
-                                                        { value: "ALL", label: "All Statuses" },
-                                                    ]}
-                                                />
-                                            </Col>
-                                            <Col xs={24} sm={8} md={6}>
-                                                <Select
-                                                    placeholder="Filter Dimension"
-                                                    allowClear
-                                                    value={dimensionFilter}
-                                                    onChange={setDimensionFilter}
-                                                    style={{ width: "100%" }}
-                                                    options={dimensions}
-                                                />
-                                            </Col>
-                                            <Col xs={24} sm={8} md={8}>
-                                                <Input.Search
-                                                    placeholder="Search title, summary, or quotes..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    onSearch={handleSearch}
-                                                    enterButton={<SearchOutlined />}
-                                                />
-                                            </Col>
-                                            <Col xs={24} sm={24} md={4} style={{ textAlign: "right" }}>
-                                                <Button onClick={() => setActiveTab("ingest")} icon={<CloudUploadOutlined />}>
-                                                    Ingest New
-                                                </Button>
-                                            </Col>
-                                        </Row>
+                    <TabsContent value="review" className="flex flex-col gap-4">
+                        <FilterBar
+                            label="Filter sinyal"
+                            actions={
+                                <Button variant="outline" className="border-input" onClick={() => setTab("ingest")}>
+                                    <CloudUploadIcon aria-hidden="true" />
+                                    Ingest New
+                                </Button>
+                            }
+                        >
+                            <FilterField label="Status" htmlFor={statusFieldId} className="w-full sm:w-auto">
+                                <Select value={status} onValueChange={setStatus}>
+                                    <SelectTrigger id={statusFieldId} className="w-full border-input bg-card sm:w-[220px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent position="popper">
+                                        {STATUS_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FilterField>
+                            <FilterSelect
+                                label="Dimensi"
+                                allLabel="Semua Dimensi"
+                                value={dimension}
+                                onChange={setDimension}
+                                options={dimensions}
+                            />
+                            <FilterField label="Cari" className="w-full sm:w-auto">
+                                <SearchInput
+                                    value={search}
+                                    onSearch={setSearch}
+                                    label="Cari sinyal"
+                                    placeholder="Search title, summary, or quotes..."
+                                    className="w-full sm:w-[280px]"
+                                />
+                            </FilterField>
+                        </FilterBar>
 
-                                        <Table
-                                            rowKey="id"
-                                            columns={columns}
-                                            dataSource={signals}
-                                            loading={loadingSignals}
-                                            pagination={{
-                                                ...pagination,
-                                                onChange: (page, pageSize) => {
-                                                    setPagination((prev) => ({ ...prev, current: page, pageSize }));
-                                                },
-                                            }}
-                                        />
-                                    </>
-                                ),
-                            },
-                            {
-                                key: "ingest",
-                                label: (
-                                    <span>
-                                        <CloudUploadOutlined style={{ marginRight: 6 }} />
-                                        Ingest Source Document / URL
-                                    </span>
-                                ),
-                                children: (
-                                    <div style={{ maxWidth: 840, margin: "0 auto", padding: "16px 0" }}>
-                                        <Alert
-                                            message="Evidence Provenance Guarantee"
-                                            description="Every candidate signal extracted from this document will permanently retain an exact verbatim excerpt and a SHA-256 fingerprint of the source text for audit verification."
-                                            type="info"
-                                            showIcon
-                                            style={{ marginBottom: 24 }}
-                                        />
+                        <DataTable
+                            columns={columns}
+                            {...table.tableProps}
+                            getRowId={(row) => String(row.id)}
+                            caption="Antrean review sinyal kandidat"
+                        />
+                    </TabsContent>
 
-                                        <Form form={ingestForm} layout="vertical" onFinish={handleIngest}>
-                                            <Row gutter={16}>
-                                                <Col xs={24} sm={16}>
-                                                    <Form.Item
-                                                        name="title"
-                                                        label="Document / Article Title"
-                                                        rules={[{ required: true, message: "Please provide a source title" }]}
-                                                    >
-                                                        <Input placeholder="e.g. EU Cleantech Regulatory Directive 2026/42" />
-                                                    </Form.Item>
-                                                </Col>
-                                                <Col xs={24} sm={8}>
-                                                    <Form.Item name="publisher" label="Publisher / Source Organization">
-                                                        <Input placeholder="e.g. European Commission, Reuters" />
-                                                    </Form.Item>
-                                                </Col>
-                                            </Row>
+                    <TabsContent value="ingest">
+                        <IngestForm loading={ingesting} onSubmit={handleIngest} />
+                    </TabsContent>
+                </Tabs>
+            </main>
 
-                                            <Row gutter={16}>
-                                                <Col xs={24} sm={16}>
-                                                    <Form.Item
-                                                        name="url"
-                                                        label="Source URL (Optional)"
-                                                        rules={[{ type: "url", message: "Enter a valid URL" }]}
-                                                    >
-                                                        <Input placeholder="https://ec.europa.eu/commission/presscorner/detail/en/ip_26_..." />
-                                                    </Form.Item>
-                                                </Col>
-                                                <Col xs={24} sm={8}>
-                                                    <Form.Item name="published_at" label="Publication Date">
-                                                        <DatePicker style={{ width: "100%" }} />
-                                                    </Form.Item>
-                                                </Col>
-                                            </Row>
+            <InspectDialog signal={inspected} open={inspectOpen} onOpenChange={setInspectOpen} />
 
-                                            <Form.Item
-                                                name="content"
-                                                label="Raw Content / Document Text"
-                                                rules={[
-                                                    { required: true, message: "Please paste the article or document body" },
-                                                    { min: 30, message: "Must be at least 30 characters" },
-                                                ]}
-                                            >
-                                                <TextArea
-                                                    rows={8}
-                                                    placeholder="Paste the excerpt, report paragraphs, or article transcript here. The extraction pipeline will parse verifiable evidence sentences, suggest taxonomies, and generate candidate signals."
-                                                />
-                                            </Form.Item>
-
-                                            <Form.Item>
-                                                <Space>
-                                                    <Button type="primary" htmlType="submit" loading={ingesting} icon={<ThunderboltOutlined />}>
-                                                        Ingest & Extract Signals
-                                                    </Button>
-                                                    <Button onClick={() => ingestForm.resetFields()}>Clear</Button>
-                                                </Space>
-                                            </Form.Item>
-                                        </Form>
-                                    </div>
-                                ),
-                            },
-                        ]}
+            <FormDialog
+                title={reviewConfig?.title ?? ""}
+                open={reviewOpen}
+                onOpenChange={setReviewOpen}
+                formId={REVIEW_FORM_ID}
+                btnText={reviewConfig?.submit}
+                btnVariant={review?.action === "reject" ? "destructive" : "default"}
+                loading={reviewing}
+                width={560}
+            >
+                {review && (
+                    <ReviewForm
+                        key={`${review.action}-${review.signal.uuid}`}
+                        id={REVIEW_FORM_ID}
+                        action={review.action}
+                        signal={review.signal}
+                        dimensions={dimensions}
+                        drivingForces={existingDrivingForces}
+                        loading={reviewing}
+                        onSubmit={handleReview}
                     />
-                </Card>
-
-                {/* Inspect Modal */}
-                <Modal
-                    title="Signal Inspection & Provenance"
-                    open={!!inspectSignal}
-                    onCancel={() => setInspectSignal(null)}
-                    footer={[
-                        <Button key="close" onClick={() => setInspectSignal(null)}>
-                            Close
-                        </Button>,
-                    ]}
-                    width={720}
-                >
-                    {inspectSignal && (
-                        <Descriptions bordered column={1} size="small" style={{ marginTop: 16 }}>
-                            <Descriptions.Item label="Signal Title">{inspectSignal.title}</Descriptions.Item>
-                            <Descriptions.Item label="Summary">{inspectSignal.summary}</Descriptions.Item>
-                            <Descriptions.Item label="Significance">{inspectSignal.significance || "N/A"}</Descriptions.Item>
-                            <Descriptions.Item label="Verbatim Evidence Quote">
-                                <Text code style={{ display: "block", padding: "8px", background: "#f5f5f5" }}>
-                                    "{inspectSignal.evidence_quote}"
-                                </Text>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Dimension">
-                                <Tag color="blue">{inspectSignal.dimension?.name || "General"}</Tag>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Estimated Horizon">
-                                {inspectSignal.suggested_time_horizon?.name || "Unassigned"}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Scoring Estimates">
-                                Impact: {inspectSignal.preliminary_impact ?? "N/A"} | Uncertainty: {inspectSignal.preliminary_uncertainty ?? "N/A"}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Confidence">
-                                {Math.round((inspectSignal.confidence_score || 0.8) * 100)}% ({inspectSignal.confidence_rationale || "Algorithmic heuristic"})
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Source Title">{inspectSignal.source?.title || "N/A"}</Descriptions.Item>
-                            {inspectSignal.source?.url && (
-                                <Descriptions.Item label="Source URL">
-                                    <a href={inspectSignal.source.url} target="_blank" rel="noreferrer">
-                                        {inspectSignal.source.url}
-                                    </a>
-                                </Descriptions.Item>
-                            )}
-                            <Descriptions.Item label="Content SHA-256 Hash">
-                                <Text code style={{ fontSize: "11px" }}>{inspectSignal.source?.content_hash || "N/A"}</Text>
-                            </Descriptions.Item>
-                            {inspectSignal.rejection_reason && (
-                                <Descriptions.Item label="Rejection Reason">
-                                    <Text type="danger">{inspectSignal.rejection_reason}</Text>
-                                </Descriptions.Item>
-                            )}
-                        </Descriptions>
-                    )}
-                </Modal>
-
-                {/* Review Action Modal */}
-                <Modal
-                    title={
-                        actionModal.type === "accept_create"
-                            ? "Accept Signal & Create Driving Force"
-                            : actionModal.type === "accept_link"
-                            ? "Accept Signal & Link to Existing Driving Force"
-                            : "Reject Candidate Signal"
-                    }
-                    open={actionModal.open}
-                    onCancel={() => setActionModal({ open: false, type: null, signal: null })}
-                    onOk={() => actionForm.submit()}
-                    confirmLoading={actionSubmitting}
-                    okText={actionModal.type === "reject" ? "Confirm Rejection" : "Confirm Acceptance"}
-                    okButtonProps={{ danger: actionModal.type === "reject" }}
-                >
-                    <Form form={actionForm} layout="vertical" onFinish={handleActionSubmit} style={{ marginTop: 16 }}>
-                        {actionModal.type === "accept_create" && (
-                            <>
-                                <Paragraph type="secondary">
-                                    Graduating this signal will initialize a new Driving Force in <strong>PENDING</strong> status. It will immediately be accessible in the existing 6-stage lifecycle for time horizon rating and approval.
-                                </Paragraph>
-                                <Form.Item
-                                    name="title"
-                                    label="Driving Force Title / Keyword (First 4 words will form keyword)"
-                                    rules={[{ required: true, message: "Title is required" }]}
-                                >
-                                    <Input />
-                                </Form.Item>
-                                <Form.Item
-                                    name="summary"
-                                    label="Strategic Description"
-                                    rules={[{ required: true, message: "Description is required" }]}
-                                >
-                                    <TextArea rows={3} />
-                                </Form.Item>
-                                <Form.Item
-                                    name="dimension_id"
-                                    label="Taxonomy Dimension"
-                                    rules={[{ required: true, message: "Select dimension" }]}
-                                >
-                                    <Select options={dimensions} />
-                                </Form.Item>
-                            </>
-                        )}
-
-                        {actionModal.type === "accept_link" && (
-                            <>
-                                <Paragraph type="secondary">
-                                    Attach this signal as verifiable supporting evidence to an existing active Driving Force.
-                                </Paragraph>
-                                <Form.Item
-                                    name="driving_force_id"
-                                    label="Target Driving Force"
-                                    rules={[{ required: true, message: "Select target driving force" }]}
-                                >
-                                    <Select
-                                        showSearch
-                                        optionFilterProp="label"
-                                        placeholder="Select driving force to attach evidence"
-                                        options={existingDrivingForces}
-                                    />
-                                </Form.Item>
-                            </>
-                        )}
-
-                        {actionModal.type === "reject" && (
-                            <>
-                                <Paragraph type="secondary">
-                                    Provide feedback on why this candidate signal does not meet strategic foresight criteria.
-                                </Paragraph>
-                                <Form.Item
-                                    name="rejection_reason"
-                                    label="Rejection Reason"
-                                    rules={[{ required: true, message: "Please provide a reason for rejection" }]}
-                                >
-                                    <TextArea rows={3} placeholder="e.g. Redundant with existing Driving Force #4; lacks verifiable market impact." />
-                                </Form.Item>
-                            </>
-                        )}
-                    </Form>
-                </Modal>
-            </Content>
+                )}
+            </FormDialog>
         </AuthenticatedLayout>
     );
 }
