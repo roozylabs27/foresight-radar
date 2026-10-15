@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { FireOutlined } from "@ant-design/icons";
+import { FlameIcon } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import AnalysisFilterBar, { useAnalysisFilters } from "@/Components/AnalysisFilters";
@@ -118,7 +118,7 @@ export default function TableRatingUrgency({ auth, title, dimensions = [] }) {
             auth={auth}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <FireOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <FlameIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Urgency Scoring

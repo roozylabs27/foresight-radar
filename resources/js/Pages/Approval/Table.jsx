@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { CheckOutlined, CloseOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
+import { CheckIcon, ShieldCheckIcon, XIcon } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import AnalysisFilterBar, { useAnalysisFilters } from "@/Components/AnalysisFilters";
@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils";
 // Pending items can be shown (approved); anything else can be taken out (closed).
 function approvalAction(record) {
     return record.status === "PENDING"
-        ? { status: "APPROVED", text: "show", label: "Show", icon: CheckOutlined }
-        : { status: "CLOSED", text: "take out", label: "Take out", icon: CloseOutlined };
+        ? { status: "APPROVED", text: "show", label: "Show", icon: CheckIcon }
+        : { status: "CLOSED", text: "take out", label: "Take out", icon: XIcon };
 }
 
 export default function TableApproval({ auth, title, dimensions = [] }) {
@@ -105,7 +105,7 @@ export default function TableApproval({ auth, title, dimensions = [] }) {
             auth={auth}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <SafetyCertificateOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <ShieldCheckIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Review &amp; Consensus

@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { InboxOutlined, RollbackOutlined } from "@ant-design/icons";
+import { InboxIcon, Undo2Icon } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import AnalysisFilterBar, { useAnalysisFilters } from "@/Components/AnalysisFilters";
@@ -86,7 +86,7 @@ export default function TableClosedItems({ auth, title, dimensions = [] }) {
                                   aria-label={`Reopen ${row.original.keyword}`}
                                   className="rounded-full"
                               >
-                                  <RollbackOutlined aria-hidden="true" />
+                                  <Undo2Icon aria-hidden="true" />
                                   Reopen
                               </Button>
                           ),
@@ -102,7 +102,7 @@ export default function TableClosedItems({ auth, title, dimensions = [] }) {
             auth={auth}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <InboxOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <InboxIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Archive Repository

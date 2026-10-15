@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { CheckOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { CheckIcon, ClockIcon } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import DataTable, { useServerTable } from "@/Components/DataTable";
@@ -28,7 +28,7 @@ function HorizonMark({ checked, label }) {
 
     return (
         <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <CheckOutlined aria-hidden="true" />
+            <CheckIcon aria-hidden="true" />
             <span className="sr-only">{label}</span>
         </span>
     );
@@ -114,7 +114,7 @@ export default function TableTimeHorizon({ auth, title, dimensions = [], time_ho
                         aria-label={`Set Time Horizon untuk ${row.original.keyword}`}
                         className="border-input"
                     >
-                        <ClockCircleOutlined aria-hidden="true" />
+                        <ClockIcon aria-hidden="true" />
                         Set Horizon
                     </Button>
                 ),
@@ -128,7 +128,7 @@ export default function TableTimeHorizon({ auth, title, dimensions = [], time_ho
             auth={auth}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <ClockCircleOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <ClockIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Horizon Assessment

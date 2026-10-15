@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchIcon } from "lucide-react";
 
 import { Input } from "@/Components/ui/input";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ export default function SearchInput({ value = "", onSearch, placeholder, label, 
 
     return (
         <form role="search" onSubmit={handleSubmit} className={cn("relative", className)}>
-            <SearchOutlined
+            <SearchIcon
                 aria-hidden="true"
                 className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
             />

@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
-import { EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 
 import FormField, { fieldControlProps } from "@/Components/FormField";
 import { Input } from "@/Components/ui/input";
@@ -23,7 +23,7 @@ const editSchema = z.object(baseSchema);
 
 function PasswordInput({ field, fieldState, id }) {
     const [visible, setVisible] = useState(false);
-    const Icon = visible ? EyeOutlined : EyeInvisibleOutlined;
+    const Icon = visible ? EyeIcon : EyeOffIcon;
 
     return (
         <div className="relative">
