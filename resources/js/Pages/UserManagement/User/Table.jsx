@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { DeleteOutlined, EditOutlined, MoreOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
+import { EllipsisVerticalIcon, PencilIcon, PlusIcon, Trash2Icon, UserIcon } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import ConfirmDialog from "@/Components/ConfirmDialog";
@@ -27,21 +27,20 @@ function RowActions({ record, onEdit, onDelete }) {
     return (
         // Non-modal so the dialogs opened from it get focus and pointer events cleanly.
         <DropdownMenu modal={false}>
-            {/* Native trigger, not <Button asChild>: the ui Button has no forwardRef on React 18. */}
             <DropdownMenuTrigger
                 aria-label={`Aksi untuk ${record.name}`}
                 className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             >
-                <MoreOutlined aria-hidden="true" />
+                <EllipsisVerticalIcon aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-36">
                 <DropdownMenuItem onSelect={() => onEdit(record)}>
-                    <EditOutlined aria-hidden="true" />
+                    <PencilIcon aria-hidden="true" />
                     Edit
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onSelect={() => onDelete(record)}>
-                    <DeleteOutlined aria-hidden="true" />
+                    <Trash2Icon aria-hidden="true" />
                     Delete
                 </DropdownMenuItem>
             </DropdownMenuContent>
@@ -158,7 +157,7 @@ export default function TableUser({ auth, title, roles = [] }) {
             auth={auth}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <UserOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <UserIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Access &amp; Roles
@@ -183,7 +182,7 @@ export default function TableUser({ auth, title, roles = [] }) {
                                 className="flex-1 sm:w-[240px] sm:flex-none"
                             />
                             <Button onClick={openCreate}>
-                                <PlusOutlined aria-hidden="true" />
+                                <PlusIcon aria-hidden="true" />
                                 Tambah Pengguna
                             </Button>
                         </div>

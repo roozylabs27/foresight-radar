@@ -1,24 +1,12 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
-import { CheckOutlined } from "@ant-design/icons";
-import { ChevronDownIcon } from "lucide-react";
 
 import FormField, { fieldControlProps } from "@/Components/FormField";
-import { buttonVariants } from "@/Components/ui/button";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/Components/ui/command";
+import SearchableSelect from "@/Components/SearchableSelect";
 import { Input } from "@/Components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/Components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { toFieldValue as toValue, useDialogForm } from "@/hooks/use-dialog-form";
 
 const FIELDS = ["dimension_id", "keyword", "description", "pic_id"];
@@ -31,67 +19,6 @@ const schema = z.object({
     description: required("Please input the description!"),
     pic_id: required("Please select the personal in charge!"),
 });
-
-function PicCombobox({ users, field, fieldState, id, initialPic }) {
-    const [open, setOpen] = useState(false);
-    const selected = users.find((user) => toValue(user.value) === field.value);
-    // The current PIC can be missing from `users` (only some roles are listed); show their name anyway.
-    const label = selected?.label ?? (field.value && field.value === initialPic.id ? initialPic.name : null);
-
-    const handleOpenChange = (next) => {
-        setOpen(next);
-        if (!next) field.onBlur();
-    };
-
-    return (
-        <Popover open={open} onOpenChange={handleOpenChange} modal>
-            {/* Native trigger, not <Button asChild>: the ui Button has no forwardRef on React 18. */}
-            <PopoverTrigger
-                {...fieldControlProps(id, fieldState)}
-                role="combobox"
-                aria-expanded={open}
-                className={cn(
-                    buttonVariants({ variant: "outline" }),
-                    "w-full justify-between border-input bg-transparent px-3 font-normal",
-                    !label && "text-muted-foreground"
-                )}
-            >
-                <span className="truncate">{label ?? "Select a personal in charge"}</span>
-                <ChevronDownIcon aria-hidden="true" className="size-4 opacity-50" />
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-64 p-0">
-                <Command>
-                    <CommandInput placeholder="Cari personal in charge..." />
-                    <CommandList>
-                        <CommandEmpty>Tidak ditemukan.</CommandEmpty>
-                        <CommandGroup>
-                            {users.map((user) => {
-                                const value = toValue(user.value);
-                                return (
-                                    <CommandItem
-                                        key={value}
-                                        value={value}
-                                        keywords={[user.label]}
-                                        onSelect={() => {
-                                            field.onChange(value);
-                                            handleOpenChange(false);
-                                        }}
-                                    >
-                                        <CheckOutlined
-                                            aria-hidden="true"
-                                            className={cn("text-primary", value !== field.value && "opacity-0")}
-                                        />
-                                        {user.label}
-                                    </CommandItem>
-                                );
-                            })}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-}
 
 /**
  * Create/edit form for a driving force. Render it inside <FormDialog formId={id}>,
@@ -181,12 +108,15 @@ export default function FormDrivingForce({ id, initialValues = {}, dimensions = 
                     control={control}
                     render={({ field, fieldState }) => (
                         <FormField id={ids.pic_id} label="Personal In Charge" error={fieldState.error}>
-                            <PicCombobox
-                                users={users}
+                            <SearchableSelect
+                                id={ids.pic_id}
                                 field={field}
                                 fieldState={fieldState}
-                                id={ids.pic_id}
-                                initialPic={{ id: toValue(initialValues.pic_id), name: initialValues.pic }}
+                                options={users}
+                                placeholder="Select a personal in charge"
+                                searchPlaceholder="Cari personal in charge..."
+                                // The current PIC can be missing from `users` (only some roles are listed).
+                                fallbackLabel={field.value === toValue(initialValues.pic_id) ? initialValues.pic : undefined}
                             />
                         </FormField>
                     )}

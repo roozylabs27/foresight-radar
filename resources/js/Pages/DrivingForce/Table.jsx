@@ -3,15 +3,15 @@ import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
-    ArrowRightOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    GlobalOutlined,
-    MoreOutlined,
-    PlusOutlined,
-    RadarChartOutlined,
-    ThunderboltOutlined,
-} from "@ant-design/icons";
+    ArrowRightIcon,
+    EllipsisVerticalIcon,
+    GlobeIcon,
+    PencilIcon,
+    PlusIcon,
+    RadarIcon,
+    Trash2Icon,
+    ZapIcon,
+} from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import ConfirmDialog from "@/Components/ConfirmDialog";
@@ -30,6 +30,7 @@ import {
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/Components/ui/sheet";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { cn } from "@/lib/utils";
 import FormDrivingForce from "./Form";
 
@@ -60,7 +61,7 @@ function PipelineStage({ pipeline }) {
                     className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 >
                     Lanjut ke {pipeline.next_label}
-                    <ArrowRightOutlined aria-hidden="true" className="text-[10px]" />
+                    <ArrowRightIcon aria-hidden="true" className="text-[10px]" />
                 </Link>
             )}
         </div>
@@ -81,7 +82,7 @@ function SignalsCell({ record, onView }) {
                 "cursor-pointer border-0 bg-accent text-primary outline-none hover:bg-accent/70 focus-visible:ring-[3px] focus-visible:ring-ring/50"
             )}
         >
-            <ThunderboltOutlined aria-hidden="true" />
+            <ZapIcon aria-hidden="true" />
             {record.signals_count} sinyal
         </button>
     );
@@ -91,25 +92,24 @@ function RowActions({ record, onViewSignals, onEdit, onDelete }) {
     return (
         // Non-modal so the dialogs opened from it get focus and pointer events cleanly.
         <DropdownMenu modal={false}>
-            {/* Native trigger, not <Button asChild>: the ui Button has no forwardRef on React 18. */}
             <DropdownMenuTrigger
                 aria-label={`Aksi untuk ${record.keyword}`}
                 className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             >
-                <MoreOutlined aria-hidden="true" />
+                <EllipsisVerticalIcon aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-44">
                 <DropdownMenuItem onSelect={() => onViewSignals(record)}>
-                    <ThunderboltOutlined aria-hidden="true" className="text-primary" />
+                    <ZapIcon aria-hidden="true" className="text-primary" />
                     Sinyal Asal ({record.signals_count || 0})
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onEdit(record)}>
-                    <EditOutlined aria-hidden="true" />
+                    <PencilIcon aria-hidden="true" />
                     Edit
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onSelect={() => onDelete(record)}>
-                    <DeleteOutlined aria-hidden="true" />
+                    <Trash2Icon aria-hidden="true" />
                     Delete
                 </DropdownMenuItem>
             </DropdownMenuContent>
@@ -125,22 +125,23 @@ function SourceLink({ url, title }) {
             rel="noopener noreferrer"
             className="inline-flex min-w-0 items-start gap-1.5 text-xs text-primary underline-offset-4 hover:underline"
         >
-            <GlobalOutlined aria-hidden="true" className="mt-0.5" />
+            <GlobeIcon aria-hidden="true" className="mt-0.5" />
             <span className="break-all">{title || url}</span>
         </a>
     );
 }
 
 function SignalsSheet({ record, open, onOpenChange }) {
+    const returnFocus = useReturnFocus(open);
     const supporting = record?.supporting_signals ?? [];
     const source = record?.source_signal;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="w-full gap-0 sm:max-w-[560px]">
+            <SheetContent side="right" onCloseAutoFocus={returnFocus} className="w-full gap-0 sm:max-w-[560px]">
                 <SheetHeader className="border-b pr-12">
                     <SheetTitle className="flex items-center gap-2">
-                        <ThunderboltOutlined aria-hidden="true" className="text-primary" />
+                        <ZapIcon aria-hidden="true" className="text-primary" />
                         <span>Originating Intelligence: {record?.keyword}</span>
                     </SheetTitle>
                     <SheetDescription>Sinyal yang menjadi asal dan bukti pendukung driving force ini.</SheetDescription>
@@ -355,7 +356,7 @@ export default function TableDrivingForce({ auth, title, dimensions = [], users 
             auth={auth}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <RadarChartOutlined aria-hidden="true" className="text-lg text-primary" />
+                    <RadarIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Signal Repository
@@ -387,7 +388,7 @@ export default function TableDrivingForce({ auth, title, dimensions = [], users 
                                 className="flex-1 sm:w-[240px] sm:flex-none"
                             />
                             <Button onClick={openCreate}>
-                                <PlusOutlined aria-hidden="true" />
+                                <PlusIcon aria-hidden="true" />
                                 Tambah Sinyal
                             </Button>
                         </div>

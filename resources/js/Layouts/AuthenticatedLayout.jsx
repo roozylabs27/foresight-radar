@@ -1,25 +1,24 @@
 import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
-import { ConfigProvider } from "antd";
 import {
-    AppstoreOutlined,
-    BarChartOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    DashboardOutlined,
-    DownOutlined,
-    FileDoneOutlined,
-    InboxOutlined,
-    LogoutOutlined,
-    MenuFoldOutlined,
-    MenuOutlined,
-    MenuUnfoldOutlined,
-    RadarChartOutlined,
-    ThunderboltOutlined,
-    UnorderedListOutlined,
-    UserOutlined,
-    WifiOutlined,
-} from "@ant-design/icons";
+    ChartColumnIcon,
+    ChevronDownIcon,
+    CircleCheckIcon,
+    ClockIcon,
+    FileCheckIcon,
+    GaugeIcon,
+    InboxIcon,
+    LayoutGridIcon,
+    ListIcon,
+    LogOutIcon,
+    MenuIcon,
+    PanelLeftCloseIcon,
+    PanelLeftOpenIcon,
+    RadarIcon,
+    UserIcon,
+    WifiIcon,
+    ZapIcon,
+} from "lucide-react";
 
 import BrandMark from "@/Components/BrandMark";
 import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
@@ -35,24 +34,23 @@ import {
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/Components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/Components/ui/tooltip";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { antdTheme } from "@/lib/antdTheme";
 import { cn } from "@/lib/utils";
 
 const COLLAPSED_KEY = "foresight-sidebar-collapsed";
 
 const NAV_ITEMS = [
-    { label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: AppstoreOutlined, permission: "view-dashboard" },
-    { label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiOutlined, permission: "view-signal" },
-    { label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ThunderboltOutlined, permission: "view-driving-force" },
-    { label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockCircleOutlined, permission: "view-time-horizon" },
-    { label: "Rating of Urgency", route: "rating-urgency.", match: "/rating-urgency", icon: DashboardOutlined, permission: "view-rating-urgency" },
-    { label: "Status of Action", route: "status-action.", match: "/status-action", icon: CheckCircleOutlined, permission: "view-status-action" },
-    { label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileDoneOutlined, permission: "view-approval-items" },
-    { label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxOutlined, permission: "view-closed-items" },
-    { label: "User Management", route: "user-management.user.", match: "/user-management", icon: UserOutlined, permission: "view-user" },
-    { label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: BarChartOutlined, permission: "view-prioritizing" },
-    { label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: UnorderedListOutlined, permission: "view-registered-list" },
-    { label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarChartOutlined, permission: "view-foresight-radar" },
+    { label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: LayoutGridIcon, permission: "view-dashboard" },
+    { label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiIcon, permission: "view-signal" },
+    { label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ZapIcon, permission: "view-driving-force" },
+    { label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockIcon, permission: "view-time-horizon" },
+    { label: "Rating of Urgency", route: "rating-urgency.", match: "/rating-urgency", icon: GaugeIcon, permission: "view-rating-urgency" },
+    { label: "Status of Action", route: "status-action.", match: "/status-action", icon: CircleCheckIcon, permission: "view-status-action" },
+    { label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileCheckIcon, permission: "view-approval-items" },
+    { label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxIcon, permission: "view-closed-items" },
+    { label: "User Management", route: "user-management.user.", match: "/user-management", icon: UserIcon, permission: "view-user" },
+    { label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },
+    { label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
+    { label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
 ];
 
 function readCollapsed() {
@@ -152,7 +150,7 @@ function UserMenu({ user }) {
                         </AvatarFallback>
                     </Avatar>
                     <span className="hidden max-w-40 truncate font-medium sm:inline">{name}</span>
-                    <DownOutlined aria-hidden="true" className="text-[10px] text-subtle-foreground" />
+                    <ChevronDownIcon aria-hidden="true" className="text-[10px] text-subtle-foreground" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -167,14 +165,14 @@ function UserMenu({ user }) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                     <Link href={route("profile.edit")}>
-                        <UserOutlined aria-hidden="true" />
+                        <UserIcon aria-hidden="true" />
                         <span>Profil Pengguna</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" asChild>
                     <Link href={route("logout")} method="post" as="button" type="button" className="w-full">
-                        <LogoutOutlined aria-hidden="true" />
+                        <LogOutIcon aria-hidden="true" />
                         <span>Keluar (Logout)</span>
                     </Link>
                 </DropdownMenuItem>
@@ -211,91 +209,89 @@ export default function Authenticated({ auth, user: propUser, header, children }
             setMobileOpen(!mobileOpen);
         }
     };
-    const ToggleIcon = !isDesktop ? MenuOutlined : collapsed ? MenuUnfoldOutlined : MenuFoldOutlined;
+    const ToggleIcon = !isDesktop ? MenuIcon : collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon;
 
     return (
-        <ConfigProvider theme={antdTheme}>
-            <TooltipProvider>
-                <div className="flex min-h-svh bg-background font-sans text-foreground">
-                    {isDesktop && (
-                        <aside
-                            data-slot="sidebar"
-                            aria-label="Navigasi utama"
+        <TooltipProvider>
+            <div className="flex min-h-svh bg-background font-sans text-foreground">
+                {isDesktop && (
+                    <aside
+                        data-slot="sidebar"
+                        aria-label="Navigasi utama"
+                        className={cn(
+                            "sticky top-0 z-20 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 motion-reduce:transition-none",
+                            collapsed ? "w-[72px]" : "w-60"
+                        )}
+                    >
+                        <div
                             className={cn(
-                                "sticky top-0 z-20 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 motion-reduce:transition-none",
-                                collapsed ? "w-[72px]" : "w-60"
+                                "flex h-16 shrink-0 items-center border-b border-sidebar-border",
+                                collapsed ? "justify-center px-2" : "px-5"
                             )}
                         >
-                            <div
-                                className={cn(
-                                    "flex h-16 shrink-0 items-center border-b border-sidebar-border",
-                                    collapsed ? "justify-center px-2" : "px-5"
-                                )}
-                            >
-                                <Brand collapsed={collapsed} />
+                            <Brand collapsed={collapsed} />
+                        </div>
+                        <nav className="flex-1 overflow-y-auto px-3 py-4">
+                            <NavList items={items} url={page.url} collapsed={collapsed} />
+                        </nav>
+                    </aside>
+                )}
+
+                {!isDesktop && (
+                    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                        <SheetContent
+                            side="left"
+                            showCloseButton={false}
+                            className="w-[280px] gap-0 bg-sidebar sm:max-w-[280px]"
+                        >
+                            <SheetTitle className="sr-only">Navigasi utama</SheetTitle>
+                            <SheetDescription className="sr-only">
+                                Pilih halaman Foresight Radar yang ingin dibuka.
+                            </SheetDescription>
+                            <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border pr-3 pl-5">
+                                <Brand />
+                                <SheetClose asChild>
+                                    <Button variant="ghost" size="icon" aria-label="Tutup menu navigasi">
+                                        <PanelLeftCloseIcon aria-hidden="true" />
+                                    </Button>
+                                </SheetClose>
                             </div>
-                            <nav className="flex-1 overflow-y-auto px-3 py-4">
-                                <NavList items={items} url={page.url} collapsed={collapsed} />
+                            <nav aria-label="Navigasi utama" className="flex-1 overflow-y-auto px-3 py-4">
+                                <NavList items={items} url={page.url} onNavigate={() => setMobileOpen(false)} />
                             </nav>
-                        </aside>
-                    )}
+                        </SheetContent>
+                    </Sheet>
+                )}
 
-                    {!isDesktop && (
-                        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                            <SheetContent
-                                side="left"
-                                showCloseButton={false}
-                                className="w-[280px] gap-0 bg-sidebar sm:max-w-[280px]"
+                <div className="flex min-w-0 flex-1 flex-col">
+                    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-solid border-border bg-card px-4 lg:px-5">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={toggleNav}
+                                aria-expanded={navOpen}
+                                aria-label={navOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
+                                className="size-11 shrink-0 border-input bg-card"
                             >
-                                <SheetTitle className="sr-only">Navigasi utama</SheetTitle>
-                                <SheetDescription className="sr-only">
-                                    Pilih halaman Foresight Radar yang ingin dibuka.
-                                </SheetDescription>
-                                <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border pr-3 pl-5">
-                                    <Brand />
-                                    <SheetClose asChild>
-                                        <Button variant="ghost" size="icon" aria-label="Tutup menu navigasi">
-                                            <MenuFoldOutlined aria-hidden="true" />
-                                        </Button>
-                                    </SheetClose>
+                                <ToggleIcon aria-hidden="true" className="text-base" />
+                            </Button>
+                            {header && (
+                                <div className="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap">
+                                    {header}
                                 </div>
-                                <nav aria-label="Navigasi utama" className="flex-1 overflow-y-auto px-3 py-4">
-                                    <NavList items={items} url={page.url} onNavigate={() => setMobileOpen(false)} />
-                                </nav>
-                            </SheetContent>
-                        </Sheet>
-                    )}
+                            )}
+                        </div>
+                        <UserMenu user={user} />
+                    </header>
 
-                    <div className="flex min-w-0 flex-1 flex-col">
-                        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-solid border-border bg-card px-4 lg:px-5">
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={toggleNav}
-                                    aria-expanded={navOpen}
-                                    aria-label={navOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
-                                    className="size-11 shrink-0 border-input bg-card"
-                                >
-                                    <ToggleIcon aria-hidden="true" className="text-base" />
-                                </Button>
-                                {header && (
-                                    <div className="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap">
-                                        {header}
-                                    </div>
-                                )}
-                            </div>
-                            <UserMenu user={user} />
-                        </header>
+                    {children}
 
-                        {children}
-
-                        <footer className="mt-auto px-6 py-2.5 text-center text-xs text-subtle-foreground">
-                            Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.
-                        </footer>
-                    </div>
+                    <footer className="mt-auto px-6 py-2.5 text-center text-xs text-subtle-foreground">
+                        Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.
+                    </footer>
                 </div>
-            </TooltipProvider>
-        </ConfigProvider>
+            </div>
+        </TooltipProvider>
     );
 }
