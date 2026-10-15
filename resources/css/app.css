@@ -1,11 +1,4 @@
-/*
- * Tailwind v4 without preflight: antd still styles most pages, so its reset
- * must not be overridden. Re-enable preflight (`@import "tailwindcss"`) once
- * antd is removed (migration phase 6).
- */
-@layer theme, base, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss";
 @import "tw-animate-css";
 
 @source not "../../design";
@@ -206,104 +199,46 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
- * Minimal reset for shadcn markup while preflight is off: Tailwind border
- * utilities assume border-style: solid. Scoped to elements that opt in.
- */
 @layer base {
-    [data-slot],
-    [data-slot] *,
-    [data-slot]::before,
-    [data-slot]::after {
-        border-width: 0;
-        border-style: solid;
+    /* Tailwind v4 preflight defaults borders to currentColor; use the token like shadcn does. */
+    *,
+    ::before,
+    ::after,
+    ::backdrop,
+    ::file-selector-button {
         border-color: var(--color-border);
     }
 
     /*
-     * The rest of preflight that shadcn markup relies on, scoped the same way.
-     * antd's CSS-in-JS styles are unlayered, so they still win over this layer.
+     * lucide icons scale with the text (1em) and sit on the baseline like inline
+     * glyphs, instead of 24px blocks. size-* utilities still override this.
      */
-    :where([data-slot]):is(button, input, select, textarea),
-    :where([data-slot]) :is(button, input, select, textarea) {
-        margin: 0;
-        padding: 0;
-        font: inherit;
-        letter-spacing: inherit;
-        color: inherit;
-        background-color: transparent;
-    }
-
-    :where([data-slot]):is(button, [role="button"]),
-    :where([data-slot]) :is(button, [role="button"]) {
-        cursor: pointer;
-    }
-
-    :where([data-slot]) :is(button, [role="button"]):disabled,
-    :where([data-slot]):is(button, [role="button"]):disabled {
-        cursor: default;
-    }
-
-    :where([data-slot]):is(a),
-    :where([data-slot]) a {
-        color: inherit;
-        text-decoration: inherit;
-    }
-
-    :where([data-slot]):is(h1, h2, h3, h4, h5, h6, p, ul, ol, figure),
-    :where([data-slot]) :is(h1, h2, h3, h4, h5, h6, p, ul, ol, figure) {
-        margin: 0;
-        font-size: inherit;
-        font-weight: inherit;
-    }
-
-    :where([data-slot]):is(ul, ol),
-    :where([data-slot]) :is(ul, ol) {
-        padding: 0;
-        list-style: none;
-    }
-
-    :where([data-slot]):is(table),
-    :where([data-slot]) table {
-        border-collapse: collapse;
-        text-indent: 0;
-    }
-
-    :where([data-slot]):is(img, svg, video),
-    :where([data-slot]) :is(img, svg, video) {
-        display: block;
-        vertical-align: middle;
-    }
-
-    /* @ant-design/icons wraps its svg in an inline span; keep it inline. */
-    :where([data-slot]) .anticon svg {
+    svg.lucide {
         display: inline-block;
+        width: 1em;
+        height: 1em;
+        flex-shrink: 0;
+        vertical-align: -0.125em;
+    }
+
+    /*
+     * Reduced motion: near-instant instead of none, so animationend still fires
+     * and Radix unmounts closed dialogs and menus. !important in this layer
+     * outranks the animate-in/out utilities.
+     */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
     }
 }
 
 body {
     background-color: var(--background);
     color: var(--foreground);
-}
-
-html,
-body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    min-height: 100%;
-    box-sizing: border-box;
-}
-
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-}
-
-.demo-logo-vertical {
-    height: 32px;
-    margin: 16px;
-    background-color: #64748b;
-    border-radius: 0.25rem;
 }

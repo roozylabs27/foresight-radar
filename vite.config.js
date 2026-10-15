@@ -18,7 +18,7 @@ export default defineConfig({
             output: {
                 manualChunks(id) {
                     if (id.includes('node_modules')) {
-                        if (id.includes('echarts') || id.includes('zrender')) {
+                        if (/node_modules[\\/](recharts|d3-|victory-vendor)/.test(id)) {
                             return 'vendor-charts';
                         }
                     }
