@@ -61,7 +61,7 @@ class RoleEscalationTest extends TestCase
     public function test_regular_admin_cannot_assign_super_admin_role_on_update(): void
     {
         $viewPerm = $this->createPermissionWithDefaults('view-user');
-        $updatePerm = $this->createPermissionWithDefaults('update-user');
+        $updatePerm = $this->createPermissionWithDefaults('edit-user');
 
         $superAdminRole = $this->createRoleWithDefaults('super-admin');
         $adminRole = $this->createRoleWithDefaults('admin');
@@ -106,5 +106,53 @@ class RoleEscalationTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('users', ['email' => 'another.super@example.com']);
+    }
+
+    public function test_admin_with_edit_user_permission_can_update_regular_user(): void
+    {
+        $viewPerm = $this->createPermissionWithDefaults('view-user');
+        $editPerm = $this->createPermissionWithDefaults('edit-user');
+
+        $adminRole = $this->createRoleWithDefaults('admin');
+        $staffRole = $this->createRoleWithDefaults('staff');
+        $adminRole->givePermissionTo([$viewPerm, $editPerm]);
+
+        $admin = User::factory()->create();
+        $admin->assignRole($adminRole);
+
+        $targetUser = User::factory()->create();
+        $targetUser->assignRole($staffRole);
+
+        $response = $this->actingAs($admin)->putJson("/user-management/user/{$targetUser->uuid}", [
+            'name' => 'Renamed User',
+            'email' => $targetUser->email,
+            'role_id' => $staffRole->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('users', ['id' => $targetUser->id, 'name' => 'Renamed User']);
+    }
+
+    public function test_user_without_edit_user_permission_cannot_update_users(): void
+    {
+        $viewPerm = $this->createPermissionWithDefaults('view-user');
+
+        $adminRole = $this->createRoleWithDefaults('admin');
+        $staffRole = $this->createRoleWithDefaults('staff');
+        $adminRole->givePermissionTo([$viewPerm]);
+
+        $admin = User::factory()->create();
+        $admin->assignRole($adminRole);
+
+        $targetUser = User::factory()->create();
+        $targetUser->assignRole($staffRole);
+
+        $response = $this->actingAs($admin)->putJson("/user-management/user/{$targetUser->uuid}", [
+            'name' => 'Renamed User',
+            'email' => $targetUser->email,
+            'role_id' => $staffRole->id,
+        ]);
+
+        $response->assertStatus(403);
     }
 }

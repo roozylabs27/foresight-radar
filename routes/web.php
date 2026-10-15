@@ -63,7 +63,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::get("/", "index")->can('view-driving-force');
         Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-driving-force');
         Route::post("/", "create")->name('create')->can('create-driving-force');
-        Route::put("/{driving_force}", "update")->name('update')->can('update-driving-force');
+        Route::put("/{driving_force}", "update")->name('update')->can('edit-driving-force');
         Route::delete("/{driving_force}", "delete")->name('delete')->can('delete-driving-force');
     });
 
@@ -102,7 +102,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
             Route::get('/', 'index')->can('view-user');
             Route::get("/fetch-data", "fetch_data")->name('fetch-data')->can('view-user');
             Route::post("/", "create")->name('create')->can('create-user');
-            Route::put("/{user}", "update")->name('update')->can('update-user');
+            Route::put("/{user}", "update")->name('update')->can('edit-user');
             Route::delete("/{user}", "delete")->name('delete')->can('delete-user');
 
             Route::prefix('profile')->controller(App\Http\Controllers\ProfileController::class)->name('profile.')->group(function () {

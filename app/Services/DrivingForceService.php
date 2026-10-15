@@ -174,7 +174,7 @@ class DrivingForceService
         $search = $params['search'] ?? null;
         $dimension = $params['dimension'] ?? null;
 
-        $approvalItems = DrivingForce::with(['rating'])
+        $approvalItems = DrivingForce::with(['rating.action_reasons'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('keyword', 'LIKE', $search . '%')
@@ -205,7 +205,7 @@ class DrivingForceService
         $search = $params['search'] ?? null;
         $dimension = $params['dimension'] ?? null;
 
-        $closedItems = DrivingForce::with(['rating'])
+        $closedItems = DrivingForce::with(['rating.action_reasons'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('keyword', 'LIKE', $search . '%')

@@ -35,7 +35,7 @@ class DrivingForceTest extends TestCase
 
         $this->makePermission('view-driving-force');
         $this->makePermission('create-driving-force');
-        $this->makePermission('update-driving-force');
+        $this->makePermission('edit-driving-force');
         $this->makePermission('delete-driving-force');
         $this->makePermission('view-dashboard');
 
@@ -48,7 +48,7 @@ class DrivingForceTest extends TestCase
         $role->givePermissionTo([
             'view-driving-force',
             'create-driving-force',
-            'update-driving-force',
+            'edit-driving-force',
             'delete-driving-force',
             'view-dashboard',
         ]);
@@ -258,5 +258,48 @@ class DrivingForceTest extends TestCase
         $this->assertEquals(3, $item2['pipeline']['step']);
         $this->assertEquals('/rating-urgency', $item2['pipeline']['next_url']);
     }
-}
 
+    public function test_admin_with_edit_permission_can_update_driving_force(): void
+    {
+        $drivingForce = $this->makeDrivingForce();
+
+        $response = $this->actingAs($this->admin)->putJson("/driving-force/{$drivingForce->uuid}", [
+            'keyword' => 'Updated Signal',
+            'description' => 'Updated description',
+            'dimension_id' => $this->dimension->id,
+            'pic_id' => $this->admin->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('driving_forces', ['id' => $drivingForce->id, 'keyword' => 'Updated Signal']);
+    }
+
+    public function test_user_without_edit_permission_cannot_update_driving_force(): void
+    {
+        $drivingForce = $this->makeDrivingForce();
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo('view-driving-force');
+
+        $response = $this->actingAs($viewer)->putJson("/driving-force/{$drivingForce->uuid}", [
+            'keyword' => 'Updated Signal',
+            'description' => 'Updated description',
+            'dimension_id' => $this->dimension->id,
+            'pic_id' => $this->admin->id,
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    private function makeDrivingForce(): DrivingForce
+    {
+        return DrivingForce::create([
+            'uuid' => fake()->uuid(),
+            'keyword' => 'To Update',
+            'description' => 'Will be updated',
+            'dimension_id' => $this->dimension->id,
+            'created_by' => $this->admin->id,
+            'pic' => $this->admin->id,
+            'status' => 'PENDING',
+        ]);
+    }
+}
