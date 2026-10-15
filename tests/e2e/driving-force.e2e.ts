@@ -13,16 +13,16 @@ test.describe('Driving Force & Signal Ingestion E2E Flows', () => {
     const uniqueKeyword = `E2E-Signal-${Date.now()}`;
 
     // Select Dimension
-    await browser.locator('#basic_dimension_id').tap();
-    await browser.locator('.ant-select-dropdown .ant-select-item-option:has-text("Technology")').tap();
+    await screen.getByRole('combobox', 'Dimension').tap();
+    await screen.getByRole('option', 'Technology').tap();
 
     // Fill Keyword and Description
     await screen.getByPlaceholder('Enter keyword').fill(uniqueKeyword);
     await screen.getByPlaceholder('Enter a description').fill('E2E automated driving force verification test signal');
 
     // Select PIC
-    await browser.locator('#basic_pic_id').tap();
-    await screen.getByText('Ana Pangestu - Admin').tap();
+    await screen.getByRole('combobox', 'Personal In Charge').tap();
+    await screen.getByRole('option', 'Ana Pangestu - Admin').tap();
 
     // Submit dialog
     await screen.getByRole('button', 'Submit').tap();

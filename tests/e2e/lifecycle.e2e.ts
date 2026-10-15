@@ -31,7 +31,7 @@ test.describe('Foresight Workflow Lifecycle Pipeline E2E Flows', () => {
 
     // Verify Status Action heading and filters
     await expect(screen.getByRole('heading', 'Status Action')).toBeVisible({ timeout: 25000 });
-    await expect(screen.getByText('Filter Analisis:')).toBeVisible();
+    await expect(screen.getByRole('region', 'Filter analisis')).toBeVisible();
   });
 
   test('Stage 5 Happy Path: Approval Items interface is accessible to Super Admin', { session: 'admin' }, async ({ app, screen, browser }) => {
@@ -40,7 +40,7 @@ test.describe('Foresight Workflow Lifecycle Pipeline E2E Flows', () => {
 
     // Verify Approval Items heading and table container
     await expect(screen.getByRole('heading', 'Approval Items')).toBeVisible({ timeout: 25000 });
-    await expect(screen.getByText('Filter Analisis:')).toBeVisible();
+    await expect(screen.getByRole('region', 'Filter analisis')).toBeVisible();
   });
 
   test('Stage 6 Happy Path: Closed Items archive is accessible and displays closed records', { session: 'admin' }, async ({ app, screen, browser }) => {
@@ -49,7 +49,7 @@ test.describe('Foresight Workflow Lifecycle Pipeline E2E Flows', () => {
 
     // Verify Closed Items heading and archive list
     await expect(screen.getByRole('heading', 'Closed Items')).toBeVisible({ timeout: 25000 });
-    await expect(screen.getByText('Filter Analisis:')).toBeVisible();
+    await expect(screen.getByRole('region', 'Filter analisis')).toBeVisible();
   });
 
   test('Unhappy & Boundary Path: unauthorized user role without approval permission cannot execute decisions', async ({ app, browser, screen }) => {

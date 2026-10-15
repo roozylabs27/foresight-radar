@@ -2,7 +2,7 @@ import { test } from '@e2e-dev/web';
 import { expect, credentials } from 'e2e';
 
 test.describe('Responsive Mobile Navigation Drawer (RESP-001)', () => {
-  test('Mobile viewport (375x667): Desktop sider is hidden and hamburger button opens drawer overlay', async ({ app, screen, browser }) => {
+  test('Mobile viewport (375x667): Desktop sidebar is hidden and hamburger button opens navigation sheet', async ({ app, screen, browser }) => {
     const admin = credentials.user('admin');
     if (typeof browser.setViewport === 'function') {
       await browser.setViewport({ width: 375, height: 667 });
@@ -15,9 +15,9 @@ test.describe('Responsive Mobile Navigation Drawer (RESP-001)', () => {
 
     await expect(browser).toHaveURL(/\/visualization\/foresight-radar|\/dashboard/, { timeout: 45000 });
 
-    // Verify desktop sider is not visible on mobile
-    const desktopSider = browser.locator('aside.ant-layout-sider');
-    await expect(desktopSider).toBeHidden();
+    // Desktop sidebar is not rendered on mobile; navigation lives in the sheet
+    const desktopSidebar = browser.locator('aside[aria-label="Navigasi utama"]');
+    await expect(desktopSidebar).toBeHidden();
 
     // Hamburger button toggles mobile navigation drawer
     const hamburgerBtn = screen.getByRole('button', 'Buka menu navigasi');

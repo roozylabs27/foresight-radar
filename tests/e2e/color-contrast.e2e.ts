@@ -11,14 +11,14 @@ test.describe('WCAG 2.1 AA Color Contrast Remediation (A11Y-002)', () => {
 
     await expect(browser).toHaveURL(/\/visualization\/foresight-radar|\/dashboard/, { timeout: 45000 });
 
-    // Verify secondary subtitle color is #595959 (rgb(89, 89, 89))
+    // Sidebar subtitle uses the subtle-foreground token #5f6d84 (rgb(95, 109, 132)), 5.3:1 on white
     const color = await browser.evaluate(() => {
       const spans = Array.from(document.querySelectorAll('span'));
       const el = spans.find((s) => s.textContent?.includes('Strategic Intel'));
       return el ? window.getComputedStyle(el).color : null;
     });
     expect(color).not.toBeNull();
-    expect(color).toBe('rgb(89, 89, 89)');
+    expect(color).toBe('rgb(95, 109, 132)');
 
     // Verify .custom-green-button has compliant dark green background (#2e7d32 = rgb(46, 125, 50))
     const greenBtnStyle = await browser.evaluate(() => {
