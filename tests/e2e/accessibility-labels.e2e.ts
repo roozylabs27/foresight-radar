@@ -27,7 +27,7 @@ test.describe('Form Label Accessibility (A11Y-001)', () => {
     attachDomHelper(browser);
     await app.open('/login');
 
-    const emailLabel = await browser.$('label[for="email"], label[for="login_email"]');
+    const emailLabel = await browser.$('label[for="email"]');
     expect(emailLabel).not.toBeNull();
     const emailForAttr = await emailLabel.getAttribute('for');
 
@@ -36,7 +36,7 @@ test.describe('Form Label Accessibility (A11Y-001)', () => {
     const inputType = await emailInput.getAttribute('type');
     expect(['text', 'email']).toContain(inputType);
 
-    const passwordLabel = await browser.$('label[for="password"], label[for="login_password"]');
+    const passwordLabel = await browser.$('label[for="password"]');
     expect(passwordLabel).not.toBeNull();
     const passwordForAttr = await passwordLabel.getAttribute('for');
 

@@ -20,34 +20,21 @@ test.describe('WCAG 2.1 AA Color Contrast Remediation (A11Y-002)', () => {
     expect(color).not.toBeNull();
     expect(color).toBe('rgb(95, 109, 132)');
 
-    // Verify .custom-green-button has compliant dark green background (#2e7d32 = rgb(46, 125, 50))
-    const greenBtnStyle = await browser.evaluate(() => {
-      const dummy = document.createElement('button');
-      dummy.className = 'custom-green-button';
-      document.body.appendChild(dummy);
-      const bg = window.getComputedStyle(dummy).backgroundColor;
-      document.body.removeChild(dummy);
-      return bg;
+    // Status colours come from design tokens now (the old .custom-green-button and
+    // .custom-tag rules went with the antd pages). Both pass 4.5:1 on white and on
+    // their -soft backgrounds: success #1f7a3a, warning #a65300.
+    const tokens = await browser.evaluate(() => {
+      const probe = document.createElement('span');
+      document.body.appendChild(probe);
+      const read = (name: string) => {
+        probe.style.color = `var(${name})`;
+        return window.getComputedStyle(probe).color;
+      };
+      const result = { success: read('--success'), warning: read('--warning') };
+      document.body.removeChild(probe);
+      return result;
     });
-    expect(greenBtnStyle).toBe('rgb(46, 125, 50)');
-
-    // Verify .custom-tag hover background rule (#b25900)
-    const tagHoverBg = await browser.evaluate(() => {
-      for (const sheet of Array.from(document.styleSheets)) {
-        try {
-          for (const rule of Array.from(sheet.cssRules || [])) {
-            if ((rule as CSSStyleRule).selectorText === '.custom-tag:hover') {
-              return (rule as CSSStyleRule).style.background;
-            }
-          }
-        } catch {
-          // ignore cross-origin sheet errors
-        }
-      }
-      return null;
-    });
-    expect(tagHoverBg).not.toBeNull();
-    expect(tagHoverBg).toBeDefined();
-    expect(tagHoverBg!.includes('#b25900') || tagHoverBg!.includes('rgb(178, 89, 0)')).toBe(true);
+    expect(tokens.success).toBe('rgb(31, 122, 58)');
+    expect(tokens.warning).toBe('rgb(166, 83, 0)');
   });
 });

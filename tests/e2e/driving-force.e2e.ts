@@ -20,9 +20,9 @@ test.describe('Driving Force & Signal Ingestion E2E Flows', () => {
     await screen.getByPlaceholder('Enter keyword').fill(uniqueKeyword);
     await screen.getByPlaceholder('Enter a description').fill('E2E automated driving force verification test signal');
 
-    // Select PIC
+    // Select PIC: the first one listed, since seeded user names differ per database
     await screen.getByRole('combobox', 'Personal In Charge').tap();
-    await screen.getByRole('option', 'Ana Pangestu - Admin').tap();
+    await screen.getByRole('option').first().tap();
 
     // Submit dialog
     await screen.getByRole('button', 'Submit').tap();

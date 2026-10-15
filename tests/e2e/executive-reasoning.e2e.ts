@@ -28,7 +28,7 @@ test.describe('Executive Reasoning & Foundation Metrics E2E Flows', () => {
 
     // Switch to Prioritizing tab
     await screen.getByRole('tab', 'Prioritizing').tap();
-    await expect(screen.getByText('Filter Analisis:')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByRole('region', 'Filter analisis')).toBeVisible({ timeout: 45000 });
 
     // Switch to Foresight Radar tab
     await screen.getByRole('tab', 'Foresight Radar').tap();

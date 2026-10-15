@@ -8,9 +8,9 @@ test.describe('Visualization & Analytical Reporting E2E Flows', () => {
 
     // Verify radar header and filter bar
     await expect(screen.getByRole('heading', 'Foresight Radar')).toBeVisible({ timeout: 25000 });
-    await expect(screen.getByText('Filter Analisis:')).toBeVisible();
-    await expect(screen.getByText('Periode:')).toBeVisible();
-    await expect(screen.getByText('Dimensi:')).toBeVisible();
+    await expect(screen.getByRole('region', 'Filter analisis')).toBeVisible();
+    await expect(screen.getByRole('button', /Periode/)).toBeVisible();
+    await expect(screen.getByRole('combobox', 'Dimensi')).toBeVisible();
 
     // Verify chart container exists
     await expect(screen.getByText(/Horizon 1 \/ 2 \/ 3/)).toBeVisible();
@@ -22,7 +22,7 @@ test.describe('Visualization & Analytical Reporting E2E Flows', () => {
 
     // Verify prioritizing heading and matrix components
     await expect(screen.getByRole('heading', 'Prioritizing')).toBeVisible({ timeout: 25000 });
-    await expect(screen.getByText('Filter Analisis:')).toBeVisible();
+    await expect(screen.getByRole('region', 'Filter analisis')).toBeVisible();
   });
 
   test('Happy Path: Registered List displays status table and segmented info view', { session: 'admin' }, async ({ app, screen, browser }) => {
@@ -46,9 +46,8 @@ test.describe('Visualization & Analytical Reporting E2E Flows', () => {
     await app.open('/visualization/foresight-radar');
 
     // Open dimension selector and pick a filter
-    const dimCombobox = screen.getByRole('combobox');
-    await dimCombobox.tap();
-    await browser.locator('.ant-select-item-option:has-text("Economy")').tap();
+    await screen.getByRole('combobox', 'Dimensi').tap();
+    await screen.getByRole('option', 'Economy').tap();
 
     // Verify reset filter button appears when active filters differ from default
     const resetBtn = screen.getByRole('button', /Reset/);
