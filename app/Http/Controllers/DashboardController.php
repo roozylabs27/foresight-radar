@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
+use App\Http\Requests\SimulationRequest;
 use App\Services\ReasoningEngineService;
+use App\Services\ScenarioSimulationService;
 
 class DashboardController extends Controller
 {
@@ -33,5 +35,18 @@ class DashboardController extends Controller
         $data = $reasoningService->getExecutiveOverview($dateRange, $dimension);
 
         return response()->json($data, Response::HTTP_OK);
+    }
+
+    /**
+     * What-if: the indices and posture with some forces changed. Nothing is saved.
+     */
+    public function simulate(SimulationRequest $request, ScenarioSimulationService $simulation)
+    {
+        $validated = $request->validated();
+
+        return response()->json(
+            $simulation->simulate($validated['date'] ?? null, $validated['dimension'] ?? null, $validated['overrides']),
+            Response::HTTP_OK
+        );
     }
 }
