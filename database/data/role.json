@@ -34,7 +34,9 @@
             "view-log",
             "view-signal",
             "create-signal",
-            "review-signal"
+            "review-signal",
+            "view-cross-impact",
+            "manage-cross-impact"
         ]
     },
     {
@@ -72,7 +74,9 @@
             "view-log",
             "view-signal",
             "create-signal",
-            "review-signal"
+            "review-signal",
+            "view-cross-impact",
+            "manage-cross-impact"
         ]
     },
     {
@@ -99,7 +103,9 @@
             "view-closed-items",
             "view-signal",
             "create-signal",
-            "review-signal"
+            "review-signal",
+            "view-cross-impact",
+            "manage-cross-impact"
         ]
     },
     {
@@ -114,7 +120,8 @@
             "view-approval-items",
             "create-approval-items",
             "view-closed-items",
-            "view-signal"
+            "view-signal",
+            "view-cross-impact"
         ]
     }
 ]
