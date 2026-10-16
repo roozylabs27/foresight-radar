@@ -151,7 +151,7 @@ This document establishes the exhaustive feature inventory for the Foresight Rad
 * **Status:** Verified.
 
 ### FEAT-012: Executive KPI Dashboard
-* **Feature Name:** Executive Overview Dashboard
+* **Feature Name:** Overview Dashboard
 * **Purpose:** Consolidates real-time organizational KPIs: total driving forces, distribution across workflow stages, environmental category counts, priority breakdown charts, and recent activity logs.
 * **Frontend Entry Point:** [`resources/js/Pages/Dashboard.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Dashboard.jsx)
 * **Backend Entry Point:** [`routes/web.php`](file:///c:/laragon/www/foresight-radar/routes/web.php#L35-L55) (Inline route handler aggregating metrics)

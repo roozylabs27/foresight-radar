@@ -1,6 +1,6 @@
 # Reasoning Engine: rumus, bobot, dan ambang
 
-Dokumen ini mencatat keputusan product owner untuk Growth Index, Resilience Index, dan postur kesiapan di Executive Overview (Fase 1a dari `docs/plans/reasoning-engine-framework.md`). Bobot awal disetujui pada 16 Oktober 2026. Implementasinya ada di `app/Services/ReasoningEngineService.php`, dan nilai pastinya diuji di `tests/Feature/Reasoning/ReasoningEngineTest.php`.
+Dokumen ini mencatat keputusan product owner untuk Growth Index, Resilience Index, dan postur kesiapan di Overview (Fase 1a dari `docs/plans/reasoning-engine-framework.md`). Bobot awal disetujui pada 16 Oktober 2026. Implementasinya ada di `app/Services/ReasoningEngineService.php`, dan nilai pastinya diuji di `tests/Feature/Reasoning/ReasoningEngineTest.php`.
 
 Engine ini berbasis aturan, bukan machine learning.
 
@@ -64,3 +64,35 @@ Bobot dan ambang berupa konstanta di `ReasoningEngineService` (`RESILIENCE_THRES
 ## Data pendukung
 - **EDA**: frekuensi per dimensi, distribusi skor 1–10, korelasi Pearson impact × uncertainty, dan sebaran impact (min, Q1, median, Q3, max) per dimensi dan per horizon. Grafik tren mencakup minimal 12 bulan terakhir sampai akhir periode filter.
 - **Riwayat rating**: `driving_force_rating_histories` menyimpan satu baris saat rating dibuat dan satu baris lagi setiap kali horizon, status aksi, prioritas, impact, atau uncertainty berubah (`DrivingForceRatingObserver`). Rating yang sudah ada sebelum tabel dibuat mendapat satu baris `baseline`. Data ini menjadi bahan Fase 2.
+
+## Fase 2: validasi empiris ringan
+Keputusan desain disetujui pada 16 Oktober 2026. Implementasinya ada di `app/Services/RatingHistoryAnalyticsService.php` dan `app/Services/CrossImpactService.php`, dengan nilai pasti diuji di `tests/Feature/Reasoning/RatingHistoryAnalyticsTest.php` dan `CrossImpactTest.php`.
+
+### Tren skor dari riwayat rating
+Untuk setiap bulan di jendela tren (minimal 12 bulan), engine mengambil skor terakhir yang tercatat untuk tiap rating sampai akhir bulan itu, lalu merata-ratakan impact dan uncertainty, baik untuk semua dimensi maupun per dimensi. Perubahan dihitung dari bulan pertama ke bulan terakhir yang berisi data.
+
+Grafik baru ditampilkan bila ada minimal **2 bulan berisi data** dan **setidaknya satu perubahan skor**. Kalau belum, dashboard menyebut sejak kapan riwayat tercatat dan berapa perubahan yang sudah ada. Riwayat di database lokal baru dimulai 10 Oktober 2026, jadi saat ini yang tampil adalah keadaan kosong itu.
+
+### Kecepatan Monitoring → Decided Plan
+Untuk setiap force, engine menggabungkan keputusan status aksi (`action_reasons`) dengan perubahan status di riwayat rating, lalu menghitung hari dari keputusan Monitoring pertama sampai Decided Plan pertama sesudahnya. Hanya perpindahan yang terjadi di jendela tren yang dihitung. Force yang masih Monitoring ditampilkan terpisah, dengan lama menunggu sampai hari ini. Baris `baseline` tidak dipakai karena waktunya adalah waktu migrasi, bukan waktu keputusan.
+
+### Cross-impact (INT-013, versi terkecil)
+- **Model**: analis menilai pengaruh berarah "A terhadap B" dengan skor bulat −3 (sangat menekan) sampai +3 (sangat memperkuat). A→B dan B→A dinilai terpisah. Pasangan tanpa nilai berarti 0, dan menyimpan 0 tanpa catatan menghapus pasangan itu. Hanya driving force berstatus APPROVED yang masuk matriks. Data disimpan di tabel `cross_impacts`.
+- **Ringkasan (metode Vester)**: Aktif = Σ|skor| di baris (seberapa kuat force memengaruhi), Pasif = Σ|skor| di kolom (seberapa kuat ia dipengaruhi). Keduanya dibandingkan dengan rata-rata matriks:
+
+| | Pasif > rata-rata | Pasif ≤ rata-rata |
+|---|---|---|
+| **Aktif > rata-rata** | Kritis | Pendorong |
+| **Aktif ≤ rata-rata** | Indikator | Penyangga |
+
+  Force tanpa pasangan bernilai berstatus "Belum dinilai". Saat matriks masih jarang terisi, rata-ratanya kecil sehingga hampir semua force yang dinilai jatuh ke Kritis atau Pendorong. Klasifikasi baru bermakna setelah sebagian besar pasangan penting dinilai.
+- **Tampilan**: halaman Cross-Impact di menu visualisasi berisi matriks dan ringkasan. Di Foresight Radar, tombol Cross-Impact menampilkan panah antar force yang sedang tampil: hijau memperkuat, merah putus-putus menekan, makin tebal makin kuat.
+- **Hak akses**: `view-cross-impact` untuk developer, super-admin, admin, dan bod. `manage-cross-impact` untuk developer, super-admin, dan admin.
+
+### Clustering: belum dibuat
+K-Means atau clustering lain baru dibuat bila ketiga syarat ini terpenuhi:
+- **Volume**: minimal **150 driving force APPROVED** dengan rating lengkap. Dengan 4 fitur (impact, uncertainty, horizon, dimensi), pedoman umum 10–20 titik per fitur per cluster untuk 3–4 cluster menghasilkan kebutuhan sekitar 120–320 titik.
+- **Riwayat**: minimal **6 bulan riwayat** dengan perubahan skor, supaya fitur dinamis (laju perubahan impact, kecepatan keputusan) ikut dipakai.
+- **Stabilitas**: cluster harus stabil, yaitu rata-rata koefisien silhouette ≥ 0,5 dan susunan cluster hampir sama saat 20% data diacak ulang. Kalau tidak, cluster hanya mencerminkan noise.
+
+Database lokal saat ini berisi sekitar 19 force dan riwayat beberapa hari, jauh di bawah ketiga syarat. Clustering sekarang hanya akan menghasilkan kelompok yang berubah setiap ada satu force baru.

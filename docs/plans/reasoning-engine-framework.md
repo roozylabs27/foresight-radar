@@ -7,6 +7,20 @@ Foresight Radar sudah memakai sebagian kecil kerangka ini. Taksonomi dimensi mem
 
 Rekomendasi: perbaiki fondasinya dulu tanpa ML (Fase 1). Isinya engine indeks yang benar dan terjelaskan, EDA lengkap, dan rantai data yang tidak membuang informasi. Pattern recognition (clustering, PCA, decision tree) baru layak setelah ada riwayat skor dan volume data yang cukup.
 
+## Status
+Per 16 Oktober 2026. Rumus, bobot, dan keputusan desain dicatat di `docs/product/REASONING_ENGINE.md`.
+
+| Fase | Status | Isi |
+|---|---|---|
+| 1a. Engine indeks | Selesai | Growth dan Resilience berupa rata-rata berbobot 0–100 dengan baseline 50 dan bobot horizon. Ambang postur 60/60, dan keempat postur punya test bernilai pasti. |
+| 1b. Causal reasoning terjelaskan | Selesai | Kontribusi per force dan aturan pemicu dikirim lewat `/dashboard/reasoning-data` dan ditampilkan di panel "Mengapa skor ini?". Status dicocokkan lewat enum `app/Enums`. |
+| 1c. EDA lengkap | Selesai | Grafik frekuensi, distribusi skor, scatter dengan korelasi Pearson, dan sebaran impact per dimensi dan horizon. Tren mencakup minimal 12 bulan, dengan label "Dimensi Makro & Mezzo". |
+| 1d. Rantai data | Selesai | Radar deterministik, deteksi Mid Term diperbaiki, `accept_create` membuat rating dari skor sinyal, dan perubahan skor dicatat di `driving_force_rating_histories`. |
+| 2. Tren dan kecepatan keputusan | Selesai | Tren skor per dimensi dari riwayat rating, serta lama dari Monitoring ke Decided Plan. Keduanya punya keadaan kosong yang jujur selama riwayat masih pendek. |
+| 2. Cross-impact (INT-013) | Selesai, versi terkecil | Matriks berarah −3..+3 yang diisi analis, ringkasan Vester (Pendorong, Kritis, Indikator, Penyangga), dan panah antar force di Foresight Radar. |
+| 2. Clustering | Sengaja ditunda | Baru dibuat setelah ada ≥150 force APPROVED, ≥6 bulan riwayat, dan cluster yang stabil. Alasannya ada di dokumen produk. |
+| 3–4 | Belum dimulai | – |
+
 ## Kerangka di PDF
 | Tahap | Isi | Fase CRISP-DM |
 |---|---|---|
@@ -34,13 +48,13 @@ Keterbatasan: tabel *Reasoning Matrix* (hal. 3) dan diagram workflow, activity, 
 | EDA: distribusi | – | Belum | – |
 | EDA: hubungan | Matriks impact × uncertainty (visual, tanpa korelasi) | Sebagian | `app/Http/Resources/PrioritizingResource.php` |
 | EDA: perbandingan | – | Belum | – |
-| Dashboard | Executive Overview, Prioritizing, Radar, Registered List dengan filter periode dan dimensi | Ada | `resources/js/Pages/Dashboard.jsx` |
+| Dashboard | Overview, Prioritizing, Radar, Registered List dengan filter periode dan dimensi | Ada | `resources/js/Pages/Dashboard.jsx` |
 | Pattern recognition | – | Belum | – |
 | Rule discovery | Aturan prioritas tetap (≥6 → High/Medium/Low) | Sebagian: aturan ditulis tangan, bukan ditemukan dari data | `app/Models/DrivingForceRating.php:64-82` |
 | Causal reasoning | Arah dampak dari status aksi (Decided Plan menaikkan, Monitoring menurunkan) | Sebagian: implisit di rumus, tidak dijelaskan ke pengguna | `ReasoningEngineService.php:56-116` |
 | Rule-based scoring dan indeks | Growth Index, Resilience Index, postur 2×2, Top 3 critical forces | Ada, dengan bug | `ReasoningEngineService.php:21-190` |
 | Input skenario dan rekomendasi | Hanya empat kalimat postur tetap | Belum | `ReasoningEngineService.php:121-156` |
-| Prototype | Executive Overview dan e2e `executive-reasoning` | Ada | `resources/js/Components/ExecutiveOverview.jsx` |
+| Prototype | Overview dan e2e `executive-reasoning` | Ada | `resources/js/Components/ExecutiveOverview.jsx` |
 | Framework synthesis | – | Belum | – |
 
 Posisi app kira-kira ada di tingkat konteks sampai scoring. Tahap validasi dan epistemik belum tersentuh.
@@ -99,7 +113,7 @@ Polanya mengikuti PDF: Data → Reasoning → Prototype → Refinement.
 
 **1b. Causal reasoning yang terjelaskan**
 - Endpoint mengembalikan, untuk tiap indeks, kontribusi per force (`+3,2` atau `−1,8`) beserta aturan yang memicunya, misalnya "Monitoring, impact 9 ≥ 7 → eksposur risiko".
-- Executive Overview menampilkan panel "Mengapa skor ini", berisi daftar faktor teratas dalam bentuk aturan seperti cabang decision tree.
+- Overview menampilkan panel "Mengapa skor ini", berisi daftar faktor teratas dalam bentuk aturan seperti cabang decision tree.
 - Kecocokan status lewat teks diganti ke ID atau enum (`app/Enums`).
 - Perubahan di `ReasoningEngineService.php`, `DashboardController.php`, `resources/js/Components/ExecutiveOverview.jsx`.
 - Selesai bila: jumlah kontribusi sama dengan selisih indeks dari baseline, dan e2e memeriksa panel penjelasan.
