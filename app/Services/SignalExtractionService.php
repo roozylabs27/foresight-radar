@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\TimeHorizonType;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\Signal;
@@ -171,14 +172,19 @@ class SignalExtractionService
         $textLower = strtolower($text);
 
         if (preg_match('/\b(202[4-6]|months|this year|imminent|immediate)\b/', $textLower)) {
-            return $timeHorizons->firstWhere('name', 'Short Term') ?? $timeHorizons->first();
+            return $this->findTimeHorizon($timeHorizons, TimeHorizonType::SHORT_TERM) ?? $timeHorizons->first();
         }
 
         if (preg_match('/\b(203[0-9]|decade|transformational|future)\b/', $textLower)) {
-            return $timeHorizons->firstWhere('name', 'Long Term') ?? $timeHorizons->last();
+            return $this->findTimeHorizon($timeHorizons, TimeHorizonType::LONG_TERM) ?? $timeHorizons->last();
         }
 
-        return $timeHorizons->firstWhere('name', 'Medium Term') ?? $timeHorizons->first();
+        return $this->findTimeHorizon($timeHorizons, TimeHorizonType::MID_TERM) ?? $timeHorizons->first();
+    }
+
+    protected function findTimeHorizon(Collection $timeHorizons, TimeHorizonType $type): ?TimeHorizon
+    {
+        return $timeHorizons->first(fn ($timeHorizon) => TimeHorizonType::fromModel($timeHorizon) === $type);
     }
 
     /**

@@ -7,9 +7,11 @@ use App\Http\Requests\IngestSourceRequest;
 use App\Http\Requests\ReviewSignalRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\DrivingForceRating;
 use App\Models\Signal;
 use App\Models\TimeHorizon;
 use App\Services\SignalExtractionService;
+use App\Support\TableSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -80,7 +82,17 @@ class SignalIngestionController extends Controller
                             ->orWhere('evidence_quote', 'LIKE', '%' . $search . '%');
                     });
                 })
-                ->orderBy('created_at', 'desc')
+                ->tap(fn ($q) => TableSort::apply(
+                    $q,
+                    $request->query(),
+                    [
+                        'title' => 'title',
+                        'taxonomy' => Dimension::select('name')->whereColumn('dimensions.id', 'signals.dimension_id'),
+                        'assessment' => 'confidence_score',
+                        'review_status' => 'review_status',
+                    ],
+                    fn ($q) => $q->orderBy('created_at', 'desc')
+                ))
                 ->paginate($request->query('pageSize', 10));
 
             return response()->json($signals, Response::HTTP_OK);
@@ -172,6 +184,20 @@ class SignalIngestionController extends Controller
                         'description' => $signal->summary,
                         'status' => 'PENDING',
                     ]);
+
+                    // Carry the signal's horizon and preliminary scores into the
+                    // rating; the status action is left for the analyst. A rating
+                    // needs a horizon, so without one the Time Horizon stage starts it.
+                    if ($signal->suggested_time_horizon_id) {
+                        $rating = new DrivingForceRating([
+                            'driving_force_id' => $drivingForce->id,
+                            'time_horizon_id' => $signal->suggested_time_horizon_id,
+                            'impact_analysis' => $signal->preliminary_impact,
+                            'uncertainty_analysis' => $signal->preliminary_uncertainty,
+                        ]);
+                        $rating->priority_id = $rating->calculatePriority();
+                        $rating->save();
+                    }
 
                     $signal->review_status = 'ACCEPTED';
                     $signal->created_driving_force_id = $drivingForce->id;

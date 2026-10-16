@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Http\Resources\UserCollection;
+use App\Support\TableSort;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -101,7 +103,23 @@ class User extends Authenticatable
                 $q->where('created_at', '>=', $date_range[0] . ' 00:00:00')
                     ->where('created_at', '<=', $date_range[1] . ' 23:59:59');
             })
-            ->orderBy('created_at', 'desc')
+            ->tap(fn ($q) => TableSort::apply(
+                $q,
+                request()->all(),
+                [
+                    'date_created' => 'created_at',
+                    'name' => 'name',
+                    'email' => 'email',
+                    // A user's first role by display name, as listed in the Role/Division column.
+                    'role' => Role::select('display_name')
+                        ->join('model_has_roles', 'model_has_roles.role_id', '=', 'roles.id')
+                        ->whereColumn('model_has_roles.model_id', 'users.id')
+                        ->where('model_has_roles.model_type', self::class)
+                        ->orderBy('display_name')
+                        ->limit(1),
+                ],
+                fn ($q) => $q->orderBy('created_at', 'desc')
+            ))
             ->paginate($pagination);
 
         return new UserCollection($users);

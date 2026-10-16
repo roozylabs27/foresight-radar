@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\PriorityLevel;
+use App\Enums\TimeHorizonType;
 use App\Models\Dimension;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -13,56 +15,51 @@ class ForesightRadarResource extends JsonResource
      *
      * @return array<string, mixed>
      */
+    /** Radar value range of each horizon band, inner to outer (see resources/js/lib/radarLayout.js). */
+    public const HORIZON_BANDS = [[2.0, 4.0], [5.0, 6.0], [7.0, 8.0]];
+
+    /**
+     * Dimension ids in display order; set by the reporting service so the
+     * collection reads them once.
+     *
+     * @var array<int, int>|null
+     */
+    public ?array $dimensionOrder = null;
+
+    public function withDimensionOrder(array $dimensionOrder): static
+    {
+        $this->dimensionOrder = $dimensionOrder;
+
+        return $this;
+    }
+
+    /**
+     * Distance from the radar centre: the horizon picks the band, and within
+     * it a higher impact sits closer to the centre. An unset horizon falls in
+     * the Mid Term band and an unrated impact counts as 5.
+     */
+    public static function radarValue(?TimeHorizonType $horizon, mixed $impact): float
+    {
+        [$inner, $outer] = self::HORIZON_BANDS[($horizon ?? TimeHorizonType::MID_TERM)->band()];
+        $impact = $impact === null ? 5 : max(1, min(10, (int) $impact));
+
+        return round($outer - ($outer - $inner) * ($impact - 1) / 9, 2);
+    }
+
     public function toArray(Request $request): array
     {
-        $short_term = null;
-        $mid_term = null;
-        $long_term = null;
+        $horizon = TimeHorizonType::fromModel($this->time_horizon);
+        $short_term = $horizon === TimeHorizonType::SHORT_TERM ? '✔' : null;
+        $mid_term = $horizon === TimeHorizonType::MID_TERM ? '✔' : null;
+        $long_term = $horizon === TimeHorizonType::LONG_TERM ? '✔' : null;
 
-        if ($this->time_horizon_id == 1) {
-            $short_term = '✔';
-        }
+        $item_style = PriorityLevel::fromModel($this->priority)?->radarColor() ?? '#000';
 
-        if ($this->time_horizon_id == 2) {
-            $mid_term = '✔';
-        }
-
-        if ($this->time_horizon_id == 3) {
-            $long_term = '✔';
-        }
-
-        $item_style = "#000";
-
-        if ($this->priority_id == 3) {
-            $item_style = '#52c41a';
-        }
-
-        if ($this->priority_id == 2) {
-            $item_style = '#faad14';
-        }
-
-        if ($this->priority_id == 1) {
-            $item_style = '#ff4d4f';
-        }
-
-        $values = [];
-        $dimensions = Dimension::count();
-
-        for ($i = 0; $i < $dimensions; $i++) {
-            array_push($values, 0);
-        }
-
-        $dimension = Dimension::all();
-        foreach ($dimension as $index => $value) {
-            if ($value->id == $this->driving_force?->dimension_id) {
-                if ($this->time_horizon_id == 1) {
-                    $values[($value->id - 1)] = rand(2, 4);
-                } else if ($this->time_horizon_id == 2) {
-                    $values[($value->id - 1)] = rand(5, 6);
-                } else {
-                    $values[($value->id - 1)] = rand(7, 8);
-                }
-            }
+        $dimensionOrder = $this->dimensionOrder ?? Dimension::orderBy('id')->pluck('id')->all();
+        $values = array_fill(0, count($dimensionOrder), 0);
+        $position = array_search($this->driving_force?->dimension_id, $dimensionOrder, true);
+        if ($position !== false) {
+            $values[$position] = self::radarValue($horizon, $this->impact_analysis);
         }
 
         $df = $this->driving_force;

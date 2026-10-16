@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Http\Resources\ForesightRadarResource;
 use App\Http\Resources\PrioritizingResource;
+use App\Models\Dimension;
 use App\Models\DrivingForceRating;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -81,7 +82,11 @@ class ForesightReportingService
             ->orderBy('created_at', 'ASC')
             ->get();
 
-        return ForesightRadarResource::collection($ratings);
+        $dimensionOrder = Dimension::orderBy('id')->pluck('id')->all();
+
+        return ForesightRadarResource::collection(
+            $ratings->map(fn ($rating) => (new ForesightRadarResource($rating))->withDimensionOrder($dimensionOrder))
+        );
     }
 
     /**

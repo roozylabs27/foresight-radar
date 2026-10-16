@@ -61,6 +61,11 @@ class DrivingForceRating extends Model
         return $this->belongsTo(Priority::class, 'priority_id');
     }
 
+    public function histories(): HasMany
+    {
+        return $this->hasMany(DrivingForceRatingHistory::class)->orderBy('changed_at')->orderBy('id');
+    }
+
     public function calculatePriority(): ?int
     {
         if ($this->impact_analysis === null || $this->uncertainty_analysis === null) {

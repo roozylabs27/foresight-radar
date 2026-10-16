@@ -8,8 +8,13 @@ use App\Http\Resources\DrivingForceCollection;
 use App\Http\Resources\RatingUrgencyCollection;
 use App\Http\Resources\StatusActionCollection;
 use App\Http\Resources\TimeHorizonCollection;
+use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\DrivingForceRating;
+use App\Models\User;
+use App\Support\TableSort;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
 class DrivingForceService
 {
@@ -47,6 +52,26 @@ class DrivingForceService
         return 10;
     }
 
+    /**
+     * Sortable related values for the DataTable columns (see TableSort).
+     */
+    private function dimensionName(): Builder
+    {
+        return Dimension::select('name')->whereColumn('dimensions.id', 'driving_forces.dimension_id');
+    }
+
+    private function picName(): Builder
+    {
+        return User::withTrashed()->select('name')->whereColumn('users.id', 'driving_forces.pic');
+    }
+
+    private function ratingValue(string $column): Builder
+    {
+        return DrivingForceRating::select($column)
+            ->whereColumn('driving_force_ratings.driving_force_id', 'driving_forces.id')
+            ->limit(1);
+    }
+
     public function filter(array $params): DrivingForceCollection
     {
         [$dateStart, $dateEnd] = $this->resolveDateRange($params);
@@ -78,7 +103,17 @@ class DrivingForceService
             })
             ->where('created_at', '>=', $dateStart)
             ->where('created_at', '<=', $dateEnd)
-            ->orderBy('created_at', 'DESC')
+            ->tap(fn ($q) => TableSort::apply(
+                $q,
+                $params,
+                [
+                    'date_created' => 'created_at',
+                    'keyword' => 'keyword',
+                    'dimension' => $this->dimensionName(),
+                    'pic' => $this->picName(),
+                ],
+                fn ($q) => $q->orderBy('created_at', 'DESC')
+            ))
             ->paginate($pageSize);
 
         return new DrivingForceCollection($drivingForces);
@@ -103,7 +138,15 @@ class DrivingForceService
             })
             ->where('created_at', '>=', $dateStart)
             ->where('created_at', '<=', $dateEnd)
-            ->orderBy('created_at', 'DESC')
+            ->tap(fn ($q) => TableSort::apply(
+                $q,
+                $params,
+                [
+                    'keyword' => 'keyword',
+                    'dimension' => $this->dimensionName(),
+                ],
+                fn ($q) => $q->orderBy('created_at', 'DESC')
+            ))
             ->paginate($pageSize);
 
         return new TimeHorizonCollection($timeHorizons);
@@ -129,7 +172,16 @@ class DrivingForceService
             ->where('created_at', '>=', $dateStart)
             ->has('rating')
             ->where('created_at', '<=', $dateEnd)
-            ->orderBy('created_at', 'DESC')
+            ->tap(fn ($q) => TableSort::apply(
+                $q,
+                $params,
+                [
+                    'keyword' => 'keyword',
+                    'uncertainty' => $this->ratingValue('uncertainty_analysis'),
+                    'impact' => $this->ratingValue('impact_analysis'),
+                ],
+                fn ($q) => $q->orderBy('created_at', 'DESC')
+            ))
             ->paginate($pageSize);
 
         return new RatingUrgencyCollection($ratings);
@@ -161,10 +213,39 @@ class DrivingForceService
                     ->whereNotNull('uncertainty_analysis');
             })
             ->where('created_at', '<=', $dateEnd)
-            ->orderBy('created_at', 'DESC')
+            ->tap(fn ($q) => TableSort::apply(
+                $q,
+                $params,
+                [
+                    'keyword' => 'keyword',
+                    'dimension' => $this->dimensionName(),
+                ],
+                fn ($q) => $q->orderBy('created_at', 'DESC')
+            ))
             ->paginate($pageSize);
 
         return new StatusActionCollection($statusActions);
+    }
+
+    /**
+     * Approval and Closed Items share their columns (Components/ReviewColumns.jsx).
+     * Time horizon, priority and status action ids run in their natural order
+     * (Short < Mid < Long, High < Medium < Low, Monitoring < Decided Plan).
+     */
+    private function reviewSortable(): array
+    {
+        return [
+            'date_created' => 'created_at',
+            'keyword' => 'keyword',
+            'dimension' => $this->dimensionName(),
+            'pic' => $this->picName(),
+            'time_horizon' => $this->ratingValue('time_horizon_id'),
+            'priority' => $this->ratingValue('priority_id'),
+            'uncertainty_analysis' => $this->ratingValue('uncertainty_analysis'),
+            'impact_analysis' => $this->ratingValue('impact_analysis'),
+            'status' => 'status',
+            'status_action' => $this->ratingValue('status_action_id'),
+        ];
     }
 
     public function approvalItems(array $params): ApprovalItemsCollection
@@ -191,8 +272,12 @@ class DrivingForceService
             ->whereIn('status', ['PENDING', 'APPROVED'])
             ->where('created_at', '>=', $dateStart)
             ->where('created_at', '<=', $dateEnd)
-            ->orderBy('created_at', 'DESC')
-            ->orderBy('status', 'DESC')
+            ->tap(fn ($q) => TableSort::apply(
+                $q,
+                $params,
+                $this->reviewSortable(),
+                fn ($q) => $q->orderBy('created_at', 'DESC')->orderBy('status', 'DESC')
+            ))
             ->paginate($pageSize);
 
         return new ApprovalItemsCollection($approvalItems);
@@ -222,7 +307,12 @@ class DrivingForceService
             ->where('status', 'CLOSED')
             ->where('created_at', '>=', $dateStart)
             ->where('created_at', '<=', $dateEnd)
-            ->orderBy('created_at', 'DESC')
+            ->tap(fn ($q) => TableSort::apply(
+                $q,
+                $params,
+                $this->reviewSortable(),
+                fn ($q) => $q->orderBy('created_at', 'DESC')
+            ))
             ->paginate($pageSize);
 
         return new ClosedItemsCollection($closedItems);
