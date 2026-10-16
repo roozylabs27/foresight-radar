@@ -73,16 +73,18 @@ test.describe('Visualization & Analytical Reporting E2E Flows', () => {
       await expect(screen.getByText(/Cross-impact (disimpan|dihapus)\./).first()).toBeVisible({ timeout: 45000 });
     };
 
-    await score(/^Pengaruh Interest Rate terhadap Loan Tanure: 0$/, '+2: Memperkuat');
-    await score(/^Pengaruh Loan Tanure terhadap Interest Rate: 0$/, '+1: Sedikit memperkuat');
+    // Whatever the cells held before, set them so the pair forms a reinforcing loop.
+    await score(/^Pengaruh Interest Rate terhadap Loan Tanure: /, '+2: Memperkuat');
+    await score(/^Pengaruh Loan Tanure terhadap Interest Rate: /, '+3: Sangat memperkuat');
 
-    await screen.getByRole('button', /R · Penguat/).first().tap();
+    // Strength √(2·3)/3 = 0,82: the strongest possible two-force loop here is listed first.
+    await screen.getByRole('button', /R · Penguat.*Interest Rate.*Loan Tanure|R · Penguat.*Loan Tanure.*Interest Rate/).first().tap();
     await expect(screen.getByRole('button', /^Pengaruh Interest Rate terhadap Loan Tanure: \+2, bagian dari loop terpilih$/)).toBeVisible({ timeout: 20000 });
 
-    // Leave the dev data as it was.
+    // Clear the two cells again.
     await score(/^Pengaruh Interest Rate terhadap Loan Tanure: \+2/, '0: Tidak berpengaruh');
-    await score(/^Pengaruh Loan Tanure terhadap Interest Rate: \+1/, '0: Tidak berpengaruh');
-    await expect(screen.getByText(/Belum ada loop/)).toBeVisible({ timeout: 45000 });
+    await score(/^Pengaruh Loan Tanure terhadap Interest Rate: \+3/, '0: Tidak berpengaruh');
+    await expect(screen.getByRole('button', /^Pengaruh Interest Rate terhadap Loan Tanure: 0$/)).toBeVisible({ timeout: 45000 });
   });
 
   test('Unhappy & Boundary Path: dimension filter handles switching and reset gracefully', { session: 'admin' }, async ({ app, screen, browser }) => {

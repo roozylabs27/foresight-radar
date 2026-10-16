@@ -39,6 +39,7 @@ Penyimpangan dari rencana:
 - **Kerangka template tidak butuh bukti.** Aturan 422 untuk sumbu tanpa sinyal ACCEPTED hanya berlaku bila LLM akan dipanggil. Tanpa key, kerangka tetap bisa dibuat walau belum ada bukti, karena database lokal belum punya sinyal sama sekali.
 - **`is_ai_generated` tetap `true` untuk sinyal heuristik**, supaya kompatibel dengan data dan test lama. Asal sinyal yang sebenarnya ada di kolom baru `extraction_provider` (`claude` atau `heuristic`), dan UI memakai kolom itu.
 - **Instalasi SDK lewat filesystem container.** `composer require` gagal di mount 9p karena file baru dikunci antivirus/indexer Windows. SDK dipasang di `/tmp` container, lalu disalin ke `vendor/` dan `installed.json` didaftarkan. Hasilnya identik dengan dist (3431 file).
+- **Versi 3b/3c yang ter-commit berasal dari user.** `CausalLoopService`, `ScenarioSimulationService`, `SimulationRequest`, `ScenarioSimulation.jsx`, dan test-nya yang ada di repo adalah implementasi user sendiri. Batas dan rumusnya sama dengan rencana ini. Loop mengembalikan rantainya sebagai `edges`, dan halaman Cross-Impact membaca `links ?? edges`. E2E simulasi mengikuti UI yang ter-commit.
 
 ## Urutan
 **3b → 3c → S (plumbing LLM) → 3a → 3d.**

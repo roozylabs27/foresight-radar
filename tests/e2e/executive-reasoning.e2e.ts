@@ -56,17 +56,16 @@ test.describe('Executive Reasoning & Foundation Metrics E2E Flows', () => {
 
     await screen.getByRole('tab', 'Simulasi What-if').tap();
     await expect(screen.getByText(/Simulasi tidak menyimpan perubahan/)).toBeVisible({ timeout: 90000 });
-    await expect(screen.getByRole('list', 'Driving force yang bisa diubah')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByRole('heading', 'Daftar Driving Force untuk Simulasi')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText(/^Baseline: [\d.]+ → Simulasi: [\d.]+$/).first()).toBeVisible({ timeout: 45000 });
 
-    // Lower the first force's impact to 1; its contribution, and so the indices, change.
+    // Lower the first force's impact to 1.
     await screen.getByRole('combobox', /^Impact /).first().tap();
     await screen.getByRole('option', '1').first().tap();
+    await expect(screen.getByRole('button', /Reset Semua \(1\)/)).toBeVisible({ timeout: 45000 });
 
-    await expect(screen.getByText(/^Postur (berubah|tetap)\./)).toBeVisible({ timeout: 45000 });
-    await expect(screen.getByRole('list', 'Selisih kontribusi per force')).toBeVisible({ timeout: 45000 });
-
-    await screen.getByRole('button', 'Reset semua').tap();
-    await expect(screen.getByText(/Ubah status aksi atau skor sebuah force/)).toBeVisible({ timeout: 20000 });
+    await screen.getByRole('button', /Reset Semua/).tap();
+    await expect(screen.getByRole('button', /Reset Semua/)).not.toBeVisible({ timeout: 20000 });
   });
 
   test('Navigation & Tab Switch: User can switch between Overview, Prioritizing, Radar, and Registered List', { session: 'admin' }, async ({ app, screen, browser }) => {

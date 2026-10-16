@@ -1,22 +1,65 @@
-# Integrasi LLM (Claude)
+# Integrasi LLM
 
-Foresight Radar memakai Claude untuk dua hal: mengusulkan sinyal dari dokumen yang ditempel analis (Fase 3a), dan menulis narasi empat kuadran skenario 2×2 (Fase 3d). Prinsipnya: **AI mengusulkan, analis memutuskan.** Semua hasil AI masuk sebagai PENDING (sinyal) atau DRAFT (skenario) dan diberi label asal.
+Foresight Radar memakai LLM untuk dua hal: mengusulkan sinyal dari dokumen yang ditempel analis (Fase 3a), dan menulis narasi empat kuadran skenario 2×2 (Fase 3d). Prinsipnya: **AI mengusulkan, analis memutuskan.** Semua hasil AI masuk sebagai PENDING (sinyal) atau DRAFT (skenario) dan diberi label asal.
 
-Tanpa API key, kedua fitur tetap berjalan tanpa AI. Ekstraksi memakai aturan kata kunci, dan skenario memakai kerangka template berlabel "Kerangka tanpa AI".
+Tanpa provider yang terkonfigurasi, kedua fitur tetap berjalan tanpa AI. Ekstraksi memakai aturan kata kunci, dan skenario memakai kerangka template berlabel "Kerangka tanpa AI".
 
-## Konfigurasi
+## Memilih provider
+`LLM_PROVIDER` memilih adapter:
+
+| Nilai | Adapter | Cocok untuk |
+|---|---|---|
+| `anthropic` (default) | `AnthropicStructuredClient`, lewat SDK resmi | Claude lewat API Anthropic. Kredit API dibeli di Console; langganan Claude Pro/Max tidak berlaku. |
+| `openai_compatible` | `OpenAiCompatibleClient`, lewat HTTP client Laravel | Semua API `/chat/completions`, seperti yang dipakai opencode: OpenRouter, OpenCode Zen, Ollama atau LM Studio lokal, Groq, DeepSeek, Gemini (endpoint OpenAI), dan lainnya. |
+
+Provider hanya aktif bila konfigurasinya lengkap. Kalau tidak, app memakai `NullLlmClient` dan berjalan tanpa AI. Nama provider (misalnya `claude` atau `openrouter`) tersimpan di setiap sinyal (`extraction_provider`) dan skenario (`provider`), dan labelnya tampil di UI.
+
+### Contoh `.env` untuk provider OpenAI-compatible
+| Provider | `OPENAI_COMPATIBLE_BASE_URL` | Lainnya |
+|---|---|---|
+| OpenRouter | `https://openrouter.ai/api/v1` | `OPENAI_COMPATIBLE_API_KEY` dari openrouter.ai, `OPENAI_COMPATIBLE_MODEL` berupa id model OpenRouter. |
+| OpenCode Zen | `https://opencode.ai/inference/openai/v1` | Key dari opencode.ai/console, `NAME=opencode`, `LABEL="OpenCode Zen"`. Hanya model berformat Chat Completions, misalnya `deepseek-v4-pro`, `glm-5.3`, `kimi-k3`, `qwen3.8-max`, `minimax-m3`, `mistral-large-4`. Model GPT, Claude, dan Gemini di Zen memakai endpoint lain dan tidak bisa lewat adapter ini. |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | Key dari Google AI Studio, `NAME=gemini`, `LABEL=Gemini`, model misalnya `gemini-3.8-flash`. Dukungan OpenAI di Gemini masih beta. Bila `json_schema` ditolak (400), pakai `json_object`. Di tier gratis, Google dapat memakai data untuk perbaikan produk, jadi jangan dipakai untuk dokumen internal. |
+| Ollama lokal | `http://host.docker.internal:11434/v1` | `ALLOW_NO_KEY=true`, `NAME=ollama`, model misalnya `qwen2.5:14b`. Teks tidak keluar dari jaringan Anda. |
+| LM Studio lokal | `http://host.docker.internal:1234/v1` | `ALLOW_NO_KEY=true`, `NAME=lm-studio`. |
+
+Semua kunci di tabel itu berawalan `OPENAI_COMPATIBLE_`.
+
+Catatan:
+- **Structured output.** `OPENAI_COMPATIBLE_STRUCTURED_OUTPUT=json_schema` (default) mengirim schema sebagai `response_format` yang strict. Bila provider atau model tidak mendukungnya (sering terjadi pada model lokal kecil), pakai `json_object`. Schema lalu ditulis di akhir user message, dan JSON yang dibungkus ```json tetap terbaca. Aturan grounding di bawah tetap berlaku: kutipan yang tidak verbatim dibuang, apa pun modelnya.
+- **Kualitas.** Ekstraksi dan narasi diuji dengan `FakeLlmClient` dan HTTP palsu. Kualitas nyata tergantung model yang dipilih. Model kecil cenderung lebih sering menghasilkan kutipan yang tidak verbatim, yang lalu dibuang.
+- **Batasan.** Fallback server-side dan prompt caching eksplisit hanya ada di adapter Anthropic. Provider OpenAI-compatible mencatat `cached_tokens` bila provider melaporkannya.
+
+| Kunci (`openai_compatible`) | Default | Arti |
+|---|---|---|
+| `OPENAI_COMPATIBLE_NAME` / `_LABEL` | `openrouter` / `OpenRouter` | Id yang disimpan dan nama yang tampil. |
+| `OPENAI_COMPATIBLE_BASE_URL` | `https://openrouter.ai/api/v1` | Basis URL; app memanggil `{base}/chat/completions`. |
+| `OPENAI_COMPATIBLE_API_KEY` | kosong | Dikirim sebagai `Authorization: Bearer`. |
+| `OPENAI_COMPATIBLE_MODEL` | kosong | Wajib diisi, misalnya `openai/gpt-4o-mini` di OpenRouter. |
+| `OPENAI_COMPATIBLE_STRUCTURED_OUTPUT` | `json_schema` | Atau `json_object`. |
+| `OPENAI_COMPATIBLE_ALLOW_NO_KEY` | `false` | `true` untuk server lokal tanpa key. |
+| `OPENAI_COMPATIBLE_REASONING_EFFORT` | kosong | Bila diisi (`low`, `medium`, `high`), dikirim sebagai `reasoning_effort`. Kosong berarti tidak dikirim, karena sebagian provider menolak parameter yang tidak dikenal. |
+| `OPENAI_COMPATIBLE_TIMEOUT` / `_MAX_RETRIES` | `120` / `1` | Retry untuk 429, 5xx, dan error koneksi. Jaga `timeout × (retry + 1)` di bawah 300 detik. |
+
+**Hasil uji Gemini (16 Oktober 2026, `gemini-3.8-flash`).** `llm:smoke` berhasil dengan `json_schema` strict (11 detik). Ekstraksi artikel 9.000 karakter dengan `reasoning_effort=low` menghasilkan JSON valid, tetapi butuh sekitar 147 detik, sehingga melewati timeout 120 detik. Percobaan berikutnya ditolak Google dengan 503 "high demand"; fallback ke aturan berjalan sesuai rancangan. Untuk Gemini, pakai `OPENAI_COMPATIBLE_REASONING_EFFORT=low`, `OPENAI_COMPATIBLE_TIMEOUT=240`, dan `OPENAI_COMPATIBLE_MAX_RETRIES=0`, atau pilih model Flash yang lebih ringan bila sedang padat.
+
+Dengan **`gemini-3.5-flash-lite`** (`reasoning_effort=low`), kedua jalur berhasil:
+- **Ingest artikel 9.000 karakter:** 18 detik dan 2.537/493 token. Dua sinyal diusulkan, kedua kutipan terverifikasi verbatim, dan usulan force-nya relevan.
+- **Narasi skenario empat kuadran:** 7 detik dan 607/1.029 token. Setiap kuadran mengutip `[S1]` dan `[S2]` serta berisi tiga indikator awal. Narasinya sekitar 80–95 kata, lebih pendek dari target 120–200 kata, sehingga model yang lebih besar memberi narasi yang lebih kaya.
+
+## Konfigurasi Anthropic
 Semua lewat `.env`, dan dibaca di `config/services.php`.
 
 | Kunci | Default | Arti |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | kosong | Kosong berarti AI mati (`NullLlmClient`). |
+| `ANTHROPIC_API_KEY` | kosong | Kosong berarti adapter Anthropic tidak aktif. |
 | `ANTHROPIC_MODEL` | `claude-opus-5-5` | Model untuk semua panggilan. |
 | `ANTHROPIC_EFFORT` | `medium` | Effort untuk ekstraksi sinyal. |
 | `ANTHROPIC_NARRATIVE_EFFORT` | `medium` | Effort untuk narasi skenario. |
 | `ANTHROPIC_TIMEOUT` | `120` | Detik per percobaan. Diterapkan di transport Guzzle, karena SDK menyerahkan timeout ke transport. |
-| `ANTHROPIC_MAX_RETRIES` | `1` | Retry otomatis SDK. Total waktu maks sekitar 240 detik, di bawah batas 300 detik PHP dan nginx. |
+| `ANTHROPIC_MAX_RETRIES` | `1` | Retry otomatis SDK. Total waktu maks sekitar 240 detik, di bawah `LLM_JOB_TIMEOUT`. |
 | `ANTHROPIC_FALLBACKS` | `default` | Fallback server-side bila model menolak karena alasan keamanan (beta `server-side-fallback-2026-07-01`). API memilih model pengganti dan model yang benar-benar menjawab dicatat. Kosongkan untuk mematikan. |
-| `SIGNAL_EXTRACTION_DRIVER` | `claude` | `heuristic` mematikan AI untuk ekstraksi walau key terisi. |
+| `SIGNAL_EXTRACTION_DRIVER` | `llm` | `heuristic` mematikan AI untuk ekstraksi walau provider terkonfigurasi. Nilai lama `claude` tetap berarti `llm`. |
 | `SIGNAL_EXTRACTION_MAX_CHARS` | `60000` | Dokumen yang lebih panjang ditolak (422) dengan pesan untuk memecahnya. Tidak ada pemotongan diam-diam. |
 | `SIGNAL_EXTRACTION_MAX_CANDIDATES` | `8` | Batas sinyal per dokumen. |
 
@@ -29,9 +72,9 @@ SDK: `anthropic-ai/sdk` `~0.59.0` (versi minor di-pin). Kode ada di `app/Service
 - `LlmException`: alasan kegagalan (`unavailable`, `rate_limited`, `overloaded`, `api_error`, `timeout`, `refusal`, `max_tokens`, `invalid_json`) dan pesan berbahasa Indonesia untuk pengguna.
 
 ## Data yang keluar dari server
-Hanya bila key terisi:
+Hanya bila provider terkonfigurasi. Teks dikirim ke provider yang dipilih di `LLM_PROVIDER`, kecuali server lokal (Ollama, LM Studio) yang tidak meninggalkan jaringan Anda:
 
-| Fitur | Yang dikirim ke Anthropic |
+| Fitur | Yang dikirim ke provider |
 |---|---|
 | Ekstraksi sinyal | Judul dan teks lengkap dokumen yang ditempel, nama dimensi dan horizon, serta keyword dan dimensi driving force APPROVED (maks 80) dengan label F1..Fn. |
 | Narasi skenario | Nama skenario, pertanyaan fokus, keyword kedua sumbu dan label kutubnya, serta judul, kutipan bukti, dan judul sumber sinyal ACCEPTED yang tertaut (maks 30 per sumbu) dengan label S1..Sn. |
@@ -70,8 +113,38 @@ Prompt adalah kelas PHP di `app/Services/Llm/Prompts/`. System prompt bersifat k
 | Refusal (setelah fallback server-side) | Fallback ke aturan | Kerangka template |
 | `max_tokens` atau JSON rusak | Fallback ke aturan | Kerangka template |
 | 0 kandidat terverifikasi | Sumber tetap disimpan tanpa sinyal, tanpa fallback | – |
+| Salah satu kegagalan di atas saat membuat ulang narasi yang sudah ditulis AI | – | Tidak ada yang disimpan; narasi AI sebelumnya tetap, status `failed` dengan pesan "Narasi sebelumnya tidak diubah" |
+
+Fallback ke kerangka template hanya terjadi bila skenario belum punya kuadran tulisan AI, supaya gangguan sesaat (misalnya 503 "high demand") tidak menimpa narasi yang sudah ada.
 
 Panggilan LLM untuk ekstraksi dilakukan sebelum transaksi DB dibuka, jadi panggilan yang lambat tidak menahan lock.
+
+## Antrian, latensi, dan risiko
+Satu panggilan LLM bisa makan 10–150 detik. Uji nyata dengan Gemini: `gemini-3.5-flash-lite` selesai dalam 18 detik (ingest) dan 7 detik (skenario), sedangkan `gemini-3.8-flash` timeout di 120 detik lalu mendapat 503 "high demand". Karena itu panggilan LLM tidak lagi berjalan di request HTTP, tetapi di job antrian:
+
+| Alur | Request | Job | Status yang di-poll UI |
+|---|---|---|---|
+| Ingest sinyal | `POST /signals/ingest` menyimpan `Source` dengan `extraction_status = queued`, lalu langsung menjawab 202 | `App\Jobs\ExtractSignals` memanggil `LlmSignalExtractor` (fallback aturan kata kunci tetap sama) dan menyimpan sinyal | `GET /signals/sources/{uuid}/extraction`: `status`, `message`, `extraction` (provider, model, jumlah sinyal, jumlah dibuang, `fallback`, `notice`), `error` |
+| Narasi skenario | `POST /scenarios/{uuid}/generate` tetap mengecek 409 (kuadran disunting, atau generasi lain masih berjalan) dan 422 (sumbu tanpa bukti), lalu menjawab 202 | `App\Jobs\GenerateScenarioNarrative` memanggil LLM, memvalidasi sitasi, dan menyimpan kuadran | `GET /scenarios/{uuid}`: `generation.status`, `generation.message`, `generation.notice`, `generation.error` |
+
+Status: `queued` → `processing` → `completed` atau `failed` (kolom `sources.extraction_status`/`extraction_error`, `scenarios.generation_status`/`generation_error`/`generation_notice`). Baris lama tanpa status dianggap selesai. UI mem-poll setiap 2,5 detik selama maksimal 6 menit; analis boleh meninggalkan halaman. Halaman Sinyal melanjutkan polling untuk ekstraksi milik analis yang masih berjalan (`pendingExtractions`), dan halaman Skenario melanjutkannya saat skenario dibuka.
+
+Penolakan yang baru diketahui di job (sitasi tidak valid, kuadran disunting saat job menunggu, bukti hilang, atau LLM gagal saat narasi AI sudah ada) tidak lagi menjadi 422/409, tetapi disimpan di `generation_error` dan tampil sebagai toast dan peringatan di panel skenario. Tidak ada yang disimpan dalam kasus itu.
+
+Worker: service `queue` di `docker-compose.yml` (`laravel_queue`) menjalankan `php artisan queue:work --tries=1` dengan driver `database` (`QUEUE_CONNECTION=database`, tabel `jobs`).
+
+| Kunci | Default | Arti |
+|---|---|---|
+| `QUEUE_CONNECTION` | `database` | `sync` menjalankan job di dalam request (seperti dulu, tanpa worker); UI tetap bekerja. Test memakai `sync`. |
+| `LLM_JOB_TIMEOUT` | `300` | Detik maksimal satu job LLM. Harus lebih besar dari timeout × (1 + retry) provider. |
+| `DB_QUEUE_RETRY_AFTER` | `360` | Detik sebelum job yang dianggap macet diberikan ke worker lain. Harus lebih besar dari `LLM_JOB_TIMEOUT`, kalau tidak panggilan LLM bisa dobel. |
+
+Risiko dan penanganannya:
+- **Worker mati atau belum dijalankan.** Job menumpuk dengan status `queued`; UI berhenti mem-poll setelah 6 menit dengan pesan bahwa proses masih di antrean. Cek `docker ps` untuk `laravel_queue`. Generasi skenario yang macet lebih lama dari `DB_QUEUE_RETRY_AFTER` boleh dimulai ulang.
+- **Kode PHP berubah.** Worker memuat kode sekali saat start, jadi jalankan `docker restart laravel_queue` setelah mengubah PHP (selain `docker restart laravel_app` untuk opcache). Worker juga keluar sendiri setiap jam (`--max-time=3600`) dan dinyalakan ulang oleh `restart: unless-stopped`.
+- **Job gagal karena error server atau timeout job.** Job tidak di-retry (`--tries=1`, `$tries = 1`) agar panggilan berbayar tidak terulang; status menjadi `failed` dengan pesan untuk analis, dan detailnya di log (`Signal extraction job failed`, `Scenario narrative job failed`) serta tabel `failed_jobs`. Sumber yang gagal tetap tersimpan tanpa sinyal; analis meng-ingest ulang.
+- **Pengiriman ganda.** Job hanya berjalan bila statusnya masih `queued`, jadi pengiriman kedua tidak menggandakan sinyal atau panggilan LLM.
+- **Satu worker, antrian berurutan.** Beberapa ingest sekaligus diproses satu per satu; jalankan lebih dari satu container worker bila antrean sering panjang.
 
 ## Log
 Setiap panggilan mencatat `llm.call` dengan tujuan, model yang menjawab, stop reason, usage token (termasuk `cache_read_input_tokens`), dan durasi. Kegagalan dicatat sebagai `llm.error` dengan tujuan, model, alasan, status HTTP, dan durasi. Log tidak pernah berisi teks dokumen, prompt, atau API key.
