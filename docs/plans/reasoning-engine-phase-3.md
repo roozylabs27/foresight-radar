@@ -23,7 +23,22 @@ Prinsip yang tidak boleh dilanggar:
 - Migrasi hanya menambah, tidak mengubah yang lama.
 - Kerja langsung di root project, tanpa commit dan tanpa trailer Co-Authored-By.
 
-Status: rencana disetujui 16 Oktober 2026, implementasi belum dimulai. Bagian dari roadmap di `docs/plans/reasoning-engine-framework.md`.
+Status: rencana disetujui 16 Oktober 2026 dan diimplementasikan di hari yang sama. Belum di-commit. Bagian dari roadmap di `docs/plans/reasoning-engine-framework.md`.
+
+| Bagian | Status |
+|---|---|
+| 3b. Causal loops | Selesai. |
+| 3c. Simulasi what-if | Selesai. |
+| S. Plumbing LLM | Selesai. SDK `anthropic-ai/sdk` `~0.59.0`. `llm:smoke` dan uji dengan key nyata belum dijalankan (menunggu persetujuan biaya). |
+| 3a. Ekstraksi sinyal LLM | Selesai, diverifikasi tanpa key dan dengan `FakeLlmClient`. |
+| 3d. Skenario 2×2 + narasi | Selesai, diverifikasi tanpa key (kerangka template) dan dengan `FakeLlmClient`. |
+
+Penyimpangan dari rencana:
+- **Fallback server-side langsung dipasang.** Parameter `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`) sudah ada di binding PHP, jadi dipakai sejak awal, bukan sebagai tindak lanjut. Bisa dimatikan lewat `ANTHROPIC_FALLBACKS=`.
+- **Timeout diterapkan di Guzzle.** Opsi `timeout` di `RequestOptions` SDK hanya bersifat anjuran ("enforced by the caller-supplied transport"), sehingga 120 detik dipasang di transport Guzzle. `maxRetries` memakai opsi SDK.
+- **Kerangka template tidak butuh bukti.** Aturan 422 untuk sumbu tanpa sinyal ACCEPTED hanya berlaku bila LLM akan dipanggil. Tanpa key, kerangka tetap bisa dibuat walau belum ada bukti, karena database lokal belum punya sinyal sama sekali.
+- **`is_ai_generated` tetap `true` untuk sinyal heuristik**, supaya kompatibel dengan data dan test lama. Asal sinyal yang sebenarnya ada di kolom baru `extraction_provider` (`claude` atau `heuristic`), dan UI memakai kolom itu.
+- **Instalasi SDK lewat filesystem container.** `composer require` gagal di mount 9p karena file baru dikunci antivirus/indexer Windows. SDK dipasang di `/tmp` container, lalu disalin ke `vendor/` dan `installed.json` didaftarkan. Hasilnya identik dengan dist (3431 file).
 
 ## Urutan
 **3b → 3c → S (plumbing LLM) → 3a → 3d.**

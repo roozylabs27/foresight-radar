@@ -96,3 +96,24 @@ K-Means atau clustering lain baru dibuat bila ketiga syarat ini terpenuhi:
 - **Stabilitas**: cluster harus stabil, yaitu rata-rata koefisien silhouette ≥ 0,5 dan susunan cluster hampir sama saat 20% data diacak ulang. Kalau tidak, cluster hanya mencerminkan noise.
 
 Database lokal saat ini berisi sekitar 19 force dan riwayat beberapa hari, jauh di bawah ketiga syarat. Clustering sekarang hanya akan menghasilkan kelompok yang berubah setiap ada satu force baru.
+
+## Fase 3: hipotesis dan GenAI
+Rencana dan keputusannya ada di `docs/plans/reasoning-engine-phase-3.md`. Integrasi LLM (ekstraksi sinyal dan narasi skenario) dijelaskan di `docs/product/LLM_INTEGRATION.md`. Dua bagian di bawah ini tidak memakai LLM.
+
+### Causal loops
+Loop adalah rantai pengaruh di matriks cross-impact yang kembali ke force awal, misalnya A → B → C → A (`app/Services/CausalLoopService.php`).
+
+- **Pencarian**: setiap siklus elementer sampai **5 force**. Hanya pasangan dengan skor ≠ 0 yang dihitung. Pencarian dari force ke-i hanya melangkah ke force berindeks lebih besar, sehingga satu siklus ditemukan sekali, tanpa duplikat rotasi. Arah sebaliknya (A → C → B → A) dihitung sebagai loop lain.
+- **Batas**: maks 300 loop dan 200.000 langkah. Bila salah satu tercapai, hasil ditandai terpotong dan UI menyebutnya.
+- **Polaritas**: jumlah pengaruh negatif genap menghasilkan loop **Penguat (R)**, yang mendorong perubahan makin besar. Jumlah ganjil menghasilkan **Penyeimbang (B)**, yang meredam perubahan.
+- **Kekuatan**: rata-rata geometris |skor| di sepanjang loop, dibagi 3, sehingga bernilai 0..1. Contoh: loop A ⇄ B dengan skor 2 dan 3 berkekuatan √6 / 3 = 0,816.
+- **Urutan**: kekuatan menurun, lalu panjang menaik.
+- Loop dikirim bersama matriks (`matrix()['loops']`) dan ikut diperbarui setiap kali skor diubah. Di halaman Cross-Impact, memilih satu loop menyorot selnya di matriks.
+
+### Simulasi what-if
+Tab "Simulasi What-if" di dashboard menghitung ulang Growth, Resilience, dan postur bila status aksi atau skor beberapa force diubah (`app/Services/ScenarioSimulationService.php`, `POST /dashboard/simulate`).
+
+- **Hanya baca**: rating disalin di memori dan tidak pernah disimpan. Test memastikan tidak ada query tulis.
+- **Efek langsung saja**: mengubah satu force hanya menggeser kontribusinya sendiri. Bobot horizon tidak berubah, jadi selisih indeks sama dengan jumlah selisih kontribusi force yang diubah (sebelum pembulatan). Cross-impact belum dirambatkan, karena skor −3..+3 belum punya pemetaan terkalibrasi ke impact atau uncertainty. UI menyatakan ini di banner.
+- **Cakupan**: force yang diubah harus ada dalam periode dan dimensi yang dipilih; jika tidak, respons 422. Maks 50 override per permintaan.
+- **Contoh** (kasus "Vulnerable" di test): mengubah force Monitoring dengan impact 9 dan uncertainty 8 menjadi Decided Plan menaikkan Resilience 50,3 → 81,5 dan Growth 56,8 → 70,6, sehingga postur berubah dari Vulnerable menjadi Agile & Resilient.

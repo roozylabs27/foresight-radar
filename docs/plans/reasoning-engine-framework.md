@@ -19,7 +19,12 @@ Per 16 Oktober 2026. Rumus, bobot, dan keputusan desain dicatat di `docs/product
 | 2. Tren dan kecepatan keputusan | Selesai | Tren skor per dimensi dari riwayat rating, serta lama dari Monitoring ke Decided Plan. Keduanya punya keadaan kosong yang jujur selama riwayat masih pendek. |
 | 2. Cross-impact (INT-013) | Selesai, versi terkecil | Matriks berarah −3..+3 yang diisi analis, ringkasan Vester (Pendorong, Kritis, Indikator, Penyangga), dan panah antar force di Foresight Radar. |
 | 2. Clustering | Sengaja ditunda | Baru dibuat setelah ada ≥150 force APPROVED, ≥6 bulan riwayat, dan cluster yang stabil. Alasannya ada di dokumen produk. |
-| 3–4 | Belum dimulai | – |
+| 3b. Causal loops | Selesai | Loop R/B sampai 5 force dari matriks cross-impact, dengan kekuatan dan sorotan sel di halaman Cross-Impact. |
+| 3c. Simulasi what-if | Selesai | Tab "Simulasi What-if" yang menghitung ulang indeks dan postur tanpa menyimpan apa pun. Hanya efek langsung; cross-impact belum dirambatkan. |
+| 3S. Plumbing LLM | Selesai, belum diuji dengan key nyata | Claude lewat `anthropic-ai/sdk` dengan structured output dan fallback server-side. Tanpa key, app berjalan tanpa AI. Lihat `docs/product/LLM_INTEGRATION.md`. |
+| 3a. Ekstraksi sinyal LLM | Selesai, belum diuji dengan key nyata | Kutipan wajib verbatim, provenance per sinyal, usulan force, dan fallback ke aturan kata kunci. |
+| 3d. Skenario 2×2 + narasi | Selesai, belum diuji dengan key nyata | Usulan sumbu, empat kuadran dengan sitasi `[Sx]` yang tervalidasi, kerangka template tanpa key, dan suntingan analis yang dilindungi. |
+| 4 | Belum dimulai | – |
 
 ## Kerangka di PDF
 | Tahap | Isi | Fase CRISP-DM |

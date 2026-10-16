@@ -8,11 +8,11 @@ This document establishes the exhaustive feature inventory for the Foresight Rad
 
 | Metric | Count | Details |
 |---|---|---|
-| Total Features Cataloged | 14 | 12 active business/workflow modules, 1 upstream ingestion module, 1 foundation taxonomy module |
-| Verified Active Features | 13 | End-to-end verified with routes, controllers, models, and UI views |
+| Total Features Cataloged | 17 | 15 active business/workflow modules, 1 upstream ingestion module, 1 foundation taxonomy module |
+| Verified Active Features | 16 | End-to-end verified with routes, controllers, models, and UI views |
 | Partially Verified / Unmanaged | 1 | Foundation taxonomy (FEAT-014) seeded via database migrations without dedicated administrative UI |
 | Core Workflow Stages | 8 | Stage 0 (Ingestion) through Stage 7 (Visualizations and Reports) |
-| Total Models Inspected | 11 | [`DrivingForce`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForce.php), [`DrivingForceRating`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForceRating.php), [`ActionReason`](file:///c:/laragon/www/foresight-radar/app/Models/ActionReason.php), [`Dimension`](file:///c:/laragon/www/foresight-radar/app/Models/Dimension.php), [`Environment`](file:///c:/laragon/www/foresight-radar/app/Models/Environment.php), [`Priority`](file:///c:/laragon/www/foresight-radar/app/Models/Priority.php), [`Signal`](file:///c:/laragon/www/foresight-radar/app/Models/Signal.php), [`Source`](file:///c:/laragon/www/foresight-radar/app/Models/Source.php), [`StatusAction`](file:///c:/laragon/www/foresight-radar/app/Models/StatusAction.php), [`TimeHorizon`](file:///c:/laragon/www/foresight-radar/app/Models/TimeHorizon.php), [`User`](file:///c:/laragon/www/foresight-radar/app/Models/User.php) |
+| Total Models Inspected | 15 | [`DrivingForce`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForce.php), [`DrivingForceRating`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForceRating.php), [`ActionReason`](file:///c:/laragon/www/foresight-radar/app/Models/ActionReason.php), [`Dimension`](file:///c:/laragon/www/foresight-radar/app/Models/Dimension.php), [`Environment`](file:///c:/laragon/www/foresight-radar/app/Models/Environment.php), [`Priority`](file:///c:/laragon/www/foresight-radar/app/Models/Priority.php), [`Signal`](file:///c:/laragon/www/foresight-radar/app/Models/Signal.php), [`Source`](file:///c:/laragon/www/foresight-radar/app/Models/Source.php), [`StatusAction`](file:///c:/laragon/www/foresight-radar/app/Models/StatusAction.php), [`TimeHorizon`](file:///c:/laragon/www/foresight-radar/app/Models/TimeHorizon.php), [`User`](file:///c:/laragon/www/foresight-radar/app/Models/User.php), [`DrivingForceRatingHistory`](file:///c:/laragon/www/foresight-radar/app/Models/DrivingForceRatingHistory.php), [`CrossImpact`](file:///c:/laragon/www/foresight-radar/app/Models/CrossImpact.php), [`Scenario`](file:///c:/laragon/www/foresight-radar/app/Models/Scenario.php), [`ScenarioQuadrant`](file:///c:/laragon/www/foresight-radar/app/Models/ScenarioQuadrant.php) |
 
 ---
 
@@ -164,15 +164,44 @@ This document establishes the exhaustive feature inventory for the Foresight Rad
 
 ### FEAT-013: Signal Ingestion, Web Scraping & Semantic Extraction (Stage 0 Ingestion)
 * **Feature Name:** Weak Signal Ingestion & AI Candidate Extraction
-* **Purpose:** Ingests external intelligence from URLs or raw text into `sources`, parses potential weak signals into `signals` (status `PENDING`), and provides an analyst review workspace to accept signals into new or existing Driving Forces via `signal_driving_force` pivot associations.
+* **Purpose:** Ingests pasted document text (title + full text) into `sources`, proposes candidate signals into `signals` (status `PENDING`), and provides an analyst review workspace to accept signals into new or existing Driving Forces via `signal_driving_force` pivot associations. URLs are stored as metadata only and are not fetched.
+* **Extraction (Phase 3a):** With `ANTHROPIC_API_KEY` set, Claude proposes signals through `LlmSignalExtractor` (prompt `extract-v1`); every evidence quote must appear verbatim in the source (`EvidenceVerifier`) or it is discarded. Without a key, or when the LLM fails, keyword rules are used and labelled "Aturan". Each signal stores `extraction_provider`, `extraction_model`, `prompt_version`, `quote_verified` and an optional `suggested_driving_force_id`. Reviews are only allowed while `PENDING` (409 otherwise) and signals with an unverified quote cannot be accepted (422). See `docs/product/LLM_INTEGRATION.md`.
 * **Frontend Entry Point:** [`resources/js/Pages/Signals/Index.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Signals/Index.jsx)
 * **Backend Entry Point:** [`app/Http/Controllers/SignalIngestionController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/SignalIngestionController.php), [`app/Services/SignalExtractionService.php`](file:///c:/laragon/www/foresight-radar/app/Services/SignalExtractionService.php)
 * **Data Entities:** `sources`, `signals`, `signal_driving_force`, `driving_forces`
 * **Inputs:** URL or text payload, source title, manual signal edits, review actions (`accept_new`, `accept_link`, `reject`).
 * **Outputs:** Persisted `sources` records, extracted `signals` records, new `driving_forces` entries or pivot links.
-* **Dependencies:** FEAT-001 (RBAC gates `view-signals`, `ingest-signals`, `review-signals`), FEAT-003 (Driving Force creation interface).
+* **Dependencies:** FEAT-001 (RBAC gates `view-signal`, `create-signal`, `review-signal`), FEAT-003 (Driving Force creation interface), optional Claude API (`anthropic-ai/sdk`).
 * **Consumers:** FEAT-003 (Feeds new driving forces into the foresight pipeline).
 * **Status:** Verified.
+
+### FEAT-015: Cross-Impact Matrix & Causal Loops
+* **Feature Name:** Cross-Impact Analysis (INT-013, smallest useful version)
+* **Purpose:** Lets analysts score how one approved driving force affects another (−3 suppresses … +3 amplifies), summarises each force's role with the Vester method (driver, critical, indicator, buffer), detects reinforcing (R) and balancing (B) feedback loops of up to five forces, and draws the links on the Foresight Radar.
+* **Frontend Entry Point:** [`resources/js/Pages/Report/CrossImpact.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Report/CrossImpact.jsx), toggle in [`Radar.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/Radar.jsx)
+* **Backend Entry Point:** [`CrossImpactController`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/CrossImpactController.php), [`CrossImpactService`](file:///c:/laragon/www/foresight-radar/app/Services/CrossImpactService.php), [`CausalLoopService`](file:///c:/laragon/www/foresight-radar/app/Services/CausalLoopService.php)
+* **Data Entities:** `cross_impacts`, `driving_forces`
+* **Dependencies:** FEAT-001 (`view-cross-impact`, `manage-cross-impact`), FEAT-007 (only APPROVED forces).
+* **Consumers:** FEAT-009 (radar links), FEAT-017 (axis independence check).
+* **Status:** Verified.
+
+### FEAT-016: What-if Simulation
+* **Feature Name:** Simulasi What-if
+* **Purpose:** Recomputes the Growth and Resilience indices and the readiness posture with some forces' status action or scores changed, without saving anything. Only the direct effect is counted; cross-impact is not propagated.
+* **Frontend Entry Point:** [`resources/js/Components/ScenarioSimulation.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/ScenarioSimulation.jsx) (dashboard tab)
+* **Backend Entry Point:** `POST /dashboard/simulate` → [`ScenarioSimulationService`](file:///c:/laragon/www/foresight-radar/app/Services/ScenarioSimulationService.php)
+* **Data Entities:** `driving_force_ratings` (read only)
+* **Dependencies:** FEAT-001 (`view-dashboard`), FEAT-012 (reasoning engine).
+* **Status:** Verified.
+
+### FEAT-017: Scenario Matrix & Narratives
+* **Feature Name:** Scenarios (2×2)
+* **Purpose:** Builds 2×2 scenario matrices from two approved driving forces with labelled poles, suggests independent high-impact/high-uncertainty axis pairs, and fills the four quadrants either with Claude narratives that cite accepted signals as `[S1]`, `[S2]` (prompt `scenario-v1`) or, without a key, with a template skeleton. Analyst edits are protected from being overwritten without confirmation.
+* **Frontend Entry Point:** [`resources/js/Pages/Report/Scenarios.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Report/Scenarios.jsx), [`Components/Scenario/QuadrantCard.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/Scenario/QuadrantCard.jsx)
+* **Backend Entry Point:** [`ScenarioController`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/ScenarioController.php), [`ScenarioService`](file:///c:/laragon/www/foresight-radar/app/Services/ScenarioService.php), [`ScenarioNarrativeService`](file:///c:/laragon/www/foresight-radar/app/Services/ScenarioNarrativeService.php)
+* **Data Entities:** `scenarios`, `scenario_quadrants`, `signals`, `signal_driving_force`, `cross_impacts`
+* **Dependencies:** FEAT-001 (`view-scenario`, `manage-scenario`), FEAT-013 (accepted signals as evidence), FEAT-015, optional Claude API.
+* **Status:** Verified (without a live API key).
 
 ### FEAT-014: Reference Taxonomy Administration & System Dictionaries
 * **Feature Name:** Reference Taxonomy Dictionaries
@@ -206,3 +235,6 @@ This document establishes the exhaustive feature inventory for the Foresight Rad
 | FEAT-012 | Executive Dashboard | [`routes/web.php`](file:///c:/laragon/www/foresight-radar/routes/web.php) | [`Dashboard.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Dashboard.jsx) | `DrivingForce`, `Signal` | Verified |
 | FEAT-013 | Signal Ingestion | [`SignalIngestionController`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/SignalIngestionController.php) | [`Signals/Index.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Signals/Index.jsx) | `Source`, `Signal`, Pivot | Verified |
 | FEAT-014 | Taxonomy Dictionaries | Seeders / Schema | Implicit in Form Dropdowns | `Dimension`, `Environment`, etc. | Partially Verified |
+| FEAT-015 | Cross-Impact & Causal Loops | [`CrossImpactController`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/CrossImpactController.php) | [`Report/CrossImpact.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Report/CrossImpact.jsx) | `CrossImpact` | Verified |
+| FEAT-016 | What-if Simulation | [`DashboardController`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/DashboardController.php) | [`ScenarioSimulation.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/ScenarioSimulation.jsx) | `DrivingForceRating` | Verified |
+| FEAT-017 | Scenario Matrix | [`ScenarioController`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/ScenarioController.php) | [`Report/Scenarios.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Report/Scenarios.jsx) | `Scenario`, `ScenarioQuadrant` | Verified |

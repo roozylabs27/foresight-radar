@@ -78,9 +78,12 @@ This analysis evaluates the current application against the 7 fundamental foresi
 ---
 
 ### 9. Can users distinguish source evidence from AI-generated interpretation?
-* **Answer: No.**
-* There is currently zero AI integration in the repository. 
-* There are no provenance flags (such as `is_ai_generated`, `ai_model`, `prompt_hash`, `confidence_score`), making it impossible to audit human vs. machine authorship.
+* **Answer: Yes (since Phase 3, 16 October 2026).**
+* Each signal records who proposed it (`extraction_provider`: `claude` or `heuristic`), the model (`extraction_model`), the prompt version (`prompt_version`) and whether its evidence quote was found verbatim in the source (`quote_verified`). Each source records the extraction run in `extraction_meta` (provider, model, token usage, how many proposals were discarded).
+* The source evidence is the verbatim quote checked against `sources.raw_content` (SHA-256 fingerprinted); the interpretation (title, summary, significance, scores, confidence and its rationale) is shown separately and labelled "Claude" or "Aturan" in the review queue. Quotes that cannot be found in the source are discarded, and signals with an unverified quote cannot be accepted.
+* Scenario quadrants are labelled "Claude", "Kerangka tanpa AI" or "Diedit analis"; their narratives cite evidence as `[S1]`, `[S2]`, which open the quoted signal and its source.
+* Signals created before Phase 3 have no provenance (`quote_verified` is null) and are shown as "Asal tidak tercatat".
+* See `docs/product/LLM_INTEGRATION.md`.
 
 ---
 
