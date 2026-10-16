@@ -46,8 +46,8 @@ const makeSchema = (maxChars) =>
     });
 
 /** Who extracts the signals, so analysts know whether text leaves the server. */
-function ProvenanceNote({ mode, model }) {
-    const claude = mode === "claude";
+function ProvenanceNote({ mode, model, label }) {
+    const ai = mode !== "heuristic";
 
     return (
         <div className="flex gap-3 rounded-lg border border-solid border-primary/30 bg-accent p-4" role="note">
@@ -55,13 +55,13 @@ function ProvenanceNote({ mode, model }) {
             <div className="flex flex-col gap-1">
                 <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
                     Evidence Provenance Guarantee
-                    <span className={cn(statusBadge(), claude ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                        {claude ? `Claude · ${model}` : "Aturan"}
+                    <span className={cn(statusBadge(), ai ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                        {ai ? `${label} · ${model}` : "Aturan"}
                     </span>
                 </p>
                 <p className="m-0 text-[13px] text-muted-foreground">
-                    {claude
-                        ? "Teks dokumen dikirim ke Claude (Anthropic) untuk diusulkan sebagai sinyal. Setiap kutipan bukti dicocokkan verbatim ke teks yang Anda tempel; kutipan yang tidak ditemukan dibuang. Semua sinyal masuk sebagai PENDING dan tetap Anda putuskan."
+                    {ai
+                        ? `Teks dokumen dikirim ke ${label} untuk diusulkan sebagai sinyal. Setiap kutipan bukti dicocokkan verbatim ke teks yang Anda tempel; kutipan yang tidak ditemukan dibuang. Semua sinyal masuk sebagai PENDING dan tetap Anda putuskan.`
                         : "Sinyal diusulkan dengan aturan kata kunci, tanpa AI, dan teks tidak keluar dari server."}{" "}
                     Setiap sinyal menyimpan kutipan verbatim dan sidik jari SHA-256 dari teks sumber untuk audit. URL hanya
                     disimpan sebagai metadata; isinya tidak diambil.
@@ -74,9 +74,10 @@ function ProvenanceNote({ mode, model }) {
 /**
  * Source document ingestion. `onSubmit(payload)` sends it and may resolve to
  * the 422 `errors` bag; resolve `true` on success to clear the form.
- * `mode` is "claude" or "heuristic"; content longer than `maxChars` is refused.
+ * `mode` is the LLM provider id or "heuristic", with `label` and `model` naming
+ * it; content longer than `maxChars` is refused.
  */
-export default function IngestForm({ loading, onSubmit, mode = "heuristic", model = null, maxChars = 60000 }) {
+export default function IngestForm({ loading, onSubmit, mode = "heuristic", model = null, label = "Aturan", maxChars = 60000 }) {
     const idPrefix = useId();
     const ids = Object.fromEntries(FIELDS.map((name) => [name, `${idPrefix}-${name}`]));
     const schema = useMemo(() => makeSchema(maxChars), [maxChars]);
@@ -126,7 +127,7 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
 
     return (
         <div className="mx-auto flex w-full max-w-[840px] flex-col gap-6 py-2">
-            <ProvenanceNote mode={mode} model={model} />
+            <ProvenanceNote mode={mode} model={model} label={label} />
 
             <form noValidate onSubmit={submit}>
                 <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
@@ -163,18 +164,12 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
                     <div className="flex flex-wrap items-center gap-2">
                         <Button type="submit" aria-busy={loading || undefined}>
                             {loading ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <ZapIcon aria-hidden="true" />}
-                            {loading ? "Mengekstrak sinyal…" : "Ingest & Extract Signals"}
+                            {loading ? "Menyimpan sumber…" : "Ingest & Extract Signals"}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => reset(EMPTY)}>
                             Clear
                         </Button>
-                        {loading && (
-                            <span role="status" className="text-xs text-muted-foreground">
-                                {mode === "claude"
-                                    ? "Claude sedang membaca dokumen; biasanya 30–120 detik. Jangan tutup halaman ini."
-                                    : "Sedang memproses dokumen…"}
-                            </span>
-                        )}
+
                     </div>
                 </fieldset>
             </form>

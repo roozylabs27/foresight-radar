@@ -15,14 +15,15 @@ import {
     SheetTitle,
 } from "@/Components/ui/sheet";
 import { Textarea } from "@/Components/ui/textarea";
+import { providerLabel } from "@/lib/llm";
 import { cn } from "@/lib/utils";
 
-/** Provenance of a quadrant: written by Claude, a template skeleton, or edited by an analyst. */
+/** Provenance of a quadrant: written by an LLM, a template skeleton, or edited by an analyst. */
 export function ProvenanceBadges({ quadrant }) {
     return (
         <span className="flex flex-wrap gap-1">
             {quadrant.is_ai_generated ? (
-                <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>Claude</span>
+                <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>{providerLabel(quadrant.provider)}</span>
             ) : (
                 <span className={cn(statusBadge(), "bg-muted text-muted-foreground")}>Kerangka tanpa AI</span>
             )}

@@ -24,6 +24,7 @@ import { Label } from "@/Components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Skeleton } from "@/Components/ui/skeleton";
 import { Textarea } from "@/Components/ui/textarea";
+import { isPending, pollUntil, providerLabel } from "@/lib/llm";
 import { cn } from "@/lib/utils";
 
 const FORM_ID = "scenario-form";
@@ -151,8 +152,11 @@ function ScenarioForm({ suggestions, values, onChange, onSubmit }) {
 }
 
 function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
-    const [generating, setGenerating] = useState(false);
+    const [requesting, setRequesting] = useState(false);
     const [confirmOverwrite, setConfirmOverwrite] = useState(false);
+    const generation = scenario.generation;
+    const pending = isPending(generation?.status);
+    const generating = requesting || pending;
     const evidence = useMemo(
         () => Object.fromEntries((scenario.evidence ?? []).map((item) => [item.ref, item])),
         [scenario.evidence]
@@ -160,17 +164,45 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
     const byPosition = Object.fromEntries(scenario.quadrants.map((quadrant) => [quadrant.position, quadrant]));
     const editedCount = scenario.quadrants.filter((quadrant) => quadrant.edited).length;
 
+    // The narrative is written by a queued job: poll until it completes or fails.
+    useEffect(() => {
+        if (!pending) return undefined;
+        const controller = new AbortController();
+        pollUntil(
+            () => axios.get(route("scenarios.show", scenario.id), { signal: controller.signal }).then((response) => response.data),
+            (data) => !isPending(data.generation?.status),
+            { signal: controller.signal }
+        )
+            .then((data) => {
+                if (controller.signal.aborted) return;
+                // The result arrives while the analyst may be looking elsewhere, so it stays up longer than a default toast.
+                const duration = 12000;
+                if (!data) {
+                    toast.info("Narasi masih dalam antrean.", { description: "Buka lagi skenario ini nanti untuk melihat hasilnya.", duration });
+                    return;
+                }
+                const result = data.generation;
+                if (result?.status === "failed") toast.error("Narasi tidak dibuat.", { description: result.error, duration });
+                else if (result?.notice) toast.warning(result.message, { description: result.notice, duration });
+                else toast.success(result?.message ?? "Narasi dibuat.", { duration });
+                onChanged(data);
+            })
+            .catch((error) => {
+                if (!controller.signal.aborted) toast.error("Status narasi tidak dapat dimuat.", { description: errorText(error, error.message) });
+            });
+        return () => controller.abort();
+        // onChanged is recreated on each parent render; polling restarts only for a new scenario or job.
+    }, [scenario.id, pending]);
+
     const generate = async (overwrite = false) => {
-        setGenerating(true);
+        setRequesting(true);
         try {
             const response = await axios.post(route("scenarios.generate", scenario.id), { overwrite_edited: overwrite });
-            if (response.data.notice) toast.warning(response.data.message, { description: response.data.notice });
-            else toast.success(response.data.message);
             onChanged(response.data.scenario);
         } catch (error) {
             toast.error("Narasi tidak dibuat.", { description: errorText(error, error.message) });
         } finally {
-            setGenerating(false);
+            setRequesting(false);
         }
     };
 
@@ -199,8 +231,8 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                 title={scenario.name}
                 badge={
                     scenario.provider && (
-                        <span className={cn(statusBadge(), scenario.provider === "claude" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                            {scenario.provider === "claude" ? `Claude · ${scenario.model ?? ""}` : "Kerangka tanpa AI"}
+                        <span className={cn(statusBadge(), scenario.provider !== "template" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                            {scenario.provider !== "template" ? `${providerLabel(scenario.provider)} · ${scenario.model ?? ""}` : "Kerangka tanpa AI"}
                         </span>
                     )
                 }
@@ -244,13 +276,19 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                         <span role="status" className="text-xs text-muted-foreground">
                             {generating
                                 ? llm.available
-                                    ? "Claude sedang menulis empat kuadran; biasanya 30–120 detik."
+                                    ? `${llm.label} sedang menulis empat kuadran; biasanya 10–150 detik. Halaman ini boleh ditinggalkan.`
                                     : "Menyusun kerangka…"
                                 : llm.available
-                                  ? `Narasi ditulis oleh Claude (${llm.model}) dari sinyal ACCEPTED yang tertaut ke kedua sumbu.`
+                                  ? `Narasi ditulis oleh ${llm.label} (${llm.model}) dari sinyal ACCEPTED yang tertaut ke kedua sumbu.`
                                   : "Tanpa API key: tombol ini membuat kerangka template tanpa AI."}
                         </span>
                     </div>
+                )}
+                {generation?.status === "failed" && !generating && (
+                    <p role="alert" className="m-0 flex items-start gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                        <TriangleAlertIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                        {generation.error}
+                    </p>
                 )}
             </Panel>
 

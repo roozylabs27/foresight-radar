@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import {
     CloudUploadIcon,
     EyeIcon,
     LinkIcon,
+    LoaderCircleIcon,
     ShieldAlertIcon,
     ShieldCheckIcon,
     ZapIcon,
@@ -37,6 +38,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
 import { fromPaginator } from "@/hooks/use-server-table";
 import { useReturnFocus } from "@/hooks/use-return-focus";
+import { isPending, pollUntil, providerLabel } from "@/lib/llm";
 import { cn } from "@/lib/utils";
 import IngestForm from "./IngestForm";
 import ReviewForm, { REVIEW_ACTIONS } from "./ReviewForm";
@@ -59,13 +61,17 @@ const STATUS_BADGES = {
 
 const confidence = (signal) => Math.round((signal.confidence_score || 0.8) * 100);
 
-/** Who proposed the signal: Claude, keyword rules, or unknown (created before provenance was recorded). */
+/** Who proposed the signal: an LLM provider, keyword rules, or unknown (created before provenance was recorded). */
 function ProviderBadge({ signal }) {
-    if (signal.extraction_provider === "claude") {
-        return <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>Claude</span>;
-    }
     if (signal.extraction_provider === "heuristic") {
         return <span className={cn(statusBadge(), "bg-muted text-muted-foreground")}>Aturan</span>;
+    }
+    if (signal.extraction_provider) {
+        return (
+            <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>
+                {providerLabel(signal.extraction_provider)}
+            </span>
+        );
     }
     return <span className={statusBadge()}>Asal tidak tercatat</span>;
 }
@@ -92,10 +98,10 @@ function QuoteStatus({ verified }) {
 }
 
 function extractedBy(signal) {
-    if (signal.extraction_provider === "claude") {
-        return `Claude (${signal.extraction_model ?? "model tidak tercatat"}), prompt ${signal.prompt_version ?? "-"}`;
-    }
     if (signal.extraction_provider === "heuristic") return "Aturan kata kunci (tanpa AI)";
+    if (signal.extraction_provider) {
+        return `${providerLabel(signal.extraction_provider)} (${signal.extraction_model ?? "model tidak tercatat"}), prompt ${signal.prompt_version ?? "-"}`;
+    }
     return "Tidak tercatat (dibuat sebelum provenance disimpan)";
 }
 
@@ -249,6 +255,50 @@ function InspectDialog({ signal, open, onOpenChange }) {
     );
 }
 
+const RESULT_TOAST_MS = 12000;
+
+/**
+ * One source whose signals are being extracted by a queued job. Polls its
+ * status and calls `onDone(progress)` once, or `onDone(null)` when it gives up.
+ */
+function ExtractionProgress({ source, label, onDone }) {
+    const [status, setStatus] = useState(source.status);
+    const done = useRef(onDone);
+    done.current = onDone;
+
+    useEffect(() => {
+        const controller = new AbortController();
+        pollUntil(
+            () =>
+                axios.get(route("signals.extraction", source.id), { signal: controller.signal }).then((response) => {
+                    setStatus(response.data.status);
+                    return response.data;
+                }),
+            (data) => !isPending(data.status),
+            { signal: controller.signal }
+        )
+            .then((data) => !controller.signal.aborted && done.current(data))
+            .catch((error) => {
+                if (!controller.signal.aborted) {
+                    toast.error("Status ekstraksi tidak dapat dimuat.", { description: errorMessage(error, error.message) });
+                    done.current(null);
+                }
+            });
+        return () => controller.abort();
+    }, [source.id]);
+
+    return (
+        <li className="flex items-start gap-2 text-[13px] text-muted-foreground">
+            <LoaderCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+            <span>
+                <b className="font-semibold text-foreground">{source.title}</b>:{" "}
+                {status === "processing" ? `${label} sedang membaca dokumen` : "menunggu giliran di antrean"}; biasanya
+                10–150 detik. Halaman ini boleh ditinggalkan, hasilnya tetap tersimpan.
+            </span>
+        </li>
+    );
+}
+
 export default function SignalIndex({
     auth,
     title,
@@ -256,7 +306,9 @@ export default function SignalIndex({
     existingDrivingForces = [],
     extractionMode = "heuristic",
     extractionModel = null,
+    extractionLabel = "Aturan",
     maxContentChars = 60000,
+    pendingExtractions = [],
 }) {
     const statusFieldId = useId();
     const [tab, setTab] = useState("review");
@@ -312,22 +364,48 @@ export default function SignalIndex({
         }
     };
 
-    // Ingest
+    // Ingest: the request saves the source; signals are extracted by a queued job.
     const [ingesting, setIngesting] = useState(false);
+    const [extractions, setExtractions] = useState(pendingExtractions);
+
+    const showReview = () => {
+        setTab("review");
+        setStatus("PENDING");
+    };
+
+    // The result arrives while the analyst may be looking elsewhere, so it stays up longer than a default toast.
+    const finishExtraction = (source) => (progress) => {
+        setExtractions((current) => current.filter((item) => item.id !== source.id));
+        const duration = RESULT_TOAST_MS;
+        if (!progress) {
+            toast.info(`Ekstraksi “${source.title}” masih berjalan.`, { description: "Muat ulang halaman ini nanti untuk melihat hasilnya.", duration });
+            return;
+        }
+        if (progress.status === "failed") {
+            toast.error(`Ekstraksi “${source.title}” gagal.`, { description: progress.error, duration });
+            return;
+        }
+        const action = { label: "Lihat sinyal", onClick: showReview };
+        if (progress.extraction?.fallback) {
+            toast.warning(progress.message, { description: progress.extraction.notice, action, duration });
+        } else {
+            toast.success(progress.message, { action, duration });
+        }
+        table.reload();
+    };
 
     const handleIngest = async (payload) => {
         setIngesting(true);
         try {
             const response = await axios.post("/signals/ingest", payload);
-            const extraction = response.data.extraction;
-            if (extraction?.fallback) {
-                toast.warning(response.data.message, { description: extraction.notice });
+            const source = response.data.source;
+            if (isPending(source.status)) {
+                toast.info(response.data.message);
+                setExtractions((current) => [source, ...current]);
             } else {
-                toast.success(response.data.message || "Content ingested successfully.");
+                // Without a queue worker (QUEUE_CONNECTION=sync) the job has already run.
+                finishExtraction(source)(source);
             }
-            setTab("review");
-            setStatus("PENDING");
-            table.reload();
             return true;
         } catch (error) {
             const errors = error.response?.data?.errors;
@@ -436,6 +514,22 @@ export default function SignalIndex({
                     description="Ingest external publications and review evidence-backed candidate signals before formal repository graduation."
                 />
 
+                {/* Outside the tabs, so polling continues on either tab. */}
+                {extractions.length > 0 && (
+                    <section aria-label="Ekstraksi yang sedang berjalan" className="rounded-lg border border-solid border-border bg-card p-4">
+                        <ul role="status" className="m-0 flex list-none flex-col gap-2 p-0">
+                            {extractions.map((source) => (
+                                <ExtractionProgress
+                                    key={source.id}
+                                    source={source}
+                                    label={extractionLabel}
+                                    onDone={finishExtraction(source)}
+                                />
+                            ))}
+                        </ul>
+                    </section>
+                )}
+
                 <Tabs value={tab} onValueChange={setTab} className="gap-4">
                     <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
                         <TabsTrigger value="review" className="px-3 py-1.5">
@@ -504,6 +598,7 @@ export default function SignalIndex({
                             onSubmit={handleIngest}
                             mode={extractionMode}
                             model={extractionModel}
+                            label={extractionLabel}
                             maxChars={maxContentChars}
                         />
                     </TabsContent>

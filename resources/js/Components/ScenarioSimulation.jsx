@@ -241,7 +241,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
                                         value={currentStatus}
                                         onValueChange={(val) => handleUpdateOverride(force.id, "status_action", val)}
                                     >
-                                        <SelectTrigger className="h-8 w-32 text-xs">
+                                        <SelectTrigger className="h-8 w-32 text-xs" aria-label={`Status aksi ${force.keyword}`}>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -257,7 +257,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
                                             value={String(currentImpact)}
                                             onValueChange={(val) => handleUpdateOverride(force.id, "impact", Number(val))}
                                         >
-                                            <SelectTrigger className="h-8 w-16 text-xs">
+                                            <SelectTrigger className="h-8 w-16 text-xs" aria-label={`Impact ${force.keyword}`}>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -277,7 +277,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
                                             value={String(currentUncertainty)}
                                             onValueChange={(val) => handleUpdateOverride(force.id, "uncertainty", Number(val))}
                                         >
-                                            <SelectTrigger className="h-8 w-16 text-xs">
+                                            <SelectTrigger className="h-8 w-16 text-xs" aria-label={`Uncertainty ${force.keyword}`}>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -298,6 +298,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
                                             className="size-8 text-muted-foreground hover:text-foreground"
                                             onClick={() => handleResetForce(force.id)}
                                             title="Reset ke baseline"
+                                            aria-label={`Reset ${force.keyword} ke baseline`}
                                         >
                                             <RotateCcwIcon className="size-3.5" />
                                         </Button>

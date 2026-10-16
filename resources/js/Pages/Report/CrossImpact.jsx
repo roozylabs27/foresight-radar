@@ -80,6 +80,9 @@ function Legend() {
     );
 }
 
+/** The loop's links in order; CausalLoopService calls them `edges`. */
+const loopLinks = (loop) => loop.links ?? loop.edges ?? [];
+
 const LOOP_FILTERS = [
     { value: "all", label: "Semua" },
     { value: "R", label: "Penguat (R)" },
@@ -147,7 +150,7 @@ function LoopPanel({ loops, forces, selected, onSelect }) {
                                         <span className={cn(statusBadge(), polarity.tone)} title={polarity.title}>
                                             {polarity.label} · {polarity.title}
                                         </span>
-                                        {loop.links.map((link, position) => (
+                                        {loopLinks(loop).map((link, position) => (
                                             <span key={position} className="inline-flex items-center gap-1">
                                                 <span className="font-medium">{names.get(link.source)}</span>
                                                 <span
@@ -511,7 +514,7 @@ export default function CrossImpact({ auth, title, canManage = false }) {
     );
     const loop = selectedLoop === null ? null : matrix?.loops?.loops?.[selectedLoop];
     const highlight = useMemo(
-        () => (loop ? new Set(loop.links.map((link) => `${link.source}|${link.target}`)) : null),
+        () => (loop ? new Set(loopLinks(loop).map((link) => `${link.source}|${link.target}`)) : null),
         [loop]
     );
 
