@@ -105,12 +105,13 @@ class SignalIngestionTest extends TestCase
             'published_at' => '2026-09-15',
         ]);
 
-        $response->assertStatus(201);
+        // QUEUE_CONNECTION is sync in tests, so the extraction job has run by the time the request returns.
+        $response->assertStatus(202);
         $response->assertJsonStructure([
             'message',
-            'source' => ['id', 'uuid', 'title', 'content_hash'],
-            'signals',
+            'source' => ['id', 'title', 'status', 'error', 'message', 'extraction' => ['mode', 'label', 'model', 'fallback', 'notice', 'signals', 'discarded']],
         ]);
+        $response->assertJsonPath('source.status', 'completed');
 
         $this->assertDatabaseHas('sources', [
             'title' => 'Breakthrough Solid-State Battery Commercialization',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LlmJobStatus;
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\IngestSourceRequest;
 use App\Http\Requests\ReviewSignalRequest;
@@ -9,6 +10,7 @@ use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\Signal;
+use App\Models\Source;
 use App\Models\TimeHorizon;
 use App\Services\SignalExtractionService;
 use App\Support\EvidenceVerifier;
@@ -63,7 +65,16 @@ class SignalIngestionController extends Controller
             'existingDrivingForces' => $drivingForces,
             'extractionMode' => $this->extractionService->mode(),
             'extractionModel' => $this->extractionService->modelName(),
+            'extractionLabel' => $this->extractionService->modeLabel(),
             'maxContentChars' => (int) config('services.signal_extraction.max_chars', 60000),
+            // The analyst's extractions still in the queue, so the page resumes polling them.
+            'pendingExtractions' => Source::where('created_by', auth()->id())
+                ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+                ->where('created_at', '>=', now()->subDay())
+                ->latest()
+                ->get()
+                ->map(fn ($source) => $this->extractionService->progress($source))
+                ->values(),
         ]);
     }
 
@@ -108,29 +119,30 @@ class SignalIngestionController extends Controller
     }
 
     /**
-     * Ingest source and extract candidate signals.
+     * Save the source and queue signal extraction. The client polls
+     * `extraction` until the status is completed or failed.
      */
     public function ingest(IngestSourceRequest $request): JsonResponse
     {
         try {
-            $result = $this->extractionService->ingestAndExtract($request->validated(), auth()->id());
+            $source = $this->extractionService->ingest($request->validated(), auth()->id());
 
             return response()->json([
-                'message' => $this->ingestMessage($result),
-                'source' => $result['source'],
-                'signals' => $result['signals'],
-                'extraction' => [
-                    'mode' => $result['mode'],
-                    'model' => $result['model'],
-                    'fallback' => $result['fallback'],
-                    'notice' => $result['notice'],
-                    'discarded' => ($result['meta']['discarded_unverified'] ?? 0) + ($result['meta']['discarded_duplicate'] ?? 0),
-                ],
-            ], Response::HTTP_CREATED);
+                'message' => 'Sumber disimpan. Sinyal sedang diekstrak di latar belakang.',
+                'source' => $this->extractionService->progress($source),
+            ], Response::HTTP_ACCEPTED);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'ingesting source content');
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Extraction status of an ingested source, with the result once it is done.
+     */
+    public function extraction(Source $source): JsonResponse
+    {
+        return response()->json($this->extractionService->progress($source), Response::HTTP_OK);
     }
 
     /**
@@ -260,25 +272,4 @@ class SignalIngestionController extends Controller
         }
     }
 
-    /**
-     * Ingest result in one sentence: who extracted, how many signals, how many were dropped.
-     */
-    protected function ingestMessage(array $result): string
-    {
-        $count = count($result['signals']);
-        $by = $result['mode'] === 'claude'
-            ? 'oleh Claude (' . $result['model'] . ')'
-            : 'dengan aturan kata kunci (tanpa AI)';
-        $message = "Sumber disimpan. {$count} sinyal kandidat diekstrak {$by}.";
-
-        $discarded = ($result['meta']['discarded_unverified'] ?? 0);
-        if ($discarded > 0) {
-            $message .= " {$discarded} usulan dibuang karena kutipannya tidak ditemukan verbatim di dokumen.";
-        }
-        if ($result['mode'] === 'claude' && $count === 0) {
-            $message .= ' Tidak ada sinyal dengan bukti terverifikasi di dokumen ini.';
-        }
-
-        return $message;
-    }
 }

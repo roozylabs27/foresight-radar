@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LlmJobStatus;
 use App\Http\Requests\ScenarioQuadrantRequest;
 use App\Http\Requests\ScenarioRequest;
 use App\Models\Scenario;
@@ -29,7 +30,12 @@ class ScenarioController extends Controller
         return Inertia::render('Report/Scenarios', [
             'title' => 'Scenarios',
             'canManage' => auth()->user()->can('manage-scenario'),
-            'llm' => ['available' => $this->llm->isAvailable(), 'model' => $this->llm->isAvailable() ? $this->llm->model() : null],
+            'llm' => [
+                'available' => $this->llm->isAvailable(),
+                'provider' => $this->llm->isAvailable() ? $this->llm->provider() : null,
+                'label' => $this->llm->isAvailable() ? $this->llm->label() : null,
+                'model' => $this->llm->isAvailable() ? $this->llm->model() : null,
+            ],
         ]);
     }
 
@@ -44,6 +50,7 @@ class ScenarioController extends Controller
                 'name' => $scenario->name,
                 'status' => $scenario->status,
                 'provider' => $scenario->provider,
+                'generation_status' => $scenario->generation_status?->value,
                 'axis_a' => $scenario->axis_a?->keyword,
                 'axis_b' => $scenario->axis_b?->keyword,
                 'quadrants_count' => $scenario->quadrants_count,
@@ -113,20 +120,44 @@ class ScenarioController extends Controller
         return response()->json(['message' => 'Kuadran disimpan.', 'scenario' => $this->present($scenario)], Response::HTTP_OK);
     }
 
+    /**
+     * Queue the narrative. The client polls `show` until `generation.status`
+     * is completed or failed.
+     */
     public function generate(Request $request, Scenario $scenario): JsonResponse
     {
-        $result = $this->narratives->generate($scenario, $request->boolean('overwrite_edited'), auth()->id());
-
-        $message = $result['provider'] === 'claude'
-            ? 'Narasi empat kuadran dibuat oleh Claude. Tinjau dan sunting sebelum dipakai.'
-            : 'Kerangka empat kuadran dibuat tanpa AI. Lengkapi narasinya bersama tim.';
+        $scenario = $this->narratives->queue($scenario, $request->boolean('overwrite_edited'), auth()->id());
 
         return response()->json([
+            'message' => 'Narasi sedang dibuat di latar belakang.',
+            'scenario' => $this->present($scenario),
+        ], Response::HTTP_ACCEPTED);
+    }
+
+    /**
+     * State of the last queued generation; null when none was queued. The
+     * message describes a completed one.
+     */
+    protected function generation(Scenario $scenario): ?array
+    {
+        $status = $scenario->generation_status;
+        if ($status === null) {
+            return null;
+        }
+
+        $message = null;
+        if ($status === LlmJobStatus::COMPLETED) {
+            $message = $scenario->provider !== ScenarioNarrativeService::PROVIDER_TEMPLATE
+                ? 'Narasi empat kuadran dibuat oleh ' . $this->llm->label() . '. Tinjau dan sunting sebelum dipakai.'
+                : 'Kerangka empat kuadran dibuat tanpa AI. Lengkapi narasinya bersama tim.';
+        }
+
+        return [
+            'status' => $status->value,
             'message' => $message,
-            'provider' => $result['provider'],
-            'notice' => $result['notice'],
-            'scenario' => $this->present($result['scenario']),
-        ], Response::HTTP_OK);
+            'notice' => $scenario->generation_notice,
+            'error' => $scenario->generation_error,
+        ];
     }
 
     protected function attributes(array $validated, int $axisA, int $axisB): array
@@ -171,6 +202,7 @@ class ScenarioController extends Controller
             'model' => $scenario->model,
             'prompt_version' => $scenario->prompt_version,
             'generated_at' => $scenario->generated_at,
+            'generation' => $this->generation($scenario),
             'evidence' => $evidence,
             'quadrants' => $scenario->quadrants->map(fn ($quadrant) => [
                 'id' => $quadrant->uuid,

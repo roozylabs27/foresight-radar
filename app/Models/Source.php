@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LlmJobStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,11 +23,14 @@ class Source extends Model
         'content_hash',
         'created_by',
         'extraction_meta',
+        'extraction_status',
+        'extraction_error',
     ];
 
     protected $casts = [
         'published_at' => 'date',
         'extraction_meta' => 'array',
+        'extraction_status' => LlmJobStatus::class,
     ];
 
     protected static function booted()

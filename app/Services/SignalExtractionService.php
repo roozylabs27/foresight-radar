@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\LlmJobStatus;
 use App\Enums\TimeHorizonType;
+use App\Jobs\ExtractSignals;
 use App\Services\Extraction\LlmSignalExtractor;
 use App\Services\Llm\LlmException;
 use App\Services\Llm\StructuredLlmClient;
@@ -33,41 +35,77 @@ class SignalExtractionService
     }
 
     /**
-     * "claude" when signals will be extracted by the LLM, otherwise "heuristic".
+     * The LLM provider id (e.g. "claude", "openrouter") when signals will be
+     * extracted by the LLM, otherwise "heuristic".
      */
     public function mode(): string
     {
-        return config('services.signal_extraction.driver') === 'claude' && $this->llm()->isAvailable()
-            ? 'claude'
+        return config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC && $this->llm()->isAvailable()
+            ? $this->llm()->provider()
             : self::PROVIDER_HEURISTIC;
+    }
+
+    public function usesLlm(): bool
+    {
+        return $this->mode() !== self::PROVIDER_HEURISTIC;
     }
 
     public function modelName(): ?string
     {
-        return $this->mode() === 'claude' ? $this->llm()->model() : null;
+        return $this->usesLlm() ? $this->llm()->model() : null;
+    }
+
+    /** Display name of the extractor: the provider's label, or "Aturan". */
+    public function modeLabel(): string
+    {
+        return $this->usesLlm() ? $this->llm()->label() : 'Aturan';
     }
 
     /**
-     * Ingest source content and extract candidate signals.
+     * Save the source and queue its extraction. The LLM call runs in the
+     * ExtractSignals job, so the request returns before the model answers.
+     */
+    public function ingest(array $data, int $userId): Source
+    {
+        $content = trim($data['content'] ?? '');
+
+        $source = Source::create([
+            'uuid' => (string) Uuid::uuid4(),
+            'title' => $data['title'] ?? 'Ingested Source Document',
+            'url' => $data['url'] ?? null,
+            'publisher' => $data['publisher'] ?? null,
+            'published_at' => !empty($data['published_at']) ? Carbon::parse($data['published_at']) : Carbon::today(),
+            'raw_content' => $content,
+            'content_hash' => hash('sha256', $content),
+            'created_by' => $userId,
+            'extraction_status' => LlmJobStatus::QUEUED,
+        ]);
+
+        ExtractSignals::dispatch($source);
+
+        return $source->refresh();
+    }
+
+    /**
+     * Extract candidate signals from a saved source and mark it completed.
      *
      * The LLM is called before the transaction opens, so a slow call holds no
      * database locks. When it fails, extraction falls back to keyword rules and
-     * `notice` says why; when it succeeds with no verifiable signal, the source
-     * is saved without signals.
-     *
-     * @return array{source: Source, signals: array, mode: string, model: ?string, fallback: bool, notice: ?string, meta: array}
+     * the stored `notice` says why; when it succeeds with no verifiable signal,
+     * the source is completed without signals.
      */
-    public function ingestAndExtract(array $data, int $userId): array
+    public function extract(Source $source): void
     {
-        $content = trim($data['content'] ?? '');
-        $title = $data['title'] ?? 'Ingested Source Document';
+        $source->update(['extraction_status' => LlmJobStatus::PROCESSING, 'extraction_error' => null]);
+
+        $content = (string) $source->raw_content;
+        $title = (string) $source->title;
         $mode = $this->mode();
         $notice = null;
-        $fallback = false;
         $candidates = null;
         $meta = [];
 
-        if ($mode === 'claude') {
+        if ($mode !== self::PROVIDER_HEURISTIC) {
             try {
                 $result = $this->llmExtractor()->extract($title, $content);
                 $candidates = array_map(fn ($item) => $item + [
@@ -75,10 +113,9 @@ class SignalExtractionService
                     'extraction_model' => $result['meta']['model'],
                     'prompt_version' => $result['meta']['prompt_version'],
                 ], $result['candidates']);
-                $meta = $result['meta'];
+                $meta = $result['meta'] + ['label' => $this->llm()->label()];
             } catch (LlmException $e) {
                 Log::warning('Signal extraction fell back to keyword rules', ['reason' => $e->reason]);
-                $fallback = true;
                 $notice = $e->userMessage() . ' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';
                 $meta = ['provider' => self::PROVIDER_HEURISTIC, 'fallback_reason' => $e->reason];
             }
@@ -91,26 +128,13 @@ class SignalExtractionService
                 'prompt_version' => null,
                 'quote_verified' => EvidenceVerifier::verify($item['evidence_quote'], $content),
                 'suggested_driving_force_id' => null,
-            ], $this->extractCandidatesFromText($content, $data['title'] ?? ''));
+            ], $this->extractCandidatesFromText($content, $title));
             $meta += ['provider' => self::PROVIDER_HEURISTIC, 'returned' => count($candidates)];
         }
 
-        $saved = DB::transaction(function () use ($data, $userId, $content, $title, $candidates, $meta) {
-            $source = Source::create([
-                'uuid' => (string) Uuid::uuid4(),
-                'title' => $title,
-                'url' => $data['url'] ?? null,
-                'publisher' => $data['publisher'] ?? null,
-                'published_at' => !empty($data['published_at']) ? Carbon::parse($data['published_at']) : Carbon::today(),
-                'raw_content' => $content,
-                'content_hash' => hash('sha256', $content),
-                'created_by' => $userId,
-                'extraction_meta' => $meta,
-            ]);
-
-            $signals = [];
+        DB::transaction(function () use ($source, $candidates, $meta, $notice) {
             foreach ($candidates as $item) {
-                $signal = Signal::create([
+                Signal::create([
                     'uuid' => (string) Uuid::uuid4(),
                     'source_id' => $source->id,
                     'review_status' => 'PENDING',
@@ -121,20 +145,65 @@ class SignalExtractionService
                     'confidence_score', 'confidence_rationale', 'extraction_provider', 'extraction_model',
                     'prompt_version', 'quote_verified', 'suggested_driving_force_id',
                 ])->all());
-
-                $signals[] = $signal->load(['dimension', 'suggested_time_horizon', 'suggested_driving_force']);
             }
 
-            return ['source' => $source, 'signals' => $signals];
+            $source->update([
+                'extraction_meta' => $meta + ['notice' => $notice],
+                'extraction_status' => LlmJobStatus::COMPLETED,
+            ]);
         });
+    }
 
-        return $saved + [
-            'mode' => $fallback ? self::PROVIDER_HEURISTIC : $mode,
-            'model' => $fallback ? null : ($meta['model'] ?? null),
-            'fallback' => $fallback,
-            'notice' => $notice,
-            'meta' => $meta,
+    /**
+     * Where a source's extraction stands; once it is done, a one-sentence
+     * result: who extracted, how many signals, how many were dropped.
+     *
+     * @return array{id: string, title: string, status: string, error: ?string, message: ?string, extraction: ?array}
+     */
+    public function progress(Source $source): array
+    {
+        // Sources saved before extraction was queued have no status and are complete.
+        $status = $source->extraction_status ?? LlmJobStatus::COMPLETED;
+        $progress = [
+            'id' => $source->uuid,
+            'title' => $source->title,
+            'status' => $status->value,
+            'error' => $source->extraction_error,
+            'message' => null,
+            'extraction' => null,
         ];
+
+        if ($status !== LlmJobStatus::COMPLETED) {
+            return $progress;
+        }
+
+        $meta = $source->extraction_meta ?? [];
+        $count = $source->signals()->count();
+        $ai = ($meta['provider'] ?? self::PROVIDER_HEURISTIC) !== self::PROVIDER_HEURISTIC;
+        $label = $ai ? ($meta['label'] ?? $meta['provider']) : 'Aturan';
+        $discarded = $meta['discarded_unverified'] ?? 0;
+
+        $by = $ai ? "oleh {$label} (" . ($meta['model'] ?? '-') . ')' : 'dengan aturan kata kunci (tanpa AI)';
+        $message = "Sumber disimpan. {$count} sinyal kandidat diekstrak {$by}.";
+        if ($discarded > 0) {
+            $message .= " {$discarded} usulan dibuang karena kutipannya tidak ditemukan verbatim di dokumen.";
+        }
+        if ($ai && $count === 0) {
+            $message .= ' Tidak ada sinyal dengan bukti terverifikasi di dokumen ini.';
+        }
+
+        return array_merge($progress, [
+            'message' => $message,
+            'extraction' => [
+                'mode' => $meta['provider'] ?? self::PROVIDER_HEURISTIC,
+                'label' => $label,
+                'model' => $ai ? ($meta['model'] ?? null) : null,
+                'fallback' => isset($meta['fallback_reason']),
+                'notice' => $meta['notice'] ?? null,
+                'signals' => $count,
+                'discarded' => $discarded + ($meta['discarded_duplicate'] ?? 0),
+            ],
+        ]);
     }
 
     protected function llm(): StructuredLlmClient

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LlmJobStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,6 +32,9 @@ class Scenario extends Model
         'prompt_version',
         'input_signal_ids',
         'generated_at',
+        'generation_status',
+        'generation_error',
+        'generation_notice',
         'created_by',
         'updated_by',
     ];
@@ -38,6 +42,7 @@ class Scenario extends Model
     protected $casts = [
         'input_signal_ids' => 'array',
         'generated_at' => 'datetime',
+        'generation_status' => LlmJobStatus::class,
     ];
 
     protected static function booted()

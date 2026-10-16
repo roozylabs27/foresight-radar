@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\LlmJobStatus;
+use App\Jobs\GenerateScenarioNarrative;
 use App\Models\Scenario;
 use App\Services\Llm\LlmException;
 use App\Services\Llm\Prompts\ScenarioNarrativePrompt;
@@ -16,6 +18,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  * Generates the four quadrants of a scenario. With an LLM it writes cited
  * narratives from the accepted signals; without one (or when the call fails)
  * it lays out a template skeleton for analysts to fill in, labelled as such.
+ * A failed regeneration never replaces an AI narrative with the template.
  *
  * Citation rules: a narrative may only cite the S-references it was given;
  * other references are removed, and if any quadrant is left without a valid
@@ -32,34 +35,49 @@ class ScenarioNarrativeService
     }
 
     /**
+     * Check that the scenario can be generated, then queue the generation.
+     * The LLM call runs in the GenerateScenarioNarrative job.
+     *
+     * @throws ConflictHttpException when a generation is running or edited quadrants would be overwritten
+     * @throws ValidationException when there is no evidence for the LLM
+     */
+    public function queue(Scenario $scenario, bool $overwriteEdited, ?int $userId): Scenario
+    {
+        // A job older than the queue's retry window has died; the analyst may start again.
+        $stale = now()->subSeconds((int) config('queue.connections.database.retry_after', 360));
+        if ($scenario->generation_status?->isPending() && $scenario->updated_at?->greaterThan($stale)) {
+            throw new ConflictHttpException('Narasi skenario ini sedang dibuat. Tunggu sampai selesai.');
+        }
+
+        $this->assertGeneratable($scenario, $overwriteEdited);
+
+        $scenario->update([
+            'generation_status' => LlmJobStatus::QUEUED,
+            'generation_error' => null,
+            'generation_notice' => null,
+        ]);
+
+        GenerateScenarioNarrative::dispatch($scenario, $overwriteEdited, $userId);
+
+        return $scenario->refresh();
+    }
+
+    /**
      * @return array{scenario: Scenario, provider: string, notice: ?string}
      *
      * @throws ConflictHttpException when edited quadrants would be overwritten
-     * @throws ValidationException when there is no evidence for the LLM, or its citations are invalid
+     * @throws ValidationException when there is no evidence for the LLM, its citations are invalid,
+     *                             or it fails while an AI narrative already exists
      */
     public function generate(Scenario $scenario, bool $overwriteEdited, ?int $userId): array
     {
-        $scenario->loadMissing(['axis_a.dimension', 'axis_b.dimension', 'quadrants']);
+        $evidence = $this->assertGeneratable($scenario, $overwriteEdited);
 
-        $edited = $scenario->quadrants->filter->isEdited()->count();
-        if ($edited > 0 && !$overwriteEdited) {
-            throw new ConflictHttpException("{$edited} kuadran sudah disunting analis. Konfirmasi untuk menimpanya.");
-        }
-
-        $evidence = $this->scenarios->evidenceFor($scenario);
         $notice = null;
         $quadrants = null;
         $model = null;
 
         if ($this->llm->isAvailable()) {
-            foreach (['A' => $scenario->axis_a, 'B' => $scenario->axis_b] as $axis => $force) {
-                if (!collect($evidence)->contains(fn ($item) => str_contains($item['axis'], $axis))) {
-                    throw ValidationException::withMessages([
-                        'evidence' => "Sumbu {$axis} ({$force->keyword}) belum punya sinyal ACCEPTED yang tertaut. Tautkan sinyal dulu sebelum membuat narasi AI.",
-                    ]);
-                }
-            }
-
             try {
                 $response = $this->llm->generateJson(ScenarioNarrativePrompt::request(
                     $scenario,
@@ -69,36 +87,77 @@ class ScenarioNarrativeService
                 $quadrants = $this->validated($response->data, array_column($evidence, 'ref'));
                 $model = $response->model;
             } catch (LlmException $e) {
+                // A template would replace a narrative the AI already wrote, so a regeneration keeps it instead.
+                if ($scenario->quadrants->contains('is_ai_generated', true)) {
+                    Log::warning('Scenario regeneration failed; previous narrative kept', ['reason' => $e->reason]);
+                    throw ValidationException::withMessages([
+                        'llm' => $e->userMessage() . ' Narasi sebelumnya tidak diubah; coba lagi nanti.',
+                    ]);
+                }
                 Log::warning('Scenario narrative fell back to the template', ['reason' => $e->reason]);
                 $notice = $e->userMessage() . ' Ditampilkan kerangka tanpa AI.';
             }
         }
 
-        $provider = $quadrants === null ? self::PROVIDER_TEMPLATE : 'claude';
+        $provider = $quadrants === null ? self::PROVIDER_TEMPLATE : $this->llm->provider();
         $quadrants ??= $this->template($scenario, $evidence);
 
         $signalIds = collect($evidence)->mapWithKeys(fn ($item) => [$item['ref'] => $item['signal']->id]);
 
-        DB::transaction(function () use ($scenario, $quadrants, $evidence, $signalIds, $provider, $model, $userId) {
+        DB::transaction(function () use ($scenario, $quadrants, $evidence, $signalIds, $provider, $model, $notice, $userId) {
             $scenario->quadrants()->delete();
             foreach ($quadrants as $quadrant) {
                 $scenario->quadrants()->create(collect($quadrant)->except('cited_refs')->all() + [
                     'cited_signal_ids' => array_values(array_map(fn ($ref) => $signalIds[$ref], $quadrant['cited_refs'])),
-                    'is_ai_generated' => $provider === 'claude',
+                    'is_ai_generated' => $provider !== self::PROVIDER_TEMPLATE,
                     'provider' => $provider,
                 ]);
             }
             $scenario->update([
                 'provider' => $provider,
                 'model' => $model,
-                'prompt_version' => $provider === 'claude' ? ScenarioNarrativePrompt::VERSION : null,
+                'prompt_version' => $provider !== self::PROVIDER_TEMPLATE ? ScenarioNarrativePrompt::VERSION : null,
                 'input_signal_ids' => array_map(fn ($item) => $item['signal']->id, $evidence),
                 'generated_at' => now(),
+                'generation_status' => LlmJobStatus::COMPLETED,
+                'generation_error' => null,
+                'generation_notice' => $notice,
                 'updated_by' => $userId,
             ]);
         });
 
         return ['scenario' => $scenario->fresh('quadrants'), 'provider' => $provider, 'notice' => $notice];
+    }
+
+    /**
+     * The scenario's evidence, once it is clear the generation may go ahead.
+     *
+     * @throws ConflictHttpException when edited quadrants would be overwritten
+     * @throws ValidationException when an axis has no evidence for the LLM
+     */
+    protected function assertGeneratable(Scenario $scenario, bool $overwriteEdited): array
+    {
+        $scenario->loadMissing(['axis_a.dimension', 'axis_b.dimension', 'quadrants']);
+
+        $edited = $scenario->quadrants->filter->isEdited()->count();
+        if ($edited > 0 && !$overwriteEdited) {
+            throw new ConflictHttpException("{$edited} kuadran sudah disunting analis. Konfirmasi untuk menimpanya.");
+        }
+
+        $evidence = $this->scenarios->evidenceFor($scenario);
+        if (!$this->llm->isAvailable()) {
+            return $evidence;
+        }
+
+        foreach (['A' => $scenario->axis_a, 'B' => $scenario->axis_b] as $axis => $force) {
+            if (!collect($evidence)->contains(fn ($item) => str_contains($item['axis'], $axis))) {
+                throw ValidationException::withMessages([
+                    'evidence' => "Sumbu {$axis} ({$force->keyword}) belum punya sinyal ACCEPTED yang tertaut. Tautkan sinyal dulu sebelum membuat narasi AI.",
+                ]);
+            }
+        }
+
+        return $evidence;
     }
 
     /**

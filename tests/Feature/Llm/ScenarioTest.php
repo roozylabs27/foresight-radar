@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Llm;
 
+use App\Jobs\GenerateScenarioNarrative;
 use App\Models\CrossImpact;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -14,7 +15,9 @@ use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Services\Llm\LlmException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Ramsey\Uuid\Uuid;
+use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -185,9 +188,11 @@ class ScenarioTest extends TestCase
         $scenario = $this->scenario();
         $this->acceptedSignal($this->regulation, 'Local content rule enacted');
 
-        $response = $this->generate($scenario)->assertStatus(200);
+        $response = $this->generate($scenario)->assertStatus(202);
 
-        $response->assertJsonPath('provider', 'template')->assertJsonPath('scenario.provider', 'template');
+        $response->assertJsonPath('scenario.provider', 'template')
+            ->assertJsonPath('scenario.generation.status', 'completed')
+            ->assertJsonPath('scenario.generation.message', 'Kerangka empat kuadran dibuat tanpa AI. Lengkapi narasinya bersama tim.');
         $quadrants = collect($response->json('scenario.quadrants'))->keyBy('position');
         $this->assertSame(['LH', 'HH', 'LL', 'HL'], array_values(array_intersect(['LH', 'HH', 'LL', 'HL'], $quadrants->keys()->all())));
         $this->assertCount(4, $quadrants);
@@ -200,9 +205,9 @@ class ScenarioTest extends TestCase
 
     public function test_template_works_even_before_any_evidence_is_linked(): void
     {
-        $response = $this->generate($this->scenario())->assertStatus(200);
+        $response = $this->generate($this->scenario())->assertStatus(202);
 
-        $this->assertSame('template', $response->json('provider'));
+        $this->assertSame('template', $response->json('scenario.provider'));
         $this->assertStringContainsString('Belum ada sinyal ACCEPTED', $response->json('scenario.quadrants.0.narrative'));
     }
 
@@ -219,9 +224,10 @@ class ScenarioTest extends TestCase
             'LL' => ['S2'],
         ]));
 
-        $response = $this->generate($scenario)->assertStatus(200);
+        $response = $this->generate($scenario)->assertStatus(202);
 
-        $response->assertJsonPath('provider', 'claude')->assertJsonPath('scenario.model', 'claude-fake');
+        $response->assertJsonPath('scenario.provider', 'claude')->assertJsonPath('scenario.model', 'claude-fake');
+        $this->assertStringContainsString('dibuat oleh Claude', $response->json('scenario.generation.message'));
         $quadrants = collect($response->json('scenario.quadrants'))->keyBy('position');
         $this->assertSame(['S1', 'S2'], $quadrants['HH']['cited_refs']);
         $this->assertSame(['S1'], $quadrants['HL']['cited_refs']);
@@ -260,10 +266,12 @@ class ScenarioTest extends TestCase
         $this->acceptedSignal($this->adoption, 'EV sales doubled');
         $llm->respond($this->narrative(['HH' => ['S1'], 'HL' => ['S2'], 'LH' => ['S1'], 'LL' => ['S7']]));
 
-        $this->generate($scenario)->assertStatus(422)->assertJsonValidationErrors('citations');
+        // The citations are checked in the job, so the request is accepted and the job records why nothing was saved.
+        $this->generate($scenario)->assertStatus(202)->assertJsonPath('scenario.generation.status', 'failed');
 
         $this->assertSame(0, $scenario->quadrants()->count());
         $this->assertNull($scenario->fresh()->provider);
+        $this->assertStringContainsString('kuadran LL tidak mengutip bukti yang valid', $scenario->fresh()->generation_error);
     }
 
     public function test_refusal_falls_back_to_the_template(): void
@@ -274,10 +282,45 @@ class ScenarioTest extends TestCase
         $this->acceptedSignal($this->adoption, 'EV sales doubled');
         $llm->respond(new LlmException('refusal'));
 
-        $response = $this->generate($scenario)->assertStatus(200);
+        $response = $this->generate($scenario)->assertStatus(202);
 
-        $response->assertJsonPath('provider', 'template');
-        $this->assertStringContainsString('menolak', $response->json('notice'));
+        $response->assertJsonPath('scenario.provider', 'template')->assertJsonPath('scenario.generation.status', 'completed');
+        $this->assertStringContainsString('menolak', $response->json('scenario.generation.notice'));
+    }
+
+    public function test_a_failed_regeneration_keeps_the_previous_ai_narrative(): void
+    {
+        $llm = $this->fakeLlm();
+        $scenario = $this->scenario();
+        $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+        $llm->respond($this->narrative(['HH' => ['S1'], 'HL' => ['S1'], 'LH' => ['S2'], 'LL' => ['S2']]));
+        $this->generate($scenario)->assertStatus(202)->assertJsonPath('scenario.provider', 'claude');
+        $before = $scenario->quadrants()->orderBy('id')->pluck('narrative', 'id')->all();
+
+        $llm->respond(new LlmException('overloaded'));
+        $this->generate($scenario)->assertStatus(202)
+            ->assertJsonPath('scenario.generation.status', 'failed')
+            ->assertJsonPath('scenario.generation.error', 'Layanan AI sedang sibuk. Coba lagi sebentar lagi. Narasi sebelumnya tidak diubah; coba lagi nanti.')
+            ->assertJsonPath('scenario.provider', 'claude');
+
+        $this->assertSame($before, $scenario->quadrants()->orderBy('id')->pluck('narrative', 'id')->all());
+        $this->assertSame(4, $scenario->quadrants()->where('is_ai_generated', true)->count());
+    }
+
+    public function test_a_failed_regeneration_over_a_template_still_falls_back(): void
+    {
+        $scenario = $this->scenario();
+        $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+        $this->generate($scenario)->assertStatus(202)->assertJsonPath('scenario.provider', 'template');
+
+        $this->fakeLlm()->respond(new LlmException('timeout'));
+        $response = $this->generate($scenario)->assertStatus(202)
+            ->assertJsonPath('scenario.generation.status', 'completed')
+            ->assertJsonPath('scenario.provider', 'template');
+
+        $this->assertStringContainsString('tidak menjawab tepat waktu', $response->json('scenario.generation.notice'));
     }
 
     public function test_edited_quadrants_are_not_overwritten_without_confirmation(): void
@@ -294,7 +337,53 @@ class ScenarioTest extends TestCase
         $this->generate($scenario)->assertStatus(409);
         $this->assertSame('Judul analis', $scenario->quadrants()->where('position', $first['position'])->first()->title);
 
-        $this->generate($scenario, ['overwrite_edited' => true])->assertStatus(200);
+        $this->generate($scenario, ['overwrite_edited' => true])->assertStatus(202);
         $this->assertSame(0, $scenario->quadrants()->whereNotNull('edited_at')->count());
+    }
+
+    public function test_generate_queues_a_job_and_reports_its_status_until_done(): void
+    {
+        Queue::fake();
+        $llm = $this->fakeLlm();
+        $scenario = $this->scenario();
+        $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+
+        $this->generate($scenario)->assertStatus(202)
+            ->assertJsonPath('scenario.generation.status', 'queued')
+            ->assertJsonPath('scenario.generation.message', null);
+        $this->assertSame([], $llm->calls);
+        Queue::assertPushed(GenerateScenarioNarrative::class, fn ($job) => $job->scenario->is($scenario) && $job->overwriteEdited === false);
+
+        // A second request while the first is queued is refused.
+        $this->generate($scenario)->assertStatus(409);
+        $this->actingAs($this->viewer)->getJson('/scenarios/fetch')->assertJsonPath('0.generation_status', 'queued');
+
+        $llm->respond($this->narrative(['HH' => ['S1'], 'HL' => ['S1'], 'LH' => ['S2'], 'LL' => ['S2']]));
+        $job = Queue::pushed(GenerateScenarioNarrative::class)->first();
+        app()->call([$job, 'handle']);
+        // A duplicate delivery of the same job does nothing.
+        app()->call([$job, 'handle']);
+
+        $this->actingAs($this->viewer)->getJson("/scenarios/{$scenario->uuid}")
+            ->assertJsonPath('generation.status', 'completed')
+            ->assertJsonPath('provider', 'claude')
+            ->assertJsonCount(4, 'quadrants');
+        $this->assertCount(1, $llm->calls);
+    }
+
+    public function test_a_failed_job_records_an_error_and_keeps_the_quadrants(): void
+    {
+        Queue::fake();
+        $scenario = $this->scenario();
+        $this->generate($scenario)->assertStatus(202);
+
+        Queue::pushed(GenerateScenarioNarrative::class)->first()->failed(new RuntimeException('Worker killed'));
+
+        $this->actingAs($this->viewer)->getJson("/scenarios/{$scenario->uuid}")
+            ->assertJsonPath('generation.status', 'failed')
+            ->assertJsonPath('generation.error', 'Narasi tidak dibuat karena kesalahan server. Kuadran yang ada tidak diubah; coba buat ulang.');
+        // Failed, not pending: the analyst can start again.
+        $this->generate($scenario)->assertStatus(202)->assertJsonPath('scenario.generation.status', 'queued');
     }
 }

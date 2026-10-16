@@ -81,6 +81,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         Route::get("/", "index")->name('index')->can('view-signal');
         Route::get("/fetch", "fetch_signals")->name('fetch')->can('view-signal');
         Route::post("/ingest", "ingest")->name('ingest')->can('create-signal')->middleware('throttle:15,1');
+        Route::get("/sources/{source}/extraction", "extraction")->name('extraction')->can('view-signal');
         Route::post("/{signal}/review", "review")->name('review')->can('review-signal');
     });
 
