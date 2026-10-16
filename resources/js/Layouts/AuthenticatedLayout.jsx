@@ -7,6 +7,7 @@ import {
     ClockIcon,
     FileCheckIcon,
     GaugeIcon,
+    GitCompareArrowsIcon,
     InboxIcon,
     LayoutGridIcon,
     ListIcon,
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
     { label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },
     { label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
     { label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
+    { label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
 ];
 
 function readCollapsed() {

@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
+import { usePage } from "@inertiajs/react";
 import axios from "axios";
 import qs from "qs";
 import { toast } from "sonner";
-import { InfoIcon, MaximizeIcon, MinimizeIcon } from "lucide-react";
+import { GitCompareArrowsIcon, InfoIcon, MaximizeIcon, MinimizeIcon } from "lucide-react";
 
 import { currentMonth } from "@/Components/AnalysisFilters";
 import DataTable from "@/Components/DataTable";
 import DimensionChip from "@/Components/DimensionChip";
 import { priorityBadge } from "@/Components/PriorityBadge";
-import RadarScope, { PRIORITY_FILLS, priorityFill } from "@/Components/RadarScope";
+import RadarScope, { LINK_STROKES, PRIORITY_FILLS, priorityFill } from "@/Components/RadarScope";
 import RadarSignalSheet from "@/Components/RadarSignalSheet";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
@@ -31,6 +32,58 @@ function Card({ title, actions, className, children }) {
             </div>
             {children}
         </section>
+    );
+}
+
+/**
+ * Cross-impact links between the forces on the radar, fetched only while
+ * `enabled`. Links to forces outside the current filter are left out.
+ */
+function useCrossImpactLinks(enabled, items) {
+    const [cells, setCells] = useState(null);
+
+    useEffect(() => {
+        if (!enabled || cells) return undefined;
+        const controller = new AbortController();
+        axios
+            .get(route("visualization.cross-impact.get-data"), { signal: controller.signal })
+            .then((response) => setCells(response.data.cells ?? []))
+            .catch((error) => {
+                if (axios.isCancel(error)) return;
+                toast.error("Gagal memuat cross-impact.", { description: error.message });
+                setCells([]);
+            });
+        return () => controller.abort();
+    }, [enabled, cells]);
+
+    return useMemo(() => {
+        if (!enabled || !cells) return [];
+        const shown = new Set(items.map((item) => item.id));
+        return cells.filter((cell) => cell.score !== 0 && shown.has(cell.source) && shown.has(cell.target));
+    }, [enabled, cells, items]);
+}
+
+function LinkLegend({ count }) {
+    return (
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+                <svg aria-hidden="true" width="22" height="6">
+                    <line x1="0" y1="3" x2="22" y2="3" stroke={LINK_STROKES.amplify} strokeWidth="2" />
+                </svg>
+                Memperkuat
+            </span>
+            <span className="flex items-center gap-1.5">
+                <svg aria-hidden="true" width="22" height="6">
+                    <line x1="0" y1="3" x2="22" y2="3" stroke={LINK_STROKES.suppress} strokeWidth="2" strokeDasharray="5 4" />
+                </svg>
+                Menekan
+            </span>
+            <span role="status">
+                {count > 0
+                    ? `${count} hubungan cross-impact antar force di radar`
+                    : "Belum ada cross-impact antar force yang tampil di radar"}
+            </span>
+        </div>
     );
 }
 
@@ -74,6 +127,9 @@ export default function Radar({ date, selectData, setLoading }) {
     const [selected, setSelected] = useState(null);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [fullscreen, setFullscreen] = useState(false);
+    const [showLinks, setShowLinks] = useState(false);
+    const canViewCrossImpact = (usePage().props.auth?.permissions ?? []).includes("view-cross-impact");
+    const links = useCrossImpactLinks(showLinks, items);
 
     const dimension = selectData?.dimension ?? null;
     const queryKey = qs.stringify({ date: date?.date ?? currentMonth(), dimension: dimension ?? undefined });
@@ -228,10 +284,23 @@ export default function Radar({ date, selectData, setLoading }) {
                         </>
                     }
                     actions={
-                        <Button variant="ghost" size="sm" onClick={() => setFullscreen((value) => !value)}>
-                            {fullscreen ? <MinimizeIcon aria-hidden="true" /> : <MaximizeIcon aria-hidden="true" />}
-                            {fullscreen ? "Kecilkan" : "Layar Penuh"}
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-1">
+                            {canViewCrossImpact && (
+                                <Button
+                                    variant={showLinks ? "secondary" : "ghost"}
+                                    size="sm"
+                                    aria-pressed={showLinks}
+                                    onClick={() => setShowLinks((value) => !value)}
+                                >
+                                    <GitCompareArrowsIcon aria-hidden="true" />
+                                    Cross-Impact
+                                </Button>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => setFullscreen((value) => !value)}>
+                                {fullscreen ? <MinimizeIcon aria-hidden="true" /> : <MaximizeIcon aria-hidden="true" />}
+                                {fullscreen ? "Kecilkan" : "Layar Penuh"}
+                            </Button>
+                        </div>
                     }
                 >
                     {loading ? (
@@ -243,6 +312,7 @@ export default function Radar({ date, selectData, setLoading }) {
                     ) : (
                         <RadarScope
                             points={points}
+                            links={links}
                             activeNo={activeNo}
                             onActivate={setActiveNo}
                             onSelect={openDetail}
@@ -250,6 +320,7 @@ export default function Radar({ date, selectData, setLoading }) {
                         />
                     )}
                     <Legends />
+                    {showLinks && <LinkLegend count={links.length} />}
                 </Card>
             </div>
 

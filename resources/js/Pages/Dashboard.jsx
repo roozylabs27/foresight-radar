@@ -9,15 +9,18 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import AnalysisFilterBar, { filterParam, useAnalysisFilters } from "@/Components/AnalysisFilters";
 import EdaCharts from "@/Components/EdaCharts";
 import ExecutiveOverview from "@/Components/ExecutiveOverview";
+import HistoryCharts from "@/Components/HistoryCharts";
 import OverallStatus from "@/Components/OverallStatus";
 import PrioritizingChart from "@/Components/PrioritizingChart";
 import Radar from "@/Components/Radar";
+import ScenarioSimulation from "@/Components/ScenarioSimulation";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-    { value: "overview", label: "Executive Overview" },
+    { value: "overview", label: "Overview" },
+    { value: "simulation", label: "Simulasi What-if" },
     { value: "prioritizing", label: "Prioritizing" },
     { value: "radar", label: "Foresight Radar" },
     { value: "registered", label: "Registered List" },
@@ -40,7 +43,7 @@ function useReasoningData(params) {
             })
             .catch((error) => {
                 if (axios.isCancel(error)) return;
-                toast.error("Gagal memuat executive overview.", {
+                toast.error("Gagal memuat Overview.", {
                     description: error.response?.data?.message ?? error.message,
                 });
                 setLoading(false);
@@ -68,7 +71,7 @@ export default function Dashboard({ auth, dimensions = [] }) {
                     <GaugeIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">Dashboard</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
-                        Executive Overview
+                        Overview
                     </span>
                 </div>
             }
@@ -99,6 +102,14 @@ export default function Dashboard({ auth, dimensions = [] }) {
                             edaRelationship={reasoning.data?.eda_relationship ?? null}
                             edaComparison={reasoning.data?.eda_comparison ?? null}
                         />
+                        <HistoryCharts
+                            loading={reasoning.loading}
+                            historyTrend={reasoning.data?.history_trend ?? null}
+                            transitionVelocity={reasoning.data?.transition_velocity ?? null}
+                        />
+                    </TabsContent>
+                    <TabsContent value="simulation">
+                        <ScenarioSimulation loading={reasoning.loading} reasoningData={reasoning.data} params={filters.params} />
                     </TabsContent>
                     <TabsContent value="prioritizing">
                         <PrioritizingChart date={date} selectData={selectData} dimensions={dimensions} />
