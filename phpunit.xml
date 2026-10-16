@@ -28,5 +28,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="ANTHROPIC_API_KEY" value="" force="true"/>
+        <env name="SIGNAL_EXTRACTION_DRIVER" value="heuristic" force="true"/>
     </php>
 </phpunit>
