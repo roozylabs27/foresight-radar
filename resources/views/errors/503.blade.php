@@ -2,14 +2,16 @@
 
 @section('title', '503 — Pemeliharaan Sistem')
 @section('code', '503')
+@section('tone', 'info')
+@section('badge')
+    503 &bull; SERVICE UNAVAILABLE
+@endsection
+@section('heading', 'Pemeliharaan Sistem')
 
-@section('content')
-    <span class="status-badge status-503">503 &bull; SERVICE UNAVAILABLE</span>
-    <h1 class="error-title">Pemeliharaan Sistem</h1>
-    <p class="error-description">
-        Sistem Foresight Radar sedang dalam proses pemeliharaan rutin atau pembaharuan versi. Layanan akan segera aktif kembali. Silakan coba beberapa saat lagi.
-    </p>
-    <div class="btn-group">
-        <a href="javascript:location.reload()" class="btn btn-primary">Coba Muat Ulang</a>
-    </div>
+@section('description')
+    Sistem Foresight Radar sedang dalam proses pemeliharaan rutin atau pembaharuan versi. Layanan akan segera aktif kembali. Silakan coba beberapa saat lagi.
+@endsection
+
+@section('actions')
+    <x-error-button href="javascript:location.reload()">Coba Muat Ulang</x-error-button>
 @endsection

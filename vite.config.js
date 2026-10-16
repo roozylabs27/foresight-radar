@@ -6,7 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: 'resources/js/app.jsx',
+            // app.css on its own is for the Blade error pages.
+            input: ['resources/js/app.jsx', 'resources/css/app.css'],
             refresh: true,
         }),
         react(),

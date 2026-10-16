@@ -1,199 +1,83 @@
+{{--
+    Error pages for non-Inertia requests (Inertia visits render Pages/Error.jsx).
+    Same design tokens and theme as the app: app.css through Vite, and the
+    inline theme script so dark users get the dark page.
+
+    Sections: title, code, badge, tone (warning | danger | info), heading,
+    description, actions (use <x-error-button>).
+--}}
+@php
+    $tones = [
+        'warning' => 'bg-warning-soft text-warning',
+        'danger' => 'bg-danger-soft text-danger',
+        'info' => 'bg-accent text-primary',
+    ];
+    $tone = $tones[trim($__env->yieldContent('tone', 'danger'))] ?? $tones['danger'];
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    @include('partials.theme-script')
+
     <title>@yield('title') - Foresight Radar</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
-    <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: Figtree, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f5f7fa;
-            color: #1f2937;
-            min-height: 100vh;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        header {
-            height: 64px;
-            width: 100%;
-            background: #ffffff;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-        }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-        }
-        .brand-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(22, 119, 255, 0.35);
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 16px;
-        }
-        .brand-text-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: #001529;
-            line-height: 1.2;
-            display: block;
-        }
-        .brand-text-sub {
-            font-size: 11px;
-            color: #8c8c8c;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        main {
-            flex: 1;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
-        .error-card {
-            background: #ffffff;
-            border: 1px solid #ebeef5;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-            border-radius: 12px;
-            max-width: 580px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 40px 32px;
-            text-align: center;
-        }
-        .status-badge {
-            display: inline-block;
-            font-size: 14px;
-            font-weight: 700;
-            padding: 4px 12px;
-            border-radius: 20px;
-            margin-bottom: 16px;
-            letter-spacing: 0.5px;
-        }
-        .status-403 { background: #fffbe6; color: #d46b08; border: 1px solid #ffe58f; }
-        .status-404 { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
-        .status-419 { background: #fffbe6; color: #d46b08; border: 1px solid #ffe58f; }
-        .status-500 { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
-        .status-503 { background: #e6f4ff; color: #0958d9; border: 1px solid #91caff; }
-        .error-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1f1f1f;
-            margin-bottom: 12px;
-        }
-        .error-description {
-            font-size: 14px;
-            color: #595959;
-            line-height: 1.6;
-            margin-bottom: 28px;
-        }
-        .btn-group {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 500;
-            border-radius: 8px;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-width: 140px;
-        }
-        .btn-primary {
-            background-color: #1677ff;
-            color: #ffffff;
-            border: 1px solid #1677ff;
-        }
-        .btn-primary:hover {
-            background-color: #4096ff;
-            border-color: #4096ff;
-        }
-        .btn-default {
-            background-color: #ffffff;
-            color: #262626;
-            border: 1px solid #d9d9d9;
-        }
-        .btn-default:hover {
-            border-color: #1677ff;
-            color: #1677ff;
-        }
-        .error-footer-info {
-            margin-top: 28px;
-            padding-top: 16px;
-            border-top: 1px solid #f0f0f0;
-            font-size: 12px;
-            color: #8c8c8c;
-        }
-        footer {
-            height: 48px;
-            background: #ffffff;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: #8c8c8c;
-            padding: 0 24px;
-        }
-    </style>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+    @vite('resources/css/app.css')
 </head>
-<body>
-    <header>
-        <a href="{{ url('/') }}" class="brand">
-            <div class="brand-icon">FR</div>
-            <div>
-                <span class="brand-text-title">Foresight Radar</span>
-                <span class="brand-text-sub">Strategic Intel</span>
-            </div>
+<body class="flex min-h-svh flex-col bg-background font-sans text-foreground antialiased">
+    <header class="flex h-16 items-center justify-between gap-3 border-b border-border bg-card px-4 sm:px-6">
+        <a href="{{ url('/') }}" class="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+            <span aria-hidden="true" class="flex size-9 shrink-0 items-center justify-center rounded-md bg-night text-scan dark:ring-1 dark:ring-border">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="size-5">
+                    <circle cx="12" cy="12" r="9" />
+                    <circle cx="12" cy="12" r="5" />
+                    <path d="M12 12 L18.4 5.6" />
+                    <circle cx="12" cy="12" r="1" fill="currentColor" />
+                </svg>
+            </span>
+            <span class="flex min-w-0 flex-col">
+                <span class="text-[15px] leading-tight font-bold text-foreground">Foresight Radar</span>
+                <span class="text-[11px] font-medium tracking-[0.05em] text-subtle-foreground uppercase">Strategic Intel</span>
+            </span>
         </a>
-        <div>
-            @auth
-                <a href="{{ route('dashboard.') }}" class="btn btn-default" style="min-width: auto; padding: 6px 14px;">Dashboard</a>
-            @else
-                <a href="{{ route('login') }}" class="btn btn-primary" style="min-width: auto; padding: 6px 14px;">Masuk</a>
-            @endauth
-        </div>
+
+        @auth
+            <x-error-button :href="route('dashboard.')" variant="outline" size="sm">Dashboard</x-error-button>
+        @else
+            <x-error-button :href="route('login')" size="sm">Masuk</x-error-button>
+        @endauth
     </header>
 
-    <main>
-        <div class="error-card">
-            @yield('content')
-            <div class="error-footer-info">
-                Kode Status HTTP: <strong>@yield('code')</strong> | Foresight Radar Strategic Intelligence System
+    <main class="flex flex-1 items-center justify-center p-4 sm:p-6">
+        <div class="w-full max-w-[580px] rounded-lg border border-border bg-card px-6 pt-10 pb-6 text-center shadow-md sm:px-10">
+            <span class="inline-block rounded-full px-3 py-1 text-xs font-bold tracking-[0.04em] {{ $tone }}">
+                @yield('badge')
+            </span>
+
+            <h1 class="mt-5 text-2xl font-bold text-foreground">@yield('heading')</h1>
+            <p class="mx-auto mt-3 max-w-[460px] text-sm leading-relaxed text-muted-foreground">
+                @yield('description')
+            </p>
+
+            <div class="mt-8 flex flex-wrap justify-center gap-3">
+                @yield('actions')
             </div>
+
+            <p class="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">
+                Kode Status HTTP:
+                <code class="rounded-sm bg-muted px-1.5 py-0.5 font-mono font-semibold text-foreground">@yield('code')</code>
+                | Foresight Radar Strategic Intelligence System
+            </p>
         </div>
     </main>
 
-    <footer>
+    <footer class="border-t border-border bg-card px-6 py-4 text-center text-xs text-muted-foreground">
         Foresight Radar &copy; {{ date('Y') }} Strategic Horizon Scanning. All Rights Reserved.
     </footer>
 </body>
