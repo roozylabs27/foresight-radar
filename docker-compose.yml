@@ -11,6 +11,25 @@ services:
     networks:
       - laravel
 
+  # Runs queued LLM jobs (signal extraction, scenario narratives) outside the
+  # web request. Restarts hourly, and after `docker restart laravel_queue`, to
+  # load changed PHP code.
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: foresight-radar-app
+    container_name: laravel_queue
+    command: php artisan queue:work --tries=1 --timeout=310 --sleep=3 --max-time=3600
+    restart: unless-stopped
+    volumes:
+      - .:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
   nginx:
     image: nginx:alpine
     container_name: laravel_nginx
