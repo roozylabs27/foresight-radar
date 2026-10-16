@@ -9,6 +9,7 @@ import {
     GaugeIcon,
     GitCompareArrowsIcon,
     InboxIcon,
+    LayersIcon,
     LayoutGridIcon,
     ListIcon,
     LogOutIcon,
@@ -54,6 +55,7 @@ const NAV_ITEMS = [
     { label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
     { label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
     { label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
+    { label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
 ];
 
 function readCollapsed() {

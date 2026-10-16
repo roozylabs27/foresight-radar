@@ -64,6 +64,19 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
         ->can('manage-cross-impact')
         ->middleware('throttle:240,1');
 
+    Route::prefix("scenarios")->controller(App\Http\Controllers\ScenarioController::class)->name("scenarios.")->group(function () {
+        Route::get("/", "index")->name('index')->can('view-scenario');
+        Route::get("/fetch", "fetch")->name('fetch')->can('view-scenario');
+        Route::get("/suggest-axes", "suggestAxes")->name('suggest-axes')->can('view-scenario');
+        Route::get("/{scenario}", "show")->name('show')->can('view-scenario');
+        Route::post("/", "store")->name('store')->can('manage-scenario');
+        Route::put("/{scenario}", "update")->name('update')->can('manage-scenario');
+        Route::delete("/{scenario}", "destroy")->name('destroy')->can('manage-scenario');
+        Route::put("/{scenario}/quadrants/{quadrant}", "updateQuadrant")->name('quadrant')->can('manage-scenario');
+        // One generation is one LLM call for all four quadrants.
+        Route::post("/{scenario}/generate", "generate")->name('generate')->can('manage-scenario')->middleware('throttle:10,1');
+    });
+
     Route::prefix("signals")->controller(App\Http\Controllers\SignalIngestionController::class)->name("signals.")->group(function () {
         Route::get("/", "index")->name('index')->can('view-signal');
         Route::get("/fetch", "fetch_signals")->name('fetch')->can('view-signal');

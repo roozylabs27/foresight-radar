@@ -168,5 +168,15 @@
         "name": "manage-cross-impact",
         "description": "permission for scoring cross-impact between driving forces",
         "category": "cross-impact"
+    },
+    {
+        "name": "view-scenario",
+        "description": "permission for access scenario matrix page",
+        "category": "scenario"
+    },
+    {
+        "name": "manage-scenario",
+        "description": "permission for creating scenarios and generating narratives",
+        "category": "scenario"
     }
 ]
