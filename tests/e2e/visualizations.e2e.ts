@@ -61,6 +61,30 @@ test.describe('Visualization & Analytical Reporting E2E Flows', () => {
     await expect(screen.getByText('Menekan')).toBeVisible();
   });
 
+  test('Cross-Impact: a two-way link forms a loop whose cells are highlighted, then is cleared', { session: 'admin' }, async ({ app, screen }) => {
+    await app.open('/visualization/cross-impact');
+    await expect(screen.getByRole('heading', 'Causal Loops')).toBeVisible({ timeout: 45000 });
+
+    // Seed forces sorted by dimension then keyword: Interest Rate and Loan Tanure come first (Economy).
+    const score = async (cell: RegExp, option: string) => {
+      await screen.getByRole('button', cell).tap();
+      await screen.getByRole('radio', option).tap();
+      await screen.getByRole('button', 'Simpan').tap();
+      await expect(screen.getByText(/Cross-impact (disimpan|dihapus)\./).first()).toBeVisible({ timeout: 45000 });
+    };
+
+    await score(/^Pengaruh Interest Rate terhadap Loan Tanure: 0$/, '+2: Memperkuat');
+    await score(/^Pengaruh Loan Tanure terhadap Interest Rate: 0$/, '+1: Sedikit memperkuat');
+
+    await screen.getByRole('button', /R · Penguat/).first().tap();
+    await expect(screen.getByRole('button', /^Pengaruh Interest Rate terhadap Loan Tanure: \+2, bagian dari loop terpilih$/)).toBeVisible({ timeout: 20000 });
+
+    // Leave the dev data as it was.
+    await score(/^Pengaruh Interest Rate terhadap Loan Tanure: \+2/, '0: Tidak berpengaruh');
+    await score(/^Pengaruh Loan Tanure terhadap Interest Rate: \+1/, '0: Tidak berpengaruh');
+    await expect(screen.getByText(/Belum ada loop/)).toBeVisible({ timeout: 45000 });
+  });
+
   test('Unhappy & Boundary Path: dimension filter handles switching and reset gracefully', { session: 'admin' }, async ({ app, screen, browser }) => {
     await app.open('/visualization/foresight-radar');
 
