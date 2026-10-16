@@ -21,10 +21,12 @@ class Source extends Model
         'raw_content',
         'content_hash',
         'created_by',
+        'extraction_meta',
     ];
 
     protected $casts = [
         'published_at' => 'date',
+        'extraction_meta' => 'array',
     ];
 
     protected static function booted()

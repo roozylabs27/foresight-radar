@@ -3,6 +3,10 @@
 namespace App\Services;
 
 use App\Enums\TimeHorizonType;
+use App\Services\Extraction\LlmSignalExtractor;
+use App\Services\Llm\LlmException;
+use App\Services\Llm\StructuredLlmClient;
+use App\Support\EvidenceVerifier;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\Signal;
@@ -11,59 +15,136 @@ use App\Models\TimeHorizon;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Ramsey\Uuid\Uuid;
 
 class SignalExtractionService
 {
+    public const PROVIDER_HEURISTIC = 'heuristic';
+
+    /**
+     * Both dependencies are optional so subclasses (and tests) can construct
+     * the service without arguments; they are resolved from the container.
+     */
+    public function __construct(
+        protected ?LlmSignalExtractor $llmExtractor = null,
+        protected ?StructuredLlmClient $llm = null,
+    ) {
+    }
+
+    /**
+     * "claude" when signals will be extracted by the LLM, otherwise "heuristic".
+     */
+    public function mode(): string
+    {
+        return config('services.signal_extraction.driver') === 'claude' && $this->llm()->isAvailable()
+            ? 'claude'
+            : self::PROVIDER_HEURISTIC;
+    }
+
+    public function modelName(): ?string
+    {
+        return $this->mode() === 'claude' ? $this->llm()->model() : null;
+    }
+
     /**
      * Ingest source content and extract candidate signals.
+     *
+     * The LLM is called before the transaction opens, so a slow call holds no
+     * database locks. When it fails, extraction falls back to keyword rules and
+     * `notice` says why; when it succeeds with no verifiable signal, the source
+     * is saved without signals.
+     *
+     * @return array{source: Source, signals: array, mode: string, model: ?string, fallback: bool, notice: ?string, meta: array}
      */
     public function ingestAndExtract(array $data, int $userId): array
     {
-        return DB::transaction(function () use ($data, $userId) {
-            $content = trim($data['content'] ?? '');
-            $contentHash = hash('sha256', $content);
+        $content = trim($data['content'] ?? '');
+        $title = $data['title'] ?? 'Ingested Source Document';
+        $mode = $this->mode();
+        $notice = null;
+        $fallback = false;
+        $candidates = null;
+        $meta = [];
 
+        if ($mode === 'claude') {
+            try {
+                $result = $this->llmExtractor()->extract($title, $content);
+                $candidates = array_map(fn ($item) => $item + [
+                    'extraction_provider' => $result['meta']['provider'],
+                    'extraction_model' => $result['meta']['model'],
+                    'prompt_version' => $result['meta']['prompt_version'],
+                ], $result['candidates']);
+                $meta = $result['meta'];
+            } catch (LlmException $e) {
+                Log::warning('Signal extraction fell back to keyword rules', ['reason' => $e->reason]);
+                $fallback = true;
+                $notice = $e->userMessage() . ' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';
+                $meta = ['provider' => self::PROVIDER_HEURISTIC, 'fallback_reason' => $e->reason];
+            }
+        }
+
+        if ($candidates === null) {
+            $candidates = array_map(fn ($item) => $item + [
+                'extraction_provider' => self::PROVIDER_HEURISTIC,
+                'extraction_model' => null,
+                'prompt_version' => null,
+                'quote_verified' => EvidenceVerifier::verify($item['evidence_quote'], $content),
+                'suggested_driving_force_id' => null,
+            ], $this->extractCandidatesFromText($content, $data['title'] ?? ''));
+            $meta += ['provider' => self::PROVIDER_HEURISTIC, 'returned' => count($candidates)];
+        }
+
+        $saved = DB::transaction(function () use ($data, $userId, $content, $title, $candidates, $meta) {
             $source = Source::create([
                 'uuid' => (string) Uuid::uuid4(),
-                'title' => $data['title'] ?? 'Ingested Source Document',
+                'title' => $title,
                 'url' => $data['url'] ?? null,
                 'publisher' => $data['publisher'] ?? null,
                 'published_at' => !empty($data['published_at']) ? Carbon::parse($data['published_at']) : Carbon::today(),
                 'raw_content' => $content,
-                'content_hash' => $contentHash,
+                'content_hash' => hash('sha256', $content),
                 'created_by' => $userId,
+                'extraction_meta' => $meta,
             ]);
 
-            $candidateItems = $this->extractCandidatesFromText($content, $data['title'] ?? '');
-            $savedSignals = [];
-
-            foreach ($candidateItems as $item) {
+            $signals = [];
+            foreach ($candidates as $item) {
                 $signal = Signal::create([
                     'uuid' => (string) Uuid::uuid4(),
                     'source_id' => $source->id,
-                    'dimension_id' => $item['dimension_id'],
-                    'title' => $item['title'],
-                    'summary' => $item['summary'],
-                    'significance' => $item['significance'],
-                    'evidence_quote' => $item['evidence_quote'],
-                    'suggested_time_horizon_id' => $item['suggested_time_horizon_id'],
-                    'preliminary_impact' => $item['preliminary_impact'],
-                    'preliminary_uncertainty' => $item['preliminary_uncertainty'],
-                    'confidence_score' => $item['confidence_score'],
-                    'confidence_rationale' => $item['confidence_rationale'],
-                    'is_ai_generated' => true,
                     'review_status' => 'PENDING',
-                ]);
+                    'is_ai_generated' => true,
+                ] + collect($item)->only([
+                    'dimension_id', 'title', 'summary', 'significance', 'evidence_quote',
+                    'suggested_time_horizon_id', 'preliminary_impact', 'preliminary_uncertainty',
+                    'confidence_score', 'confidence_rationale', 'extraction_provider', 'extraction_model',
+                    'prompt_version', 'quote_verified', 'suggested_driving_force_id',
+                ])->all());
 
-                $savedSignals[] = $signal->load(['dimension', 'suggested_time_horizon']);
+                $signals[] = $signal->load(['dimension', 'suggested_time_horizon', 'suggested_driving_force']);
             }
 
-            return [
-                'source' => $source,
-                'signals' => $savedSignals,
-            ];
+            return ['source' => $source, 'signals' => $signals];
         });
+
+        return $saved + [
+            'mode' => $fallback ? self::PROVIDER_HEURISTIC : $mode,
+            'model' => $fallback ? null : ($meta['model'] ?? null),
+            'fallback' => $fallback,
+            'notice' => $notice,
+            'meta' => $meta,
+        ];
+    }
+
+    protected function llm(): StructuredLlmClient
+    {
+        return $this->llm ??= app(StructuredLlmClient::class);
+    }
+
+    protected function llmExtractor(): LlmSignalExtractor
+    {
+        return $this->llmExtractor ??= app(LlmSignalExtractor::class);
     }
 
     /**
@@ -213,7 +294,7 @@ class SignalExtractionService
         // Confidence estimation
         $hasQuoteEvidence = strlen($text) > 80;
         $confidence = $hasQuoteEvidence ? 0.88 : 0.72;
-        $rationale = 'Score derived from semantic keyword markers and verbatim evidence excerpt verification.';
+        $rationale = 'Skor berbasis kata kunci (tanpa AI): kosakata dampak dan ketidakpastian di paragraf; keyakinan dari panjang kutipan.';
 
         return [
             'impact' => $impact,

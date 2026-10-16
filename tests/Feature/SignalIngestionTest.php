@@ -304,4 +304,91 @@ class SignalIngestionTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['title', 'content']);
     }
+
+    private function pendingSignal(array $attributes = []): Signal
+    {
+        $source = Source::create([
+            'uuid' => (string) Uuid::uuid4(),
+            'title' => 'Robotics Report',
+            'raw_content' => 'Humanoid robots enter automotive assembly lines at scale across Asia.',
+            'content_hash' => hash('sha256', 'Humanoid robots enter automotive assembly lines at scale across Asia.'),
+            'created_by' => $this->analyst->id,
+        ]);
+
+        return Signal::create($attributes + [
+            'uuid' => (string) Uuid::uuid4(),
+            'source_id' => $source->id,
+            'dimension_id' => $this->techDimension->id,
+            'title' => 'Autonomous Factory Robotics',
+            'summary' => 'Humanoid robots enter automotive assembly lines at scale.',
+            'evidence_quote' => 'Humanoid robots enter automotive assembly lines at scale across Asia.',
+            'review_status' => 'PENDING',
+            'confidence_score' => 0.85,
+        ]);
+    }
+
+    public function test_signals_page_reports_the_extraction_mode(): void
+    {
+        $this->actingAs($this->analyst)->get('/signals')
+            ->assertInertia(fn ($page) => $page
+                ->where('extractionMode', 'heuristic')
+                ->where('extractionModel', null)
+                ->where('maxContentChars', 60000));
+    }
+
+    public function test_reviewing_an_already_reviewed_signal_is_a_conflict(): void
+    {
+        $signal = $this->pendingSignal(['review_status' => 'REJECTED', 'rejection_reason' => 'Duplicate']);
+
+        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", [
+            'action' => 'accept_create',
+        ])->assertStatus(409);
+
+        $this->assertSame('REJECTED', $signal->fresh()->review_status);
+        $this->assertNull($signal->fresh()->created_driving_force_id);
+    }
+
+    public function test_signal_with_unverified_quote_cannot_be_accepted(): void
+    {
+        $signal = $this->pendingSignal(['quote_verified' => false]);
+
+        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", ['action' => 'accept_create'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('evidence_quote');
+
+        $this->assertSame('PENDING', $signal->fresh()->review_status);
+        $this->assertSame(0, DrivingForce::count());
+    }
+
+    public function test_edited_quote_is_verified_again_against_the_source(): void
+    {
+        $signal = $this->pendingSignal(['quote_verified' => true]);
+
+        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", [
+            'action' => 'update',
+            'evidence_quote' => 'Robots replace every factory worker in Asia by next year.',
+        ])->assertStatus(200);
+        $this->assertFalse($signal->fresh()->quote_verified);
+
+        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", ['action' => 'accept_create'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('evidence_quote');
+
+        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", [
+            'action' => 'update',
+            'evidence_quote' => 'Humanoid robots enter automotive assembly lines at scale',
+        ])->assertStatus(200);
+        $this->assertTrue($signal->fresh()->quote_verified);
+    }
+
+    public function test_older_signal_without_verification_can_still_be_accepted(): void
+    {
+        $signal = $this->pendingSignal();
+        $this->assertNull($signal->fresh()->quote_verified);
+
+        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", ['action' => 'accept_create'])
+            ->assertStatus(200);
+
+        $this->assertSame('ACCEPTED', $signal->fresh()->review_status);
+    }
 }

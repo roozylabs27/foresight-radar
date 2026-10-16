@@ -11,11 +11,13 @@ use App\Models\DrivingForceRating;
 use App\Models\Signal;
 use App\Models\TimeHorizon;
 use App\Services\SignalExtractionService;
+use App\Support\EvidenceVerifier;
 use App\Support\TableSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Ramsey\Uuid\Uuid;
@@ -59,6 +61,9 @@ class SignalIngestionController extends Controller
             'dimensions' => $dimensions,
             'timeHorizons' => $timeHorizons,
             'existingDrivingForces' => $drivingForces,
+            'extractionMode' => $this->extractionService->mode(),
+            'extractionModel' => $this->extractionService->modelName(),
+            'maxContentChars' => (int) config('services.signal_extraction.max_chars', 60000),
         ]);
     }
 
@@ -72,7 +77,7 @@ class SignalIngestionController extends Controller
             $dimension = $request->query('dimension');
             $search = $request->query('search');
 
-            $signals = Signal::with(['source', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force'])
+            $signals = Signal::with(['source', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
                 ->when($status && $status !== 'ALL', fn ($q) => $q->where('review_status', $status))
                 ->when($dimension, fn ($q) => $q->where('dimension_id', $dimension))
                 ->when($search, function ($q) use ($search) {
@@ -111,9 +116,16 @@ class SignalIngestionController extends Controller
             $result = $this->extractionService->ingestAndExtract($request->validated(), auth()->id());
 
             return response()->json([
-                'message' => 'Source ingested and ' . count($result['signals']) . ' candidate signal(s) extracted successfully.',
+                'message' => $this->ingestMessage($result),
                 'source' => $result['source'],
                 'signals' => $result['signals'],
+                'extraction' => [
+                    'mode' => $result['mode'],
+                    'model' => $result['model'],
+                    'fallback' => $result['fallback'],
+                    'notice' => $result['notice'],
+                    'discarded' => ($result['meta']['discarded_unverified'] ?? 0) + ($result['meta']['discarded_duplicate'] ?? 0),
+                ],
             ], Response::HTTP_CREATED);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'ingesting source content');
@@ -130,11 +142,21 @@ class SignalIngestionController extends Controller
             $validated = $request->validated();
             $action = $validated['action'];
 
+            if ($signal->review_status !== 'PENDING') {
+                return response()->json([
+                    'errors' => 'Sinyal ini sudah direview (' . $signal->review_status . ') dan tidak bisa diubah lagi.',
+                ], Response::HTTP_CONFLICT);
+            }
+
             return DB::transaction(function () use ($validated, $action, $signal) {
                 // Apply any edited fields
                 if (!empty($validated['title'])) { $signal->title = $validated['title']; }
                 if (!empty($validated['summary'])) { $signal->summary = $validated['summary']; }
-                if (!empty($validated['evidence_quote'])) { $signal->evidence_quote = $validated['evidence_quote']; }
+                if (!empty($validated['evidence_quote']) && $validated['evidence_quote'] !== $signal->evidence_quote) {
+                    // An edited quote must still be found verbatim in the source.
+                    $signal->evidence_quote = $validated['evidence_quote'];
+                    $signal->quote_verified = EvidenceVerifier::verify($validated['evidence_quote'], $signal->source?->raw_content);
+                }
                 if (!empty($validated['dimension_id'])) { $signal->dimension_id = $validated['dimension_id']; }
                 if (!empty($validated['suggested_time_horizon_id'])) { $signal->suggested_time_horizon_id = $validated['suggested_time_horizon_id']; }
                 if (isset($validated['preliminary_impact'])) { $signal->preliminary_impact = $validated['preliminary_impact']; }
@@ -151,6 +173,13 @@ class SignalIngestionController extends Controller
                         'message' => 'Signal successfully rejected with feedback.',
                         'signal' => $signal->fresh(),
                     ], Response::HTTP_OK);
+                }
+
+                if (in_array($action, ['accept_link', 'accept_create'], true)
+                    && (trim((string) $signal->evidence_quote) === '' || $signal->quote_verified === false)) {
+                    throw ValidationException::withMessages([
+                        'evidence_quote' => 'Kutipan bukti tidak ditemukan verbatim di dokumen sumber, jadi sinyal ini tidak bisa diterima. Perbaiki kutipannya atau tolak sinyal.',
+                    ]);
                 }
 
                 if ($action === 'accept_link') {
@@ -223,9 +252,33 @@ class SignalIngestionController extends Controller
                     'signal' => $signal->fresh(),
                 ], Response::HTTP_OK);
             });
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'reviewing signal');
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Ingest result in one sentence: who extracted, how many signals, how many were dropped.
+     */
+    protected function ingestMessage(array $result): string
+    {
+        $count = count($result['signals']);
+        $by = $result['mode'] === 'claude'
+            ? 'oleh Claude (' . $result['model'] . ')'
+            : 'dengan aturan kata kunci (tanpa AI)';
+        $message = "Sumber disimpan. {$count} sinyal kandidat diekstrak {$by}.";
+
+        $discarded = ($result['meta']['discarded_unverified'] ?? 0);
+        if ($discarded > 0) {
+            $message .= " {$discarded} usulan dibuang karena kutipannya tidak ditemukan verbatim di dokumen.";
+        }
+        if ($result['mode'] === 'claude' && $count === 0) {
+            $message .= ' Tidak ada sinyal dengan bukti terverifikasi di dokumen ini.';
+        }
+
+        return $message;
     }
 }

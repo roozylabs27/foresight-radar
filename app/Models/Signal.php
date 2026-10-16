@@ -31,6 +31,11 @@ class Signal extends Model
         'reviewed_by',
         'reviewed_at',
         'created_driving_force_id',
+        'extraction_provider',
+        'extraction_model',
+        'prompt_version',
+        'quote_verified',
+        'suggested_driving_force_id',
     ];
 
     protected $casts = [
@@ -39,6 +44,7 @@ class Signal extends Model
         'reviewed_at' => 'datetime',
         'preliminary_impact' => 'integer',
         'preliminary_uncertainty' => 'integer',
+        'quote_verified' => 'boolean',
     ];
 
     protected static function booted()
@@ -73,6 +79,12 @@ class Signal extends Model
     public function created_driving_force(): BelongsTo
     {
         return $this->belongsTo(DrivingForce::class, 'created_driving_force_id');
+    }
+
+    /** Existing driving force the extractor thinks this signal supports. */
+    public function suggested_driving_force(): BelongsTo
+    {
+        return $this->belongsTo(DrivingForce::class, 'suggested_driving_force_id');
     }
 
     public function driving_forces(): BelongsToMany
