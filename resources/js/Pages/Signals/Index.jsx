@@ -9,6 +9,8 @@ import {
     CloudUploadIcon,
     EyeIcon,
     LinkIcon,
+    ShieldAlertIcon,
+    ShieldCheckIcon,
     ZapIcon,
 } from "lucide-react";
 
@@ -57,6 +59,46 @@ const STATUS_BADGES = {
 
 const confidence = (signal) => Math.round((signal.confidence_score || 0.8) * 100);
 
+/** Who proposed the signal: Claude, keyword rules, or unknown (created before provenance was recorded). */
+function ProviderBadge({ signal }) {
+    if (signal.extraction_provider === "claude") {
+        return <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>Claude</span>;
+    }
+    if (signal.extraction_provider === "heuristic") {
+        return <span className={cn(statusBadge(), "bg-muted text-muted-foreground")}>Aturan</span>;
+    }
+    return <span className={statusBadge()}>Asal tidak tercatat</span>;
+}
+
+/** Whether the evidence quote was found verbatim in the source text. */
+function QuoteStatus({ verified }) {
+    if (verified === true) {
+        return (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success">
+                <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
+                Kutipan terverifikasi
+            </span>
+        );
+    }
+    if (verified === false) {
+        return (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-destructive">
+                <ShieldAlertIcon aria-hidden="true" className="size-3.5" />
+                Kutipan tidak ditemukan di sumber
+            </span>
+        );
+    }
+    return <span className="text-[11px] text-muted-foreground">Kutipan belum diverifikasi (data lama)</span>;
+}
+
+function extractedBy(signal) {
+    if (signal.extraction_provider === "claude") {
+        return `Claude (${signal.extraction_model ?? "model tidak tercatat"}), prompt ${signal.prompt_version ?? "-"}`;
+    }
+    if (signal.extraction_provider === "heuristic") return "Aturan kata kunci (tanpa AI)";
+    return "Tidak tercatat (dibuat sebelum provenance disimpan)";
+}
+
 function errorMessage(error, fallback) {
     const errors = error.response?.data?.errors;
     return typeof errors === "string" ? errors : (error.response?.data?.message ?? fallback);
@@ -71,6 +113,12 @@ function SignalCell({ signal }) {
                 <blockquote className="m-0 border-0 border-l-[3px] border-solid border-primary bg-muted/60 px-2.5 py-1.5 text-xs text-foreground italic">
                     “{signal.evidence_quote}”
                 </blockquote>
+            )}
+            <QuoteStatus verified={signal.quote_verified} />
+            {signal.suggested_driving_force && (
+                <span className="text-[11px] text-muted-foreground">
+                    Usulan force: <b className="text-foreground">{signal.suggested_driving_force.keyword}</b>
+                </span>
             )}
         </div>
     );
@@ -142,7 +190,16 @@ function InspectDialog({ signal, open, onOpenChange }) {
                                 <code className="block rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap">
                                     “{signal.evidence_quote}”
                                 </code>
+                                <QuoteStatus verified={signal.quote_verified} />
                             </DetailItem>
+                            <DetailItem label="Diekstrak oleh" className="sm:col-span-2">
+                                {extractedBy(signal)}
+                            </DetailItem>
+                            {signal.suggested_driving_force && (
+                                <DetailItem label="Usulan Driving Force" className="sm:col-span-2">
+                                    {signal.suggested_driving_force.keyword}
+                                </DetailItem>
+                            )}
                             <DetailItem label="Dimension">
                                 <DimensionChip name={signal.dimension?.name || "General"} />
                             </DetailItem>
@@ -192,7 +249,15 @@ function InspectDialog({ signal, open, onOpenChange }) {
     );
 }
 
-export default function SignalIndex({ auth, title, dimensions = [], existingDrivingForces = [] }) {
+export default function SignalIndex({
+    auth,
+    title,
+    dimensions = [],
+    existingDrivingForces = [],
+    extractionMode = "heuristic",
+    extractionModel = null,
+    maxContentChars = 60000,
+}) {
     const statusFieldId = useId();
     const [tab, setTab] = useState("review");
 
@@ -236,7 +301,9 @@ export default function SignalIndex({ auth, title, dimensions = [], existingDriv
         } catch (error) {
             const errors = error.response?.data?.errors;
             if (error.response?.status === 422 && errors && typeof errors === "object") {
-                toast.error("Validation failed", { description: "Periksa kembali isian yang ditandai." });
+                toast.error("Validation failed", {
+                    description: errors.evidence_quote?.[0] ?? "Periksa kembali isian yang ditandai.",
+                });
                 return errors;
             }
             toast.error("Action failed to execute.", { description: errorMessage(error, error.message) });
@@ -252,7 +319,12 @@ export default function SignalIndex({ auth, title, dimensions = [], existingDriv
         setIngesting(true);
         try {
             const response = await axios.post("/signals/ingest", payload);
-            toast.success(response.data.message || "Content ingested successfully.");
+            const extraction = response.data.extraction;
+            if (extraction?.fallback) {
+                toast.warning(response.data.message, { description: extraction.notice });
+            } else {
+                toast.success(response.data.message || "Content ingested successfully.");
+            }
             setTab("review");
             setStatus("PENDING");
             table.reload();
@@ -319,9 +391,7 @@ export default function SignalIndex({ auth, title, dimensions = [], existingDriv
                                 Est. Impact: <b className="text-foreground">{signal.preliminary_impact ?? "N/A"}</b> |
                                 Uncertainty: <b className="text-foreground">{signal.preliminary_uncertainty ?? "N/A"}</b>
                             </span>
-                            <span className={cn(statusBadge(), signal.is_ai_generated && "bg-accent text-primary")}>
-                                {signal.is_ai_generated ? "AI Candidate" : "Human Extracted"}
-                            </span>
+                            <ProviderBadge signal={signal} />
                         </div>
                     );
                 },
@@ -429,7 +499,13 @@ export default function SignalIndex({ auth, title, dimensions = [], existingDriv
                     </TabsContent>
 
                     <TabsContent value="ingest">
-                        <IngestForm loading={ingesting} onSubmit={handleIngest} />
+                        <IngestForm
+                            loading={ingesting}
+                            onSubmit={handleIngest}
+                            mode={extractionMode}
+                            model={extractionModel}
+                            maxChars={maxContentChars}
+                        />
                     </TabsContent>
                 </Tabs>
             </main>

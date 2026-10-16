@@ -8,6 +8,7 @@ import { Input } from "@/Components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
 import { toFieldValue, useDialogForm } from "@/hooks/use-dialog-form";
+import { cn } from "@/lib/utils";
 
 export const REVIEW_ACTIONS = {
     accept_create: {
@@ -50,6 +51,32 @@ export const REVIEW_ACTIONS = {
     },
 };
 
+/** The evidence being accepted, read only: it cannot be changed while accepting. */
+function EvidenceBlock({ signal }) {
+    if (!signal?.evidence_quote) return null;
+    const unverified = signal.quote_verified === false;
+
+    return (
+        <figure className="m-0 flex flex-col gap-1.5">
+            <figcaption className="text-xs font-medium text-muted-foreground">Bukti dari sumber</figcaption>
+            <blockquote
+                className={cn(
+                    "m-0 border-0 border-l-[3px] border-solid bg-muted/60 px-3 py-2 text-xs text-foreground italic",
+                    unverified ? "border-destructive" : "border-primary"
+                )}
+            >
+                “{signal.evidence_quote}”
+            </blockquote>
+            <span className={cn("text-[11px]", unverified ? "text-destructive" : "text-muted-foreground")}>
+                {signal.quote_verified === true && "Kutipan ditemukan verbatim di dokumen sumber."}
+                {unverified && "Kutipan tidak ditemukan di dokumen sumber, jadi sinyal ini tidak bisa diterima."}
+                {signal.quote_verified == null && "Sinyal lama: kutipan belum pernah diverifikasi."}
+                {signal.source?.title && ` Sumber: ${signal.source.title}.`}
+            </span>
+        </figure>
+    );
+}
+
 /**
  * Review step for one candidate signal: accept as a new driving force, link it
  * to an existing one, or reject it. Render inside <FormDialog formId={id}>.
@@ -66,7 +93,7 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
             title: signal?.title ?? "",
             summary: signal?.summary ?? "",
             dimension_id: toFieldValue(signal?.dimension_id),
-            driving_force_id: "",
+            driving_force_id: toFieldValue(signal?.suggested_driving_force_id ?? ""),
             rejection_reason: "",
         },
         ids,
@@ -97,6 +124,8 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
         <form id={id} noValidate onSubmit={submit}>
             <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
                 <p className="m-0 text-sm text-muted-foreground">{config.intro}</p>
+
+                {action !== "reject" && <EvidenceBlock signal={signal} />}
 
                 {action === "accept_create" && (
                     <>
