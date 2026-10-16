@@ -1,6 +1,6 @@
 import { useId, useMemo } from "react";
 import { rowPaginationFeature, rowSortingFeature, tableFeatures, useTable } from "@tanstack/react-table";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { Button } from "@/Components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
@@ -37,12 +37,8 @@ function withSortingOff(columns) {
 }
 
 function SortIcon({ direction }) {
-    return (
-        <span aria-hidden="true" className="inline-flex flex-col text-[9px] leading-[7px]">
-            <ChevronUpIcon className={direction === "asc" ? "text-primary" : "text-subtle-foreground/50"} />
-            <ChevronDownIcon className={direction === "desc" ? "text-primary" : "text-subtle-foreground/50"} />
-        </span>
-    );
+    const Icon = direction === "asc" ? ArrowUpIcon : direction === "desc" ? ArrowDownIcon : ArrowUpDownIcon;
+    return <Icon aria-hidden="true" className={cn("size-3.5", direction ? "text-primary" : "text-subtle-foreground")} />;
 }
 
 function HeaderContent({ table, header }) {
@@ -128,9 +124,10 @@ function Pagination({ table, rowCount, pageSizeOptions, loading }) {
  * Server-driven table on TanStack Table v9. Pair with `useServerTable` for the
  * axios + qs + route() fetching, or control `pagination`/`sorting` yourself.
  *
- * Column defs are TanStack's (`accessorKey`, `header`, `cell`). Sorting is off
- * unless a column sets `enableSorting: true`, because most endpoints sort on
- * the server by a fixed order. Extra per-column options go in `meta`:
+ * Column defs are TanStack's (`accessorKey`, `header`, `cell`). Sorting runs on
+ * the server and is off unless a column sets `enableSorting: true`; the column
+ * id must also be whitelisted for its endpoint (app/Support/TableSort.php).
+ * Extra per-column options go in `meta`:
  * `align` ("left" | "center" | "right"), `width` (CSS value), `className`,
  * `headerClassName`, `rowSpan` (see `spanEqual`). Nested `columns` render as
  * grouped header rows.

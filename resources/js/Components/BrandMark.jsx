@@ -6,7 +6,7 @@ export default function BrandMark({ className, iconClassName }) {
         <span
             aria-hidden="true"
             className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-md bg-night text-scan",
+                "flex size-9 shrink-0 items-center justify-center rounded-md bg-night text-scan dark:ring-1 dark:ring-border",
                 className
             )}
         >

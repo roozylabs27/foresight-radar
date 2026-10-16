@@ -1,11 +1,13 @@
 import { Link } from "@inertiajs/react";
 
 import BrandMark from "@/Components/BrandMark";
+import ThemeToggle from "@/Components/ThemeToggle";
 
 /** Centred card layout for the secondary auth pages (forgot / reset / confirm password, verify email). */
 export default function GuestLayout({ children }) {
     return (
-        <div className="flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8 font-sans text-foreground">
+        <div className="relative flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8 font-sans text-foreground">
+            <ThemeToggle className="absolute top-3 right-3" />
             <main className="flex w-full max-w-[440px] flex-col items-center">
                 <Link
                     href="/"
@@ -22,7 +24,7 @@ export default function GuestLayout({ children }) {
                     </span>
                 </Link>
 
-                <div className="w-full rounded-lg border border-solid border-border bg-card px-6 py-8 shadow-[0_1px_2px_0_rgb(11_27_51/0.05),0_1px_3px_0_rgb(11_27_51/0.04)] sm:px-7">
+                <div className="w-full rounded-lg border border-solid border-border bg-card px-6 py-8 shadow-sm sm:px-7">
                     {children}
                 </div>
 

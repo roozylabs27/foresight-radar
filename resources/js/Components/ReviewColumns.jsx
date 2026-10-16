@@ -21,16 +21,19 @@ export function reviewColumns({ status }) {
     return [
         {
             accessorKey: "date_created",
+            enableSorting: true,
             header: "Date Created",
             meta: { className: "whitespace-nowrap" },
         },
         {
             accessorKey: "dimension",
+            enableSorting: true,
             header: "Dimension",
             cell: ({ getValue }) => <DimensionChip name={getValue()} />,
         },
         {
             accessorKey: "keyword",
+            enableSorting: true,
             header: "Keyword",
             meta: { className: "min-w-[140px] font-medium text-foreground" },
         },
@@ -41,38 +44,45 @@ export function reviewColumns({ status }) {
         },
         {
             accessorKey: "pic",
+            enableSorting: true,
             header: "Personal In Charge",
             meta: { align: "center" },
         },
         {
             accessorKey: "time_horizon",
+            enableSorting: true,
             header: "Time Horizon",
             meta: { align: "center", className: "whitespace-nowrap" },
         },
         {
             accessorKey: "priority",
+            enableSorting: true,
             header: "Priority",
             meta: { align: "center" },
             cell: ({ getValue }) => <PriorityBadge priority={getValue()} />,
         },
         {
             accessorKey: "uncertainty_analysis",
+            enableSorting: true,
             header: "Uncertainty",
             meta: { align: "center", className: "tabular-nums" },
         },
         {
             accessorKey: "impact_analysis",
+            enableSorting: true,
             header: "Impact",
             meta: { align: "center", className: "tabular-nums" },
         },
         {
             accessorKey: "status",
+            enableSorting: true,
             header: "Status",
             meta: { align: "center" },
             cell: ({ row }) => status(row.original),
         },
         {
             accessorKey: "status_action",
+            enableSorting: true,
             header: "Status Action",
             meta: { align: "center" },
             cell: ({ getValue }) =>

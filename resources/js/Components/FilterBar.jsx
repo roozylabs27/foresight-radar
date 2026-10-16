@@ -6,7 +6,7 @@ export default function FilterBar({ label = "Filter", meta, actions, className, 
         <section
             aria-label={label}
             className={cn(
-                "flex w-full flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-solid border-border bg-card p-4 text-sm text-card-foreground shadow-[0_1px_2px_0_rgb(11_27_51/0.05),0_1px_3px_0_rgb(11_27_51/0.04)]",
+                "flex w-full flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-solid border-border bg-card p-4 text-sm text-card-foreground shadow-sm",
                 className
             )}
         >

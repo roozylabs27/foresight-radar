@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import BrandMark from "@/Components/BrandMark";
+import { ThemeMenuItem } from "@/Components/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
 import { Button } from "@/Components/ui/button";
 import {
@@ -169,6 +170,8 @@ function UserMenu({ user }) {
                         <span>Profil Pengguna</span>
                     </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <ThemeMenuItem />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" asChild>
                     <Link href={route("logout")} method="post" as="button" type="button" className="w-full">
