@@ -41,6 +41,11 @@ class AnthropicStructuredClient implements StructuredLlmClient
         return 'claude';
     }
 
+    public function label(): string
+    {
+        return 'Claude';
+    }
+
     public function model(): string
     {
         return (string) ($this->config['model'] ?? 'claude-opus-5-5');

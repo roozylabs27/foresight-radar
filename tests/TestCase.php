@@ -17,7 +17,7 @@ abstract class TestCase extends BaseTestCase
     {
         $fake = new FakeLlmClient($available);
         $this->app->instance(StructuredLlmClient::class, $fake);
-        config(['services.signal_extraction.driver' => 'claude']);
+        config(['services.signal_extraction.driver' => 'llm']);
 
         return $fake;
     }

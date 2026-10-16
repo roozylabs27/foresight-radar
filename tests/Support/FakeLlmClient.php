@@ -45,6 +45,11 @@ class FakeLlmClient implements StructuredLlmClient
         return 'claude';
     }
 
+    public function label(): string
+    {
+        return 'Claude';
+    }
+
     public function model(): string
     {
         return 'claude-fake';

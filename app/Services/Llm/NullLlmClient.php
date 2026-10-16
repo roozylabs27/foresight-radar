@@ -17,6 +17,11 @@ class NullLlmClient implements StructuredLlmClient
         return 'none';
     }
 
+    public function label(): string
+    {
+        return 'Aturan';
+    }
+
     public function model(): string
     {
         return '';

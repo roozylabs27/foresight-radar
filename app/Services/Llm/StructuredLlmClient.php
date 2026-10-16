@@ -12,7 +12,11 @@ interface StructuredLlmClient
     /** False when no provider is configured; callers then use their non-AI path. */
     public function isAvailable(): bool;
 
+    /** Short id stored with generated data, e.g. "claude" or "openrouter". */
     public function provider(): string;
+
+    /** Name shown to analysts, e.g. "Claude" or "OpenRouter". */
+    public function label(): string;
 
     public function model(): string;
 
