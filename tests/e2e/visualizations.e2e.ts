@@ -42,6 +42,25 @@ test.describe('Visualization & Analytical Reporting E2E Flows', () => {
     await expect(screen.getByText(/DIMENSION|ITEM/)).toBeVisible({ timeout: 20000 });
   });
 
+  test('Happy Path: Cross-Impact page shows the matrix and the Vester summary', { session: 'admin' }, async ({ app, screen, browser }) => {
+    await app.open('/visualization/cross-impact');
+    await expect(browser).toHaveURL('/visualization/cross-impact');
+
+    await expect(screen.getByRole('heading', 'Cross-Impact')).toBeVisible({ timeout: 25000 });
+    await expect(screen.getByRole('heading', 'Matriks Cross-Impact')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText(/\d+ dari \d+ pasangan dinilai/)).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByRole('heading', 'Ringkasan Pengaruh per Driving Force')).toBeVisible({ timeout: 45000 });
+  });
+
+  test('Happy Path: Foresight Radar toggles cross-impact links', { session: 'admin' }, async ({ app, screen }) => {
+    await app.open('/visualization/foresight-radar');
+
+    await screen.getByRole('button', 'Cross-Impact').tap();
+    await expect(screen.getByText(/hubungan cross-impact antar force di radar|Belum ada cross-impact antar force/)).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Memperkuat')).toBeVisible();
+    await expect(screen.getByText('Menekan')).toBeVisible();
+  });
+
   test('Unhappy & Boundary Path: dimension filter handles switching and reset gracefully', { session: 'admin' }, async ({ app, screen, browser }) => {
     await app.open('/visualization/foresight-radar');
 

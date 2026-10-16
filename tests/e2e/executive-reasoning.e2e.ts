@@ -2,13 +2,13 @@ import { test } from '@e2e-dev/web';
 import { expect, credentials } from 'e2e';
 
 test.describe('Executive Reasoning & Foundation Metrics E2E Flows', () => {
-  test('Happy Path: Dashboard renders Executive Overview by default with gauges and EDA charts', { session: 'admin' }, async ({ app, screen, browser }) => {
+  test('Happy Path: Dashboard renders Overview by default with gauges and EDA charts', { session: 'admin' }, async ({ app, screen, browser }) => {
     await app.open('/dashboard');
     await expect(browser).toHaveURL('/dashboard');
 
-    // 1. Verify Executive Overview Tab and Heading
+    // 1. Verify Overview Tab and Heading
     await expect(screen.getByRole('heading', 'Dashboard')).toBeVisible({ timeout: 45000 });
-    await expect(screen.getByRole('tab', 'Executive Overview')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByRole('tab', 'Overview')).toBeVisible({ timeout: 45000 });
 
     // 2. Verify Posture and Gauge cards (wait for async reasoning-data to resolve)
     await expect(screen.getByText(/Postur Kesiapan Strategis:/)).toBeVisible({ timeout: 90000 });
@@ -40,7 +40,18 @@ test.describe('Executive Reasoning & Foundation Metrics E2E Flows', () => {
     await expect(screen.getByRole('list', 'Kontribusi Growth')).toBeVisible({ timeout: 45000 });
   });
 
-  test('Navigation & Tab Switch: User can switch between Executive Overview, Prioritizing, Radar, and Registered List', { session: 'admin' }, async ({ app, screen, browser }) => {
+  test('Rating history: score trend and Monitoring → Decided Plan velocity panels render with data or an honest empty state', { session: 'admin' }, async ({ app, screen }) => {
+    await app.open('/dashboard');
+
+    await expect(screen.getByRole('heading', 'Tren Skor dari Riwayat Rating')).toBeVisible({ timeout: 90000 });
+    await expect(screen.getByText(/Riwayat rating baru tercatat sejak|Belum ada riwayat rating|Perubahan dari bulan pertama|Belum ada dua bulan/)).toBeVisible({ timeout: 45000 });
+
+    await expect(screen.getByRole('heading', 'Kecepatan Monitoring → Decided Plan')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Perpindahan')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Masih Monitoring')).toBeVisible({ timeout: 45000 });
+  });
+
+  test('Navigation & Tab Switch: User can switch between Overview, Prioritizing, Radar, and Registered List', { session: 'admin' }, async ({ app, screen, browser }) => {
     await app.open('/dashboard');
 
     // Switch to Prioritizing tab
@@ -51,8 +62,8 @@ test.describe('Executive Reasoning & Foundation Metrics E2E Flows', () => {
     await screen.getByRole('tab', 'Foresight Radar').tap();
     await expect(screen.getByText(/Short Term \(0 - 1 yr\)/)).toBeVisible({ timeout: 90000 });
 
-    // Switch back to Executive Overview tab
-    await screen.getByRole('tab', 'Executive Overview').tap();
-    await expect(screen.getByRole('tab', 'Executive Overview')).toBeVisible({ timeout: 45000 });
+    // Switch back to Overview tab
+    await screen.getByRole('tab', 'Overview').tap();
+    await expect(screen.getByRole('tab', 'Overview')).toBeVisible({ timeout: 45000 });
   });
 });
