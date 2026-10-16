@@ -298,17 +298,20 @@ export default function TableDrivingForce({ auth, title, dimensions = [], users 
         () => [
             {
                 accessorKey: "date_created",
+                enableSorting: true,
                 header: "Date Created",
                 // Already formatted by the model ("Sab, 10 Oktober 2026").
                 meta: { className: "whitespace-nowrap" },
             },
             {
                 accessorKey: "dimension",
+                enableSorting: true,
                 header: "Dimension",
                 cell: ({ getValue }) => <DimensionChip name={getValue()} />,
             },
             {
                 accessorKey: "keyword",
+                enableSorting: true,
                 header: "Keyword",
                 meta: { className: "font-medium text-foreground" },
             },
@@ -319,6 +322,7 @@ export default function TableDrivingForce({ auth, title, dimensions = [], users 
             },
             {
                 accessorKey: "pic",
+                enableSorting: true,
                 header: "Personal In Charge",
                 cell: ({ getValue }) => getValue() || "-",
             },

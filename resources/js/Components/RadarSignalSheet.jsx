@@ -47,7 +47,7 @@ function SourceSignal({ signal }) {
 }
 
 /** Detail and provenance of one radar item (replaces the antd Drawer). */
-export default function RadarSignalSheet({ item, open, onOpenChange }) {
+export default function RadarSignalSheet({ item, open, onOpenChange, className }) {
     const returnFocus = useReturnFocus(open);
     const supporting = item?.supporting_signals ?? [];
     const action = item?.status_action
@@ -56,7 +56,11 @@ export default function RadarSignalSheet({ item, open, onOpenChange }) {
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" onCloseAutoFocus={returnFocus} className="w-full gap-0 sm:max-w-[560px]">
+            <SheetContent
+                side="right"
+                onCloseAutoFocus={returnFocus}
+                className={cn("w-full gap-0 sm:max-w-[560px]", className)}
+            >
                 <SheetHeader className="gap-2 border-b pr-12">
                     <SheetTitle className="text-base">
                         {item ? `#${item.no} ${item.keyword}` : "Signal Details"}

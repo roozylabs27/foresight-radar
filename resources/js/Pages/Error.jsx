@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import BrandMark from "@/Components/BrandMark";
+import ThemeToggle from "@/Components/ThemeToggle";
 import { Button } from "@/Components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -103,25 +104,28 @@ export default function ErrorPage({ status = 404, message: customMessage, auth }
                     </div>
                 </div>
 
-                {isAuthenticated ? (
-                    <Button asChild variant="outline">
-                        <Link href="/dashboard">
-                            <HouseIcon aria-hidden="true" />
-                            Dashboard
-                        </Link>
-                    </Button>
-                ) : (
-                    <Button asChild>
-                        <Link href="/login">
-                            <LogInIcon aria-hidden="true" />
-                            Masuk
-                        </Link>
-                    </Button>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                    <ThemeToggle />
+                    {isAuthenticated ? (
+                        <Button asChild variant="outline">
+                            <Link href="/dashboard">
+                                <HouseIcon aria-hidden="true" />
+                                Dashboard
+                            </Link>
+                        </Button>
+                    ) : (
+                        <Button asChild>
+                            <Link href="/login">
+                                <LogInIcon aria-hidden="true" />
+                                Masuk
+                            </Link>
+                        </Button>
+                    )}
+                </div>
             </header>
 
             <main className="flex flex-1 items-center justify-center p-4 sm:p-6">
-                <div className="w-full max-w-[580px] rounded-lg border border-solid border-border bg-card px-6 pt-10 pb-6 text-center shadow-[0_4px_20px_rgb(11_27_51/0.06)] sm:px-10">
+                <div className="w-full max-w-[580px] rounded-lg border border-solid border-border bg-card px-6 pt-10 pb-6 text-center shadow-md sm:px-10">
                     <span
                         aria-hidden="true"
                         className={cn("mx-auto flex size-16 items-center justify-center rounded-full text-[30px]", TONES[error.tone])}

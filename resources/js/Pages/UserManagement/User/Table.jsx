@@ -122,21 +122,25 @@ export default function TableUser({ auth, title, roles = [] }) {
         () => [
             {
                 accessorKey: "date_created",
+                enableSorting: true,
                 header: "Date Created",
                 meta: { className: "whitespace-nowrap" },
             },
             {
                 accessorKey: "name",
+                enableSorting: true,
                 header: "Name",
                 meta: { className: "font-medium text-foreground" },
             },
             {
                 accessorKey: "email",
+                enableSorting: true,
                 header: "Email",
                 meta: { className: "text-muted-foreground" },
             },
             {
                 accessorKey: "role",
+                enableSorting: true,
                 header: "Role/Division",
                 cell: ({ getValue }) => (
                     <span className={cn(statusBadge(), "bg-accent text-primary")}>{getValue() || "-"}</span>

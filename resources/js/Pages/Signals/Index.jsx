@@ -274,11 +274,13 @@ export default function SignalIndex({ auth, title, dimensions = [], existingDriv
         () => [
             {
                 accessorKey: "title",
+                enableSorting: true,
                 header: "Signal Title & Evidence",
                 cell: ({ row }) => <SignalCell signal={row.original} />,
             },
             {
                 id: "taxonomy",
+                enableSorting: true,
                 header: "Taxonomy & Origin",
                 cell: ({ row }) => {
                     const signal = row.original;
@@ -299,6 +301,7 @@ export default function SignalIndex({ auth, title, dimensions = [], existingDriv
             },
             {
                 id: "assessment",
+                enableSorting: true,
                 header: "Assessment & Confidence",
                 cell: ({ row }) => {
                     const signal = row.original;
@@ -325,6 +328,7 @@ export default function SignalIndex({ auth, title, dimensions = [], existingDriv
             },
             {
                 accessorKey: "review_status",
+                enableSorting: true,
                 header: "Status",
                 cell: ({ getValue }) => {
                     const badge = STATUS_BADGES[getValue()];

@@ -90,6 +90,7 @@ export default function TableRatingUrgency({ auth, title, dimensions = [] }) {
             },
             {
                 accessorKey: "keyword",
+                enableSorting: true,
                 header: "ITEM",
                 meta: { className: "min-w-[200px]" },
                 cell: ({ row }) => (
@@ -104,6 +105,7 @@ export default function TableRatingUrgency({ auth, title, dimensions = [] }) {
                 header: "RATING",
                 columns: ["uncertainty", "impact"].map((type) => ({
                     accessorKey: type,
+                    enableSorting: true,
                     header: TYPE_LABELS[type],
                     meta: { align: "center" },
                     cell: ({ row }) => <RatingScale record={row.original} type={type} onPick={pickRating} />,

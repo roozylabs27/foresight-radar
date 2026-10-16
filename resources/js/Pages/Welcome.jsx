@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import BrandMark from "@/Components/BrandMark";
+import ThemeToggle from "@/Components/ThemeToggle";
 import { Button } from "@/Components/ui/button";
 
 const FEATURES = [
@@ -62,6 +63,7 @@ export default function Welcome({ auth, canRegister = true }) {
                 </div>
 
                 <nav aria-label="Akun" className="flex shrink-0 items-center gap-2 sm:gap-3">
+                    <ThemeToggle />
                     {user ? (
                         <Button asChild>
                             <Link href={route("dashboard.")}>

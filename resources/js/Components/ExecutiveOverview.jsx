@@ -1,10 +1,13 @@
-import { CompassIcon, RocketIcon, ShieldCheckIcon, SirenIcon } from "lucide-react";
+import { useState } from "react";
+import { CompassIcon, GitBranchIcon, RocketIcon, ShieldCheckIcon, SirenIcon } from "lucide-react";
 
 import DimensionChip from "@/Components/DimensionChip";
 import Panel from "@/Components/Panel";
 import PriorityBadge from "@/Components/PriorityBadge";
 import { statusBadge } from "@/Components/StatusBadge";
+import { Button } from "@/Components/ui/button";
 import { Skeleton } from "@/Components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 // ReasoningEngineService sends antd colour names for the readiness posture.
@@ -117,9 +120,139 @@ function CriticalForce({ force }) {
     );
 }
 
+const TOP_FACTORS = 5;
+
+const signed = new Intl.NumberFormat("id-ID", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 2,
+    signDisplay: "exceptZero",
+});
+const decimal = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+
+const EFFECT_TONES = {
+    positive: { text: "text-success", bar: "bg-success" },
+    negative: { text: "text-danger", bar: "bg-danger" },
+    neutral: { text: "text-muted-foreground", bar: "bg-muted-foreground" },
+};
+
+/** One rule that fired for a force, with its signed contribution to the index. */
+function Factor({ factor, scale }) {
+    const tone = EFFECT_TONES[factor.effect] ?? EFFECT_TONES.neutral;
+    const [condition, outcome] = String(factor.rule).split(" → ");
+    const width = scale > 0 && factor.contribution !== 0 ? Math.max(2, (Math.abs(factor.contribution) / scale) * 50) : 0;
+
+    return (
+        <li className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-3 border-0 border-b border-solid border-border py-2.5 last:border-b-0">
+            <div className="flex flex-col items-end gap-1">
+                <span className={cn("text-sm font-bold tabular-nums", tone.text)}>
+                    {factor.contribution === 0 ? "0" : signed.format(factor.contribution)}
+                </span>
+                <span aria-hidden="true" className="relative h-1.5 w-full rounded-full bg-muted">
+                    <span
+                        className={cn("absolute top-0 h-full rounded-full", tone.bar)}
+                        style={
+                            factor.contribution < 0
+                                ? { right: "50%", width: `${width}%` }
+                                : { left: "50%", width: `${width}%` }
+                        }
+                    />
+                </span>
+            </div>
+            <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-[13px] font-semibold text-foreground">{factor.keyword}</span>
+                <span className="text-xs text-muted-foreground">
+                    Jika {condition}
+                    {outcome && (
+                        <>
+                            {" → "}
+                            <span className={cn("font-semibold", tone.text)}>{outcome}</span>
+                        </>
+                    )}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                    {[factor.dimension, factor.time_horizon, `bobot ${decimal.format(factor.weight)}`]
+                        .filter(Boolean)
+                        .join(" · ")}
+                </span>
+            </div>
+        </li>
+    );
+}
+
+function FactorList({ name, explanation }) {
+    const [showAll, setShowAll] = useState(false);
+    const contributions = explanation?.contributions ?? [];
+    const index = Number(explanation?.index ?? 50);
+    const baseline = Number(explanation?.baseline ?? 50);
+    const visible = showAll ? contributions : contributions.slice(0, TOP_FACTORS);
+    const scale = Math.max(0, ...contributions.map((factor) => Math.abs(factor.contribution)));
+    const delta = index - baseline;
+
+    if (contributions.length === 0) {
+        return (
+            <p className="m-0 py-6 text-center text-sm text-muted-foreground">
+                Belum ada driving force yang dihitung untuk {name}, sehingga skornya tetap di baseline{" "}
+                {decimal.format(baseline)}.
+            </p>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-2">
+            <p className="m-0 text-xs text-muted-foreground tabular-nums">
+                {name} {decimal.format(index)} = baseline {decimal.format(baseline)}{" "}
+                <span className="font-semibold text-foreground">{delta === 0 ? "± 0" : signed.format(delta)}</span>{" "}
+                dari {contributions.length} driving force.
+                {contributions.length > TOP_FACTORS && !showAll && ` ${TOP_FACTORS} faktor terbesar:`}
+            </p>
+            <ul aria-label={`Kontribusi ${name}`} className="m-0 list-none p-0">
+                {visible.map((factor, position) => (
+                    <Factor key={factor.id ?? position} factor={factor} scale={scale} />
+                ))}
+            </ul>
+            {contributions.length > TOP_FACTORS && (
+                <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll((value) => !value)}>
+                    {showAll ? `Tampilkan ${TOP_FACTORS} teratas` : `Tampilkan semua (${contributions.length})`}
+                </Button>
+            )}
+        </div>
+    );
+}
+
+/** "Mengapa skor ini": the posture rule and the per-force contributions behind each index. */
+function ScoreExplanation({ explanation }) {
+    if (!explanation) return null;
+
+    return (
+        <Panel
+            icon={<GitBranchIcon className="text-primary" />}
+            title="Mengapa skor ini?"
+            badge={<span className={cn(statusBadge(), "bg-accent text-primary")}>Berbasis Aturan</span>}
+            description="Setiap driving force memicu satu aturan. Kontribusinya ditambahkan ke baseline 50, ditimbang menurut time horizon."
+        >
+            <p className="m-0 rounded-md bg-muted/60 px-3 py-2 text-xs font-medium text-foreground">
+                {explanation.posture_rule}
+            </p>
+            <Tabs defaultValue="resilience">
+                <TabsList>
+                    <TabsTrigger value="resilience">Resilience</TabsTrigger>
+                    <TabsTrigger value="growth">Growth</TabsTrigger>
+                </TabsList>
+                <TabsContent value="resilience">
+                    <FactorList name="Resilience" explanation={explanation.resilience} />
+                </TabsContent>
+                <TabsContent value="growth">
+                    <FactorList name="Growth" explanation={explanation.growth} />
+                </TabsContent>
+            </Tabs>
+        </Panel>
+    );
+}
+
 /**
  * Executive summary from /dashboard/reasoning-data: readiness posture, growth
- * and resilience gauges, and the top critical driving forces.
+ * and resilience gauges, why the scores are what they are, and the top
+ * critical driving forces.
  */
 export default function ExecutiveOverview({ loading = false, reasoningData = null }) {
     if (loading && !reasoningData) {
@@ -151,6 +284,7 @@ export default function ExecutiveOverview({ loading = false, reasoningData = nul
         readiness_description = "",
         total_active_forces = 0,
         top_critical_forces = [],
+        explanation = null,
     } = reasoningData;
     const tone = READINESS_TONES[readiness_color] ?? READINESS_TONES.processing;
 
@@ -182,7 +316,7 @@ export default function ExecutiveOverview({ loading = false, reasoningData = nul
                     icon={<RocketIcon className="text-primary" />}
                     title="Growth Index"
                     badge={<span className={cn(statusBadge(), "bg-accent text-primary")}>Peluang Pasar</span>}
-                    description="Daya dorong organisasi menangkap peluang pada tren Customer, Technology, & Economy."
+                    description="Peluang yang sudah ditangkap (Decided Plan) dibanding yang belum, pada dimensi Customer, Technology, & Economy."
                     value={growth_index}
                     label="Skor Growth"
                     color="var(--primary)"
@@ -192,13 +326,15 @@ export default function ExecutiveOverview({ loading = false, reasoningData = nul
                     icon={<ShieldCheckIcon className="text-success" />}
                     title="Resilience Index"
                     badge={<span className={cn(statusBadge(), "bg-success-soft text-success")}>Mitigasi Risiko</span>}
-                    description="Ketahanan organisasi terhadap ancaman eksternal melalui Status Action terencana."
+                    description="Mitigasi terencana (Decided Plan) dibanding eksposur force berdampak tinggi yang masih Monitoring."
                     value={resilience_index}
                     label="Skor Resilience"
                     color="var(--success)"
                     scale={["0: Vulnerable", "50: Baseline", "100: Fully Resilient"]}
                 />
             </div>
+
+            <ScoreExplanation explanation={explanation} />
 
             <Panel
                 icon={<SirenIcon className="text-danger" />}

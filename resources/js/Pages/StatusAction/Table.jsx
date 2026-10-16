@@ -85,11 +85,13 @@ export default function TableStatusAction({ auth, title, dimensions = [], status
             },
             {
                 accessorKey: "keyword",
+                enableSorting: true,
                 header: "Keyword",
                 meta: { className: "min-w-[200px] font-medium text-foreground" },
             },
             {
                 accessorKey: "dimension",
+                enableSorting: true,
                 header: "Dimension",
                 cell: ({ getValue }) => <DimensionChip name={getValue()} />,
             },

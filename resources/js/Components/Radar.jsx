@@ -185,8 +185,14 @@ export default function Radar({ date, selectData, setLoading }) {
         []
     );
 
+    // Fullscreen is the design system's presentation mode: a night ground in either
+    // theme. The scoped `dark` class switches every token inside to its dark value.
     return (
-        <div className={cn(fullscreen && "fixed inset-0 z-40 overflow-y-auto bg-background p-4 lg:p-6")}>
+        <div
+            className={cn(
+                fullscreen && "dark fixed inset-0 z-40 overflow-y-auto bg-night p-4 text-foreground lg:p-6"
+            )}
+        >
             <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                 <Card
                     title={
@@ -247,7 +253,13 @@ export default function Radar({ date, selectData, setLoading }) {
                 </Card>
             </div>
 
-            <RadarSignalSheet item={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
+            {/* The sheet renders in a portal, outside the fullscreen container, so it needs its own `dark`. */}
+            <RadarSignalSheet
+                item={selected}
+                open={sheetOpen}
+                onOpenChange={setSheetOpen}
+                className={fullscreen ? "dark" : undefined}
+            />
         </div>
     );
 }

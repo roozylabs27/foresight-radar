@@ -83,11 +83,13 @@ export default function TableTimeHorizon({ auth, title, dimensions = [], time_ho
             },
             {
                 accessorKey: "keyword",
+                enableSorting: true,
                 header: "Keyword",
                 meta: { className: "min-w-[200px] font-medium text-foreground" },
             },
             {
                 accessorKey: "dimension",
+                enableSorting: true,
                 header: "Dimension",
                 cell: ({ getValue }) => <DimensionChip name={getValue()} />,
             },

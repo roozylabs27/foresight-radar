@@ -94,6 +94,10 @@ export default function Dashboard({ auth, dimensions = [] }) {
                             loading={reasoning.loading}
                             edaFrequency={reasoning.data?.eda_frequency ?? []}
                             edaTrend={reasoning.data?.eda_trend ?? []}
+                            edaTrendRange={reasoning.data?.eda_trend_range ?? null}
+                            edaDistribution={reasoning.data?.eda_distribution ?? null}
+                            edaRelationship={reasoning.data?.eda_relationship ?? null}
+                            edaComparison={reasoning.data?.eda_comparison ?? null}
                         />
                     </TabsContent>
                     <TabsContent value="prioritizing">
