@@ -81,7 +81,7 @@ class CausalLoopService
                                 $productAbs *= abs($le['score']);
                             }
                             $polarity = ($negativeCount % 2 === 0) ? 'R' : 'B';
-                            $strength = round(pow($productAbs, 1 / $length) / 3, 4);
+                            $strength = round(pow($productAbs, 1 / $length) / 3, 3);
 
                             $loops[] = [
                                 'nodes' => $path,
@@ -128,6 +128,7 @@ class CausalLoopService
         });
 
         return [
+            'count' => count($loops),
             'loops' => $loops,
             'truncated' => $truncated,
         ];
