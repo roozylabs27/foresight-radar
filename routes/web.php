@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CrossImpactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForesightRadarController;
 use App\Http\Controllers\PrioritizingController;
@@ -31,6 +32,7 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
     Route::prefix("/dashboard")->controller(App\Http\Controllers\DashboardController::class)->name('dashboard.')->group(function () {
         Route::get("/", "index")->can('view-dashboard');
         Route::get("/reasoning-data", "reasoning_data")->name('reasoning-data')->can('view-dashboard');
+        Route::post("/simulate", "simulate")->name('simulate')->can('view-dashboard')->middleware('throttle:60,1');
     });
 
     Route::prefix('visualization')->middleware('throttle:60,1')->name('visualization.')->group(function() {
@@ -50,7 +52,17 @@ Route::prefix("/")->middleware(['auth', 'verified'])->group(function () {
             Route::get("/", [ForesightRadarController::class, 'index'])->can('view-foresight-radar');
             Route::get("/get-data", [ForesightRadarController::class, 'foresight_radar'])->name('get-data')->can('view-foresight-radar');
         });
+        Route::prefix("/cross-impact")->name('cross-impact.')->group(function() {
+            Route::get("/", [CrossImpactController::class, 'index'])->can('view-cross-impact');
+            Route::get("/get-data", [CrossImpactController::class, 'data'])->name('get-data')->can('view-cross-impact');
+        });
     });
+
+    // Scoring a matrix sends one request per cell, so it stays outside the visualization throttle.
+    Route::post("/visualization/cross-impact", [CrossImpactController::class, 'update'])
+        ->name('visualization.cross-impact.update')
+        ->can('manage-cross-impact')
+        ->middleware('throttle:240,1');
 
     Route::prefix("signals")->controller(App\Http\Controllers\SignalIngestionController::class)->name("signals.")->group(function () {
         Route::get("/", "index")->name('index')->can('view-signal');

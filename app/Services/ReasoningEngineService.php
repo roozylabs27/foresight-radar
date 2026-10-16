@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 /**
  * Rule-based reasoning over approved driving force ratings: Growth and
  * Resilience indices with per-force contributions, the 2x2 readiness posture
- * and the EDA datasets of the Executive Overview.
+ * and the EDA datasets of the Overview.
  *
  * Both indices are a weighted average on the same 0-100 scale:
  *   index = 50 + Σ(w · d) / Σw
@@ -43,8 +43,10 @@ class ReasoningEngineService
     /** Months the trend chart covers when the selected period is shorter. */
     public const TREND_MONTHS = 12;
 
-    public function __construct(protected ForesightReportingService $reportingService)
-    {
+    public function __construct(
+        protected ForesightReportingService $reportingService,
+        protected RatingHistoryAnalyticsService $historyAnalytics,
+    ) {
     }
 
     /**
@@ -52,14 +54,7 @@ class ReasoningEngineService
      */
     public function getExecutiveOverview(?array $dateRange = null, mixed $dimension = null): array
     {
-        $ratings = $this->reportingService->baseApprovedRatingQuery($dateRange, $dimension)
-            ->with([
-                'driving_force.dimension',
-                'priority',
-                'status_action',
-                'time_horizon',
-            ])
-            ->get();
+        $ratings = $this->loadRatings($dateRange, $dimension);
 
         $resilience = $this->explainResilienceIndex($ratings);
         $growth = $this->explainGrowthIndex($ratings);
@@ -91,7 +86,24 @@ class ReasoningEngineService
             'eda_comparison' => $this->calculateEdaComparison($ratings),
             'eda_trend' => $trend['data'],
             'eda_trend_range' => $trend['range'],
+            'history_trend' => $this->historyAnalytics->scoreTrend($trend['range'], $dimension),
+            'transition_velocity' => $this->historyAnalytics->transitionVelocity($trend['range'], $dimension),
         ];
+    }
+
+    /**
+     * Ratings the indices are computed from, with the relations they read.
+     */
+    public function loadRatings(?array $dateRange = null, mixed $dimension = null): Collection
+    {
+        return $this->reportingService->baseApprovedRatingQuery($dateRange, $dimension)
+            ->with([
+                'driving_force.dimension',
+                'priority',
+                'status_action',
+                'time_horizon',
+            ])
+            ->get();
     }
 
     public function calculateResilienceIndex(Collection $ratings): float
