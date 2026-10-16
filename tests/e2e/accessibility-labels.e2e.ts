@@ -23,9 +23,11 @@ test.describe('Form Label Accessibility (A11Y-001)', () => {
     };
   };
 
-  test('Login form inputs correctly match label htmlFor without browser binding errors', async ({ app, browser }) => {
+  test('Login form inputs correctly match label htmlFor without browser binding errors', async ({ app, screen, browser }) => {
     attachDomHelper(browser);
     await app.open('/login');
+    // The DOM helper reads the page once; wait for React to render the form first.
+    await expect(screen.getByRole('heading', 'Masuk ke Foresight Radar')).toBeVisible();
 
     const emailLabel = await browser.$('label[for="email"]');
     expect(emailLabel).not.toBeNull();
@@ -44,9 +46,10 @@ test.describe('Form Label Accessibility (A11Y-001)', () => {
     expect(passwordInput).not.toBeNull();
   });
 
-  test('Register form inputs correctly match label htmlFor without browser binding errors', async ({ app, browser }) => {
+  test('Register form inputs correctly match label htmlFor without browser binding errors', async ({ app, screen, browser }) => {
     attachDomHelper(browser);
     await app.open('/register');
+    await expect(screen.getByRole('heading', 'Daftar Akun Baru')).toBeVisible();
 
     const fields = ['name', 'email', 'password', 'password_confirmation'];
     for (const field of fields) {
