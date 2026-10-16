@@ -19,7 +19,7 @@ const READINESS_TONES = {
 };
 
 /** Half-circle gauge from 0 to 100; the filled arc shows the score. */
-function Gauge({ value, label, color }) {
+export function Gauge({ value, label, color }) {
     const score = Math.max(0, Math.min(100, Number(value) || 0));
     const arc = "M 20 100 A 80 80 0 0 1 180 100";
 
@@ -64,7 +64,7 @@ function Gauge({ value, label, color }) {
     );
 }
 
-function GaugePanel({ icon, title, badge, description, value, label, color, scale }) {
+export function GaugePanel({ icon, title, badge, description, value, label, color, scale }) {
     return (
         <Panel icon={icon} title={title} badge={badge} description={description}>
             <Gauge value={value} label={label} color={color} />
@@ -136,7 +136,7 @@ const EFFECT_TONES = {
 };
 
 /** One rule that fired for a force, with its signed contribution to the index. */
-function Factor({ factor, scale }) {
+export function Factor({ factor, scale }) {
     const tone = EFFECT_TONES[factor.effect] ?? EFFECT_TONES.neutral;
     const [condition, outcome] = String(factor.rule).split(" → ");
     const width = scale > 0 && factor.contribution !== 0 ? Math.max(2, (Math.abs(factor.contribution) / scale) * 50) : 0;
@@ -179,7 +179,7 @@ function Factor({ factor, scale }) {
     );
 }
 
-function FactorList({ name, explanation }) {
+export function FactorList({ name, explanation }) {
     const [showAll, setShowAll] = useState(false);
     const contributions = explanation?.contributions ?? [];
     const index = Number(explanation?.index ?? 50);
