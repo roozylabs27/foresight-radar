@@ -244,10 +244,15 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                         ["B", scenario.axis_b],
                     ].map(([letter, axis]) => (
                         <span key={letter} className="flex flex-wrap items-center gap-1.5">
-                            <b className="text-foreground">Sumbu {letter}:</b> {axis.keyword}
-                            {axis.dimension && <DimensionChip name={axis.dimension} />}
+                            <b className="text-foreground">Sumbu {letter}:</b> {axis?.keyword ?? "(Faktor tidak tersedia)"}
+                            {axis?.dimension && <DimensionChip name={axis.dimension} />}
+                            {axis?.is_deleted && (
+                                <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+                                    Dihapus
+                                </span>
+                            )}
                             <span>
-                                ({axis.low} ↔ {axis.high})
+                                ({axis?.low ?? "-"} ↔ {axis?.high ?? "-"})
                             </span>
                         </span>
                     ))}
@@ -459,7 +464,7 @@ export default function Scenarios({ auth, title, canManage = false, llm = { avai
                                     >
                                         <span className="text-[13px] font-semibold text-foreground">{row.name}</span>
                                         <span className="text-[11px] text-muted-foreground">
-                                            {row.axis_a} × {row.axis_b}
+                                            {row.axis_a ?? "(Faktor dihapus)"} × {row.axis_b ?? "(Faktor dihapus)"}
                                         </span>
                                     </button>
                                 </li>

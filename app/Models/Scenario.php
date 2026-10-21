@@ -56,12 +56,12 @@ class Scenario extends Model
 
     public function axis_a(): BelongsTo
     {
-        return $this->belongsTo(DrivingForce::class, 'axis_a_force_id');
+        return $this->belongsTo(DrivingForce::class, 'axis_a_force_id')->withTrashed();
     }
 
     public function axis_b(): BelongsTo
     {
-        return $this->belongsTo(DrivingForce::class, 'axis_b_force_id');
+        return $this->belongsTo(DrivingForce::class, 'axis_b_force_id')->withTrashed();
     }
 
     public function quadrants(): HasMany
