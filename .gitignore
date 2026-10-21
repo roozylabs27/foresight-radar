@@ -21,7 +21,7 @@ yarn-error.log
 /.archify
 /.superpowers
 /public/docs
-/docs/superpowers
+/docs
 /audit
 /.config
 /.e2e
