@@ -94,7 +94,7 @@ class UserSeeder extends Seeder
             'guard_name' => 'web'
         ]);
 
-        $new_role->givePermissionTo($role->permissions);
+        $new_role->syncPermissions($role->permissions);
     }
 
     protected function initializeUser($user)

@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+vendor
+storage/logs/*
+.env
+.env.backup
+.idea
+.vscode
+tests
+docs

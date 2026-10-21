@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | LLM Job Timeout
+    |--------------------------------------------------------------------------
+    |
+    | Seconds a signal extraction or scenario narrative job may run. One LLM
+    | call takes at most timeout x (1 + max_retries), ~240 s by default.
+    |
+    */
+
+    'llm_job_timeout' => (int) env('LLM_JOB_TIMEOUT', 300),
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------
     |
@@ -38,7 +50,8 @@ return [
             'driver' => 'database',
             'table' => 'jobs',
             'queue' => 'default',
-            'retry_after' => 90,
+            // Longer than llm_job_timeout, or a running LLM job is handed to a second worker.
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 360),
             'after_commit' => false,
         ],
 

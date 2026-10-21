@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Resources\OverallStatusCollection;
 use App\Http\Resources\OverallStatusResource;
 use App\Models\Dimension;
-use App\Models\DrivingForceRating;
 use App\Models\Priority;
 use App\Models\StatusAction;
 use App\Models\TimeHorizon;
+use App\Services\ForesightReportingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -47,35 +47,47 @@ class RegisteredListController extends Controller
         return Inertia::render('Report/RegisteredList', compact('dimensions', 'title', 'priorities', 'status_actions', 'time_horizons'));
     }
 
-    public function registered_list()
+    public function registered_list(ForesightReportingService $reportingService)
     {
         try {
-
             $pagination = request('pagination.pageSize');
-            $registered_list = DrivingForceRating::registered_list()->paginate($pagination);
+            $registered_list = $reportingService->getRegisteredListQuery()->paginate($pagination);
             $result = new OverallStatusCollection($registered_list);
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
+            Log::error('Registered list fetch error: ' . $th->getMessage(), ['exception' => $th]);
             return response()->json([
-                'errors' => $th->getMessage(),
+                'message' => 'An unexpected server error occurred while retrieving data.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function export_data()
+    public function export_data(ForesightReportingService $reportingService)
     {
         try {
-            $registered_list = DrivingForceRating::registered_list()->get();
-            $result = OverallStatusResource::collection($registered_list);
+            $query = $reportingService->getRegisteredListQuery();
 
-            return response()->json($result, Response::HTTP_OK);
-
+            return response()->stream(function () use ($query) {
+                echo '[';
+                $first = true;
+                foreach ($query->lazy(100) as $item) {
+                    if (!$first) {
+                        echo ',';
+                    }
+                    $first = false;
+                    $resource = new OverallStatusResource($item);
+                    echo json_encode($resource->resolve());
+                }
+                echo ']';
+            }, Response::HTTP_OK, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'no-cache, must-revalidate',
+            ]);
         } catch (\Throwable $th) {
-            Log::error($th);
+            Log::error('Export data error: ' . $th->getMessage(), ['exception' => $th]);
             return response()->json([
-                'errors' => $th->getMessage(),
+                'message' => 'An unexpected server error occurred while retrieving data.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

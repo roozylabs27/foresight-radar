@@ -1,414 +1,265 @@
-import {
-    Button,
-    Col,
-    message,
-    notification,
-    Row,
-    Segmented,
-    Skeleton,
-    Table,
-    Tooltip,
-} from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import dayjs from "dayjs";
 import qs from "qs";
 import * as XLSX from "xlsx";
+import { toast } from "sonner";
+import { CheckIcon, FileSpreadsheetIcon, LoaderCircleIcon } from "lucide-react";
 
-const OverallStatus = ({ loading, setLoading, date, selectedData, permissions }) => {
-    const getParams = (params) => {
-        return {
-            results: params.pagination?.pageSize,
-            page: params.pagination?.current,
-            ...params,
-        };
-    };
-    const [tableParams, setTableParams] = useState({
-        pagination: {
-            current: 1,
-            pageSize: 20,
-        },
-        date: [
-            dayjs().startOf("month").format("YYYY-MM-DD"),
-            dayjs().endOf("month").format("YYYY-MM-DD"),
-        ],
-    });
-    const [data, setData] = useState(null);
-    const [segmented, setSegmented] = useState("Overall");
+import { currentMonth } from "@/Components/AnalysisFilters";
+import DataTable, { spanEqual, useServerTable } from "@/Components/DataTable";
+import DimensionChip from "@/Components/DimensionChip";
+import { statusBadge } from "@/Components/StatusBadge";
+import { Button } from "@/Components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-    useEffect(() => {
-        fetchData();
-    }, [
-        tableParams.pagination?.pageSize,
-        tableParams.pagination?.current,
-        date,
-        selectedData.dimension,
-        selectedData.time_horizon,
-        selectedData.priority,
-        selectedData.status_action,
-    ]);
+const VIEWS = [
+    { value: "overall", label: "Overall" },
+    { value: "detail", label: "Detail Info" },
+];
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                `${route(
-                    "visualization.registered-list.get-data"
-                )}?${qs.stringify(
-                    getParams({
-                        ...tableParams,
-                        date: date != null ? date.date : tableParams.date,
-                        ...selectedData,
-                    })
-                )}`
-            );
-
-            if (response.status == 200) {
-                setTimeout(() => {
-                    const newData = response.data.data.map((d, i) => ({
-                        no: i + 1,
-                        ...d,
-                    }));
-
-                    setData(newData);
-                    setTableParams({
-                        ...tableParams,
-                        pagination: {
-                            pageSize: response.data.meta.per_page,
-                            current: response.data.meta.current_page,
-                            total: response.data.meta.total,
-                        },
-                    });
-
-                    setLoading(false);
-                }, 500);
-            } else {
-                message.error(`Error: ${error.message}`);
-                setLoading(false);
-            }
-        } catch (error) {
-            // TODO: Handling error
-            message.error(`Error: ${error.message}`);
-            setLoading(false);
-        }
-    };
-
-    const columnsDetail = [
-        {
-            title: "DIMENSION",
-            dataIndex: "dimension",
-            onCell: (record, rowIndex) => {
-                const rowSpan = data.reduce((acc, cur, curIndex) => {
-                    if (
-                        cur.dimension === record.dimension &&
-                        curIndex >= rowIndex
-                    ) {
-                        return acc + 1;
-                    }
-                    return acc;
-                }, 0);
-
-                if (
-                    rowIndex === 0 ||
-                    data[rowIndex - 1].dimension !== record.dimension
-                ) {
-                    return { rowSpan };
-                }
-
-                return { rowSpan: 0 };
-            },
-        },
-        {
-            title: "",
-            dataIndex: "no",
-            align: "center",
-        },
-        {
-            title: "Driving Force Detail",
-            dataIndex: "description",
-        },
-    ];
-
-    const renderToolTip = (record, type) => {
-        return (
-            <Tooltip placement="left" title={record.action_reason}>
-                {type == "decided_plan"
-                    ? record.decided_plan
-                    : record.monitoring}
-            </Tooltip>
-        );
-    };
-
-    const columns = [
-        {
-            title: "DIMENSION",
-            dataIndex: "dimension",
-            onCell: (record, rowIndex) => {
-                const rowSpan = data.reduce((acc, cur, curIndex) => {
-                    if (
-                        cur.dimension === record.dimension &&
-                        curIndex >= rowIndex
-                    ) {
-                        return acc + 1;
-                    }
-                    return acc;
-                }, 0);
-
-                if (
-                    rowIndex === 0 ||
-                    data[rowIndex - 1].dimension !== record.dimension
-                ) {
-                    return { rowSpan };
-                }
-
-                return { rowSpan: 0 };
-            },
-        },
-        {
-            title: "",
-            dataIndex: "no",
-            align: "center",
-        },
-        {
-            title: "DRIVING FORCE",
-            dataIndex: "keyword",
-        },
-        {
-            title: "TIME HORIZON",
-            children: [
-                {
-                    title: "Short Term",
-                    dataIndex: "short_term",
-                    align: "center",
-                },
-                {
-                    title: "Mid Term",
-                    dataIndex: "mid_term",
-                    align: "center",
-                },
-                {
-                    title: "Long Term",
-                    dataIndex: "long_term",
-                    align: "center",
-                },
-            ],
-        },
-        {
-            title: "PRIORITIZING",
-            children: [
-                {
-                    title: "High",
-                    align: "center",
-                    dataIndex: "high",
-                },
-                {
-                    title: "Medium",
-                    align: "center",
-                    dataIndex: "medium",
-                },
-                {
-                    title: "Low",
-                    align: "center",
-                    dataIndex: "low",
-                },
-            ],
-        },
-        {
-            title: "STATUS OF ACTION",
-            children: [
-                {
-                    title: "Decided Plan",
-                    dataIndex: "decided_plan",
-                    align: "center",
-                    render: (text, record) =>
-                        renderToolTip(record, "decided_plan"),
-                },
-                {
-                    title: "Monitor",
-                    dataIndex: "monitoring",
-                    align: "center",
-                    render: (text, record) =>
-                        renderToolTip(record, "monitoring"),
-                },
-            ],
-        },
-    ];
-
-    const handleTableChange = (pagination, filters, sorter) => {
-        setTableParams({
-            pagination,
-            date: tableParams.date,
-            dimension: tableParams.dimension,
-        });
-
-        if (pagination.pageSize !== tableParams.pagination?.pageSize) {
-            setData([]);
-        }
-    };
-
-    const handleExport = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                `${route(
-                    "visualization.registered-list.export-data"
-                )}?${qs.stringify(
-                    getParams({
-                        ...tableParams,
-                        date: date != null ? date.date : tableParams.date,
-                        ...selectedData,
-                    })
-                )}`
-            );
-
-            const exportData = response.data.map((record, index) => ({
-                No: index + 1,
-                Dimension: record.dimension,
-                Keyword: record.keyword,
-                Description: record.description,
-                "Short Term": record.short_term,
-                "Mid Term": record.mid_term,
-                "Long Term": record.long_term,
-                High: record.high,
-                Medium: record.medium,
-                Low: record.low,
-                "Decided Plan": record.decided_plan,
-                Monitor: record.monitoring,
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-
-            const merges = [];
-            let startRow = 2; // Excel rows are 1-indexed
-            let prevDimension = exportData[0].Dimension;
-            let rowCount = 1;
-
-            for (let i = 1; i < exportData.length; i++) {
-                if (exportData[i].Dimension === prevDimension) {
-                    rowCount++;
-                } else {
-                    if (rowCount > 1) {
-                        merges.push({
-                            s: { r: startRow - 1, c: 1 }, // starting cell (row, col)
-                            e: { r: startRow + rowCount - 2, c: 1 }, // ending cell (row, col)
-                        });
-
-                        // Atur centering untuk sel yang digabungkan
-                        for (
-                            let j = startRow - 1;
-                            j <= startRow + rowCount - 2;
-                            j++
-                        ) {
-                            const cellRef = XLSX.utils.encode_cell({
-                                r: j,
-                                c: 1,
-                            });
-                            if (!worksheet[cellRef]) worksheet[cellRef] = {};
-                            worksheet[cellRef].s = {
-                                alignment: {
-                                    vertical: "center",
-                                    horizontal: "center",
-                                },
-                            };
-                        }
-                    }
-                    startRow += rowCount;
-                    rowCount = 1;
-                    prevDimension = exportData[i].Dimension;
-                }
-            }
-
-            // Handle merge for the last set of rows
-            if (rowCount > 1) {
-                merges.push({
-                    s: { r: startRow - 1, c: 1 }, // starting cell (row, col)
-                    e: { r: startRow + rowCount - 2, c: 1 }, // ending cell (row, col)
-                });
-
-                for (let j = startRow - 1; j <= startRow + rowCount - 2; j++) {
-                    const cellRef = XLSX.utils.encode_cell({ r: j, c: 1 });
-                    if (!worksheet[cellRef]) worksheet[cellRef] = {};
-                    worksheet[cellRef].s = {
-                        alignment: {
-                            vertical: "center",
-                            horizontal: "center",
-                        },
-                    };
-                }
-            }
-
-            worksheet["!merges"] = merges;
-
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(
-                workbook,
-                worksheet,
-                "Registered List"
-            );
-
-            XLSX.writeFile(
-                workbook,
-                `${dayjs().format("YYYY-MM-DD")} - Registered List Data.xlsx`
-            );
-
-            setTimeout(() => {
-                setLoading(false);
-            }, 1000);
-        } catch (error) {
-            setLoading(false);
-            notification["warning"]("Error", error);
-        }
-    };
+// OverallStatusResource marks the matching column with "✔" (or the status code).
+function CheckMark({ value, label }) {
+    if (!value) return null;
 
     return (
-        <Skeleton active loading={false}>
-            <Row gutter={24}>
-                <Col span={24}>
-                    <Row justify="space-between">
-                        <Col span={12}>
-                            <Segmented
-                                options={["Overall", "Detail Info"]}
-                                onChange={(value) => {
-                                    setSegmented(value);
-                                    setLoading(true);
-
-                                    setTimeout(() => {
-                                        setLoading(false);
-                                    }, 500);
-                                }}
-                            />
-                        </Col>
-                        {permissions.includes("export-registered-list") && (
-                            <Col span={12}>
-                                <Row justify="end">
-                                    <Button
-                                        onClick={handleExport}
-                                        disabled={loading}
-                                        loading={loading}
-                                        type="default"
-                                    >
-                                        Export to Excel
-                                    </Button>
-                                </Row>
-                            </Col>
-                        )}
-                    </Row>
-                </Col>
-                <Col span={24}>
-                    <Table
-                        columns={
-                            segmented == "Overall" ? columns : columnsDetail
-                        }
-                        dataSource={data}
-                        bordered
-                        loading={loading}
-                        rowKey={(record) => record.id}
-                        pagination={tableParams.pagination}
-                        onChange={handleTableChange}
-                    />
-                </Col>
-            </Row>
-        </Skeleton>
+        <span className="inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+            <CheckIcon aria-hidden="true" />
+            <span className="sr-only">{label}</span>
+        </span>
     );
-};
+}
 
-export default OverallStatus;
+/** Status code with the latest action reason in a tooltip (focusable for keyboard users). */
+function StatusCode({ code, label, reason }) {
+    if (!code) return null;
+
+    const badge = (
+        <span className={cn(statusBadge(), "font-mono")}>
+            <span aria-hidden="true">{code}</span>
+            <span className="sr-only">{label}</span>
+        </span>
+    );
+    if (!reason) return badge;
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span
+                    tabIndex={0}
+                    className="inline-flex cursor-help rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                    {badge}
+                </span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-xs">
+                {reason}
+            </TooltipContent>
+        </Tooltip>
+    );
+}
+
+function markColumns(keys) {
+    return keys.map(([key, header]) => ({
+        accessorKey: key,
+        header,
+        meta: { align: "center", width: "92px" },
+        cell: ({ getValue }) => <CheckMark value={getValue()} label={header} />,
+    }));
+}
+
+// The xlsx rows merge the Dimension cells of consecutive rows, like the table.
+function exportWorkbook(records) {
+    const rows = records.map((record, index) => ({
+        No: index + 1,
+        Dimension: record.dimension,
+        Keyword: record.keyword,
+        Description: record.description,
+        "Short Term": record.short_term,
+        "Mid Term": record.mid_term,
+        "Long Term": record.long_term,
+        High: record.high,
+        Medium: record.medium,
+        Low: record.low,
+        "Decided Plan": record.decided_plan,
+        Monitor: record.monitoring,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const merges = [];
+    let start = 0;
+    for (let index = 1; index <= rows.length; index++) {
+        if (index === rows.length || rows[index].Dimension !== rows[start].Dimension) {
+            if (index - start > 1) {
+                // +1: row 0 is the header; column 1 is Dimension.
+                merges.push({ s: { r: start + 1, c: 1 }, e: { r: index, c: 1 } });
+            }
+            start = index;
+        }
+    }
+    worksheet["!merges"] = merges;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Registered List");
+    XLSX.writeFile(workbook, `${dayjs().format("YYYY-MM-DD")} - Registered List Data.xlsx`);
+}
+
+/**
+ * Registered driving forces grouped by dimension, with an Overall and a
+ * Detail Info view and an Excel export (`export-registered-list`).
+ *
+ * `date` is `{ date: [start, end] }` (defaults to this month) and `selectedData`
+ * holds the extra filters (`dimension`, `time_horizon`, `priority`,
+ * `status_action`); empty values are not sent. `setLoading` mirrors the
+ * loading state for a parent that shows its own indicator.
+ */
+export default function OverallStatus({ date, selectedData, permissions = [], setLoading }) {
+    const [view, setView] = useState("overall");
+    const [exporting, setExporting] = useState(false);
+
+    const params = {
+        date: date?.date ?? currentMonth(),
+        ...Object.fromEntries(
+            Object.entries(selectedData ?? {}).filter(([, value]) => value !== null && value !== undefined && value !== "")
+        ),
+    };
+
+    const table = useServerTable({
+        url: route("visualization.registered-list.get-data"),
+        params,
+        initialPageSize: 20,
+    });
+
+    useEffect(() => {
+        setLoading?.(table.loading || exporting);
+    }, [table.loading, exporting, setLoading]);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const response = await axios.get(
+                `${route("visualization.registered-list.export-data")}?${qs.stringify(params)}`
+            );
+            if (!response.data?.length) {
+                toast.info("Tidak ada data untuk diekspor.");
+                return;
+            }
+            exportWorkbook(response.data);
+        } catch (error) {
+            toast.error("Export gagal", { description: error.response?.data?.message ?? error.message });
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const { pageIndex, pageSize } = table.pagination;
+
+    const columns = useMemo(() => {
+        const dimension = {
+            accessorKey: "dimension",
+            header: "DIMENSION",
+            meta: { rowSpan: spanEqual("dimension"), className: "min-w-[150px]" },
+            cell: ({ getValue }) => <DimensionChip name={getValue()} />,
+        };
+        const number = {
+            id: "no",
+            header: () => <span className="sr-only">No</span>,
+            meta: { align: "center", width: "56px", className: "tabular-nums text-muted-foreground" },
+            cell: ({ row }) => pageIndex * pageSize + row.index + 1,
+        };
+
+        if (view === "detail") {
+            return [
+                dimension,
+                number,
+                {
+                    accessorKey: "description",
+                    header: "Driving Force Detail",
+                    meta: { className: "min-w-[320px]" },
+                },
+            ];
+        }
+
+        return [
+            dimension,
+            number,
+            {
+                accessorKey: "keyword",
+                header: "DRIVING FORCE",
+                meta: { className: "min-w-[180px] font-medium text-foreground" },
+            },
+            {
+                id: "time_horizon",
+                header: "TIME HORIZON",
+                columns: markColumns([
+                    ["short_term", "Short Term"],
+                    ["mid_term", "Mid Term"],
+                    ["long_term", "Long Term"],
+                ]),
+            },
+            {
+                id: "prioritizing",
+                header: "PRIORITIZING",
+                columns: markColumns([
+                    ["high", "High"],
+                    ["medium", "Medium"],
+                    ["low", "Low"],
+                ]),
+            },
+            {
+                id: "status_of_action",
+                header: "STATUS OF ACTION",
+                columns: [
+                    ["decided_plan", "Decided Plan"],
+                    ["monitoring", "Monitor"],
+                ].map(([key, header]) => ({
+                    accessorKey: key,
+                    header,
+                    meta: { align: "center", width: "112px" },
+                    cell: ({ row, getValue }) => (
+                        <StatusCode code={getValue()} label={header} reason={row.original.action_reason} />
+                    ),
+                })),
+            },
+        ];
+    }, [view, pageIndex, pageSize]);
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    value={view}
+                    onValueChange={(value) => value && setView(value)}
+                    aria-label="Tampilan tabel"
+                >
+                    {VIEWS.map((item) => (
+                        <ToggleGroupItem
+                            key={item.value}
+                            value={item.value}
+                            className="px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                        >
+                            {item.label}
+                        </ToggleGroupItem>
+                    ))}
+                </ToggleGroup>
+                {permissions.includes("export-registered-list") && (
+                    <Button onClick={handleExport} disabled={exporting} aria-busy={exporting || undefined}>
+                        {exporting ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <FileSpreadsheetIcon aria-hidden="true" />}
+                        Export to Excel
+                    </Button>
+                )}
+            </div>
+
+            <DataTable
+                columns={columns}
+                {...table.tableProps}
+                getRowId={(row) => row.id}
+                caption={view === "detail" ? "Detail driving force per dimensi" : "Status driving force per dimensi"}
+            />
+        </div>
+    );
+}

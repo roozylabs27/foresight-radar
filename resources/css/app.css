@@ -1,6 +1,258 @@
-.demo-logo-vertical {
-    height: 32px;
-    margin : 16px;
-    background-color: #64748b;
-    border-radius: 0.25rem;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@source not "../../design";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Foresight Radar design system tokens (design system "Foresight Radar", tokens.json). */
+:root {
+    color-scheme: light;
+    --radius: 0.75rem;
+
+    --elevation-sm: 0 1px 2px 0 rgb(11 27 51 / 0.05), 0 1px 3px 0 rgb(11 27 51 / 0.04);
+    --elevation-md: 0 4px 12px -2px rgb(11 27 51 / 0.1), 0 2px 4px -2px rgb(11 27 51 / 0.06);
+    --elevation-lg: 0 16px 40px -8px rgb(11 27 51 / 0.18);
+
+    --background: #f5f7fb;
+    --foreground: #0b1b33;
+    --card: #ffffff;
+    --card-foreground: #0b1b33;
+    --popover: #ffffff;
+    --popover-foreground: #0b1b33;
+    --primary: #1a5fd6;
+    --primary-foreground: #ffffff;
+    --primary-hover: #144bb0;
+    --secondary: #eef2f8;
+    --secondary-foreground: #0b1b33;
+    --muted: #eef2f8;
+    --muted-foreground: #4a5872;
+    --subtle-foreground: #5f6d84;
+    --accent: #e8f0fd;
+    --accent-foreground: #0b1b33;
+    --destructive: #c42b2b;
+    --border: #e1e7ef;
+    --input: #7b889c;
+    --ring: #1a5fd6;
+
+    --night: #0b1b33;
+    --on-night: #ffffff;
+    --scan: #0b8f8a;
+
+    --success: #1f7a3a;
+    --success-soft: #e8f5ec;
+    --warning: #a65300;
+    --warning-soft: #fdf1e2;
+    --danger: #c42b2b;
+    --danger-soft: #fceaea;
+
+    --horizon-short: #c9daf3;
+    --horizon-mid: #dde8f8;
+    --horizon-long: #eef4fc;
+
+    --dim-economy: #b07d00;
+    --dim-competitor: #d1433a;
+    --dim-customer: #c0397a;
+    --dim-supplier: #7a5a2e;
+    --dim-substitute: #e0741c;
+    --dim-technology: #0b8f8a;
+    --dim-regulation: #6a4cc0;
+    --dim-ecology: #3d8a2c;
+
+    --chart-1: #1a5fd6;
+    --chart-2: #0b8f8a;
+    --chart-3: #a65300;
+    --chart-4: #6a4cc0;
+    --chart-5: #c0397a;
+
+    --sidebar: #ffffff;
+    --sidebar-foreground: #0b1b33;
+    --sidebar-primary: #1a5fd6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e8f0fd;
+    --sidebar-accent-foreground: #1a5fd6;
+    --sidebar-border: #e1e7ef;
+    --sidebar-ring: #1a5fd6;
+}
+
+.dark {
+    color-scheme: dark;
+
+    --elevation-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --elevation-md: 0 6px 16px -2px rgb(0 0 0 / 0.55);
+    --elevation-lg: 0 20px 48px -8px rgb(0 0 0 / 0.7);
+    --background: #08101e;
+    --foreground: #e9eef7;
+    --card: #0f1a2d;
+    --card-foreground: #e9eef7;
+    --popover: #0f1a2d;
+    --popover-foreground: #e9eef7;
+    --primary: #6aa5ff;
+    --primary-foreground: #06142b;
+    --primary-hover: #93bdff;
+    --secondary: #16233a;
+    --secondary-foreground: #e9eef7;
+    --muted: #16233a;
+    --muted-foreground: #a3b2c9;
+    --subtle-foreground: #8797b0;
+    --accent: #132a4f;
+    --accent-foreground: #e9eef7;
+    --destructive: #ff7f7f;
+    --border: #22314b;
+    --input: #5f7290;
+    --ring: #6aa5ff;
+
+    --night: #050b16;
+    --on-night: #e9eef7;
+    --scan: #2fd1c2;
+
+    --success: #5cd18a;
+    --success-soft: #10301f;
+    --warning: #f5b454;
+    --warning-soft: #33240c;
+    --danger: #ff7f7f;
+    --danger-soft: #3a1618;
+
+    --horizon-short: #24406b;
+    --horizon-mid: #1a3053;
+    --horizon-long: #132440;
+
+    --dim-economy: #e3b23c;
+    --dim-competitor: #ff7a6e;
+    --dim-customer: #f07ab3;
+    --dim-supplier: #c9a36b;
+    --dim-substitute: #ff9d4d;
+    --dim-technology: #2fd1c2;
+    --dim-regulation: #a98bff;
+    --dim-ecology: #7bd36a;
+
+    --chart-1: #6aa5ff;
+    --chart-2: #2fd1c2;
+    --chart-3: #f5b454;
+    --chart-4: #a98bff;
+    --chart-5: #f07ab3;
+
+    --sidebar: #0f1a2d;
+    --sidebar-foreground: #e9eef7;
+    --sidebar-primary: #6aa5ff;
+    --sidebar-primary-foreground: #06142b;
+    --sidebar-accent: #132a4f;
+    --sidebar-accent-foreground: #6aa5ff;
+    --sidebar-border: #22314b;
+    --sidebar-ring: #6aa5ff;
+}
+
+@theme inline {
+    --shadow-sm: var(--elevation-sm);
+    --shadow-md: var(--elevation-md);
+    --shadow-lg: var(--elevation-lg);
+
+    --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-hover: var(--primary-hover);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-subtle-foreground: var(--subtle-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-night: var(--night);
+    --color-on-night: var(--on-night);
+    --color-scan: var(--scan);
+    --color-success: var(--success);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+    --color-danger: var(--danger);
+    --color-danger-soft: var(--danger-soft);
+    --color-horizon-short: var(--horizon-short);
+    --color-horizon-mid: var(--horizon-mid);
+    --color-horizon-long: var(--horizon-long);
+    --color-dim-economy: var(--dim-economy);
+    --color-dim-competitor: var(--dim-competitor);
+    --color-dim-customer: var(--dim-customer);
+    --color-dim-supplier: var(--dim-supplier);
+    --color-dim-substitute: var(--dim-substitute);
+    --color-dim-technology: var(--dim-technology);
+    --color-dim-regulation: var(--dim-regulation);
+    --color-dim-ecology: var(--dim-ecology);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+    /* Tailwind v4 preflight defaults borders to currentColor; use the token like shadcn does. */
+    *,
+    ::before,
+    ::after,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-border);
+    }
+
+    /*
+     * lucide icons scale with the text (1em) and sit on the baseline like inline
+     * glyphs, instead of 24px blocks. size-* utilities still override this.
+     */
+    svg.lucide {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        flex-shrink: 0;
+        vertical-align: -0.125em;
+    }
+
+    /*
+     * Reduced motion: near-instant instead of none, so animationend still fires
+     * and Radix unmounts closed dialogs and menus. !important in this layer
+     * outranks the animate-in/out utilities.
+     */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+}
+
+body {
+    background-color: var(--background);
+    color: var(--foreground);
 }

@@ -112,4 +112,16 @@ return [
 
     'password_timeout' => 10800,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public Account Registration Control
+    |--------------------------------------------------------------------------
+    |
+    | When disabled, open public self-registration via /register is prohibited.
+    | User accounts must be created administratively via User Management.
+    |
+    */
+
+    'allow_registration' => env('AUTH_ALLOW_REGISTRATION', true),
+
 ];

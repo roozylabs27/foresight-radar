@@ -1,99 +1,96 @@
-import { useRef, useState } from 'react';
-import DangerButton from '@/Components/DangerButton';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Modal';
-import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
-import { useForm } from '@inertiajs/react';
+import { useState } from "react";
+import { Controller } from "react-hook-form";
+import { z } from "zod";
+import { LockIcon, Trash2Icon } from "lucide-react";
 
-export default function DeleteUserForm({ className = '' }) {
-    const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
-    const passwordInput = useRef();
+import AuthAlert from "@/Components/auth/AuthAlert";
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import FormDialog from "@/Components/FormDialog";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaVisit } from "@/lib/inertia-submit";
+import SectionHeading from "./SectionHeading";
 
-    const {
-        data,
-        setData,
-        delete: destroy,
-        processing,
-        reset,
-        errors,
-    } = useForm({
-        password: '',
+const FORM_ID = "delete-account-form";
+
+const schema = z.object({
+    password: z.string().min(1, "Kata sandi wajib diisi untuk konfirmasi."),
+});
+
+export default function DeleteUserForm() {
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const form = useDialogForm({
+        schema,
+        defaultValues: { password: "" },
+        ids: { password: "delete-account-password" },
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaVisit("delete", route("profile.destroy"), values, {
+                preserveScroll: true,
+                onSuccess: () => setOpen(false),
+                onError: () => form.setValue("password", ""),
+            }).finally(() => setLoading(false));
+        },
     });
 
-    const confirmUserDeletion = () => {
-        setConfirmingUserDeletion(true);
-    };
-
-    const deleteUser = (e) => {
-        e.preventDefault();
-
-        destroy(route('profile.destroy'), {
-            preserveScroll: true,
-            onSuccess: () => closeModal(),
-            onError: () => passwordInput.current.focus(),
-            onFinish: () => reset(),
-        });
-    };
-
-    const closeModal = () => {
-        setConfirmingUserDeletion(false);
-
-        reset();
+    const close = () => {
+        setOpen(false);
+        form.reset();
     };
 
     return (
-        <section className={`space-y-6 ${className}`}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">Delete Account</h2>
+        <section aria-labelledby="delete-account-heading">
+            <SectionHeading
+                id="delete-account-heading"
+                title="Hapus Akun Pengguna"
+                className="text-danger"
+                description="Setelah akun Anda dihapus, semua sumber daya dan data terkait akan dihapus secara permanen. Harap unduh data atau informasi yang ingin Anda simpan sebelum melanjutkan."
+            />
 
-                <p className="mt-1 text-sm text-gray-600">
-                    Once your account is deleted, all of its resources and data will be permanently deleted. Before
-                    deleting your account, please download any data or information that you wish to retain.
-                </p>
-            </header>
+            <Button variant="destructive" className="h-10" onClick={() => setOpen(true)}>
+                <Trash2Icon aria-hidden="true" />
+                Hapus Akun Ini
+            </Button>
 
-            <DangerButton onClick={confirmUserDeletion}>Delete Account</DangerButton>
-
-            <Modal show={confirmingUserDeletion} onClose={closeModal}>
-                <form onSubmit={deleteUser} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Are you sure you want to delete your account?
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-600">
-                        Once your account is deleted, all of its resources and data will be permanently deleted. Please
-                        enter your password to confirm you would like to permanently delete your account.
-                    </p>
-
-                    <div className="mt-6">
-                        <InputLabel htmlFor="password" value="Password" className="sr-only" />
-
-                        <TextInput
-                            id="password"
-                            type="password"
+            <FormDialog
+                title="Konfirmasi Penghapusan Akun"
+                description="Masukkan kata sandi Anda saat ini untuk mengonfirmasi bahwa Anda ingin menghapus akun ini."
+                open={open}
+                onCancel={close}
+                formId={FORM_ID}
+                btnText="Hapus Akun Secara Permanen"
+                btnVariant="destructive"
+                cancelText="Batal"
+                loading={loading}
+                width={520}
+            >
+                <form id={FORM_ID} noValidate onSubmit={form.submit}>
+                    <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0 pb-1">
+                        <AuthAlert tone="error" title="Peringatan Tindakan Tidak Dapat Dibatalkan">
+                            Semua data dan hak akses Anda di Foresight Radar akan dihapus secara permanen.
+                        </AuthAlert>
+                        <Controller
                             name="password"
-                            ref={passwordInput}
-                            value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            className="mt-1 block w-3/4"
-                            isFocused
-                            placeholder="Password"
+                            control={form.control}
+                            render={(props) => (
+                                <AuthInput
+                                    id="delete-account-password"
+                                    label="Kata Sandi Akun"
+                                    icon={LockIcon}
+                                    type="password"
+                                    placeholder="Masukkan kata sandi Anda"
+                                    autoComplete="current-password"
+                                    autoFocus
+                                    {...rhfInputProps(props)}
+                                />
+                            )}
                         />
-
-                        <InputError message={errors.password} className="mt-2" />
-                    </div>
-
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeModal}>Cancel</SecondaryButton>
-
-                        <DangerButton className="ms-3" disabled={processing}>
-                            Delete Account
-                        </DangerButton>
-                    </div>
+                    </fieldset>
                 </form>
-            </Modal>
+            </FormDialog>
         </section>
     );
 }

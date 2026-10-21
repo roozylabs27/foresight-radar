@@ -1,0 +1,86 @@
+import { test } from '@e2e-dev/web';
+import { expect, credentials } from 'e2e';
+
+test.describe('Executive Reasoning & Foundation Metrics E2E Flows', () => {
+  test('Happy Path: Dashboard renders Overview by default with gauges and EDA charts', { session: 'admin' }, async ({ app, screen, browser }) => {
+    await app.open('/dashboard');
+    await expect(browser).toHaveURL('/dashboard');
+
+    // 1. Verify Overview Tab and Heading
+    await expect(screen.getByRole('heading', 'Dashboard')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByRole('tab', 'Overview')).toBeVisible({ timeout: 45000 });
+
+    // 2. Verify Posture and Gauge cards (wait for async reasoning-data to resolve)
+    await expect(screen.getByText(/Postur Kesiapan Strategis:/)).toBeVisible({ timeout: 90000 });
+    await expect(screen.getByText('Growth Index')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Resilience Index')).toBeVisible({ timeout: 45000 });
+
+    // 3. Verify Top Critical Forces section
+    await expect(screen.getByText(/Top Driving Forces Kritis \(Perhatian BoD\)/)).toBeVisible({ timeout: 45000 });
+
+    // 4. Verify EDA charts: frequency, trend, distribution, relationship, comparison
+    await expect(screen.getByText('Distribusi Frekuensi per Dimensi Makro & Mezzo')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Tren Pertumbuhan Driving Forces Bulanan')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Distribusi Skor Impact & Uncertainty')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Hubungan Impact × Uncertainty')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Perbandingan Impact per Dimensi')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Perbandingan Impact per Time Horizon')).toBeVisible({ timeout: 45000 });
+  });
+
+  test('Explanation: "Mengapa skor ini?" shows the posture rule and per-force contributions for both indices', { session: 'admin' }, async ({ app, screen }) => {
+    await app.open('/dashboard');
+
+    await expect(screen.getByRole('heading', 'Mengapa skor ini?')).toBeVisible({ timeout: 90000 });
+    await expect(screen.getByText(/^Resilience \d+,\d (≥|<) 60 dan Growth \d+,\d (≥|<) 60 → /)).toBeVisible({ timeout: 45000 });
+
+    // Resilience tab is open first and lists its contributions as rules
+    await expect(screen.getByRole('list', 'Kontribusi Resilience')).toBeVisible({ timeout: 45000 });
+
+    await screen.getByRole('tab', 'Growth').tap();
+    await expect(screen.getByRole('list', 'Kontribusi Growth')).toBeVisible({ timeout: 45000 });
+  });
+
+  test('Rating history: score trend and Monitoring → Decided Plan velocity panels render with data or an honest empty state', { session: 'admin' }, async ({ app, screen }) => {
+    await app.open('/dashboard');
+
+    await expect(screen.getByRole('heading', 'Tren Skor dari Riwayat Rating')).toBeVisible({ timeout: 90000 });
+    await expect(screen.getByText(/Riwayat rating baru tercatat sejak|Belum ada riwayat rating|Perubahan dari bulan pertama|Belum ada dua bulan/)).toBeVisible({ timeout: 45000 });
+
+    await expect(screen.getByRole('heading', 'Kecepatan Monitoring → Decided Plan')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Perpindahan')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText('Masih Monitoring')).toBeVisible({ timeout: 45000 });
+  });
+
+  test('What-if: changing a force in the simulation tab shows the index deltas without saving', { session: 'admin' }, async ({ app, screen }) => {
+    await app.open('/dashboard');
+
+    await screen.getByRole('tab', 'Simulasi What-if').tap();
+    await expect(screen.getByText(/Simulasi tidak menyimpan perubahan/)).toBeVisible({ timeout: 90000 });
+    await expect(screen.getByRole('heading', 'Daftar Driving Force untuk Simulasi')).toBeVisible({ timeout: 45000 });
+    await expect(screen.getByText(/^Baseline: [\d.]+ → Simulasi: [\d.]+$/).first()).toBeVisible({ timeout: 45000 });
+
+    // Lower the first force's impact to 1.
+    await screen.getByRole('combobox', /^Impact /).first().tap();
+    await screen.getByRole('option', '1').first().tap();
+    await expect(screen.getByRole('button', /Reset Semua \(1\)/)).toBeVisible({ timeout: 45000 });
+
+    await screen.getByRole('button', /Reset Semua/).tap();
+    await expect(screen.getByRole('button', /Reset Semua/)).not.toBeVisible({ timeout: 20000 });
+  });
+
+  test('Navigation & Tab Switch: User can switch between Overview, Prioritizing, Radar, and Registered List', { session: 'admin' }, async ({ app, screen, browser }) => {
+    await app.open('/dashboard');
+
+    // Switch to Prioritizing tab
+    await screen.getByRole('tab', 'Prioritizing').tap();
+    await expect(screen.getByRole('region', 'Filter analisis')).toBeVisible({ timeout: 45000 });
+
+    // Switch to Foresight Radar tab
+    await screen.getByRole('tab', 'Foresight Radar').tap();
+    await expect(screen.getByText(/Short Term \(0 - 1 yr\)/)).toBeVisible({ timeout: 90000 });
+
+    // Switch back to Overview tab
+    await screen.getByRole('tab', 'Overview').tap();
+    await expect(screen.getByRole('tab', 'Overview')).toBeVisible({ timeout: 45000 });
+  });
+});

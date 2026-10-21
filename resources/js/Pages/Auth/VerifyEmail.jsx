@@ -1,44 +1,48 @@
-import GuestLayout from '@/Layouts/GuestLayout';
-import PrimaryButton from '@/Components/PrimaryButton';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { useState } from "react";
+import { Head, router } from "@inertiajs/react";
+import { LoaderCircleIcon, LogOutIcon, SendIcon } from "lucide-react";
+
+import AuthAlert from "@/Components/auth/AuthAlert";
+import GuestLayout, { GuestHeading } from "@/Layouts/GuestLayout";
+import { Button } from "@/Components/ui/button";
 
 export default function VerifyEmail({ status }) {
-    const { post, processing } = useForm({});
+    const [loading, setLoading] = useState(false);
 
-    const submit = (e) => {
-        e.preventDefault();
-
-        post(route('verification.send'));
+    const resend = (event) => {
+        event.preventDefault();
+        setLoading(true);
+        router.post(route("verification.send"), {}, { onFinish: () => setLoading(false) });
     };
 
     return (
         <GuestLayout>
-            <Head title="Email Verification" />
+            <Head title="Verifikasi Email" />
+            <GuestHeading title="Verifikasi Alamat Email">
+                Terima kasih telah bergabung di Foresight Radar. Silakan verifikasi email Anda dengan mengklik tautan yang
+                telah kami kirimkan.
+            </GuestHeading>
 
-            <div className="mb-4 text-sm text-gray-600">
-                Thanks for signing up! Before getting started, could you verify your email address by clicking on the
-                link we just emailed to you? If you didn't receive the email, we will gladly send you another.
-            </div>
-
-            {status === 'verification-link-sent' && (
-                <div className="mb-4 font-medium text-sm text-green-600">
-                    A new verification link has been sent to the email address you provided during registration.
-                </div>
+            {status === "verification-link-sent" && (
+                <AuthAlert tone="success" className="mb-5">
+                    Tautan verifikasi baru telah berhasil dikirim ke alamat email Anda.
+                </AuthAlert>
             )}
 
-            <form onSubmit={submit}>
-                <div className="mt-4 flex items-center justify-between">
-                    <PrimaryButton disabled={processing}>Resend Verification Email</PrimaryButton>
-
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                        Log Out
-                    </Link>
-                </div>
+            <form onSubmit={resend} className="flex flex-col gap-3">
+                <Button type="submit" className="h-11 w-full" disabled={loading} aria-busy={loading || undefined}>
+                    {loading ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <SendIcon aria-hidden="true" />}
+                    Kirim Ulang Email Verifikasi
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-input"
+                    onClick={() => router.post(route("logout"))}
+                >
+                    <LogOutIcon aria-hidden="true" />
+                    Keluar (Logout)
+                </Button>
             </form>
         </GuestLayout>
     );

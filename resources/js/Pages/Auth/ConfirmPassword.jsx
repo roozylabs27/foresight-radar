@@ -1,58 +1,70 @@
-import { useEffect } from 'react';
-import GuestLayout from '@/Layouts/GuestLayout';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Head, useForm } from '@inertiajs/react';
+import { useState } from "react";
+import { Head } from "@inertiajs/react";
+import { Controller } from "react-hook-form";
+import { z } from "zod";
+import { LoaderCircleIcon, LockIcon } from "lucide-react";
 
-export default function ConfirmPassword() {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        password: '',
+import AuthAlert from "@/Components/auth/AuthAlert";
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import GuestLayout, { GuestHeading } from "@/Layouts/GuestLayout";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaPost } from "@/lib/inertia-submit";
+
+const schema = z.object({
+    password: z.string().min(1, "Harap masukkan kata sandi Anda!"),
+});
+
+export default function ConfirmPassword({ errors: serverErrors = {} }) {
+    const [loading, setLoading] = useState(false);
+
+    const { control, submit } = useDialogForm({
+        schema,
+        defaultValues: { password: "" },
+        ids: { password: "password" },
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaPost(route("password.confirm"), values).finally(() => setLoading(false));
+        },
     });
-
-    useEffect(() => {
-        return () => {
-            reset('password');
-        };
-    }, []);
-
-    const submit = (e) => {
-        e.preventDefault();
-
-        post(route('password.confirm'));
-    };
 
     return (
         <GuestLayout>
-            <Head title="Confirm Password" />
+            <Head title="Konfirmasi Kata Sandi" />
+            <GuestHeading title="Konfirmasi Kata Sandi">
+                Ini adalah area sensitif aplikasi. Harap masukkan kata sandi akun Anda sebelum melanjutkan.
+            </GuestHeading>
 
-            <div className="mb-4 text-sm text-gray-600">
-                This is a secure area of the application. Please confirm your password before continuing.
-            </div>
+            {serverErrors.password && (
+                <AuthAlert tone="error" className="mb-5">
+                    {serverErrors.password}
+                </AuthAlert>
+            )}
 
-            <form onSubmit={submit}>
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
+            <form noValidate onSubmit={submit}>
+                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                    <Controller
                         name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        isFocused={true}
-                        onChange={(e) => setData('password', e.target.value)}
+                        control={control}
+                        render={(props) => (
+                            <AuthInput
+                                id="password"
+                                label="Kata Sandi"
+                                icon={LockIcon}
+                                type="password"
+                                placeholder="Masukkan kata sandi akun"
+                                autoComplete="current-password"
+                                autoFocus
+                                {...rhfInputProps(props)}
+                            />
+                        )}
                     />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="flex items-center justify-end mt-4">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Confirm
-                    </PrimaryButton>
-                </div>
+                    <Button type="submit" className="h-11 w-full" aria-busy={loading || undefined}>
+                        {loading && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
+                        Konfirmasi
+                    </Button>
+                </fieldset>
             </form>
         </GuestLayout>
     );

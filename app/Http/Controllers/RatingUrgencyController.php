@@ -10,11 +10,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
+use App\Http\Controllers\Concerns\HandlesApiErrors;
+use App\Services\DrivingForceService;
 use Symfony\Component\HttpFoundation\Response;
 
 class RatingUrgencyController extends Controller
 {
-    //
+    use HandlesApiErrors;
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
 
     public function index()
     {
@@ -32,63 +38,47 @@ class RatingUrgencyController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::rating_urgency();
+            $result = $this->drivingForceService->ratingUrgency(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching rating urgency data');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
     public function create(Request $request, DrivingForceRating $driving_force_rating)
     {
+        $validated = $request->validate([
+            'type' => ['required', 'string', 'in:impact,uncertainty'],
+            'value' => ['required', 'integer', 'between:1,10'],
+        ]);
+
         try {
-            DB::beginTransaction();
-
-            if ($request['type'] == 'uncertainty') {
-                $driving_force_rating->uncertainty_analysis = $request['value'];
-            } else {
-                $driving_force_rating->impact_analysis = $request['value'];
-            }
-
-            $driving_force_rating->save();
-
-            DB::commit();
-
-            DB::beginTransaction();
-
-
-            if ($driving_force_rating->impact_analysis != null && $driving_force_rating->uncertainty_analysis != null) {
-                if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis >= 6) {
-                    $driving_force_rating->priority_id = 1;
-                } else if ($driving_force_rating->impact_analysis >= 6 && $driving_force_rating->uncertainty_analysis <= 5) {
-                    $driving_force_rating->priority_id = 2;
-                } else if ($driving_force_rating->impact_analysis <= 5 && $driving_force_rating->uncertainty_analysis >= 6) {
-                    $driving_force_rating->priority_id = 2;
+            DB::transaction(function () use ($validated, $driving_force_rating) {
+                if ($validated['type'] == 'uncertainty') {
+                    $driving_force_rating->uncertainty_analysis = $validated['value'];
                 } else {
-                    $driving_force_rating->priority_id = 3;
+                    $driving_force_rating->impact_analysis = $validated['value'];
                 }
-            }
 
-            $driving_force_rating->save();
-
-            DB::commit();
-
+                $driving_force_rating->priority_id = $driving_force_rating->calculatePriority() ?? $driving_force_rating->priority_id;
+                $driving_force_rating->save();
+            });
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($request['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')
+                'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($validated['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')
             ];
         } catch (\Throwable $th) {
-
-            DB::rollBack();
+            Log::error('Rating urgency update failed', [
+                'rating_id' => $driving_force_rating->id,
+                'error' => $th->getMessage(),
+            ]);
 
             $response = [
                 'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
+                'message' => 'An error occurred while updating the rating. Please try again.',
             ];
         }
 

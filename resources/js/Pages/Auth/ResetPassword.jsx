@@ -1,89 +1,90 @@
-import { useEffect } from 'react';
-import GuestLayout from '@/Layouts/GuestLayout';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Head, useForm } from '@inertiajs/react';
+import { useState } from "react";
+import { Head } from "@inertiajs/react";
+import { Controller } from "react-hook-form";
+import { z } from "zod";
+import { LoaderCircleIcon, LockIcon, MailIcon } from "lucide-react";
 
-export default function ResetPassword({ token, email }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        token: token,
-        email: email,
-        password: '',
-        password_confirmation: '',
+import AuthAlert from "@/Components/auth/AuthAlert";
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import GuestLayout, { GuestHeading } from "@/Layouts/GuestLayout";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaPost } from "@/lib/inertia-submit";
+
+const FIELDS = ["email", "password", "password_confirmation"];
+
+const schema = z
+    .object({
+        email: z.string().trim().min(1, "Harap masukkan email kerja Anda!").email("Format email tidak valid!"),
+        password: z.string().min(1, "Harap masukkan kata sandi baru Anda!").min(8, "Kata sandi minimal 8 karakter!"),
+        password_confirmation: z.string().min(1, "Harap konfirmasi kata sandi Anda!"),
+    })
+    .refine((values) => !values.password_confirmation || values.password === values.password_confirmation, {
+        path: ["password_confirmation"],
+        message: "Konfirmasi kata sandi tidak cocok!",
     });
 
-    useEffect(() => {
-        return () => {
-            reset('password', 'password_confirmation');
-        };
-    }, []);
+export default function ResetPassword({ token, email, errors: serverErrors = {} }) {
+    const [loading, setLoading] = useState(false);
+    const firstServerError = Object.values(serverErrors)[0];
 
-    const submit = (e) => {
-        e.preventDefault();
+    const { control, submit } = useDialogForm({
+        schema,
+        defaultValues: { email: email ?? "", password: "", password_confirmation: "" },
+        ids: Object.fromEntries(FIELDS.map((name) => [name, name])),
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaPost(route("password.store"), { ...values, token }).finally(() => setLoading(false));
+        },
+    });
 
-        post(route('password.store'));
-    };
+    const field = (name, label, icon, inputProps) => (
+        <Controller
+            name={name}
+            control={control}
+            render={(props) => (
+                <AuthInput id={name} label={label} icon={icon} {...inputProps} {...rhfInputProps(props)} />
+            )}
+        />
+    );
 
     return (
         <GuestLayout>
-            <Head title="Reset Password" />
+            <Head title="Atur Ulang Kata Sandi" />
+            <GuestHeading title="Atur Ulang Kata Sandi">
+                Silakan masukkan kata sandi baru untuk mengakses akun Anda.
+            </GuestHeading>
 
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
+            {firstServerError && (
+                <AuthAlert tone="error" className="mb-5">
+                    {firstServerError}
+                </AuthAlert>
+            )}
 
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={(e) => setData('email', e.target.value)}
-                    />
-
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        isFocused={true}
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
-
-                    <TextInput
-                        type="password"
-                        name="password_confirmation"
-                        value={data.password_confirmation}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) => setData('password_confirmation', e.target.value)}
-                    />
-
-                    <InputError message={errors.password_confirmation} className="mt-2" />
-                </div>
-
-                <div className="flex items-center justify-end mt-4">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Reset Password
-                    </PrimaryButton>
-                </div>
+            <form noValidate onSubmit={submit}>
+                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                    {field("email", "Email Kerja", MailIcon, {
+                        type: "email",
+                        placeholder: "analis@perusahaan.com",
+                        autoComplete: "username",
+                    })}
+                    {field("password", "Kata Sandi Baru", LockIcon, {
+                        type: "password",
+                        placeholder: "Minimal 8 karakter",
+                        autoComplete: "new-password",
+                        autoFocus: true,
+                    })}
+                    {field("password_confirmation", "Konfirmasi Kata Sandi", LockIcon, {
+                        type: "password",
+                        placeholder: "Ulangi kata sandi baru",
+                        autoComplete: "new-password",
+                    })}
+                    <Button type="submit" className="mt-2 h-11 w-full" aria-busy={loading || undefined}>
+                        {loading && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
+                        Simpan Kata Sandi Baru
+                    </Button>
+                </fieldset>
             </form>
         </GuestLayout>
     );

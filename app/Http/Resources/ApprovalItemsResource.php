@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Models\ActionReason;
 use App\Models\StatusAction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -17,7 +16,9 @@ class ApprovalItemsResource extends JsonResource
     public function toArray(Request $request): array
     {
         $status_action = StatusAction::where('id', $this->rating->status_action_id)->first();
-        $action_reason = ActionReason::where('id', $this->rating->id)->latest()->first();
+        $action_reason = $this->rating->action_reasons
+            ->sortBy([['date', 'desc'], ['id', 'desc']])
+            ->first();
 
         return [
             'id' => $this->uuid,

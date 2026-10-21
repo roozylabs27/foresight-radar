@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class UserController extends Controller
 {
+    use HandlesApiErrors;
     //
     public function index()
     {
@@ -43,10 +45,8 @@ class UserController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching users');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -55,9 +55,8 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
 
-            $new_user = User::firstOrCreate([
+            $new_user = User::create([
                 "name" => $request->name,
-            ], [
                 "uuid" => Uuid::uuid1(),
                 "email" => $request->email,
                 "password" => bcrypt($request->password),
@@ -76,10 +75,8 @@ class UserController extends Controller
                 'message' => 'Successfully create new user !'
             ];
         } catch (\Throwable $th) {
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            DB::rollBack();
+            $response = $this->handleError($th, 'creating user');
         }
 
         return response()->json($response, $response['statusCode']);
@@ -87,6 +84,8 @@ class UserController extends Controller
 
     public function update(UserRequest $request, User $user)
     {
+        $this->authorize('update', $user);
+
         try {
             DB::beginTransaction();
 
@@ -105,14 +104,12 @@ class UserController extends Controller
             DB::commit();
 
             $response = [
-                'statusCode' => Response::HTTP_CREATED,
+                'statusCode' => Response::HTTP_OK,
                 'message' => 'Successfully update user !'
             ];
         } catch (\Throwable $th) {
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            DB::rollBack();
+            $response = $this->handleError($th, 'updating user');
         }
 
         return response()->json($response, $response['statusCode']);
@@ -120,6 +117,8 @@ class UserController extends Controller
 
     public function delete(User $user)
     {
+        $this->authorize('delete', $user);
+
         try {
             DB::beginTransaction();
 
@@ -132,14 +131,8 @@ class UserController extends Controller
                 'message' => 'Successfully delete the user !'
             ];
         } catch (\Throwable $th) {
-            //throw $th;
-
             DB::rollBack();
-
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            $response = $this->handleError($th, 'deleting user');
         }
 
         return response()->json($response, $response['statusCode']);

@@ -1,112 +1,96 @@
-import { useRef } from 'react';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { useForm } from '@inertiajs/react';
-import { Transition } from '@headlessui/react';
+import { useState } from "react";
+import { Controller } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { LoaderCircleIcon, LockIcon, SaveIcon } from "lucide-react";
 
-export default function UpdatePasswordForm({ className = '' }) {
-    const passwordInput = useRef();
-    const currentPasswordInput = useRef();
+import AuthInput, { rhfInputProps } from "@/Components/auth/AuthInput";
+import { Button } from "@/Components/ui/button";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaVisit } from "@/lib/inertia-submit";
+import SectionHeading from "./SectionHeading";
 
-    const { data, setData, errors, put, reset, processing, recentlySuccessful } = useForm({
-        current_password: '',
-        password: '',
-        password_confirmation: '',
+const EMPTY = { current_password: "", password: "", password_confirmation: "" };
+
+const schema = z
+    .object({
+        current_password: z.string().min(1, "Kata sandi saat ini wajib diisi."),
+        password: z.string().min(1, "Kata sandi baru wajib diisi.").min(8, "Kata sandi minimal 8 karakter."),
+        password_confirmation: z.string().min(1, "Konfirmasi kata sandi wajib diisi."),
+    })
+    .refine((values) => !values.password_confirmation || values.password === values.password_confirmation, {
+        path: ["password_confirmation"],
+        message: "Konfirmasi kata sandi tidak cocok!",
     });
 
-    const updatePassword = (e) => {
-        e.preventDefault();
+const FIELDS = [
+    ["current_password", "Kata Sandi Saat Ini", "Masukkan kata sandi saat ini", "current-password"],
+    ["password", "Kata Sandi Baru", "Minimal 8 karakter", "new-password"],
+    ["password_confirmation", "Konfirmasi Kata Sandi Baru", "Ulangi kata sandi baru", "new-password"],
+];
 
-        put(route('password.update'), {
-            preserveScroll: true,
-            onSuccess: () => reset(),
-            onError: (errors) => {
-                if (errors.password) {
-                    reset('password', 'password_confirmation');
-                    passwordInput.current.focus();
-                }
+export default function UpdatePasswordForm() {
+    const [loading, setLoading] = useState(false);
 
-                if (errors.current_password) {
-                    reset('current_password');
-                    currentPasswordInput.current.focus();
-                }
-            },
-        });
-    };
+    const form = useDialogForm({
+        schema,
+        defaultValues: EMPTY,
+        ids: Object.fromEntries(FIELDS.map(([name]) => [name, `profile-${name}`])),
+        loading,
+        onSubmit: (values) => {
+            setLoading(true);
+            return inertiaVisit("put", route("password.update"), values, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    form.reset(EMPTY);
+                    toast.success("Kata sandi berhasil diperbarui.");
+                },
+                onError: (errors) => {
+                    if (errors.password) {
+                        form.setValue("password", "");
+                        form.setValue("password_confirmation", "");
+                    }
+                    if (errors.current_password) form.setValue("current_password", "");
+                },
+            }).finally(() => setLoading(false));
+        },
+    });
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">Update Password</h2>
+        <section aria-labelledby="update-password-heading">
+            <SectionHeading
+                id="update-password-heading"
+                title="Perbarui Kata Sandi"
+                description="Pastikan akun Anda menggunakan kata sandi yang kuat dan aman."
+            />
 
-                <p className="mt-1 text-sm text-gray-600">
-                    Ensure your account is using a long, random password to stay secure.
-                </p>
-            </header>
-
-            <form onSubmit={updatePassword} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel htmlFor="current_password" value="Current Password" />
-
-                    <TextInput
-                        id="current_password"
-                        ref={currentPasswordInput}
-                        value={data.current_password}
-                        onChange={(e) => setData('current_password', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="current-password"
-                    />
-
-                    <InputError message={errors.current_password} className="mt-2" />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="password" value="New Password" />
-
-                    <TextInput
-                        id="password"
-                        ref={passwordInput}
-                        value={data.password}
-                        onChange={(e) => setData('password', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
-
-                    <TextInput
-                        id="password_confirmation"
-                        value={data.password_confirmation}
-                        onChange={(e) => setData('password_confirmation', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                    />
-
-                    <InputError message={errors.password_confirmation} className="mt-2" />
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
-
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
-                    >
-                        <p className="text-sm text-gray-600">Saved.</p>
-                    </Transition>
-                </div>
+            <form noValidate onSubmit={form.submit}>
+                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                    {FIELDS.map(([name, label, placeholder, autoComplete]) => (
+                        <Controller
+                            key={name}
+                            name={name}
+                            control={form.control}
+                            render={(props) => (
+                                <AuthInput
+                                    id={`profile-${name}`}
+                                    label={label}
+                                    icon={LockIcon}
+                                    type="password"
+                                    placeholder={placeholder}
+                                    autoComplete={autoComplete}
+                                    {...rhfInputProps(props)}
+                                />
+                            )}
+                        />
+                    ))}
+                    <div>
+                        <Button type="submit" className="h-10" aria-busy={loading || undefined}>
+                            {loading ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <SaveIcon aria-hidden="true" />}
+                            Simpan Kata Sandi
+                        </Button>
+                    </div>
+                </fieldset>
             </form>
         </section>
     );

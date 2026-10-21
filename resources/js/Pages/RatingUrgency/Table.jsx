@@ -1,380 +1,172 @@
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { useId, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
-import {
-    Col,
-    DatePicker,
-    message,
-    Popconfirm,
-    Row,
-    Select,
-    Space,
-    Table,
-    Tag,
-    theme,
-    Typography,
-} from "antd";
-import { Content } from "antd/es/layout/layout";
-import dayjs from "dayjs";
-import qs from "qs";
-import { useEffect, useRef, useState } from "react";
-import "../../../css/additional.css";
+import axios from "axios";
+import { toast } from "sonner";
+import { FlameIcon } from "lucide-react";
 
-export default function TableRatingUrgency({ auth, title, dimensions }) {
-    // Import
-    const {
-        token: { colorBgContainer, borderRadiusLG },
-    } = theme.useToken();
-    const { RangePicker } = DatePicker;
-    const { Title } = Typography;
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import AnalysisFilterBar, { useAnalysisFilters } from "@/Components/AnalysisFilters";
+import ConfirmDialog from "@/Components/ConfirmDialog";
+import DataTable, { useServerTable } from "@/Components/DataTable";
+import DimensionChip from "@/Components/DimensionChip";
+import { statusBadge } from "@/Components/StatusBadge";
+import { cn } from "@/lib/utils";
 
-    // Table
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [defaultDate, setDefaultDate] = useState([
-        dayjs().startOf("month"),
-        dayjs().endOf("month"),
-    ]);
-    const [tableParams, setTableParams] = useState({
-        pagination: {
-            current: 1,
-            pageSize: 10,
-        },
-        date: [
-            dayjs().startOf("month").format("YYYY-MM-DD"),
-            dayjs().endOf("month").format("YYYY-MM-DD"),
-        ],
-    });
-    const [rating, setRating] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+const RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const TYPE_LABELS = { uncertainty: "Uncertainty", impact: "Impact" };
 
-    // Modal
-    const formRef = useRef(null);
-    const [errors, setErrors] = useState({});
-    const [open, setOpen] = useState(false);
-    const [titleModal, setTitleModal] = useState("");
-    const [initialValues, setInitialValues] = useState({});
+/** 1–10 scale; picking a value asks for confirmation before it is saved. */
+function RatingScale({ record, type, onPick }) {
+    const current = record[type];
 
-    useEffect(() => {
-        fetchData();
-    }, [
-        tableParams.pagination?.pageSize,
-        tableParams.pagination?.current,
-        tableParams?.date,
-        tableParams?.dimension,
-    ]);
+    return (
+        <div role="group" aria-label={`${TYPE_LABELS[type]} untuk ${record.keyword}`} className="flex justify-center gap-1">
+            {RATINGS.map((value) => {
+                const active = value === current;
+                return (
+                    <button
+                        key={value}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => !active && onPick({ record, type, value })}
+                        className={cn(
+                            "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-solid text-sm font-semibold tabular-nums outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:transition-none",
+                            active
+                                ? "cursor-default border-warning bg-warning text-primary-foreground"
+                                : "border-border bg-card text-foreground hover:border-warning hover:bg-warning-soft hover:text-warning"
+                        )}
+                    >
+                        {value}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
 
-    const getParams = (params) => {
-        return {
-            results: params.pagination?.pageSize,
-            page: params.pagination?.current,
-            ...params,
-        };
+export default function TableRatingUrgency({ auth, title, dimensions = [] }) {
+    const listHeadingId = useId();
+
+    const filters = useAnalysisFilters(dimensions);
+    const { activeDimension } = filters;
+    const table = useServerTable({ url: route("rating-urgency.fetch-data"), params: filters.params });
+
+    // Confirm before saving; the pick stays set while the dialog animates closed.
+    const [pending, setPending] = useState(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+
+    const pickRating = (pick) => {
+        setPending(pick);
+        setConfirmOpen(true);
     };
 
-    const fetchData = async () => {
-        setLoading(true);
+    const saveRating = async () => {
+        const { record, type, value } = pending;
         try {
-            const response = await axios.get(
-                `${route("rating-urgency.fetch-data")}?${qs.stringify(
-                    getParams(tableParams)
-                )}`
-            );
-
-            if (response.status == 200) {
-                setTimeout(() => {
-                    const newData = response.data.data.map((d, i) => ({
-                        no: i + 1,
-                        ...d,
-                    }));
-                    setData(newData);
-                    setTableParams({
-                        ...tableParams,
-                        pagination: {
-                            pageSize: response.data.meta.per_page,
-                            current: response.data.meta.current_page,
-                            total: response.data.meta.total,
-                        },
-                    });
-                    setLoading(false);
-                }, 500);
-            } else {
-                message.error(`Error: ${error.message}`);
-                setLoading(false);
-            }
+            const response = await axios.post(route("rating-urgency.create", record.id), {
+                uuid: record.id,
+                type,
+                value,
+            });
+            toast.success(response.data.message);
+            table.reload();
         } catch (error) {
-            message.error(`Error: ${error.message}`);
-            setLoading(false);
+            toast.error("Failed to set rating", {
+                description: error.response?.data?.message ?? error.message,
+            });
+            throw error;
         }
     };
 
-    const handleRangePickerChange = (dates) => {
-        if (dates && dates.length === 2) {
-            const formattedDates = dates.map((date) =>
-                date.format("YYYY-MM-DD")
-            );
+    const { pageIndex, pageSize } = table.pagination;
 
-            setDefaultDate(dates);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: formattedDates,
-            }));
-        } else {
-            const newStartDate = dayjs().startOf("month").format("YYYY-MM-DD");
-            const newEndDate = dayjs().endOf("month").format("YYYY-MM-DD");
-
-            setDefaultDate([dayjs(newStartDate), dayjs(newEndDate)]);
-            setTableParams((prevParams) => ({
-                ...prevParams,
-                date: [newStartDate, newEndDate],
-            }));
-        }
-    };
-
-    const handleSelectChange = (field, value) => {
-        setTableParams({
-            ...tableParams,
-            page: 1,
-            pagination: {
-                pageSize: 10,
-                current: 1,
+    const columns = useMemo(
+        () => [
+            {
+                id: "no",
+                header: "No",
+                meta: { align: "center", width: "64px", className: "tabular-nums text-muted-foreground" },
+                cell: ({ row }) => pageIndex * pageSize + row.index + 1,
             },
-            [field]: value,
-        });
-    };
-
-    const columns = [
-        {
-            title: "No",
-            dataIndex: "no",
-            key: "no",
-        },
-        {
-            title: "ITEM",
-            dataIndex: "keyword",
-            key: "keyword",
-        },
-        {
-            title: "RATING",
-            dataIndex: "rating",
-            key: "rating",
-            children: [
-                {
-                    title: "Uncertainty",
-                    dataIndex: "uncertainty",
-                    key: "uncertainty",
-                    align: "center",
-                    render: (text, record) => (
-                        <div>
-                            {rating.map((value, index) => (
-                                <Popconfirm
-                                    title={`Are you sure to set rating uncertainty ${value} for ${record.keyword}?`}
-                                    onConfirm={() =>
-                                        handleTagClick(
-                                            record,
-                                            "uncertainty",
-                                            value
-                                        )
-                                    }
-                                    okText="Yes"
-                                    cancelText="No"
-                                    key={index}
-                                >
-                                    <Tag
-                                        className="custom-tag"
-                                        color={
-                                            value == record.uncertainty
-                                                ? "orange"
-                                                : ""
-                                        }
-                                        key={index}
-                                    >
-                                        {value}
-                                    </Tag>
-                                </Popconfirm>
-                            ))}
-                        </div>
-                    ),
-                },
-                {
-                    title: "Impact",
-                    dataIndex: "impact",
-                    key: "impact",
-                    align: "center",
-                    render: (text, record) => (
-                        <div>
-                            {rating.map((value, index) => (
-                                <Popconfirm
-                                    title={`Are you sure to set rating impact ${value} for ${record.keyword}?`}
-                                    onConfirm={() =>
-                                        handleTagClick(record, "impact", value)
-                                    }
-                                    okText="Yes"
-                                    cancelText="No"
-                                    key={index}
-                                >
-                                    <Tag
-                                        className="custom-tag"
-                                        color={
-                                            value == record.impact
-                                                ? "orange"
-                                                : ""
-                                        }
-                                        key={index}
-                                    >
-                                        {value}
-                                    </Tag>
-                                </Popconfirm>
-                            ))}
-                        </div>
-                    ),
-                },
-            ],
-        },
-    ];
-
-    const showActiveDimension = (dimension) => {
-        const { label } = dimensions.find((d) => d.value === dimension);
-
-        return label.toUpperCase();
-    };
-
-    const handleTableChange = (pagination, filters, sorter) => {
-        setTableParams({
-            pagination,
-            date: tableParams.date,
-            dimension: tableParams.dimension,
-        });
-
-        if (pagination.pageSize !== tableParams.pagination?.pageSize) {
-            setData([]);
-        }
-    };
-
-
-    const handleTagClick = async (record, type, value) => {
-        const payload = {
-            uuid: record.id,
-            type,
-            value,
-        };
-
-        setLoading(true);
-
-        try {
-            const response = await axios.post(
-                route("rating-urgency.create", record.id),
-                payload
-            );
-
-            if (response.status === 200 || response.status === 201) {
-                message.success(response.data.message);
-                setOpen(false);
-                fetchData(); // Refresh the table data
-            } else {
-                message.error(`Failed to set rating`);
-            }
-        } catch (error) {
-            message.error(`Error: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+            {
+                accessorKey: "keyword",
+                enableSorting: true,
+                header: "ITEM",
+                meta: { className: "min-w-[200px]" },
+                cell: ({ row }) => (
+                    <div className="flex flex-col items-start gap-1.5">
+                        <span className="font-medium text-foreground">{row.original.keyword}</span>
+                        <DimensionChip name={row.original.dimension} />
+                    </div>
+                ),
+            },
+            {
+                id: "rating",
+                header: "RATING",
+                columns: ["uncertainty", "impact"].map((type) => ({
+                    accessorKey: type,
+                    enableSorting: true,
+                    header: TYPE_LABELS[type],
+                    meta: { align: "center" },
+                    cell: ({ row }) => <RatingScale record={row.original} type={type} onPick={pickRating} />,
+                })),
+            },
+        ],
+        [pageIndex, pageSize]
+    );
 
     return (
         <AuthenticatedLayout
             auth={auth}
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    {title}
-                </h2>
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <FlameIcon aria-hidden="true" className="text-lg text-primary" />
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
+                    <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
+                        Urgency Scoring
+                    </span>
+                </div>
             }
         >
             <Head title={title} />
 
-            <Content
-                style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    minHeight: 100,
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
-                }}
-            >
-                <Row gutter={16} style={{ marginBottom: "10px" }}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Title level={5}>Filter</Title>
-                    </Col>
-                </Row>
-                <Row gutter={16}>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Date Period :
-                            <RangePicker
-                                value={defaultDate}
-                                disabled={loading}
-                                onChange={handleRangePickerChange}
-                                format="YYYY-MM-DD"
-                                style={{ width: "100%" }}
-                            />
-                        </Space>
-                    </Col>
-                    <Col xs={24} sm={12} md={8} lg={6}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                            Dimension :
-                            <Select
-                                style={{ width: "100%" }}
-                                disabled={loading}
-                                placeholder="Select a dimension"
-                                filterOption={(input, option) =>
-                                    (option?.label ?? "")
-                                        .toLowerCase()
-                                        .includes(input.toLowerCase())
-                                }
-                                allowClear
-                                onChange={(value) =>
-                                    handleSelectChange("dimension", value)
-                                }
-                                options={dimensions}
-                            />
-                        </Space>
-                    </Col>
-                </Row>
-            </Content>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:px-6 lg:py-5">
+                <AnalysisFilterBar filters={filters} dimensions={dimensions} />
 
-            <Content
-                style={{
-                    margin: "24px 16px 0",
-                    padding: 24,
-                    background: colorBgContainer,
-                    borderRadius: borderRadiusLG,
-                }}
-            >
-                <Row gutter={16} align="top" style={{ padding: "5px" }}>
-                    <Col xs={24} sm={12} md={16}>
-                        <Title level={4}>{title} List</Title>
-                    </Col>
-                </Row>
-                <Table
-                    columns={columns}
-                    dataSource={data}
-                    bordered
-                    loading={loading}
-                    onChange={handleTableChange}
-                    rowKey={(record) => record.id}
-                    pagination={tableParams.pagination}
-                    title={() => (
-                        <div
-                            style={{ textAlign: "center", fontWeight: "bold" }}
-                        >
-                            RATING OF URGENCY
-                            {tableParams?.dimension
-                                ? ` ▶ ${showActiveDimension(
-                                      tableParams.dimension
-                                  )}`
-                                : " ▶ OVERALL"}
-                        </div>
-                    )}
-                />
-            </Content>
+                <section aria-labelledby={listHeadingId} className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h2 id={listHeadingId} className="m-0 text-base font-semibold text-foreground">
+                            Rating per Driving Force
+                        </h2>
+                        {activeDimension ? (
+                            <DimensionChip name={activeDimension.label} />
+                        ) : (
+                            <span className={statusBadge()}>Overall</span>
+                        )}
+                    </div>
+
+                    <DataTable
+                        columns={columns}
+                        {...table.tableProps}
+                        getRowId={(row) => row.id}
+                        caption={`Rating of urgency ${activeDimension ? activeDimension.label : "overall"}`}
+                    />
+                </section>
+            </main>
+
+            <ConfirmDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                variant="default"
+                title={`Set ${TYPE_LABELS[pending?.type] ?? ""} rating`}
+                description={
+                    pending &&
+                    `Are you sure to set rating ${pending.type} ${pending.value} for ${pending.record.keyword}?`
+                }
+                confirmText="Yes"
+                cancelText="No"
+                onConfirm={saveRating}
+            />
         </AuthenticatedLayout>
     );
 }

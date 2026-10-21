@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\TimeHorizonRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -11,12 +12,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use App\Services\DrivingForceService;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
 
 class TimeHorizonController extends Controller
 {
-    //
+    use HandlesApiErrors;
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
 
     public function index()
     {
@@ -40,14 +46,12 @@ class TimeHorizonController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::time_horizon();
+            $result = $this->drivingForceService->timeHorizon(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching time horizons');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -59,7 +63,6 @@ class TimeHorizonController extends Controller
             DrivingForceRating::updateOrCreate([
                 'driving_force_id' => $driving_force->id,
             ], [
-                'uuid' => Uuid::uuid1(),
                 'time_horizon_id' => $request['time_horizon_id'],
             ]);
 
@@ -71,13 +74,8 @@ class TimeHorizonController extends Controller
                 'message' => 'Successfully set time horizon !'
             ];
         } catch (\Throwable $th) {
-
             DB::rollBack();
-
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            $response = $this->handleError($th, 'setting time horizon');
         }
 
         return response()->json($response, $response['statusCode']);

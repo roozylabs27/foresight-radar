@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\DrivingForceRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -11,11 +12,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
+use App\Services\DrivingForceService;
 use Symfony\Component\HttpFoundation\Response;
 
 class DrivingForceController extends Controller
 {
-    //
+    use HandlesApiErrors;
+
+    public function __construct(protected DrivingForceService $drivingForceService)
+    {
+    }
+
     public function index()
     {
         $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
@@ -24,12 +31,13 @@ class DrivingForceController extends Controller
                 'label' => $dimension->name
             ];
         });
-        $users = User::select('id', 'name')->whereHas('roles', function ($q) {
+        $users = User::select('id', 'name')->with('roles:id,name,display_name')->whereHas('roles', function ($q) {
             $q->where('name', 'admin');
         })->orderBy('name', 'asc')->get()->map(function ($user) {
+            $roleName = $user->roles->first()?->display_name ?? 'Admin';
             return [
                 'value' => $user->id,
-                'label' => $user->name . ' - ' . $user->roles->pluck('display_name')[0]
+                'label' => $user->name . ' - ' . $roleName
             ];
         });
 
@@ -41,14 +49,12 @@ class DrivingForceController extends Controller
     public function fetch_data()
     {
         try {
-            $result = DrivingForce::filter();
+            $result = $this->drivingForceService->filter(request()->all());
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json([
-                'errors' => $th->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $error = $this->handleError($th, 'fetching driving forces');
+            return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -72,10 +78,8 @@ class DrivingForceController extends Controller
                 'message' => 'Successfully create new signal !'
             ];
         } catch (\Throwable $th) {
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            DB::rollBack();
+            $response = $this->handleError($th, 'creating driving force');
         }
 
         return response()->json($response, $response['statusCode']);
@@ -83,6 +87,8 @@ class DrivingForceController extends Controller
 
     public function update(DrivingForceRequest $request, DrivingForce $driving_force)
     {
+        $this->authorize('update', $driving_force);
+
         try {
             DB::beginTransaction();
 
@@ -102,10 +108,8 @@ class DrivingForceController extends Controller
                 'message' => 'Successfully update the signal !'
             ];
         } catch (\Throwable $th) {
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            DB::rollBack();
+            $response = $this->handleError($th, 'updating driving force');
         }
 
         return response()->json($response, $response['statusCode']);
@@ -113,6 +117,8 @@ class DrivingForceController extends Controller
 
     public function delete(DrivingForce $driving_force)
     {
+        $this->authorize('delete', $driving_force);
+
         try {
             DB::beginTransaction();
 
@@ -125,14 +131,8 @@ class DrivingForceController extends Controller
                 'message' => 'Successfully delete the signal !'
             ];
         } catch (\Throwable $th) {
-            //throw $th;
-
             DB::rollBack();
-
-            $response = [
-                'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-                'message' => $th->getMessage(),
-            ];
+            $response = $this->handleError($th, 'deleting driving force');
         }
 
         return response()->json($response, $response['statusCode']);

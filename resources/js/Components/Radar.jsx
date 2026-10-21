@@ -1,354 +1,336 @@
-import React, { useEffect, useState } from "react";
-import ReactEcharts from "echarts-for-react";
-import { Col, message, Row, Skeleton, Table } from "antd";
-import dayjs from "dayjs";
+import { useEffect, useMemo, useState } from "react";
+import { usePage } from "@inertiajs/react";
+import axios from "axios";
 import qs from "qs";
-import "../../css/additional.css";
+import { toast } from "sonner";
+import { GitCompareArrowsIcon, InfoIcon, MaximizeIcon, MinimizeIcon } from "lucide-react";
 
-export default function Radar({ loading, setLoading, date, selectData }) {
-    const getParams = (params) => {
-        return {
-            ...params,
-        };
-    };
-    const [tableParams, setTableParams] = useState({
-        date: [
-            dayjs().startOf("month").format("YYYY-MM-DD"),
-            dayjs().endOf("month").format("YYYY-MM-DD"),
-        ],
-    });
-    const [radarData, setRadarData] = useState([]);
-    const [data, setData] = useState(null);
-    const options = {
-        title: {
-            text: "Foresight Radar",
-            left: "center",
-        },
-        legend: {
-            data: [
-                "Economy",
-                "Ecology",
-                "Regulation",
-                "Technology",
-                "Substitute",
-                "Supplier",
-                "Customer",
-                "Competitor",
-            ],
-            bottom: 0,
-        },
-        radar: {
-            indicator: [
-                { name: "Economy", max: 9 },
-                { name: "Ecology", max: 9 },
-                { name: "Regulation", max: 9 },
-                { name: "Technology", max: 9 },
-                { name: "Substitute", max: 9 },
-                { name: "Supplier", max: 9 },
-                { name: "Customer", max: 9 },
-                { name: "Competitor", max: 9 },
-            ],
-            shape: "circle",
-            splitNumber: 8,
-            splitArea: {
-                areaStyle: {
-                    color: [
-                        // "rgb(0,0,0)",
-                        "rgb(166,166,166)",
-                        "rgb(166,166,166)",
-                        "rgb(166,166,166)",
-                        "rgb(166,166,166)",
-                        "rgb(190,190,190)",
-                        "rgb(190,190,190)",
-                        "rgb(217,217,217)",
-                        "rgb(217,217,217)",
-                    ],
-                },
-            },
-            axisLine: {
-                lineStyle: {
-                    color: "rgb(135, 134, 134)",
-                },
-            },
-            splitLine: {
-                lineStyle: {
-                    color: [
-                        "rgb(135, 134, 134)",
-                        "rgb(135, 134, 134)",
-                        "rgb(135, 134, 134)",
-                        "rgb(135, 134, 134)",
-                        "rgb(135, 134, 134)",
-                        "rgb(135, 134, 134)",
-                        "rgb(135, 134, 134)",
-                        "rgb(135, 134, 134)",
-                    ],
-                    width: 1,
-                },
-            },
-            name: {
-                textStyle: {
-                    color: "#000",
-                    backgroundColor: "#fff",
-                    borderRadius: 3,
-                    fontWeight: "bold",
-                    padding: [3, 5],
-                },
-            },
-        },
-        series: [
-            {
-                name: "Priority",
-                type: "radar",
-                symbolSize: function (value, params) {
-                    // console.log(params)
-                    // Only display the symbol if the value is not zero
-                    // return value !== 0 ? 15 : 0; // Adjust the size as needed (8 here is an example)
-                    // console.log(params, value);
-                    // for(let i=0; i< value.length; i++) {
-                    //     console.log(value[i]);
-                    //     return value[i] !== 0 ? 15 : 0
-                    // }
-                    return 15;
-                },
-                label: {
-                    show: function (params) {
-                        return true;
-                    },
-                    // formatter: "{@[2]}",
-                    formatter: function (params) {
-                        const index = params.dataIndex; // This gets the index of the current data point
-                        const tableNumber = data[index].no; // Fetches the corresponding table number
-                        return params.value !== 0 ? tableNumber : "";
-                    },
-                    position: "top",
-                    fontWeight: "bold",
-                    backgroundColor: "#000",
-                    padding: [3, 3],
-                    borderRadius: 50,
-                    color: "#fff",
-                },
-                // symbolOffset: function (value, params) {
-                //     console.log(value,params);
-                //     // Geser simbol jika memiliki nilai yang sama agar tidak bertumpuk
-                //     if (params.value === 3 && params.dataIndex === 1) {
-                //         return [0, "-20%"]; // Geser ke atas untuk data index 1 dengan nilai 3
-                //     }
-                //     if (params.value === 3 && params.dataIndex === 3) {
-                //         return [0, "20%"]; // Geser ke bawah untuk data index 3 dengan nilai 3
-                //     }
-                //     return [0, "20%"]; // Tidak ada geseran untuk data lainnya
-                // },
-                lineStyle: {
-                    color: "transparent",
-                },
-                areaStyle: {
-                    opacity: 0,
-                },
-                data: radarData,
-                // [
-                //     {
-                //         value: [7, 2, 3, 3, 5],
-                //         name: "Economy",
-                //         symbol: "triangle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                //     {
-                //         value: [1, 2, 3, 3, 5],
-                //         name: "Ecology",
-                //         symbol: "triangle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                //     {
-                //         value: [5, 3, 2, 3, 4],
-                //         name: "Regulation",
-                //         symbol: "triangle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                //     {
-                //         value: [2, 1, 3, 4, 1],
-                //         name: "Technology",
-                //         symbol: "triangle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                //     {
-                //         value: [5, 3, 2, 3, 4],
-                //         name: "Substitute",
-                //         symbol: "circle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                //     {
-                //         value: [5, 3, 2, 3, 4],
-                //         name: "Supplier",
-                //         symbol: "triangle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                //     {
-                //         value: [5, 3, 2, 3, 4],
-                //         name: "Customer",
-                //         symbol: "triangle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                //     {
-                //         value: [5, 3, 2, 3, 4],
-                //         name: "Competitor",
-                //         symbol: "circle",
-                //         itemStyle: {
-                //             color: "#ff4d4f",
-                //         },
-                //     },
-                // ],
-            },
-        ],
-        // graphic: [
-        //     {
-        //         type: 'text',
-        //         left: 'center',
-        //         top: 'center',
-        //         style: {
-        //             text: 'Custom Text',
-        //             textAlign: 'center',
-        //             font: 'bold 18px sans-serif',
-        //             fill: '#000', // Warna teks
-        //             z: 100 // z-index untuk memastikan teks berada di depan
-        //         }
-        //     }
-        // ]
-    };
+import { currentMonth } from "@/Components/AnalysisFilters";
+import DataTable from "@/Components/DataTable";
+import DimensionChip from "@/Components/DimensionChip";
+import { priorityBadge } from "@/Components/PriorityBadge";
+import RadarScope, { LINK_STROKES, PRIORITY_FILLS, priorityFill } from "@/Components/RadarScope";
+import RadarSignalSheet from "@/Components/RadarSignalSheet";
+import { statusBadge } from "@/Components/StatusBadge";
+import { Button } from "@/Components/ui/button";
+import { Skeleton } from "@/Components/ui/skeleton";
+import { computeAntiCollisionPoints, HORIZON_BANDS } from "@/lib/radarLayout";
+import { cn } from "@/lib/utils";
+
+const BAND_SWATCHES = { 1: "var(--horizon-short)", 2: "var(--horizon-mid)", 3: "var(--horizon-long)" };
+const PRIORITY_LABELS = { high: "High Priority", medium: "Medium Priority", low: "Low Priority" };
+
+function Card({ title, actions, className, children }) {
+    return (
+        <section
+            aria-label={typeof title === "string" ? title : undefined}
+            className={cn("flex min-w-0 flex-col gap-3 rounded-lg border border-solid border-border bg-card p-4", className)}
+        >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">{title}</div>
+                {actions}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+/**
+ * Cross-impact links between the forces on the radar, fetched only while
+ * `enabled`. Links to forces outside the current filter are left out.
+ */
+function useCrossImpactLinks(enabled, items) {
+    const [cells, setCells] = useState(null);
 
     useEffect(() => {
-        fetchData();
-    }, [date, selectData]);
+        if (!enabled || cells) return undefined;
+        const controller = new AbortController();
+        axios
+            .get(route("visualization.cross-impact.get-data"), { signal: controller.signal })
+            .then((response) => setCells(response.data.cells ?? []))
+            .catch((error) => {
+                if (axios.isCancel(error)) return;
+                toast.error("Gagal memuat cross-impact.", { description: error.message });
+                setCells([]);
+            });
+        return () => controller.abort();
+    }, [enabled, cells]);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                `${route("visualization.foresight-radar.get-data")}?${qs.stringify(
-                    getParams({
-                        ...tableParams,
-                        date: date != null ? date.date : tableParams.date,
-                        dimension: selectData ? selectData.dimension : null,
-                    })
-                )}`
-            );
+    return useMemo(() => {
+        if (!enabled || !cells) return [];
+        const shown = new Set(items.map((item) => item.id));
+        return cells.filter((cell) => cell.score !== 0 && shown.has(cell.source) && shown.has(cell.target));
+    }, [enabled, cells, items]);
+}
 
-            if (response.status == 200) {
-                setTimeout(() => {
-                    const newData = response.data.map((d, i) => ({
-                        no: i + 1,
-                        ...d,
-                    }));
-
-                    const radar = response.data.map((d) => ({
-                        value: d.value,
-                        name: d.dimension,
-                        symbol: d.symbol,
-                        itemStyle: {
-                            color: d.item_style,
-                        },
-                    }));
-                    setRadarData(radar);
-
-                    setData(newData);
-                    setTableParams({
-                        ...tableParams,
-                    });
-
-                    setLoading(false);
-                }, 500);
-            } else {
-                message.error(`Error: ${error.message}`);
-                setLoading(false);
-            }
-        } catch (error) {
-            // TODO: Handling error
-            message.error(`Error: ${error.message}`);
-            setLoading(false);
-        }
-    };
-
-    const columns = [
-        {
-            title: "No",
-            width: "60px",
-            dataIndex: "no",
-        },
-        {
-            title: "Signal of Changes",
-            dataIndex: "keyword",
-        },
-        // {
-        //     title: "Act",
-        //     dataIndex: "status_action",
-        //     align: "center",
-        // },
-        // {
-        //     title: "ST",
-        //     dataIndex: "short_term",
-        //     align: "center",
-        // },
-        // {
-        //     title: "MT",
-        //     dataIndex: "mid_term",
-        //     align: "center",
-        // },
-        // {
-        //     title: "LT",
-        //     dataIndex: "long_term",
-        //     align: "center",
-        // },
-    ];
-
-    const getRowClassName = (record) => {
-        if (record.priority.toLowerCase() === "high")
-            return "red-background disable-hover";
-        if (record.priority.toLowerCase() === "medium")
-            return "yellow-background disable-hover";
-        if (record.priority.toLowerCase() === "low")
-            return "green-background disable-hover";
-        return "disable-hover";
-    };
-
-    setTimeout(() => {
-        setLoading(false);
-    }, 1000);
-
+function LinkLegend({ count }) {
     return (
-        <Row gutter={16} style={{ margin: 20 }}>
-            <Col span={8}>
-                <Table
-                    columns={columns}
-                    dataSource={data}
-                    bordered
-                    loading={loading}
-                    rowClassName={getRowClassName}
-                    rowKey={(record) => record.no}
-                    pagination={false}
-                />
-            </Col>
-            <Col span={16}>
-                <Skeleton loading={loading} active>
-                    <ReactEcharts
-                        notMerge={true}
-                        option={options}
-                        style={{ height: "600px", width: "100%" }}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+                <svg aria-hidden="true" width="22" height="6">
+                    <line x1="0" y1="3" x2="22" y2="3" stroke={LINK_STROKES.amplify} strokeWidth="2" />
+                </svg>
+                Memperkuat
+            </span>
+            <span className="flex items-center gap-1.5">
+                <svg aria-hidden="true" width="22" height="6">
+                    <line x1="0" y1="3" x2="22" y2="3" stroke={LINK_STROKES.suppress} strokeWidth="2" strokeDasharray="5 4" />
+                </svg>
+                Menekan
+            </span>
+            <span role="status">
+                {count > 0
+                    ? `${count} hubungan cross-impact antar force di radar`
+                    : "Belum ada cross-impact antar force yang tampil di radar"}
+            </span>
+        </div>
+    );
+}
+
+function Legends() {
+    return (
+        <div className="flex flex-col items-center gap-2 text-xs text-muted-foreground">
+            <ul className="m-0 flex list-none flex-wrap justify-center gap-x-4 gap-y-1 p-0">
+                {HORIZON_BANDS.map((band) => (
+                    <li key={band.horizon} className="flex items-center gap-1.5">
+                        <span
+                            aria-hidden="true"
+                            className="size-3 rounded-full border border-solid border-border"
+                            style={{ backgroundColor: BAND_SWATCHES[band.horizon] }}
+                        />
+                        {band.label}
+                    </li>
+                ))}
+            </ul>
+            <ul className="m-0 flex list-none flex-wrap justify-center gap-x-4 gap-y-1 p-0">
+                {Object.entries(PRIORITY_FILLS).map(([key, fill]) => (
+                    <li key={key} className="flex items-center gap-1.5">
+                        <span aria-hidden="true" className="size-2.5 rounded-full" style={{ backgroundColor: fill }} />
+                        {PRIORITY_LABELS[key]}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+/**
+ * Foresight Radar: the signal list beside the 360° radar, a detail Sheet per
+ * item and a fullscreen mode. `date` is `{ date: [start, end] }` (defaults to
+ * this month) and `selectData` may hold a `dimension` id. `setLoading` mirrors
+ * the loading state for a parent with its own indicator.
+ */
+export default function Radar({ date, selectData, setLoading }) {
+    const [items, setItems] = useState([]);
+    const [loading, setLocalLoading] = useState(true);
+    const [activeNo, setActiveNo] = useState(null);
+    const [selected, setSelected] = useState(null);
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const [fullscreen, setFullscreen] = useState(false);
+    const [showLinks, setShowLinks] = useState(false);
+    const canViewCrossImpact = (usePage().props.auth?.permissions ?? []).includes("view-cross-impact");
+    const links = useCrossImpactLinks(showLinks, items);
+
+    const dimension = selectData?.dimension ?? null;
+    const queryKey = qs.stringify({ date: date?.date ?? currentMonth(), dimension: dimension ?? undefined });
+
+    useEffect(() => {
+        const controller = new AbortController();
+        setLocalLoading(true);
+        axios
+            .get(`${route("visualization.foresight-radar.get-data")}?${queryKey}`, { signal: controller.signal })
+            .then((response) => {
+                const rows = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+                setItems(rows.map((row, index) => ({ ...row, no: index + 1 })));
+                setLocalLoading(false);
+            })
+            .catch((error) => {
+                if (axios.isCancel(error)) return;
+                toast.error("Gagal memuat data radar.", { description: error.response?.data?.message ?? error.message });
+                setLocalLoading(false);
+            });
+        return () => controller.abort();
+    }, [queryKey]);
+
+    useEffect(() => {
+        setLoading?.(loading);
+    }, [loading, setLoading]);
+
+    // Escape leaves fullscreen, unless it is closing the detail sheet.
+    useEffect(() => {
+        if (!fullscreen) return undefined;
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape" && !sheetOpen) setFullscreen(false);
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [fullscreen, sheetOpen]);
+
+    const points = useMemo(() => computeAntiCollisionPoints(items), [items]);
+
+    const openDetail = (item) => {
+        setSelected(item);
+        setSheetOpen(true);
+    };
+
+    const columns = useMemo(
+        () => [
+            {
+                accessorKey: "no",
+                header: "No",
+                meta: { align: "center", width: "56px" },
+                cell: ({ row }) => (
+                    <span
+                        className="inline-flex size-6 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground tabular-nums"
+                        style={{ backgroundColor: priorityFill(row.original.priority) }}
+                    >
+                        {row.original.no}
+                    </span>
+                ),
+            },
+            {
+                accessorKey: "keyword",
+                header: "Signal of Changes",
+                cell: ({ row }) => (
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[13px] font-semibold text-foreground">{row.original.keyword}</span>
+                        <div className="flex flex-wrap gap-1">
+                            <DimensionChip name={row.original.dimension} />
+                            {row.original.status_action && (
+                                <span className={cn(statusBadge(), "bg-accent font-mono text-primary")}>
+                                    {row.original.status_action}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                ),
+            },
+            {
+                accessorKey: "priority",
+                header: "Priority",
+                meta: { align: "center" },
+                // Short label: the list column is narrow beside the radar.
+                cell: ({ getValue }) => {
+                    const priority = String(getValue() ?? "").toLowerCase();
+                    return (
+                        <span className={priorityBadge({ priority: priority in PRIORITY_LABELS ? priority : "unknown" })}>
+                            {getValue() || "-"}
+                        </span>
+                    );
+                },
+            },
+            {
+                id: "detail",
+                header: () => <span className="sr-only">Detail</span>,
+                meta: { align: "center", width: "48px" },
+                cell: ({ row }) => (
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Detail & provenance ${row.original.keyword}`}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            openDetail(row.original);
+                        }}
+                    >
+                        <InfoIcon aria-hidden="true" className="text-primary" />
+                    </Button>
+                ),
+            },
+        ],
+        []
+    );
+
+    // Fullscreen is the design system's presentation mode: a night ground in either
+    // theme. The scoped `dark` class switches every token inside to its dark value.
+    return (
+        <div
+            className={cn(
+                fullscreen && "dark fixed inset-0 z-40 overflow-y-auto bg-night p-4 text-foreground lg:p-6"
+            )}
+        >
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+                <Card
+                    title={
+                        <>
+                            <h2 className="m-0 text-sm font-semibold text-foreground">Signal of Changes</h2>
+                            <span className={cn(statusBadge(), "bg-primary text-primary-foreground tabular-nums")}>
+                                {items.length}
+                            </span>
+                        </>
+                    }
+                >
+                    <DataTable
+                        columns={columns}
+                        data={items}
+                        loading={loading}
+                        getRowId={(row) => String(row.no)}
+                        onRowClick={openDetail}
+                        onRowHover={(row) => setActiveNo(row?.no ?? null)}
+                        rowClassName={(row) => row.no === activeNo && "bg-accent"}
+                        caption="Daftar signal of changes"
+                        emptyMessage="No signals found for the selected period or dimension"
+                        className={cn("overflow-y-auto", fullscreen ? "max-h-[calc(100vh-140px)]" : "max-h-[560px]")}
                     />
-                </Skeleton>
-            </Col>
-        </Row>
+                </Card>
+
+                <Card
+                    title={
+                        <>
+                            <h2 className="m-0 text-sm font-semibold text-foreground">Radar Visualization</h2>
+                            {dimension && (
+                                <span className={cn(statusBadge(), "bg-accent text-primary")}>Filtered by Dimension</span>
+                            )}
+                        </>
+                    }
+                    actions={
+                        <div className="flex flex-wrap items-center gap-1">
+                            {canViewCrossImpact && (
+                                <Button
+                                    variant={showLinks ? "secondary" : "ghost"}
+                                    size="sm"
+                                    aria-pressed={showLinks}
+                                    onClick={() => setShowLinks((value) => !value)}
+                                >
+                                    <GitCompareArrowsIcon aria-hidden="true" />
+                                    Cross-Impact
+                                </Button>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => setFullscreen((value) => !value)}>
+                                {fullscreen ? <MinimizeIcon aria-hidden="true" /> : <MaximizeIcon aria-hidden="true" />}
+                                {fullscreen ? "Kecilkan" : "Layar Penuh"}
+                            </Button>
+                        </div>
+                    }
+                >
+                    {loading ? (
+                        <Skeleton className="mx-auto aspect-[16/15] w-full max-w-[640px]" />
+                    ) : items.length === 0 ? (
+                        <p className="m-0 py-28 text-center text-sm text-muted-foreground">
+                            No radar signals available to display
+                        </p>
+                    ) : (
+                        <RadarScope
+                            points={points}
+                            links={links}
+                            activeNo={activeNo}
+                            onActivate={setActiveNo}
+                            onSelect={openDetail}
+                            style={fullscreen ? { maxWidth: "min(100%, calc((100vh - 220px) * 1.07))" } : undefined}
+                        />
+                    )}
+                    <Legends />
+                    {showLinks && <LinkLegend count={links.length} />}
+                </Card>
+            </div>
+
+            {/* The sheet renders in a portal, outside the fullscreen container, so it needs its own `dark`. */}
+            <RadarSignalSheet
+                item={selected}
+                open={sheetOpen}
+                onOpenChange={setSheetOpen}
+                className={fullscreen ? "dark" : undefined}
+            />
+        </div>
     );
 }

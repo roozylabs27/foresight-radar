@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -36,6 +37,21 @@ class DrivingForce extends Model
         'approved_at',
         'closed_at'
     ];
+
+    protected static function booted()
+    {
+        static::deleting(function ($drivingForce) {
+            if ($drivingForce->isForceDeleting()) {
+                $drivingForce->rating()->withTrashed()->forceDelete();
+            } else {
+                $drivingForce->rating()->delete();
+            }
+        });
+
+        static::restoring(function ($drivingForce) {
+            $drivingForce->rating()->withTrashed()->restore();
+        });
+    }
 
     public function dimension(): BelongsTo
     {
@@ -62,6 +78,18 @@ class DrivingForce extends Model
         return $this->hasOne(DrivingForceRating::class);
     }
 
+    public function source_signal(): HasOne
+    {
+        return $this->hasOne(Signal::class, 'created_driving_force_id');
+    }
+
+    public function supporting_signals(): BelongsToMany
+    {
+        return $this->belongsToMany(Signal::class, 'signal_driving_force')
+            ->withPivot('notes')
+            ->withTimestamps();
+    }
+
     public function createdAt(): Attribute
     {
         return Attribute::make(
@@ -83,182 +111,21 @@ class DrivingForce extends Model
         );
     }
 
+    public function getStatusEnum(): \App\Enums\DrivingForceStatus
+    {
+        $statusStr = $this->status ?? 'PENDING';
+        return \App\Enums\DrivingForceStatus::tryFrom($statusStr) ?? \App\Enums\DrivingForceStatus::PENDING;
+    }
+
+    public function transitionTo(\App\Enums\DrivingForceStatus|string $targetStatus): self
+    {
+        $targetEnum = $this->getStatusEnum()->validateTransitionTo($targetStatus);
+        $this->status = $targetEnum->value;
+        return $this;
+    }
+
     public function getRouteKeyName()
     {
         return 'uuid';
-    }
-
-    public static function filter()
-    {
-        $pagination = request('pagination.pageSize');
-        $search = request('search');
-        $dimension = request('dimension');
-        $status = request('status');
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
-
-        $driving_forces = self::with(['dimension', 'created_by_user', 'updated_by_user'])
-            ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE',  $search . '%')
-                    ->orWhere('description', 'LIKE',  $search . '%');
-            })
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->where('dimension_id', $dimension);
-            })
-            ->when($status, function ($q) use ($status) {
-                $q->where('status', $status);
-            })
-            ->where('created_at', '>=', $date_start)
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'DESC')
-            ->paginate($pagination);
-
-
-        return new DrivingForceCollection($driving_forces);
-    }
-
-    public static function time_horizon()
-    {
-        $pagination = request('pagination.pageSize');
-        $search = request('search');
-        $dimension = request('dimension');
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
-
-        $time_horizons = self::with(['dimension', 'rating'])
-            ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
-            })
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->where('dimension_id', $dimension);
-            })
-            ->where('created_at', '>=', $date_start)
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'DESC')
-            ->paginate($pagination);
-
-        return new TimeHorizonCollection($time_horizons);
-    }
-
-    public static function rating_urgency()
-    {
-        $pagination = request('pagination.pageSize');
-        $search = request('search');
-        $dimension = request('dimension');
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
-
-        $time_horizons = self::with(['dimension', 'rating'])
-            ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
-            })
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->where('dimension_id', $dimension);
-            })
-            ->where('created_at', '>=', $date_start)
-            ->has('rating')
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'DESC')
-            ->paginate($pagination);
-
-        return new RatingUrgencyCollection($time_horizons);
-    }
-
-    public static function status_action()
-    {
-        $pagination = request('pagination.pageSize');
-        $search = request('search');
-        $dimension = request('dimension');
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
-
-        $status_actions = self::with(['dimension', 'rating.action_reasons' => function ($q) {
-            $q->select('driving_force_rating_id', 'date', 'reason', 'status_action_id')->orderBy('date', 'ASC');
-        }])
-            ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
-            })
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->where('dimension_id', $dimension);
-            })
-            ->where('created_at', '>=', $date_start)
-            ->has('rating')
-            ->whereHas('rating', function ($q) {
-                $q->whereNotNull('impact_analysis')
-                    ->whereNotNull('uncertainty_analysis');
-            })
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'DESC')
-            ->paginate($pagination);
-
-        return new StatusActionCollection($status_actions);
-    }
-
-    public static function closed_items()
-    {
-        $pagination = request('pagination.pageSize');
-        $search = request('search');
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
-        $dimension = request('dimension');
-
-        $closed_items = self::with(['rating'])
-            ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
-            })
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->where('dimension_id', $dimension);
-            })
-            ->whereHas('rating', function ($q) {
-                $q->whereNotNull('status_action_id');
-            })
-            ->has('rating')
-            ->where('status', 'CLOSED')
-            ->where('created_at', '>=', $date_start)
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'DESC')
-            ->paginate($pagination);
-
-        return new ClosedItemsCollection($closed_items);
-    }
-
-    public static function approval_items()
-    {
-        $pagination = request('pagination.pageSize');
-        $search = request('search');
-        $date_range = request('date');
-        $date_start = $date_range[0] . ' 00:00:00';
-        $date_end = $date_range[1] . ' 23:59:59';
-        $dimension = request('dimension');
-
-        $approval_items = self::with(['rating'])
-            ->when($search, function ($q) use ($search) {
-                $q->where('keyword', 'LIKE', $search . '%')
-                    ->orWhere('description', 'LIKE', $search . '%');
-            })
-            ->when($dimension, function ($q) use ($dimension) {
-                $q->where('dimension_id', $dimension);
-            })
-            ->whereHas('rating', function ($q) {
-                $q->whereNotNull('status_action_id');
-            })
-            ->has('rating')
-            ->whereIn('status', ['PENDING', 'APPROVED'])
-            ->where('created_at', '>=', $date_start)
-            ->where('created_at', '<=', $date_end)
-            ->orderBy('created_at', 'DESC')
-            ->orderBy('status', 'DESC')
-            ->paginate($pagination);
-
-        return new ApprovalItemsCollection($approval_items);
     }
 }
