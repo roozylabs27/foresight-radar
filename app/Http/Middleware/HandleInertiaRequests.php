@@ -17,7 +17,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Determine the current asset version.
      */
-    public function version(Request $request): string|null
+    public function version(Request $request): ?string
     {
         return parent::version($request);
     }
@@ -48,10 +48,10 @@ class HandleInertiaRequests extends Middleware
                     'permissions' => method_exists($user, 'getAllPermissions')
                         ? $user->getAllPermissions()->pluck('name')->toArray()
                         : ($user->permissions ? $user->permissions->pluck('name')->toArray() : []),
-                ]
+                ],
             ];
         }
-        
+
         return $data;
     }
 }

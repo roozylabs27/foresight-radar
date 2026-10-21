@@ -18,15 +18,15 @@ class TimeHorizonResource extends JsonResource
         $mid_term = null;
         $long_term = null;
 
-        if($this->rating && $this->rating->time_horizon_id == 1) {
+        if ($this->rating && $this->rating->time_horizon_id == 1) {
             $short_term = '✔';
         }
 
-        if($this->rating && $this->rating->time_horizon_id == 2) {
+        if ($this->rating && $this->rating->time_horizon_id == 2) {
             $mid_term = '✔';
         }
 
-        if($this->rating && $this->rating->time_horizon_id == 3) {
+        if ($this->rating && $this->rating->time_horizon_id == 3) {
             $long_term = '✔';
         }
 

@@ -17,9 +17,12 @@ class ScenarioService
 {
     /** Approved forces ranked by impact x uncertainty that are offered as axes. */
     public const AXIS_CANDIDATES = 8;
+
     public const SUGGESTED_PAIRS = 5;
+
     /** Axes should be independent: neither may push the other this hard (|score|). */
     public const MAX_AXIS_INFLUENCE = 2;
+
     public const EVIDENCE_PER_AXIS = 30;
 
     /**
@@ -40,7 +43,7 @@ class ScenarioService
             ->where('score', '!=', 0)
             ->get(['source_driving_force_id', 'target_driving_force_id', 'score']);
         $scores = $impacts->mapWithKeys(fn ($impact) => [
-            $impact->source_driving_force_id . '>' . $impact->target_driving_force_id => $impact->score,
+            $impact->source_driving_force_id.'>'.$impact->target_driving_force_id => $impact->score,
         ]);
 
         $candidates = $forces
@@ -52,8 +55,8 @@ class ScenarioService
         $pairs = [];
         foreach ($candidates as $i => $a) {
             foreach ($candidates->slice($i + 1) as $b) {
-                $ab = (int) ($scores[$a->id . '>' . $b->id] ?? 0);
-                $ba = (int) ($scores[$b->id . '>' . $a->id] ?? 0);
+                $ab = (int) ($scores[$a->id.'>'.$b->id] ?? 0);
+                $ba = (int) ($scores[$b->id.'>'.$a->id] ?? 0);
                 if ($a->dimension_id === $b->dimension_id || max(abs($ab), abs($ba)) >= self::MAX_AXIS_INFLUENCE) {
                     continue;
                 }
@@ -102,10 +105,11 @@ class ScenarioService
             foreach ($signals as $signal) {
                 if (isset($seen[$signal->id])) {
                     $evidence[$seen[$signal->id]]['axis'] = 'AB';
+
                     continue;
                 }
                 $seen[$signal->id] = count($evidence);
-                $evidence[] = ['ref' => 'S' . (count($evidence) + 1), 'axis' => $axis, 'signal' => $signal];
+                $evidence[] = ['ref' => 'S'.(count($evidence) + 1), 'axis' => $axis, 'signal' => $signal];
             }
         }
 
@@ -122,7 +126,7 @@ class ScenarioService
         $signals = Signal::with('source:id,title,url,publisher')->whereIn('id', $ids)->get()->keyBy('id');
 
         return collect($ids)->values()->map(fn ($id, $index) => $signals->has($id) ? [
-            'ref' => 'S' . ($index + 1),
+            'ref' => 'S'.($index + 1),
             'id' => $signals[$id]->uuid,
             'title' => $signals[$id]->title,
             'evidence_quote' => $signals[$id]->evidence_quote,
@@ -130,7 +134,7 @@ class ScenarioService
             'source_title' => $signals[$id]->source?->title,
             'source_publisher' => $signals[$id]->source?->publisher,
             'source_url' => $signals[$id]->source?->url,
-        ] : ['ref' => 'S' . ($index + 1), 'id' => null, 'title' => 'Sinyal sudah dihapus'])->all();
+        ] : ['ref' => 'S'.($index + 1), 'id' => null, 'title' => 'Sinyal sudah dihapus'])->all();
     }
 
     /**

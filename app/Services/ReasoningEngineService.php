@@ -28,6 +28,7 @@ class ReasoningEngineService
 
     /** Posture quadrant thresholds. */
     public const RESILIENCE_THRESHOLD = 60.0;
+
     public const GROWTH_THRESHOLD = 60.0;
 
     /** A Monitoring force at or above this impact counts as risk exposure. */
@@ -38,6 +39,7 @@ class ReasoningEngineService
 
     /** Horizon weights; an unset horizon is weighted as Mid Term. */
     public const RESILIENCE_HORIZON_WEIGHTS = ['ST' => 1.0, 'MT' => 0.75, 'LT' => 0.5];
+
     public const GROWTH_HORIZON_WEIGHTS = ['ST' => 1.0, 'MT' => 1.0, 'LT' => 1.0];
 
     /** Months the trend chart covers when the selected period is shorter. */
@@ -46,8 +48,7 @@ class ReasoningEngineService
     public function __construct(
         protected ForesightReportingService $reportingService,
         protected RatingHistoryAnalyticsService $historyAnalytics,
-    ) {
-    }
+    ) {}
 
     /**
      * Compute full executive reasoning payload.
@@ -134,11 +135,11 @@ class ReasoningEngineService
                 ],
                 $s['action'] === StatusActionType::MONITORING && $s['impact'] >= self::EXPOSURE_IMPACT => [
                     -50 * $s['i'] * $s['u'],
-                    "Monitoring, {$impactText} ≥ " . self::EXPOSURE_IMPACT . ", uncertainty {$s['uncertainty']} → eksposur risiko",
+                    "Monitoring, {$impactText} ≥ ".self::EXPOSURE_IMPACT.", uncertainty {$s['uncertainty']} → eksposur risiko",
                 ],
                 $s['action'] === StatusActionType::MONITORING => [
                     0.0,
-                    "Monitoring, {$impactText} < " . self::EXPOSURE_IMPACT . " → netral",
+                    "Monitoring, {$impactText} < ".self::EXPOSURE_IMPACT.' → netral',
                 ],
                 default => [0.0, 'Status aksi tidak dikenali → netral'],
             };
@@ -154,6 +155,7 @@ class ReasoningEngineService
     {
         $opportunities = $ratings->filter(function ($rating) {
             $name = strtolower($rating->driving_force?->dimension?->name ?? '');
+
             return in_array($name, self::GROWTH_DIMENSIONS, true);
         });
 
@@ -326,6 +328,7 @@ class ReasoningEngineService
                 $impact = (int) ($rating->impact_analysis ?? 0);
                 $isMonitoring = StatusActionType::fromModel($rating->status_action) === StatusActionType::MONITORING ? 10 : 0;
                 $isHighPriority = PriorityLevel::fromModel($rating->priority) === PriorityLevel::HIGH ? 5 : 0;
+
                 return $impact + $isMonitoring + $isHighPriority;
             })
             ->take(3)
@@ -359,6 +362,7 @@ class ReasoningEngineService
 
         return Dimension::orderBy('id')->get()->map(function ($dim) use ($countsByDimension) {
             $group = $countsByDimension->get($dim->id, collect());
+
             return [
                 'dimension_id' => $dim->id,
                 'name' => $dim->name,

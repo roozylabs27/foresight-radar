@@ -13,7 +13,7 @@ class PriorityCalculationTest extends TestCase
 
     public function test_returns_null_when_either_analysis_is_missing(): void
     {
-        $rating = new DrivingForceRating();
+        $rating = new DrivingForceRating;
 
         $rating->impact_analysis = null;
         $rating->uncertainty_analysis = null;
@@ -32,7 +32,7 @@ class PriorityCalculationTest extends TestCase
     {
         $high = Priority::create(['uuid' => fake()->uuid(), 'name' => 'High', 'color' => 'red']);
 
-        $rating = new DrivingForceRating();
+        $rating = new DrivingForceRating;
         $rating->impact_analysis = 6;
         $rating->uncertainty_analysis = 6;
         $this->assertSame($high->id, $rating->calculatePriority());
@@ -46,7 +46,7 @@ class PriorityCalculationTest extends TestCase
     {
         $medium = Priority::create(['uuid' => fake()->uuid(), 'name' => 'Medium', 'color' => 'yellow']);
 
-        $rating = new DrivingForceRating();
+        $rating = new DrivingForceRating;
         $rating->impact_analysis = 8;
         $rating->uncertainty_analysis = 4;
         $this->assertSame($medium->id, $rating->calculatePriority());
@@ -60,7 +60,7 @@ class PriorityCalculationTest extends TestCase
     {
         $low = Priority::create(['uuid' => fake()->uuid(), 'name' => 'Low', 'color' => 'green']);
 
-        $rating = new DrivingForceRating();
+        $rating = new DrivingForceRating;
         $rating->impact_analysis = 5;
         $rating->uncertainty_analysis = 5;
         $this->assertSame($low->id, $rating->calculatePriority());
@@ -72,7 +72,7 @@ class PriorityCalculationTest extends TestCase
 
     public function test_uses_fallback_ids_when_database_records_are_absent(): void
     {
-        $rating = new DrivingForceRating();
+        $rating = new DrivingForceRating;
 
         $rating->impact_analysis = 8;
         $rating->uncertainty_analysis = 8;

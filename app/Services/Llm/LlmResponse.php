@@ -15,6 +15,5 @@ final class LlmResponse
         public readonly ?string $stopReason = null,
         public readonly array $usage = [],
         public readonly int $durationMs = 0,
-    ) {
-    }
+    ) {}
 }

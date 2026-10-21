@@ -12,7 +12,7 @@ class CausalLoopServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CausalLoopService();
+        $this->service = new CausalLoopService;
     }
 
     public function test_detects_reinforcing_two_node_loop(): void

@@ -18,7 +18,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -73,13 +73,13 @@ class User extends Authenticatable
         $pagination = request('pagination.pageSize', 10);
         $search = request('search');
         $date_range = request('date');
-        $has_date = is_array($date_range) && count($date_range) === 2 && !empty($date_range[0]) && !empty($date_range[1]);
+        $has_date = is_array($date_range) && count($date_range) === 2 && ! empty($date_range[0]) && ! empty($date_range[1]);
 
         if (in_array('developer', auth()->user()->roles->pluck('name')->toArray())) {
             $users = self::query()->with('roles', function ($q) {
                 $q->select('id', 'display_name')->orderBy('id');
             });
-        } else if (in_array('super-admin', auth()->user()->roles->pluck('name')->toArray())) {
+        } elseif (in_array('super-admin', auth()->user()->roles->pluck('name')->toArray())) {
             $users = self::query()->with('roles', function ($q) {
                 $q->select('id', 'display_name');
             })->whereHas('roles', function ($q) {
@@ -95,13 +95,13 @@ class User extends Authenticatable
 
         $users = $users->when($search, function ($q) use ($search) {
             $q->where(function ($sub) use ($search) {
-                $sub->where('name', 'LIKE',  $search . '%')
-                    ->orWhere('email', 'LIKE', $search . '%');
+                $sub->where('name', 'LIKE', $search.'%')
+                    ->orWhere('email', 'LIKE', $search.'%');
             });
         })
             ->when($has_date, function ($q) use ($date_range) {
-                $q->where('created_at', '>=', $date_range[0] . ' 00:00:00')
-                    ->where('created_at', '<=', $date_range[1] . ' 23:59:59');
+                $q->where('created_at', '>=', $date_range[0].' 00:00:00')
+                    ->where('created_at', '<=', $date_range[1].' 23:59:59');
             })
             ->tap(fn ($q) => TableSort::apply(
                 $q,

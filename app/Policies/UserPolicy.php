@@ -12,12 +12,13 @@ class UserPolicy
     public function update(User $authUser, User $targetUser): bool
     {
         // Cannot edit users with higher-privilege roles
-        if ($targetUser->hasRole('developer') && !$authUser->hasRole('developer')) {
+        if ($targetUser->hasRole('developer') && ! $authUser->hasRole('developer')) {
             return false;
         }
-        if ($targetUser->hasRole('super-admin') && !$authUser->hasAnyRole(['developer', 'super-admin'])) {
+        if ($targetUser->hasRole('super-admin') && ! $authUser->hasAnyRole(['developer', 'super-admin'])) {
             return false;
         }
+
         return $authUser->hasAnyRole(['developer', 'super-admin', 'admin']);
     }
 
@@ -30,6 +31,7 @@ class UserPolicy
         if ($authUser->id === $targetUser->id) {
             return false;
         }
+
         return $this->update($authUser, $targetUser);
     }
 }

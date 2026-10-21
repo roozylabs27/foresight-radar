@@ -12,7 +12,7 @@ class Environment extends Model
 
     protected $fillable = [
         'uuid',
-        'name'
+        'name',
     ];
 
     public function dimensions(): HasMany

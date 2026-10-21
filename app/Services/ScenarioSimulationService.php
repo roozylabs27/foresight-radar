@@ -10,16 +10,13 @@ class ScenarioSimulationService
 {
     public function __construct(
         protected ReasoningEngineService $reasoningEngine,
-    ) {
-    }
+    ) {}
 
     /**
      * Simulate "what-if" overrides on approved driving force ratings.
      *
      * @param  string|array|null  $dateRange
-     * @param  mixed  $dimension
      * @param  array<int, array{force: string, status_action?: string, impact?: int, uncertainty?: int}>  $overrides
-     * @return array
      */
     public function simulate(mixed $dateRange, mixed $dimension, array $overrides): array
     {
@@ -36,7 +33,7 @@ class ScenarioSimulationService
         // Validate that all forces in overrides exist within the current filter scope
         foreach ($overrides as $override) {
             $forceUuid = $override['force'] ?? null;
-            if (!$forceUuid || !isset($ratingsByUuid[$forceUuid])) {
+            if (! $forceUuid || ! isset($ratingsByUuid[$forceUuid])) {
                 throw ValidationException::withMessages([
                     'overrides' => "Driving force [{$forceUuid}] tidak ditemukan pada cakupan filter saat ini.",
                 ]);
@@ -74,6 +71,7 @@ class ScenarioSimulationService
             if ($rating->relationLoaded('time_horizon') && $rating->time_horizon) {
                 $clone->setRelation('time_horizon', clone $rating->time_horizon);
             }
+
             return $clone;
         });
 

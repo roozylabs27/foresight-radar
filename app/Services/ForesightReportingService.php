@@ -17,10 +17,10 @@ class ForesightReportingService
     public function resolveDateRange(?array $dateRange = null): array
     {
         $date = $dateRange ?? request('date');
-        if (!empty($date) && is_array($date) && count($date) >= 2 && !empty($date[0]) && !empty($date[1])) {
+        if (! empty($date) && is_array($date) && count($date) >= 2 && ! empty($date[0]) && ! empty($date[1])) {
             return [
-                $date[0] . ' 00:00:00',
-                $date[1] . ' 23:59:59',
+                $date[0].' 00:00:00',
+                $date[1].' 23:59:59',
             ];
         }
 
@@ -42,7 +42,7 @@ class ForesightReportingService
             ->has('driving_force')
             ->whereHas('driving_force', function ($q) use ($dimension) {
                 $q->where('status', 'APPROVED');
-                if (!empty($dimension)) {
+                if (! empty($dimension)) {
                     $q->where('dimension_id', $dimension);
                 }
             })
@@ -153,9 +153,9 @@ class ForesightReportingService
                     $q->select('id', 'code');
                 },
             ])
-            ->when($timeHorizon, fn($q) => $q->where('time_horizon_id', $timeHorizon))
-            ->when($priority, fn($q) => $q->where('priority_id', $priority))
-            ->when($statusAction, fn($q) => $q->where('status_action_id', $statusAction))
+            ->when($timeHorizon, fn ($q) => $q->where('time_horizon_id', $timeHorizon))
+            ->when($priority, fn ($q) => $q->where('priority_id', $priority))
+            ->when($statusAction, fn ($q) => $q->where('status_action_id', $statusAction))
             ->orderBy('created_at', 'ASC');
     }
 }

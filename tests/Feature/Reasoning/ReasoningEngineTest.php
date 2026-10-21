@@ -26,15 +26,25 @@ class ReasoningEngineTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Dimension $customerDim;
+
     private Dimension $techDim;
+
     private Dimension $ecoDim;
+
     private StatusAction $decidedPlanAction;
+
     private StatusAction $monitoringAction;
+
     private Priority $highPriority;
+
     private Priority $lowPriority;
+
     private TimeHorizon $shortTerm;
+
     private TimeHorizon $midTerm;
+
     private TimeHorizon $longTerm;
 
     protected function setUp(): void
@@ -117,7 +127,7 @@ class ReasoningEngineTest extends TestCase
 
     private function reasoning(string $query = '')
     {
-        $response = $this->actingAs($this->admin)->getJson('/dashboard/reasoning-data' . $query);
+        $response = $this->actingAs($this->admin)->getJson('/dashboard/reasoning-data'.$query);
         $response->assertStatus(200);
 
         return $response;

@@ -22,15 +22,13 @@ use Illuminate\Support\Str;
  */
 class OpenAiCompatibleClient implements StructuredLlmClient
 {
-    public function __construct(private readonly array $config)
-    {
-    }
+    public function __construct(private readonly array $config) {}
 
     public function isAvailable(): bool
     {
         return trim((string) ($this->config['base_url'] ?? '')) !== ''
             && trim((string) ($this->config['model'] ?? '')) !== ''
-            && (trim((string) ($this->config['api_key'] ?? '')) !== '' || !empty($this->config['allow_no_key']));
+            && (trim((string) ($this->config['api_key'] ?? '')) !== '' || ! empty($this->config['allow_no_key']));
     }
 
     public function provider(): string
@@ -50,7 +48,7 @@ class OpenAiCompatibleClient implements StructuredLlmClient
 
     public function generateJson(LlmRequest $request): LlmResponse
     {
-        if (!$this->isAvailable()) {
+        if (! $this->isAvailable()) {
             throw new LlmException('unavailable');
         }
 
@@ -58,8 +56,8 @@ class OpenAiCompatibleClient implements StructuredLlmClient
         $jsonSchema = ($this->config['structured_output'] ?? 'json_schema') !== 'json_object';
         $user = $jsonSchema
             ? $request->user
-            : $request->user . "\n\nRespond with one JSON object that matches this JSON Schema, and nothing else:\n"
-                . json_encode($request->schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            : $request->user."\n\nRespond with one JSON object that matches this JSON Schema, and nothing else:\n"
+                .json_encode($request->schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $body = [
             'model' => $this->model(),
@@ -124,7 +122,7 @@ class OpenAiCompatibleClient implements StructuredLlmClient
             'duration_ms' => $durationMs,
         ]);
 
-        if (!empty($choice['message']['refusal']) || $finish === 'content_filter') {
+        if (! empty($choice['message']['refusal']) || $finish === 'content_filter') {
             throw new LlmException('refusal');
         }
         if ($finish === 'length') {
@@ -132,7 +130,7 @@ class OpenAiCompatibleClient implements StructuredLlmClient
         }
 
         $data = json_decode($this->stripFences((string) ($choice['message']['content'] ?? '')), true);
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             throw new LlmException('invalid_json');
         }
 

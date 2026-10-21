@@ -26,10 +26,15 @@ class ScenarioTest extends TestCase
     use RefreshDatabase;
 
     private User $manager;
+
     private User $viewer;
+
     private Environment $environment;
+
     private TimeHorizon $horizon;
+
     private DrivingForce $regulation;
+
     private DrivingForce $adoption;
 
     protected function setUp(): void
@@ -119,7 +124,7 @@ class ScenarioTest extends TestCase
         return ['quadrants' => array_map(fn ($position) => [
             'position' => $position,
             'title' => "Masa depan {$position}",
-            'narrative' => "Narasi {$position} " . implode(' ', array_map(fn ($ref) => "[{$ref}]", $citations[$position] ?? [])),
+            'narrative' => "Narasi {$position} ".implode(' ', array_map(fn ($ref) => "[{$ref}]", $citations[$position] ?? [])),
             'implications' => "Implikasi {$position}.",
             'early_indicators' => ["Indikator {$position}"],
             'cited_refs' => $citations[$position] ?? [],

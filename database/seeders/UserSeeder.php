@@ -14,8 +14,11 @@ class UserSeeder extends Seeder
      * Run the database seeds.
      */
     protected $users;
+
     protected $roles;
+
     protected $permissions;
+
     protected $synthetic_users;
 
     public function __construct()
@@ -56,7 +59,7 @@ class UserSeeder extends Seeder
         }
 
         // 4. Initial synthetic foresight analyst & executive team (loaded from synthetic_user.json)
-        if ((config('app.env') === 'local' || app()->environment('local', 'testing')) && !empty($this->synthetic_users)) {
+        if ((config('app.env') === 'local' || app()->environment('local', 'testing')) && ! empty($this->synthetic_users)) {
             $this->command->info('initial synthetic foresight analysts & executives');
             $this->command->getOutput()->progressStart(count($this->synthetic_users));
             foreach ($this->synthetic_users as $profile) {
@@ -112,7 +115,7 @@ class UserSeeder extends Seeder
 
     protected function initializeSyntheticUser(array $profile): void
     {
-        $email = $profile['email'] ?? (str()->slug($profile['name'], '.') . '@foresight.internal');
+        $email = $profile['email'] ?? (str()->slug($profile['name'], '.').'@foresight.internal');
 
         $newUser = User::firstOrCreate([
             'email' => $email,

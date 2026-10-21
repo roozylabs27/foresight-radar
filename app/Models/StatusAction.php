@@ -13,6 +13,6 @@ class StatusAction extends Model
         'uuid',
         'name',
         'symbol',
-        'code'
+        'code',
     ];
 }

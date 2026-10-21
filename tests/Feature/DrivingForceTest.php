@@ -16,6 +16,7 @@ class DrivingForceTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Dimension $dimension;
 
     private function makePermission(string $name): Permission

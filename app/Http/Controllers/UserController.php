@@ -5,9 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Role;
@@ -16,13 +14,14 @@ use Symfony\Component\HttpFoundation\Response;
 class UserController extends Controller
 {
     use HandlesApiErrors;
+
     //
     public function index()
     {
-        $title = "User";
+        $title = 'User';
         if (auth()->user()->roles->pluck('name')[0] == 'developer') {
             $roles = Role::select('id', 'display_name')->get();
-        } else if (auth()->user()->roles->pluck('name')[0] == 'super-admin') {
+        } elseif (auth()->user()->roles->pluck('name')[0] == 'super-admin') {
             $roles = Role::select('id', 'display_name')->whereNotIn('name', ['developer'])->get();
         } else {
             $roles = Role::select('id', 'display_name')->whereNotIn('name', ['super-admin', 'developer'])->get();
@@ -31,11 +30,11 @@ class UserController extends Controller
         $roles = $roles->map(function ($role) {
             return [
                 'value' => $role->id,
-                'label' => $role->display_name
+                'label' => $role->display_name,
             ];
         });
 
-        return Inertia::render("UserManagement/User/Table", compact('title', 'roles'));
+        return Inertia::render('UserManagement/User/Table', compact('title', 'roles'));
     }
 
     public function fetch_data()
@@ -46,6 +45,7 @@ class UserController extends Controller
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'fetching users');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -56,10 +56,10 @@ class UserController extends Controller
             DB::beginTransaction();
 
             $new_user = User::create([
-                "name" => $request->name,
-                "uuid" => Uuid::uuid1(),
-                "email" => $request->email,
-                "password" => bcrypt($request->password),
+                'name' => $request->name,
+                'uuid' => Uuid::uuid1(),
+                'email' => $request->email,
+                'password' => bcrypt($request->password),
             ]);
 
             $get_role = Role::where('id', $request->role_id)->first();
@@ -72,7 +72,7 @@ class UserController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_CREATED,
-                'message' => 'Successfully create new user !'
+                'message' => 'Successfully create new user !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -105,7 +105,7 @@ class UserController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully update user !'
+                'message' => 'Successfully update user !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -128,7 +128,7 @@ class UserController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully delete the user !'
+                'message' => 'Successfully delete the user !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();

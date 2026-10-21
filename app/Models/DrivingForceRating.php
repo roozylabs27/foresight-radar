@@ -2,11 +2,6 @@
 
 namespace App\Models;
 
-use App\Http\Resources\ClosedItemsResource;
-use App\Http\Resources\ForesightRadarResource;
-use App\Http\Resources\OverallStatusCollection;
-use App\Http\Resources\OverallStatusResource;
-use App\Http\Resources\PrioritizingResource;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

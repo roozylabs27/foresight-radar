@@ -22,19 +22,19 @@ class DrivingForceRequest extends FormRequest
      */
     public function rules(): array
     {
-        if (request()->isMethod("POST")) {
+        if (request()->isMethod('POST')) {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(20)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', 'exists:users,id']
+                'pic_id' => ['required', 'exists:users,id'],
             ];
         } else {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(30)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', 'exists:users,id']
+                'pic_id' => ['required', 'exists:users,id'],
             ];
         }
     }

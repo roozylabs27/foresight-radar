@@ -2,9 +2,7 @@
 
 namespace App\Rules;
 
-use Closure;
 use Illuminate\Contracts\Validation\Rule;
-use Illuminate\Contracts\Validation\ValidationRule;
 
 class WordCountRule implements Rule
 {
@@ -31,6 +29,7 @@ class WordCountRule implements Rule
     public function passes($attribute, $value)
     {
         $wordCount = str_word_count(strip_tags($value));
+
         return $wordCount <= $this->maxWords;
     }
 

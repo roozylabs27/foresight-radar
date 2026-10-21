@@ -28,10 +28,15 @@ class RatingDataChainTest extends TestCase
     use RefreshDatabase;
 
     private User $analyst;
+
     private Environment $environment;
+
     private StatusAction $monitoring;
+
     private TimeHorizon $shortTerm;
+
     private TimeHorizon $midTerm;
+
     private TimeHorizon $longTerm;
 
     protected function setUp(): void
@@ -115,7 +120,8 @@ class RatingDataChainTest extends TestCase
 
     public function test_mid_term_cues_are_detected_as_mid_term(): void
     {
-        $service = new class extends SignalExtractionService {
+        $service = new class extends SignalExtractionService
+        {
             public function horizon(string $text): ?TimeHorizon
             {
                 return $this->detectTimeHorizon($text, TimeHorizon::all());

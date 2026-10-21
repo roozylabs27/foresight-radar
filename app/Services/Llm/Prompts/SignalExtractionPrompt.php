@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 final class SignalExtractionPrompt
 {
     public const VERSION = 'extract-v1';
+
     public const NO_FORCE = 'none';
 
     public const SYSTEM = <<<'PROMPT'

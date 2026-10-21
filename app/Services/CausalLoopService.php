@@ -5,7 +5,9 @@ namespace App\Services;
 class CausalLoopService
 {
     public const MAX_LENGTH = 5;
+
     public const MAX_LOOPS = 300;
+
     public const MAX_STEPS = 200000;
 
     /**
@@ -23,7 +25,7 @@ class CausalLoopService
             $s = $edge['source'] ?? null;
             $t = $edge['target'] ?? null;
             $score = (int) ($edge['score'] ?? 0);
-            if ($score === 0 || !isset($nodeIndex[$s]) || !isset($nodeIndex[$t])) {
+            if ($score === 0 || ! isset($nodeIndex[$s]) || ! isset($nodeIndex[$t])) {
                 continue;
             }
             $adj[$s][] = [
@@ -50,7 +52,7 @@ class CausalLoopService
                 ],
             ];
 
-            while (!empty($stack)) {
+            while (! empty($stack)) {
                 $frame = array_pop($stack);
                 $curr = $frame['curr'];
                 $path = $frame['path'];
@@ -96,6 +98,7 @@ class CausalLoopService
                                 break 3;
                             }
                         }
+
                         continue;
                     }
 
@@ -104,7 +107,7 @@ class CausalLoopService
                     }
 
                     // Only visit nodes with index > startIndex to avoid rotational duplicates
-                    if (!isset($nodeIndex[$next]) || $nodeIndex[$next] <= $startIndex) {
+                    if (! isset($nodeIndex[$next]) || $nodeIndex[$next] <= $startIndex) {
                         continue;
                     }
 

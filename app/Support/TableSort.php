@@ -24,7 +24,7 @@ final class TableSort
         $field = $params['sortField'] ?? null;
         $order = $params['sortOrder'] ?? null;
 
-        if (!is_string($field) || !array_key_exists($field, $sortable) || !in_array($order, ['ascend', 'descend'], true)) {
+        if (! is_string($field) || ! array_key_exists($field, $sortable) || ! in_array($order, ['ascend', 'descend'], true)) {
             $default($query);
 
             return $query;

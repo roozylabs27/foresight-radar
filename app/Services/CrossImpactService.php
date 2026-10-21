@@ -25,9 +25,7 @@ class CrossImpactService
         'unscored' => 'Belum dinilai',
     ];
 
-    public function __construct(protected CausalLoopService $loops)
-    {
-    }
+    public function __construct(protected CausalLoopService $loops) {}
 
     public function matrix(): array
     {
@@ -96,6 +94,7 @@ class CrossImpactService
 
         if ($score === 0 && $note === null) {
             CrossImpact::where($keys)->delete();
+
             return null;
         }
 

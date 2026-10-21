@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DrivingForceRatingHistory extends Model
 {
     public const UPDATED_AT = null;
+
     public const CREATED_AT = 'changed_at';
 
     protected $fillable = [

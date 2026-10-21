@@ -8,21 +8,16 @@ use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\TimeHorizon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
 use App\Services\DrivingForceService;
-use Ramsey\Uuid\Uuid;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class TimeHorizonController extends Controller
 {
     use HandlesApiErrors;
 
-    public function __construct(protected DrivingForceService $drivingForceService)
-    {
-    }
+    public function __construct(protected DrivingForceService $drivingForceService) {}
 
     public function index()
     {
@@ -30,17 +25,17 @@ class TimeHorizonController extends Controller
         $dimensions = Dimension::all()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
-                'label' => $dimension->name
+                'label' => $dimension->name,
             ];
         });
-        $time_horizons = TimeHorizon::all()->map(function ($time_horizon){
+        $time_horizons = TimeHorizon::all()->map(function ($time_horizon) {
             return [
                 'value' => $time_horizon->id,
-                'label' => $time_horizon->name
+                'label' => $time_horizon->name,
             ];
         });
 
-        return Inertia::render("TimeHorizon/Table", compact('dimensions', 'title', 'time_horizons'));
+        return Inertia::render('TimeHorizon/Table', compact('dimensions', 'title', 'time_horizons'));
     }
 
     public function fetch_data()
@@ -51,6 +46,7 @@ class TimeHorizonController extends Controller
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'fetching time horizons');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -66,12 +62,11 @@ class TimeHorizonController extends Controller
                 'time_horizon_id' => $request['time_horizon_id'],
             ]);
 
-
             DB::commit();
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully set time horizon !'
+                'message' => 'Successfully set time horizon !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();

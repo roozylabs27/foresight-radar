@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
                 default => new AnthropicStructuredClient(config('services.anthropic', [])),
             };
 
-            return $client->isAvailable() ? $client : new NullLlmClient();
+            return $client->isAvailable() ? $client : new NullLlmClient;
         });
     }
 

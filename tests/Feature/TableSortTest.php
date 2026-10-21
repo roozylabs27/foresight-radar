@@ -107,7 +107,7 @@ class TableSortTest extends TestCase
         $this->assertSame($default, $this->keywords('/driving-force/fetch-data'));
         $this->assertSame($default, $this->keywords('/driving-force/fetch-data?sortField=description&sortOrder=ascend'));
         $this->assertSame($default, $this->keywords('/driving-force/fetch-data?sortField=keyword&sortOrder=sideways'));
-        $this->assertSame($default, $this->keywords('/driving-force/fetch-data?sortField=' . urlencode('keyword desc, (select 1)') . '&sortOrder=ascend'));
+        $this->assertSame($default, $this->keywords('/driving-force/fetch-data?sortField='.urlencode('keyword desc, (select 1)').'&sortOrder=ascend'));
     }
 
     public function test_rating_urgency_sorts_by_rating_score(): void

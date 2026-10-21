@@ -18,7 +18,6 @@ use App\Support\TableSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -29,9 +28,7 @@ class SignalIngestionController extends Controller
 {
     use HandlesApiErrors;
 
-    public function __construct(protected SignalExtractionService $extractionService)
-    {
-    }
+    public function __construct(protected SignalExtractionService $extractionService) {}
 
     /**
      * Render the Signal Ingestion and Candidate Review workspace.
@@ -55,7 +52,7 @@ class SignalIngestionController extends Controller
             ->get()
             ->map(fn ($df) => [
                 'value' => $df->id,
-                'label' => $df->keyword . ' (' . ($df->dimension->name ?? 'General') . ') [' . $df->status . ']',
+                'label' => $df->keyword.' ('.($df->dimension->name ?? 'General').') ['.$df->status.']',
             ]);
 
         return Inertia::render('Signals/Index', [
@@ -93,9 +90,9 @@ class SignalIngestionController extends Controller
                 ->when($dimension, fn ($q) => $q->where('dimension_id', $dimension))
                 ->when($search, function ($q) use ($search) {
                     $q->where(function ($sub) use ($search) {
-                        $sub->where('title', 'LIKE', '%' . $search . '%')
-                            ->orWhere('summary', 'LIKE', '%' . $search . '%')
-                            ->orWhere('evidence_quote', 'LIKE', '%' . $search . '%');
+                        $sub->where('title', 'LIKE', '%'.$search.'%')
+                            ->orWhere('summary', 'LIKE', '%'.$search.'%')
+                            ->orWhere('evidence_quote', 'LIKE', '%'.$search.'%');
                     });
                 })
                 ->tap(fn ($q) => TableSort::apply(
@@ -114,6 +111,7 @@ class SignalIngestionController extends Controller
             return response()->json($signals, Response::HTTP_OK);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'fetching signals');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -133,6 +131,7 @@ class SignalIngestionController extends Controller
             ], Response::HTTP_ACCEPTED);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'ingesting source content');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -156,23 +155,35 @@ class SignalIngestionController extends Controller
 
             if ($signal->review_status !== 'PENDING') {
                 return response()->json([
-                    'errors' => 'Sinyal ini sudah direview (' . $signal->review_status . ') dan tidak bisa diubah lagi.',
+                    'errors' => 'Sinyal ini sudah direview ('.$signal->review_status.') dan tidak bisa diubah lagi.',
                 ], Response::HTTP_CONFLICT);
             }
 
             return DB::transaction(function () use ($validated, $action, $signal) {
                 // Apply any edited fields
-                if (!empty($validated['title'])) { $signal->title = $validated['title']; }
-                if (!empty($validated['summary'])) { $signal->summary = $validated['summary']; }
-                if (!empty($validated['evidence_quote']) && $validated['evidence_quote'] !== $signal->evidence_quote) {
+                if (! empty($validated['title'])) {
+                    $signal->title = $validated['title'];
+                }
+                if (! empty($validated['summary'])) {
+                    $signal->summary = $validated['summary'];
+                }
+                if (! empty($validated['evidence_quote']) && $validated['evidence_quote'] !== $signal->evidence_quote) {
                     // An edited quote must still be found verbatim in the source.
                     $signal->evidence_quote = $validated['evidence_quote'];
                     $signal->quote_verified = EvidenceVerifier::verify($validated['evidence_quote'], $signal->source?->raw_content);
                 }
-                if (!empty($validated['dimension_id'])) { $signal->dimension_id = $validated['dimension_id']; }
-                if (!empty($validated['suggested_time_horizon_id'])) { $signal->suggested_time_horizon_id = $validated['suggested_time_horizon_id']; }
-                if (isset($validated['preliminary_impact'])) { $signal->preliminary_impact = $validated['preliminary_impact']; }
-                if (isset($validated['preliminary_uncertainty'])) { $signal->preliminary_uncertainty = $validated['preliminary_uncertainty']; }
+                if (! empty($validated['dimension_id'])) {
+                    $signal->dimension_id = $validated['dimension_id'];
+                }
+                if (! empty($validated['suggested_time_horizon_id'])) {
+                    $signal->suggested_time_horizon_id = $validated['suggested_time_horizon_id'];
+                }
+                if (isset($validated['preliminary_impact'])) {
+                    $signal->preliminary_impact = $validated['preliminary_impact'];
+                }
+                if (isset($validated['preliminary_uncertainty'])) {
+                    $signal->preliminary_uncertainty = $validated['preliminary_uncertainty'];
+                }
 
                 if ($action === 'reject') {
                     $signal->review_status = 'REJECTED';
@@ -202,7 +213,7 @@ class SignalIngestionController extends Controller
                     $signal->save();
 
                     $signal->driving_forces()->syncWithoutDetaching([
-                        $dfId => ['notes' => 'Linked during analyst review from source #' . $signal->source_id],
+                        $dfId => ['notes' => 'Linked during analyst review from source #'.$signal->source_id],
                     ]);
 
                     return response()->json([
@@ -259,6 +270,7 @@ class SignalIngestionController extends Controller
 
                 // If just updating metadata
                 $signal->save();
+
                 return response()->json([
                     'message' => 'Signal metadata updated successfully.',
                     'signal' => $signal->fresh(),
@@ -268,8 +280,8 @@ class SignalIngestionController extends Controller
             throw $e;
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'reviewing signal');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
 }

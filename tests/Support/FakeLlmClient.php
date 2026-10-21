@@ -21,9 +21,7 @@ class FakeLlmClient implements StructuredLlmClient
     /** @var array<int, array{request: LlmRequest, transaction_level: int}> */
     public array $calls = [];
 
-    public function __construct(private bool $available = true)
-    {
-    }
+    public function __construct(private bool $available = true) {}
 
     /**
      * Queue the next answer: a decoded JSON array, or an exception to throw.

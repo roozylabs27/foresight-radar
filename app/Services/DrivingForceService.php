@@ -23,10 +23,10 @@ class DrivingForceService
      */
     private function resolveDateRange(array $params): array
     {
-        if (!empty($params['date']) && is_array($params['date']) && count($params['date']) === 2) {
+        if (! empty($params['date']) && is_array($params['date']) && count($params['date']) === 2) {
             return [
-                $params['date'][0] . ' 00:00:00',
-                $params['date'][1] . ' 23:59:59',
+                $params['date'][0].' 00:00:00',
+                $params['date'][1].' 23:59:59',
             ];
         }
 
@@ -91,8 +91,8 @@ class DrivingForceService
         ])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -129,8 +129,8 @@ class DrivingForceService
         $timeHorizons = DrivingForce::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -162,8 +162,8 @@ class DrivingForceService
         $ratings = DrivingForce::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -199,8 +199,8 @@ class DrivingForceService
         }])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -258,8 +258,8 @@ class DrivingForceService
         $approvalItems = DrivingForce::with(['rating.action_reasons'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -293,8 +293,8 @@ class DrivingForceService
         $closedItems = DrivingForce::with(['rating.action_reasons'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {

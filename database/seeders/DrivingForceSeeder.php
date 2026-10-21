@@ -16,7 +16,9 @@ class DrivingForceSeeder extends Seeder
      * Run the database seeds.
      */
     protected $driving_forces;
+
     protected $driving_force_ratings;
+
     protected array $synthetic_reasons = [];
 
     public function __construct()
@@ -120,6 +122,7 @@ class DrivingForceSeeder extends Seeder
         if ($keyword && isset($this->synthetic_reasons[$keyword][$statusKey])) {
             $pool = $this->synthetic_reasons[$keyword][$statusKey];
             $index = ($step - 1) % count($pool);
+
             return $pool[$index];
         }
 

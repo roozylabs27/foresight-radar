@@ -7,43 +7,40 @@ use App\Http\Requests\DrivingForceRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\User;
-use Illuminate\Http\Request;
+use App\Services\DrivingForceService;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
-use App\Services\DrivingForceService;
 use Symfony\Component\HttpFoundation\Response;
 
 class DrivingForceController extends Controller
 {
     use HandlesApiErrors;
 
-    public function __construct(protected DrivingForceService $drivingForceService)
-    {
-    }
+    public function __construct(protected DrivingForceService $drivingForceService) {}
 
     public function index()
     {
         $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
-                'label' => $dimension->name
+                'label' => $dimension->name,
             ];
         });
         $users = User::select('id', 'name')->with('roles:id,name,display_name')->whereHas('roles', function ($q) {
             $q->where('name', 'admin');
         })->orderBy('name', 'asc')->get()->map(function ($user) {
             $roleName = $user->roles->first()?->display_name ?? 'Admin';
+
             return [
                 'value' => $user->id,
-                'label' => $user->name . ' - ' . $roleName
+                'label' => $user->name.' - '.$roleName,
             ];
         });
 
-        $title = "Driving Force";
+        $title = 'Driving Force';
 
-        return Inertia::render("DrivingForce/Table", compact('dimensions', 'title', 'users'));
+        return Inertia::render('DrivingForce/Table', compact('dimensions', 'title', 'users'));
     }
 
     public function fetch_data()
@@ -54,6 +51,7 @@ class DrivingForceController extends Controller
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'fetching driving forces');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -65,7 +63,7 @@ class DrivingForceController extends Controller
             $request['uuid'] = Uuid::uuid1();
             $request['created_by'] = auth()->user()->id;
             $request['pic'] = $request['pic_id'];
-            $request['status'] = "PENDING";
+            $request['status'] = 'PENDING';
 
             $request = $request->all();
 
@@ -75,7 +73,7 @@ class DrivingForceController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_CREATED,
-                'message' => 'Successfully create new signal !'
+                'message' => 'Successfully create new signal !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -105,7 +103,7 @@ class DrivingForceController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully update the signal !'
+                'message' => 'Successfully update the signal !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -128,7 +126,7 @@ class DrivingForceController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully delete the signal !'
+                'message' => 'Successfully delete the signal !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();

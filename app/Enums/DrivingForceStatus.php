@@ -54,7 +54,7 @@ enum DrivingForceStatus: string
     {
         $targetEnum = is_string($target) ? self::tryFrom($target) : $target;
 
-        if ($targetEnum === null || !$this->canTransitionTo($targetEnum)) {
+        if ($targetEnum === null || ! $this->canTransitionTo($targetEnum)) {
             $targetValue = is_string($target) ? $target : ($targetEnum?->value ?? 'UNKNOWN');
             throw new InvalidStateTransitionException(
                 "Illegal driving force status transition from {$this->value} to {$targetValue}."

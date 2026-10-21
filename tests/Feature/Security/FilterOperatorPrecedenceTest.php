@@ -4,7 +4,6 @@ namespace Tests\Feature\Security;
 
 use App\Models\Dimension;
 use App\Models\DrivingForce;
-use App\Models\DrivingForceRating;
 use App\Models\User;
 use App\Services\DrivingForceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,7 +51,7 @@ class FilterOperatorPrecedenceTest extends TestCase
             'status' => 'PENDING',
         ]);
 
-        $service = new DrivingForceService();
+        $service = new DrivingForceService;
 
         // Query closed items filtered specifically for dimension 1 with search term "quantum"
         $result = $service->closedItems([
@@ -103,7 +102,7 @@ class FilterOperatorPrecedenceTest extends TestCase
             'status' => 'PENDING',
         ]);
 
-        $service = new DrivingForceService();
+        $service = new DrivingForceService;
 
         $result = $service->filter([
             'dimension' => $dimension1->id,

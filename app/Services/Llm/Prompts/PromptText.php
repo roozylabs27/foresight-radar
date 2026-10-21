@@ -18,7 +18,7 @@ final class PromptText
     public static function tag(string $name, string $text): string
     {
         $names = implode('|', array_map(fn ($tag) => preg_quote($tag, '#'), array_unique([...self::DATA_TAGS, $name])));
-        $safe = preg_replace('#<\s*/\s*(' . $names . ')\s*>#i', '&lt;/$1&gt;', $text);
+        $safe = preg_replace('#<\s*/\s*('.$names.')\s*>#i', '&lt;/$1&gt;', $text);
 
         return "<{$name}>\n{$safe}\n</{$name}>";
     }

@@ -20,10 +20,15 @@ class ForesightReportingServiceTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Dimension $dimension;
+
     private TimeHorizon $timeHorizon;
+
     private StatusAction $statusAction;
+
     private Priority $priority;
+
     private ForesightReportingService $service;
 
     protected function setUp(): void

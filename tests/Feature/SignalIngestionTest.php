@@ -19,7 +19,9 @@ class SignalIngestionTest extends TestCase
     use RefreshDatabase;
 
     private User $analyst;
+
     private Dimension $techDimension;
+
     private TimeHorizon $midHorizon;
 
     private function makePermission(string $name, string $category = 'general'): Permission
@@ -93,9 +95,9 @@ class SignalIngestionTest extends TestCase
 
     public function test_ingest_source_creates_source_record_and_extracts_candidate_signals(): void
     {
-        $sampleText = "Breakthrough commercial deployment of scalable solid-state battery technology achieved by researchers. " .
-            "The energy density surpasses conventional lithium-ion by 45 percent, enabling long-range heavy transport. " .
-            "Mass production is targeted for 2028 across major manufacturing facilities.";
+        $sampleText = 'Breakthrough commercial deployment of scalable solid-state battery technology achieved by researchers. '.
+            'The energy density surpasses conventional lithium-ion by 45 percent, enabling long-range heavy transport. '.
+            'Mass production is targeted for 2028 across major manufacturing facilities.';
 
         $response = $this->actingAs($this->analyst)->postJson('/signals/ingest', [
             'title' => 'Breakthrough Solid-State Battery Commercialization',

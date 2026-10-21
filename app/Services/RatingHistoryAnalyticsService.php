@@ -179,7 +179,7 @@ class RatingHistoryAnalyticsService
         return DrivingForceRating::query()
             ->whereHas('driving_force', function ($q) use ($dimension) {
                 $q->where('status', 'APPROVED');
-                if (!empty($dimension)) {
+                if (! empty($dimension)) {
                     $q->where('dimension_id', $dimension);
                 }
             })

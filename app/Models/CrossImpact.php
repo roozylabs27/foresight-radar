@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CrossImpact extends Model
 {
     public const MIN_SCORE = -3;
+
     public const MAX_SCORE = 3;
 
     protected $fillable = [

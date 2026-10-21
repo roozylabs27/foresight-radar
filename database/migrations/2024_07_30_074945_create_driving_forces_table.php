@@ -28,7 +28,7 @@ return new class extends Migration
             $table->bigInteger('pic')->unsigned()->nullable();
             $table->string('keyword', 100);
             $table->text('description');
-            $table->string('status')->default("PENDING");
+            $table->string('status')->default('PENDING');
             $table->text('remark')->nullable();
             $table->dateTime('approved_at')->nullable();
             $table->dateTime('closed_at')->nullable();
@@ -37,10 +37,10 @@ return new class extends Migration
         });
 
         Schema::table('driving_forces', function (Blueprint $table) {
-            $table->foreign('dimension_id')->references("id")->on('dimensions')->onDelete("cascade");
-            $table->foreign('created_by')->references("id")->on('users')->onDelete("cascade");
-            $table->foreign('updated_by')->references("id")->on('users')->nullOnDelete();
-            $table->foreign('pic')->references("id")->on('users')->nullOnDelete();
+            $table->foreign('dimension_id')->references('id')->on('dimensions')->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('pic')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('status_actions', function (Blueprint $table) {
@@ -83,15 +83,15 @@ return new class extends Migration
         });
 
         Schema::table('driving_force_ratings', function (Blueprint $table) {
-            $table->foreign('driving_force_id')->references("id")->on('driving_forces')->onDelete("cascade");
-            $table->foreign('time_horizon_id')->references("id")->on('time_horizons')->onDelete("cascade");
-            $table->foreign('status_action_id')->references("id")->on('status_actions')->onDelete("cascade");
-            $table->foreign('priority_id')->references("id")->on('priorities')->onDelete("cascade");
+            $table->foreign('driving_force_id')->references('id')->on('driving_forces')->onDelete('cascade');
+            $table->foreign('time_horizon_id')->references('id')->on('time_horizons')->onDelete('cascade');
+            $table->foreign('status_action_id')->references('id')->on('status_actions')->onDelete('cascade');
+            $table->foreign('priority_id')->references('id')->on('priorities')->onDelete('cascade');
         });
 
-        Schema::table('action_reasons', function(Blueprint $table) {
-            $table->foreign('driving_force_rating_id')->references("id")->on('driving_force_ratings')->restrictOnDelete();
-            $table->foreign('status_action_id')->references("id")->on('status_actions')->restrictOnDelete();
+        Schema::table('action_reasons', function (Blueprint $table) {
+            $table->foreign('driving_force_rating_id')->references('id')->on('driving_force_ratings')->restrictOnDelete();
+            $table->foreign('status_action_id')->references('id')->on('status_actions')->restrictOnDelete();
         });
     }
 

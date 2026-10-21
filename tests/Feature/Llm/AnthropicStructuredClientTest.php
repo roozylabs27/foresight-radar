@@ -80,11 +80,12 @@ class AnthropicStructuredClientTest extends TestCase
 
         Log::shouldHaveReceived('info')->withArgs(function ($message, $context) {
             $encoded = json_encode($context);
+
             return $message === 'llm.call'
                 && $context['purpose'] === 'signal_extraction'
                 && $context['usage']['input_tokens'] === 1200
-                && !str_contains($encoded, 'CONFIDENTIAL')
-                && !str_contains($encoded, 'sk-test');
+                && ! str_contains($encoded, 'CONFIDENTIAL')
+                && ! str_contains($encoded, 'sk-test');
         })->once();
     }
 

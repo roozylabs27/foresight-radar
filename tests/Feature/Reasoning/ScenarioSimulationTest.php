@@ -20,10 +20,15 @@ class ScenarioSimulationTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Dimension $techDimension;
+
     private Priority $highPriority;
+
     private StatusAction $monitoringAction;
+
     private StatusAction $decidedPlanAction;
+
     private TimeHorizon $shortTermHorizon;
 
     protected function setUp(): void

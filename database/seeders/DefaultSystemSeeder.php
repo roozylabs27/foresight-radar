@@ -7,7 +7,6 @@ use App\Models\Environment;
 use App\Models\Priority;
 use App\Models\StatusAction;
 use App\Models\TimeHorizon;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
 
@@ -16,7 +15,15 @@ class DefaultSystemSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    protected $environments, $dimensions, $time_horizons, $priorities, $status_actions;
+    protected $environments;
+
+    protected $dimensions;
+
+    protected $time_horizons;
+
+    protected $priorities;
+
+    protected $status_actions;
 
     public function __construct()
     {
@@ -68,9 +75,9 @@ class DefaultSystemSeeder extends Seeder
     protected function initializeDefaultEnv($env): void
     {
         Environment::firstOrCreate([
-            'name' => $env->name
+            'name' => $env->name,
         ], [
-            'uuid' => Uuid::uuid1()
+            'uuid' => Uuid::uuid1(),
         ]);
     }
 
@@ -80,17 +87,17 @@ class DefaultSystemSeeder extends Seeder
             'name' => $dimension->name,
         ], [
             'uuid' => Uuid::uuid1(),
-            'environment_id' => $dimension->environment_id
+            'environment_id' => $dimension->environment_id,
         ]);
     }
 
-    protected function initializeDefaultTimeHorizon($time_horizon) : void
+    protected function initializeDefaultTimeHorizon($time_horizon): void
     {
         TimeHorizon::firstOrCreate([
             'name' => $time_horizon->name,
         ], [
             'uuid' => Uuid::uuid1(),
-            'code' => $time_horizon->code
+            'code' => $time_horizon->code,
         ]);
     }
 
@@ -100,7 +107,7 @@ class DefaultSystemSeeder extends Seeder
             'name' => $priority->name,
         ], [
             'uuid' => Uuid::uuid1(),
-            'color' => $priority->color
+            'color' => $priority->color,
         ]);
     }
 
@@ -111,7 +118,7 @@ class DefaultSystemSeeder extends Seeder
         ], [
             'uuid' => Uuid::uuid1(),
             'symbol' => $status_action->symbol,
-            'code' => $status_action->code
+            'code' => $status_action->code,
         ]);
     }
 }
