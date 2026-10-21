@@ -25,4 +25,5 @@ yarn-error.log
 /audit
 /.config
 /.e2e
+/.composer
 /C/

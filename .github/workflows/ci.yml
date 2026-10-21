@@ -2,9 +2,9 @@ name: CI & Security Quality Gate
 
 on:
   push:
-    branches: [main, master, dev, develop]
+    branches: [main, master, dev, develop, development, 'feat/**']
   pull_request:
-    branches: [main, master, dev, develop]
+    branches: [main, master, dev, develop, development, 'feat/**']
 
 jobs:
   backend:
@@ -38,7 +38,9 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Composer Security Audit
+      # Security Policy: composer audit reports upstream advisories in the Laravel 10 ecosystem.
+      # Runs in advisory reporting mode pending major framework version upgrades.
+      - name: Composer Security Audit (Advisory)
         run: composer audit
         continue-on-error: true
 
@@ -47,6 +49,12 @@ jobs:
 
       - name: Generate key
         run: php artisan key:generate
+
+      - name: Code style check (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Static analysis (Larastan)
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G
 
       - name: Run test suite
         env:
@@ -74,9 +82,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: NPM Security Audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
+      # Security Policy: Blocks CI if any CRITICAL severity vulnerability is detected.
+      # Known SheetJS/esbuild high/moderate advisories remain tracked until replacement packages are adopted.
+      - name: NPM Security Audit (Block on Critical)
+        run: npm audit --audit-level=critical
 
       - name: Build production assets
         run: npm run build

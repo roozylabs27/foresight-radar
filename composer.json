@@ -17,6 +17,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
+        "larastan/larastan": "^2.0",
         "laravel/breeze": "^1.26",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",
@@ -50,6 +51,15 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+        "test": "@php artisan test",
+        "format:check": "pint --test",
+        "format": "pint",
+        "stan": "phpstan analyse --memory-limit=2G",
+        "verify": [
+            "pint --test",
+            "phpstan analyse --memory-limit=2G",
+            "@php artisan test"
         ]
     },
     "extra": {
@@ -58,6 +68,7 @@
         }
     },
     "config": {
+        "process-timeout": 1200,
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
