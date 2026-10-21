@@ -6,6 +6,7 @@ use App\Enums\LlmJobStatus;
 use App\Models\Scenario;
 use App\Services\ScenarioNarrativeService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -20,7 +21,7 @@ use Throwable;
  * citations, quadrants edited meanwhile, evidence removed) is stored as the
  * generation error for the analyst to read, and nothing is saved.
  */
-class GenerateScenarioNarrative implements ShouldQueue
+class GenerateScenarioNarrative implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -29,6 +30,11 @@ class GenerateScenarioNarrative implements ShouldQueue
     public int $timeout;
 
     public bool $failOnTimeout = true;
+
+    public function uniqueId(): string
+    {
+        return (string) $this->scenario->id;
+    }
 
     public function __construct(public Scenario $scenario, public bool $overwriteEdited, public ?int $userId)
     {
