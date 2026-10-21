@@ -5,15 +5,14 @@ namespace App\Services;
 use App\Enums\LlmJobStatus;
 use App\Enums\TimeHorizonType;
 use App\Jobs\ExtractSignals;
+use App\Models\Dimension;
+use App\Models\Signal;
+use App\Models\Source;
+use App\Models\TimeHorizon;
 use App\Services\Extraction\LlmSignalExtractor;
 use App\Services\Llm\LlmException;
 use App\Services\Llm\StructuredLlmClient;
 use App\Support\EvidenceVerifier;
-use App\Models\Dimension;
-use App\Models\DrivingForce;
-use App\Models\Signal;
-use App\Models\Source;
-use App\Models\TimeHorizon;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -31,8 +30,7 @@ class SignalExtractionService
     public function __construct(
         protected ?LlmSignalExtractor $llmExtractor = null,
         protected ?StructuredLlmClient $llm = null,
-    ) {
-    }
+    ) {}
 
     /**
      * The LLM provider id (e.g. "claude", "openrouter") when signals will be
@@ -74,7 +72,7 @@ class SignalExtractionService
             'title' => $data['title'] ?? 'Ingested Source Document',
             'url' => $data['url'] ?? null,
             'publisher' => $data['publisher'] ?? null,
-            'published_at' => !empty($data['published_at']) ? Carbon::parse($data['published_at']) : Carbon::today(),
+            'published_at' => ! empty($data['published_at']) ? Carbon::parse($data['published_at']) : Carbon::today(),
             'raw_content' => $content,
             'content_hash' => hash('sha256', $content),
             'created_by' => $userId,
@@ -96,6 +94,10 @@ class SignalExtractionService
      */
     public function extract(Source $source): void
     {
+        if ($source->extraction_status === LlmJobStatus::COMPLETED) {
+            return;
+        }
+
         $source->update(['extraction_status' => LlmJobStatus::PROCESSING, 'extraction_error' => null]);
 
         $content = (string) $source->raw_content;
@@ -116,7 +118,7 @@ class SignalExtractionService
                 $meta = $result['meta'] + ['label' => $this->llm()->label()];
             } catch (LlmException $e) {
                 Log::warning('Signal extraction fell back to keyword rules', ['reason' => $e->reason]);
-                $notice = $e->userMessage() . ' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';
+                $notice = $e->userMessage().' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';
                 $meta = ['provider' => self::PROVIDER_HEURISTIC, 'fallback_reason' => $e->reason];
             }
         }
@@ -133,6 +135,8 @@ class SignalExtractionService
         }
 
         DB::transaction(function () use ($source, $candidates, $meta, $notice) {
+            $source->signals()->where('review_status', 'PENDING')->delete();
+
             foreach ($candidates as $item) {
                 Signal::create([
                     'uuid' => (string) Uuid::uuid4(),
@@ -164,11 +168,26 @@ class SignalExtractionService
     {
         // Sources saved before extraction was queued have no status and are complete.
         $status = $source->extraction_status ?? LlmJobStatus::COMPLETED;
+        $staleWindow = (int) config('queue.llm_job_timeout', 300);
+
+        if ($status === LlmJobStatus::PROCESSING
+            && $source->updated_at
+            && $source->updated_at->diffInSeconds(now()) >= $staleWindow) {
+            $status = LlmJobStatus::FAILED;
+            $error = $source->extraction_error ?? 'Ekstraksi sinyal terhenti karena timeout atau kegagalan server. Sumber tersimpan tanpa sinyal; coba ingest ulang dokumen ini.';
+            $source->update([
+                'extraction_status' => LlmJobStatus::FAILED,
+                'extraction_error' => $error,
+            ]);
+        } else {
+            $error = $source->extraction_error;
+        }
+
         $progress = [
             'id' => $source->uuid,
             'title' => $source->title,
             'status' => $status->value,
-            'error' => $source->extraction_error,
+            'error' => $error,
             'message' => null,
             'extraction' => null,
         ];
@@ -183,7 +202,7 @@ class SignalExtractionService
         $label = $ai ? ($meta['label'] ?? $meta['provider']) : 'Aturan';
         $discarded = $meta['discarded_unverified'] ?? 0;
 
-        $by = $ai ? "oleh {$label} (" . ($meta['model'] ?? '-') . ')' : 'dengan aturan kata kunci (tanpa AI)';
+        $by = $ai ? "oleh {$label} (".($meta['model'] ?? '-').')' : 'dengan aturan kata kunci (tanpa AI)';
         $message = "Sumber disimpan. {$count} sinyal kandidat diekstrak {$by}.";
         if ($discarded > 0) {
             $message .= " {$discarded} usulan dibuang karena kutipannya tidak ditemukan verbatim di dokumen.";
@@ -241,7 +260,7 @@ class SignalExtractionService
             $sentences = preg_split('/(?<=[.?!])\s+(?=[A-Z0-9])/', $para);
             $evidenceQuote = $sentences[0] ?? $para;
             if (strlen($evidenceQuote) < 30 && isset($sentences[1])) {
-                $evidenceQuote .= ' ' . $sentences[1];
+                $evidenceQuote .= ' '.$sentences[1];
             }
 
             $matchedDimension = $this->detectDimension($para, $dimensions);
@@ -253,10 +272,10 @@ class SignalExtractionService
             $firstWords = implode(' ', array_slice($paraWords, 0, 6));
             $candidateTitle = count($selectedParagraphs) === 1
                 ? ($sourceTitle ?: $firstWords)
-                : ($firstWords . '...');
+                : ($firstWords.'...');
 
-            $summary = strlen($para) > 300 ? substr($para, 0, 297) . '...' : $para;
-            $significance = 'Indicates emerging changes in ' . ($matchedDimension?->name ?? 'operating environment') . ' that may alter organizational planning assumptions.';
+            $summary = strlen($para) > 300 ? substr($para, 0, 297).'...' : $para;
+            $significance = 'Indicates emerging changes in '.($matchedDimension?->name ?? 'operating environment').' that may alter organizational planning assumptions.';
 
             $candidates[] = [
                 'title' => $candidateTitle,

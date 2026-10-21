@@ -35,11 +35,27 @@ class ExtractSignals implements ShouldQueue
 
     public function handle(SignalExtractionService $extraction): void
     {
-        if ($this->source->extraction_status !== LlmJobStatus::QUEUED) {
+        if ($this->source->extraction_status === LlmJobStatus::COMPLETED) {
             return;
         }
 
-        $extraction->extract($this->source);
+        $staleWindow = (int) config('queue.llm_job_timeout', 300);
+        $isStale = $this->source->extraction_status === LlmJobStatus::PROCESSING
+            && $this->source->updated_at
+            && $this->source->updated_at->diffInSeconds(now()) >= $staleWindow;
+
+        if ($this->source->extraction_status !== LlmJobStatus::QUEUED
+            && $this->source->extraction_status !== LlmJobStatus::FAILED
+            && ! $isStale) {
+            return;
+        }
+
+        try {
+            $extraction->extract($this->source);
+        } catch (Throwable $e) {
+            $this->failed($e);
+            throw $e;
+        }
     }
 
     public function failed(Throwable $e): void
