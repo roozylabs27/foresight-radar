@@ -13,31 +13,20 @@ class UserSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    protected $users, $roles, $permissions;
-
-    /**
-     * Realistic synthetic internal foresight and strategic planning team profiles.
-     */
-    protected const SYNTHETIC_TEAM_PROFILES = [
-        ['name' => 'Budi Santoso', 'department' => 'Corporate Planning', 'role' => 'admin'],
-        ['name' => 'Rini Indrawati', 'department' => 'Market Intelligence', 'role' => 'admin'],
-        ['name' => 'Bambang Wijaya', 'department' => 'Government Relations', 'role' => 'admin'],
-        ['name' => 'Siti Nurhaliza', 'department' => 'ESG & Sustainability', 'role' => 'admin'],
-        ['name' => 'Dewi Lestari', 'department' => 'R&D Powertrain', 'role' => 'admin'],
-        ['name' => 'Aditya Pratama', 'department' => 'Product Strategy', 'role' => 'admin'],
-        ['name' => 'Hendro Gunawan', 'department' => 'Supply Chain Risk', 'role' => 'admin'],
-        ['name' => 'Maya Anggraini', 'department' => 'Customer Insights', 'role' => 'admin'],
-        ['name' => 'Fajar Hidayat', 'department' => 'Regulatory Affairs', 'role' => 'admin'],
-        ['name' => 'Nadia Safitri', 'department' => 'Mobility Ecosystem', 'role' => 'admin'],
-        ['name' => 'Arya Kusuma', 'department' => 'Executive Strategic Board', 'role' => 'bod'],
-        ['name' => 'Tri Wahyuni', 'department' => 'Executive Risk Committee', 'role' => 'bod'],
-    ];
+    protected $users;
+    protected $roles;
+    protected $permissions;
+    protected $synthetic_users;
 
     public function __construct()
     {
-        $this->users = json_decode(file_get_contents(__DIR__ . '../../data/user.json'));
-        $this->roles = json_decode(file_get_contents(__DIR__ . '../../data/role.json'));
-        $this->permissions = json_decode(file_get_contents(__DIR__ . '../../data/permission.json'));
+        $this->users = json_decode(file_get_contents(database_path('data/user.json')));
+        $this->roles = json_decode(file_get_contents(database_path('data/role.json')));
+        $this->permissions = json_decode(file_get_contents(database_path('data/permission.json')));
+        $syntheticFile = database_path('data/synthetic_user.json');
+        $this->synthetic_users = file_exists($syntheticFile)
+            ? json_decode(file_get_contents($syntheticFile), true)
+            : [];
     }
 
     public function run(): void
@@ -66,11 +55,11 @@ class UserSeeder extends Seeder
             $this->command->getOutput()->progressAdvance();
         }
 
-        // 4. Initial synthetic foresight analyst & executive team (strictly non-Lorem, realistic corporate team)
-        if (config('app.env') === 'local' || app()->environment('local', 'testing')) {
+        // 4. Initial synthetic foresight analyst & executive team (loaded from synthetic_user.json)
+        if ((config('app.env') === 'local' || app()->environment('local', 'testing')) && !empty($this->synthetic_users)) {
             $this->command->info('initial synthetic foresight analysts & executives');
-            $this->command->getOutput()->progressStart(count(self::SYNTHETIC_TEAM_PROFILES));
-            foreach (self::SYNTHETIC_TEAM_PROFILES as $profile) {
+            $this->command->getOutput()->progressStart(count($this->synthetic_users));
+            foreach ($this->synthetic_users as $profile) {
                 $this->initializeSyntheticUser($profile);
                 $this->command->getOutput()->progressAdvance();
             }
@@ -123,8 +112,7 @@ class UserSeeder extends Seeder
 
     protected function initializeSyntheticUser(array $profile): void
     {
-        $slug = str()->slug($profile['name'], '.');
-        $email = $slug . '@foresight.internal';
+        $email = $profile['email'] ?? (str()->slug($profile['name'], '.') . '@foresight.internal');
 
         $newUser = User::firstOrCreate([
             'email' => $email,

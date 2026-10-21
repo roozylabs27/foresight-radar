@@ -20,11 +20,11 @@ class DefaultSystemSeeder extends Seeder
 
     public function __construct()
     {
-        $this->environments = json_decode(file_get_contents(__DIR__ . '../../data/environment.json', true));
-        $this->dimensions = json_decode(file_get_contents(__DIR__ . '../../data/dimension.json', true));
-        $this->time_horizons = json_decode(file_get_contents(__DIR__ . '../../data/time_horizon.json', true));
-        $this->priorities = json_decode(file_get_contents(__DIR__ . '../../data/priority.json', true));
-        $this->status_actions = json_decode(file_get_contents(__DIR__ . '../../data/status_action.json', true));
+        $this->environments = json_decode(file_get_contents(database_path('data/environment.json')));
+        $this->dimensions = json_decode(file_get_contents(database_path('data/dimension.json')));
+        $this->time_horizons = json_decode(file_get_contents(database_path('data/time_horizon.json')));
+        $this->priorities = json_decode(file_get_contents(database_path('data/priority.json')));
+        $this->status_actions = json_decode(file_get_contents(database_path('data/status_action.json')));
     }
 
     public function run(): void
