@@ -156,15 +156,17 @@
     {
       "id": "FEAT-012",
       "name": "Strategic Executive Dashboard & What-If Simulation",
-      "description": "Executive summary KPIs, distribution charts, and interactive Monte Carlo / what-if horizon simulations.",
+      "description": "Executive summary KPIs, distribution charts, and interactive Monte Carlo / what-if horizon simulations with cross-impact ripple propagation.",
       "priority": "P1",
       "status": "passing",
       "acceptance_criteria": [
         "Displays real-time counts of pending, approved, and closed forces",
         "Executes what-if simulation permutations without mutating primary database records",
+        "Propagates cross-impact influence (+-3) across connected forces when enabled, clamping effective scores to [1, 10]",
+        "UI renders interactive propagation toggle and ripple trace breakdown panel",
         "Handles missing or unrated parameters gracefully"
       ],
-      "verification_evidence": "Tests/Feature/Security/VisualizationAuthorizationTest passes"
+      "verification_evidence": "Tests/Feature/Reasoning/ScenarioSimulationTest and Tests/Feature/Reasoning/ScenarioSimulationPropagationTest pass (20 assertions)"
     },
     {
       "id": "FEAT-013",
