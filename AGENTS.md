@@ -1,71 +1,119 @@
-# Foresight Radar — Agent Guidelines & Engineering Standards
+# Foresight Radar — Agent Guidelines & Harness Engineering Standards
 
-## 1. Technology Stack & UI Architecture
+## 1. Project Purpose & Technology Stack
 
-This application is built with:
+Foresight Radar is an executive intelligence and strategic foresight platform designed to ingest signals of change, evaluate driving forces, detect systems-dynamics causal loops, and simulate 2x2 scenario planning matrices.
+
 - **Backend:** Laravel 10 (PHP 8.2), MySQL 8.0, Redis, Spatie Laravel Permission
 - **Frontend:** React 18, Inertia.js, Tailwind CSS v4 (`@tailwindcss/vite`), Radix UI (`radix-ui`), Lucide React
-- **Design System:** `shadcn/ui` component patterns located in `resources/js/Components/ui/`
+- **Design System:** `shadcn/ui` patterns located in `resources/js/Components/ui/`
+- **LLM Gateway:** Multi-provider (`anthropic`, OpenAI-compatible) with background queues and deterministic offline fallbacks
 
 > [!IMPORTANT]
 > **No Ant Design:** The codebase was migrated from Ant Design v5 to `shadcn/ui` + `radix-ui` + `Tailwind CSS v4`. Never introduce Ant Design (`antd`) components, imports, or tokens.
 
-## 2. Repository Entry Points
+---
 
-- **Routes:** `routes/web.php` (web & Inertia endpoints), `routes/auth.php` (authentication)
-- **Controllers:** `app/Http/Controllers/`
-- **Services:** `app/Services/` (core domain reasoning, causal loops, LLM integrations)
-- **Policies:** `app/Policies/` (`DrivingForcePolicy`, `ScenarioPolicy`, `UserPolicy`)
-- **Models:** `app/Models/` (Eloquent entities with soft deletes & UUID identifiers)
-- **Frontend Pages:** `resources/js/Pages/` (Inertia React page components)
-- **UI Components:** `resources/js/Components/ui/` (Radix UI / Tailwind primitives)
-- **Seeders & Data:** `database/seeders/` and `database/data/*.json` (synthetic domain data)
+## 2. Architecture Boundaries & Key Entry Points
 
-## 3. Verification Commands & Contracts
+The repository enforces strict module separation:
 
-Every change must be validated against the standard quality contract before claiming completion:
+- **Routing & RBAC:** `routes/web.php` (Inertia & web endpoints with Spatie permission middleware), `routes/auth.php`
+- **Controllers:** `app/Http/Controllers/` (lean controllers; delegate business logic to services; use `HandlesApiErrors` envelope)
+- **Domain Services:** `app/Services/`
+  - `SignalExtractionService` & `EvidenceVerifier`: Ingestion, background LLM extraction, verbatim quote verification
+  - `DrivingForceService`: 6-stage lifecycle, 1-to-1 ratings, priority classification
+  - `CausalLoopService` & `CrossImpactService`: Cross-impact matrix and cycle detection (reinforcing vs balancing)
+  - `ScenarioNarrativeService`: 2x2 matrix generation, pessimistic queue locking (`lockForUpdate`), citation veracity
+- **Persistence & Policies:** `app/Models/` (UUIDs, soft deletes), `app/Policies/` (`DrivingForcePolicy`, `ScenarioPolicy`, `UserPolicy`)
+- **Background Jobs:** `app/Jobs/` (`ExtractSignals`, `GenerateScenarioNarrative` with `ShouldBeUnique` contract)
+- **Frontend Views:** `resources/js/Pages/` (Inertia React pages), `resources/js/Components/ui/` (Radix UI / Tailwind primitives)
+- **Detailed Documentation:** In-depth architecture specs are located in `docs/audit/` and `docs/product/`.
+
+---
+
+## 3. Harness Scripts & Standard Verification Commands
+
+Standardized repository entry points for human developers and AI coding agents:
 
 ```bash
-# 1. Unified Verification Contract (Pint, Larastan Level 5, PHPUnit)
-docker exec laravel_app composer verify
+# 1. Safe Environment Initialization
+./init.sh                     # Verifies runtime dependencies, Docker, .env, and baseline smoke check
 
-# 2. Frontend Production Build (host machine)
-npm run build
+# 2. Standard Quality Verification Engine
+./verify.sh                   # Runs Pint, Larastan Level 5, PHPUnit, Vite Build, NPM Audit
+./verify.sh --quick           # Runs Pint, Larastan, Vite Build, and NPM Audit (skips full PHPUnit suite)
+./verify.sh --e2e             # Runs standard suite + Playwright headless E2E smoke tests
 
-# 3. Security Quality Gate
-npm audit --audit-level=critical
+# 3. Direct Docker / Host Verification Shortcuts
+docker exec laravel_app composer verify   # Unified contract (Pint, Larastan Level 5, PHPUnit)
+npm run build                             # Production frontend bundle
+npm audit --audit-level=critical          # Security quality gate
+npm run test:e2e:smoke                    # Headless E2E smoke test
 ```
 
-## 4. Engineering Standards & Agent Skills
+---
 
-This repository integrates engineering skills from [Addy Osmani's agent-skills](https://skills.addy.ie/) located in `.agents/skills/` and `.agents/references/`.
+## 4. Mandatory Session Protocols (WalkingLabs Principles)
 
-For every implementation task, agents must follow the corresponding workflow skill:
+To maintain continuity across long-running tasks and agent context resets:
+
+### At Session Start (Mandatory 6 Steps):
+1. **Confirm Repository:** Verify the current directory is the Foresight Radar root with `pwd`.
+2. **Read State:** Read [`PROGRESS.md`](file:///c:/laragon/www/foresight-radar/PROGRESS.md) to understand current verified state, blockers, and priorities.
+3. **Review Context:** Check [`feature_list.json`](file:///c:/laragon/www/foresight-radar/feature_list.json) and relevant project specs in `docs/audit/`.
+4. **Inspect Git Status:** Run `git status` and `git log -5 --oneline` to inspect recent commits and working-tree status.
+5. **Run Baseline Verification:** Execute `./init.sh` to confirm containers and environment integrity.
+6. **Resume Work:** Pick up the highest-priority unfinished task identified in `PROGRESS.md`. If a baseline check is failing, localize and fix the failure before starting new features.
+
+### At Session Wrapup (Mandatory 5 Steps):
+1. **Update `PROGRESS.md`:** Record completed work, in-progress items, and updated session log entry.
+2. **Record Verification Evidence:** Record actual commands executed, durations, and outputs (never mark unexecuted checks as passed).
+3. **Record Next Actions & Blockers:** Identify unresolved blockers, risks, and the single highest-priority next actionable task.
+4. **Update Feature Register:** If feature status changed, update [`feature_list.json`](file:///c:/laragon/www/foresight-radar/feature_list.json) (`not_started`, `in_progress`, `blocked`, `passing`).
+5. **Review Git Diff:** Inspect `git diff` and leave the repository in a clean, reviewable, resumable state with conventional commits.
+
+---
+
+## 5. Engineering Standards & Agent Skills
+
+This repository uses workflow skills from `.agents/skills/` following a 3-phase methodology:
 
 1. **Phase 1: Define & Plan**:
-   - `spec-driven-development` & `planning-and-task-breakdown`: Define explicit acceptance criteria and break work into verifiable units before coding.
-   - `interview-me`: Clarify underspecified requirements with the user before assuming.
-   - `source-driven-development`: Ground decisions in authoritative documentation (Laravel 10, Inertia.js, React 18, Radix UI, Tailwind v4).
-   - `using-agent-skills`: Surface assumptions early, manage confusion actively, resist sycophancy, and maintain strict scope discipline.
-
+   - `spec-driven-development` & `planning-and-task-breakdown`: Define explicit acceptance criteria before modifying code.
+   - `interview-me`: Clarify underspecified requirements rather than making silent assumptions.
+   - `source-driven-development`: Ground implementations in official documentation (Laravel 10, React 18, Radix UI, Tailwind v4).
 2. **Phase 2: Build & Harden**:
-   - `incremental-implementation`: Build in thin, vertical slices. Test and verify each slice before moving to the next.
-   - `frontend-ui-engineering`: Maintain design system fidelity, WCAG 2.1 AA accessibility, responsive layouts, and token-based theming.
-   - `api-and-interface-design`: Enforce typed/validated contracts, clean error structures, and predictable responses.
-   - `security-and-hardening`: Enforce RBAC authorization gates, sanitize inputs, parameterize queries, and follow OWASP Top 10 guidelines.
-   - `doubt-driven-development`: Adversarially cross-examine non-trivial architectural and security decisions.
-
+   - `incremental-implementation`: Build in thin, vertical slices. Test each slice before proceeding.
+   - `frontend-ui-engineering`: Maintain design system fidelity, WCAG 2.1 AA accessibility, and responsive layouts.
+   - `security-and-hardening`: Enforce Spatie RBAC gates, sanitize inputs, parameterize queries, and guard against OWASP Top 10 risks.
+   - `doubt-driven-development`: Adversarially review authorization checks and concurrency boundaries.
 3. **Phase 3: Verify & Review**:
-   - `test-driven-development`: Verify behavior using automated tests before claiming completion.
-   - `debugging-and-error-recovery`: Reproduce -> Localize -> Fix -> Guard with regression tests.
-   - `code-review-and-quality`: Conduct multi-axis verification before proposing PRs or marking tasks done.
-   - `code-simplification`: Remove accidental complexity and dead branches while strictly preserving behavior.
+   - `test-driven-development`: Guard changes with regression tests (PHPUnit for domain logic, Playwright for E2E).
+   - `debugging-and-error-recovery`: Reproduce -> Localize -> Fix -> Guard.
+   - `code-review-and-quality`: Validate changes against Pint and Larastan Level 5.
+   - `code-simplification`: Remove dead code and unnecessary complexity without altering verified behavior.
 
-## 5. Definition of Done (DoD)
+---
+
+## 6. Security, Git Safety & Scope Discipline
+
+- **Data Security:** Never log or commit `.env` credentials, API keys, or production data. Always use `FakeLlmClient` fixtures for automated tests.
+- **Git Branching:** Work strictly on the designated feature or `development` branch. Never switch branches or push to remotes without explicit user instruction.
+- **Atomic Commits:** Use Conventional Commits (`feat(...)`, `fix(...)`, `chore(...)`, `test(...)`, `ci(...)`). Keep commits atomic and focused.
+- **Working Tree:** Preserve existing uncommitted user files. Never run `git reset --hard` or `git clean -fd` without authorization.
+
+---
+
+## 7. Definition of Done (DoD)
 
 A task is complete only when:
-1. **Quality Contract:** `composer verify` passes in `laravel_app` (0 Pint style issues, 0 Larastan Level 5 errors, 0 test failures).
-2. **Build:** `npm run build` succeeds cleanly without warnings treated as errors or failed assets.
-3. **Security:** No critical security vulnerabilities introduced; authorization policies enforced on models.
-4. **Regression Guard:** Any fixed defect includes an automated regression test covering reproduction and edge cases.
-5. **Scope Discipline:** Working tree diff contains only intentional, reviewable changes related to the task.
+1. **Unified Quality Contract:** `docker exec laravel_app composer verify` passes cleanly:
+   - 0 Laravel Pint code style issues.
+   - 0 Larastan Level 5 static analysis errors.
+   - 100% PHPUnit test suite passing.
+2. **Frontend Build:** `npm run build` succeeds cleanly without bundle or Rollup resolution errors.
+3. **Security Quality Gate:** `npm audit --audit-level=critical` reports 0 critical vulnerabilities.
+4. **Regression Guard:** Any bug fix or behavioral change includes an automated test verifying reproduction and edge cases.
+5. **State Persisted:** `PROGRESS.md` and `feature_list.json` reflect the updated state, verification evidence, and next steps.
+6. **Clean Working Tree:** `git status` shows all changes are committed cleanly.
