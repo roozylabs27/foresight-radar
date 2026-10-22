@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { AlertCircleIcon, RotateCcwIcon, SlidersHorizontalIcon, SparklesIcon } from "lucide-react";
+import { AlertCircleIcon, ArrowRightIcon, GitForkIcon, RotateCcwIcon, SlidersHorizontalIcon, SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import Panel from "@/Components/Panel";
@@ -20,6 +20,7 @@ const READINESS_TONES = {
 
 export default function ScenarioSimulation({ loading, reasoningData, params }) {
     const [overrides, setOverrides] = useState({});
+    const [propagate, setPropagate] = useState(false);
     const [simulationResult, setSimulationResult] = useState(null);
     const [simulating, setSimulating] = useState(false);
 
@@ -77,6 +78,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
             const payload = {
                 date: params?.date ?? null,
                 dimension: params?.dimension ?? null,
+                propagate,
                 overrides: Object.entries(overrides).map(([forceId, changes]) => ({
                     force: forceId,
                     ...changes,
@@ -102,7 +104,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
             clearTimeout(timer);
             controller.abort();
         };
-    }, [overrides, params]);
+    }, [overrides, params, propagate]);
 
     if (loading) {
         return (
@@ -126,18 +128,46 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
 
     return (
         <div className="flex flex-col gap-4">
-            {/* Simulation Warning Banner */}
-            <div className="flex items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-50/50 p-3.5 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-                <AlertCircleIcon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                <div className="flex-1">
-                    <span className="font-semibold">Simulasi What-if (Hanya Baca):</span> Simulasi tidak menyimpan perubahan ke database. Efek propagasi lintas-force belum dihitung.
-                </div>
-                {activeOverrideCount > 0 && (
-                    <Button variant="ghost" size="sm" onClick={handleResetAll} className="h-8 gap-1.5 text-xs">
-                        <RotateCcwIcon className="size-3.5" />
-                        Reset Semua ({activeOverrideCount})
-                    </Button>
+            {/* Simulation Control & Warning Banner */}
+            <div className={cn(
+                "flex flex-col gap-3 rounded-lg border p-3.5 text-sm sm:flex-row sm:items-center",
+                propagate
+                    ? "border-indigo-500/30 bg-indigo-50/60 text-indigo-950 dark:bg-indigo-950/30 dark:text-indigo-200"
+                    : "border-amber-500/20 bg-amber-50/50 text-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
+            )}>
+                {propagate ? (
+                    <GitForkIcon className="size-5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                ) : (
+                    <AlertCircleIcon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
                 )}
+                <div className="flex-1">
+                    <span className="font-semibold">
+                        {propagate ? "Simulasi Sistemik (Propagasi Aktif):" : "Simulasi What-if (Efek Langsung):"}
+                    </span>{" "}
+                    {propagate
+                        ? "Perubahan status dan nilai merambat ke driving force yang terhubung melalui matriks cross-impact."
+                        : "Simulasi tidak menyimpan perubahan ke database. Efek perambatan lintas-force belum dihitung."}
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant={propagate ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPropagate((prev) => !prev)}
+                        className={cn(
+                            "h-8 gap-1.5 text-xs",
+                            propagate && "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                        )}
+                    >
+                        <GitForkIcon className="size-3.5" />
+                        {propagate ? "Propagasi Aktif" : "Aktifkan Propagasi"}
+                    </Button>
+                    {activeOverrideCount > 0 && (
+                        <Button variant="ghost" size="sm" onClick={handleResetAll} className="h-8 gap-1.5 text-xs">
+                            <RotateCcwIcon className="size-3.5" />
+                            Reset Semua ({activeOverrideCount})
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Comparison Metrics Cards */}
@@ -202,6 +232,58 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
                     </div>
                 </Panel>
             </div>
+
+            {/* Cross-Impact Propagation Ripple Trace Panel */}
+            {propagate && simulationResult?.propagations && (
+                <Panel
+                    icon={<GitForkIcon className="size-4 text-indigo-500" />}
+                    title={`Efek Riak Lintas-Force (${simulationResult.propagations.length} Relasi Terpengaruh)`}
+                    description="Perambatan dampak ke driving force terkait yang dipicu oleh perubahan status/skor melalui matriks cross-impact"
+                >
+                    {simulationResult.propagations.length === 0 ? (
+                        <div className="py-4 text-center text-xs text-muted-foreground">
+                            Tidak ada relasi cross-impact aktif yang terhubung dengan driving force yang disesuaikan saat ini.
+                        </div>
+                    ) : (
+                        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                            {simulationResult.propagations.map((p, idx) => (
+                                <div key={idx} className="flex flex-col gap-1.5 rounded-md border border-border/60 bg-muted/30 p-2.5 text-xs">
+                                    <div className="flex items-center justify-between font-medium">
+                                        <span className="truncate text-foreground/90">{p.source_keyword}</span>
+                                        <span className={cn(
+                                            "rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold",
+                                            p.score > 0
+                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                                : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                                        )}>
+                                            {p.score > 0 ? `+${p.score}` : p.score}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                                        <ArrowRightIcon className="size-3 shrink-0" />
+                                        <span className="truncate font-semibold text-foreground/80">{p.target_keyword}</span>
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2 border-t border-border/40 pt-1.5 text-[11px] text-muted-foreground">
+                                        <span>
+                                            Δ Impact:{" "}
+                                            <strong className={p.induced_delta_impact > 0 ? "text-emerald-600" : (p.induced_delta_impact < 0 ? "text-rose-600" : "")}>
+                                                {p.induced_delta_impact > 0 ? `+${p.induced_delta_impact}` : p.induced_delta_impact}
+                                            </strong>
+                                        </span>
+                                        <span>•</span>
+                                        <span>
+                                            Δ Uncertainty:{" "}
+                                            <strong className={p.induced_delta_uncertainty < 0 ? "text-emerald-600" : (p.induced_delta_uncertainty > 0 ? "text-rose-600" : "")}>
+                                                {p.induced_delta_uncertainty > 0 ? `+${p.induced_delta_uncertainty}` : p.induced_delta_uncertainty}
+                                            </strong>
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </Panel>
+            )}
 
             {/* Forces Controls List */}
             <Panel
