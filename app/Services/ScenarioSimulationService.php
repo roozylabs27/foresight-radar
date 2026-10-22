@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\StatusActionType;
+use App\Models\CrossImpact;
 use App\Models\StatusAction;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +19,7 @@ class ScenarioSimulationService
      * @param  string|array|null  $dateRange
      * @param  array<int, array{force: string, status_action?: string, impact?: int, uncertainty?: int}>  $overrides
      */
-    public function simulate(mixed $dateRange, mixed $dimension, array $overrides): array
+    public function simulate(mixed $dateRange, mixed $dimension, array $overrides, bool $propagate = false): array
     {
         $date = is_array($dateRange) ? $dateRange : (is_string($dateRange) ? explode(' - ', $dateRange) : null);
         $ratings = $this->reasoningEngine->loadRatings($date, $dimension);
@@ -116,6 +117,74 @@ class ScenarioSimulationService
             ];
         }
 
+        $propagations = [];
+        if ($propagate) {
+            $sourceForceIds = [];
+            foreach ($appliedOverrides as $ao) {
+                $u = $ao['force'];
+                if (isset($clonedByUuid[$u]->driving_force_id)) {
+                    $sourceForceIds[$clonedByUuid[$u]->driving_force_id] = $u;
+                }
+            }
+
+            $allForceIds = [];
+            foreach ($clonedRatings as $r) {
+                if ($r->driving_force_id && $r->driving_force?->uuid) {
+                    $allForceIds[$r->driving_force_id] = $r->driving_force->uuid;
+                }
+            }
+
+            if (! empty($sourceForceIds) && ! empty($allForceIds)) {
+                $edges = CrossImpact::query()
+                    ->whereIn('source_driving_force_id', array_keys($sourceForceIds))
+                    ->whereIn('target_driving_force_id', array_keys($allForceIds))
+                    ->where('score', '!=', 0)
+                    ->get();
+
+                foreach ($edges as $edge) {
+                    $targetUuid = $allForceIds[$edge->target_driving_force_id] ?? null;
+                    $sourceUuid = $sourceForceIds[$edge->source_driving_force_id] ?? null;
+
+                    if (! $targetUuid || ! $sourceUuid || ! isset($clonedByUuid[$targetUuid])) {
+                        continue;
+                    }
+
+                    $targetRating = $clonedByUuid[$targetUuid];
+                    $sourceRating = $clonedByUuid[$sourceUuid];
+
+                    $scoreNorm = $edge->score / 3.0;
+                    $isSourceDecided = StatusActionType::fromModel($sourceRating->status_action) === StatusActionType::DECIDED_PLAN;
+
+                    if ($isSourceDecided) {
+                        $deltaU = (int) round(-$scoreNorm * 1.5);
+                        $deltaI = (int) round($scoreNorm * 1.0);
+                    } else {
+                        $deltaU = (int) round($scoreNorm * 0.5);
+                        $deltaI = 0;
+                    }
+
+                    $oldImpact = $targetRating->impact_analysis;
+                    $oldUncertainty = $targetRating->uncertainty_analysis;
+
+                    $newImpact = max(1, min(10, $oldImpact + $deltaI));
+                    $newUncertainty = max(1, min(10, $oldUncertainty + $deltaU));
+
+                    $targetRating->impact_analysis = $newImpact;
+                    $targetRating->uncertainty_analysis = $newUncertainty;
+
+                    $propagations[] = [
+                        'source' => $sourceUuid,
+                        'source_keyword' => $sourceRating->driving_force?->keyword ?? 'Unknown',
+                        'target' => $targetUuid,
+                        'target_keyword' => $targetRating->driving_force?->keyword ?? 'Unknown',
+                        'score' => $edge->score,
+                        'induced_delta_impact' => $newImpact - $oldImpact,
+                        'induced_delta_uncertainty' => $newUncertainty - $oldUncertainty,
+                    ];
+                }
+            }
+        }
+
         // Recalculate simulation
         $simResilience = $this->reasoningEngine->explainResilienceIndex($clonedRatings);
         $simGrowth = $this->reasoningEngine->explainGrowthIndex($clonedRatings);
@@ -154,6 +223,8 @@ class ScenarioSimulationService
             ],
             'posture_changed' => $postureChanged,
             'overrides' => $appliedOverrides,
+            'propagation_enabled' => $propagate,
+            'propagations' => $propagations,
         ];
     }
 }

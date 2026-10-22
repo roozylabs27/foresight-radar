@@ -50,7 +50,12 @@ class DashboardController extends Controller
             $validated = $request->validated();
 
             return response()->json(
-                $simulation->simulate($validated['date'] ?? null, $validated['dimension'] ?? null, $validated['overrides']),
+                $simulation->simulate(
+                    $validated['date'] ?? null,
+                    $validated['dimension'] ?? null,
+                    $validated['overrides'],
+                    (bool) ($validated['propagate'] ?? false)
+                ),
                 Response::HTTP_OK
             );
         } catch (\Throwable $th) {

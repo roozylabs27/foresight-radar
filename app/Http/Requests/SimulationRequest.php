@@ -16,6 +16,7 @@ class SimulationRequest extends FormRequest
         return [
             'date' => ['nullable', 'string'],
             'dimension' => ['nullable'],
+            'propagate' => ['nullable', 'boolean'],
             'overrides' => ['required', 'array', 'max:50'],
             'overrides.*.force' => ['required', 'string', 'exists:driving_forces,uuid'],
             'overrides.*.status_action' => ['nullable', 'string', 'in:monitoring,decided_plan'],
