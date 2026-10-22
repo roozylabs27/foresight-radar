@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "typecheck": "tsc --noEmit",
         "test:e2e": "e2e run",
         "test:e2e:smoke": "e2e run tests/e2e/smoke.e2e.ts"
     },
@@ -13,6 +14,9 @@
         "@e2e-dev/web": "^0.12.0",
         "@inertiajs/react": "^1.0.0",
         "@tailwindcss/vite": "^4.3.3",
+        "@types/node": "^26.6.5",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
         "@vitejs/plugin-react": "^4.2.0",
         "autoprefixer": "^10.4.12",
         "axios": "^1.6.4",
@@ -22,6 +26,7 @@
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "tailwindcss": "^4.3.3",
+        "typescript": "^7.0.2",
         "vite": "^5.0.0"
     },
     "dependencies": {

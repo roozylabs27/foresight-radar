@@ -5,26 +5,39 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.1",
+        "php": "^8.2 || ^8.3",
         "anthropic-ai/sdk": "~0.59.0",
         "guzzlehttp/guzzle": "^7.2",
-        "inertiajs/inertia-laravel": "^0.6.3",
-        "laravel/framework": "^10.10",
-        "laravel/sanctum": "^3.2",
-        "laravel/tinker": "^2.8",
+        "inertiajs/inertia-laravel": "^1.0 || ^2.0",
+        "laravel/framework": "^11.0",
+        "laravel/sanctum": "^4.0",
+        "laravel/tinker": "^2.9",
         "spatie/laravel-permission": "^6.9",
+        "symfony/clock": "^7.0",
+        "symfony/css-selector": "^7.0",
+        "symfony/event-dispatcher": "^7.0",
+        "symfony/http-foundation": "^7.0",
+        "symfony/http-kernel": "^7.0",
+        "symfony/mailer": "^7.0",
+        "symfony/mime": "^7.0",
+        "symfony/routing": "^7.0",
+        "symfony/string": "^7.0",
+        "symfony/translation": "^7.0",
+        "symfony/uid": "^7.0",
+        "symfony/var-dumper": "^7.0",
+        "symfony/yaml": "^7.0",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.9.1",
-        "larastan/larastan": "^2.0",
-        "laravel/breeze": "^1.26",
-        "laravel/pint": "^1.0",
-        "laravel/sail": "^1.18",
-        "mockery/mockery": "^1.4.4",
-        "nunomaduro/collision": "^7.0",
-        "phpunit/phpunit": "^10.1",
-        "spatie/laravel-ignition": "^2.0"
+        "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^2.9",
+        "laravel/breeze": "^2.0",
+        "laravel/pint": "^1.14",
+        "laravel/sail": "^1.26",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.1",
+        "phpunit/phpunit": "^10.5",
+        "spatie/laravel-ignition": "^2.4"
     },
     "autoload": {
         "psr-4": {
@@ -68,6 +81,9 @@
         }
     },
     "config": {
+        "platform": {
+            "php": "8.3.36"
+        },
         "process-timeout": 1200,
         "optimize-autoloader": true,
         "preferred-install": "dist",

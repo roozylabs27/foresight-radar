@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LlmJobStatus;
+use App\Jobs\GenerateScenarioNarrative;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
@@ -9,6 +11,7 @@ use App\Models\Environment;
 use App\Models\Scenario;
 use App\Models\TimeHorizon;
 use App\Models\User;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
@@ -196,9 +199,9 @@ class ScenarioHarnessTest extends TestCase
     public function test_generate_scenario_narrative_job_implements_unique_contract(): void
     {
         $scenario = $this->createScenario($this->creator);
-        $job = new \App\Jobs\GenerateScenarioNarrative($scenario, false, $this->creator->id);
+        $job = new GenerateScenarioNarrative($scenario, false, $this->creator->id);
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Queue\ShouldBeUnique::class, $job);
+        $this->assertInstanceOf(ShouldBeUnique::class, $job);
         $this->assertSame((string) $scenario->id, $job->uniqueId());
     }
 
@@ -206,7 +209,7 @@ class ScenarioHarnessTest extends TestCase
     {
         $scenario = $this->createScenario($this->creator);
         $scenario->update([
-            'generation_status' => \App\Enums\LlmJobStatus::QUEUED,
+            'generation_status' => LlmJobStatus::QUEUED,
             'updated_at' => now(),
         ]);
 

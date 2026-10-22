@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DrivingForceStatus;
+use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Models\ActionReason;
 use App\Models\Dimension;
@@ -61,8 +63,8 @@ class ClosedItemsController extends Controller
         }
 
         try {
-            $driving_force->transitionTo(\App\Enums\DrivingForceStatus::PENDING);
-        } catch (\App\Exceptions\InvalidStateTransitionException $e) {
+            $driving_force->transitionTo(DrivingForceStatus::PENDING);
+        } catch (InvalidStateTransitionException $e) {
             return response()->json([
                 'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
                 'errors' => $e->getMessage(),

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DrivingForceStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -102,14 +103,14 @@ class DrivingForce extends Model
         );
     }
 
-    public function getStatusEnum(): \App\Enums\DrivingForceStatus
+    public function getStatusEnum(): DrivingForceStatus
     {
         $statusStr = $this->status ?? 'PENDING';
 
-        return \App\Enums\DrivingForceStatus::tryFrom($statusStr) ?? \App\Enums\DrivingForceStatus::PENDING;
+        return DrivingForceStatus::tryFrom($statusStr) ?? DrivingForceStatus::PENDING;
     }
 
-    public function transitionTo(\App\Enums\DrivingForceStatus|string $targetStatus): self
+    public function transitionTo(DrivingForceStatus|string $targetStatus): self
     {
         $targetEnum = $this->getStatusEnum()->validateTransitionTo($targetStatus);
         $this->status = $targetEnum->value;

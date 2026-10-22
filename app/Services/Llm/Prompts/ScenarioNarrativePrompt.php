@@ -3,6 +3,7 @@
 namespace App\Services\Llm\Prompts;
 
 use App\Models\Scenario;
+use App\Models\Signal;
 use App\Services\Llm\LlmRequest;
 
 /**
@@ -32,7 +33,7 @@ Make the four futures clearly different from each other and plausible rather tha
 PROMPT;
 
     /**
-     * @param  array<int, array{ref: string, axis: string, signal: \App\Models\Signal}>  $evidence
+     * @param  array<int, array{ref: string, axis: string, signal: Signal}>  $evidence
      */
     public static function request(Scenario $scenario, array $evidence, string $effort): LlmRequest
     {
