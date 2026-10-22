@@ -233,6 +233,20 @@
         "Zero Pint style issues, zero Larastan Level 5 errors, zero test failures"
       ],
       "verification_evidence": "composer verify passes (227 files, 131 stan files, 227 tests, 1075 assertions); verify.sh passes"
+    },
+    {
+      "id": "FEAT-018",
+      "name": "Synthetic Foresight Generator & Theory Reconciliation Harness",
+      "description": "Deterministic PRNG synthetic data generation, K-Means clustering, Silhouette evaluation, PCA 2D/3D projection, and domain theory reconciliation verifier.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "SyntheticForesightGenerator produces reproducible multi-dimensional forces and cross-impact edges via seedable PRNG",
+        "KMeansClusterer, SilhouetteEvaluator, and PcaTransformer perform pure mathematical clustering and dimensional reduction",
+        "TheoryReconciliationService validates causal loop polarity, Vester boundaries, and scenario axis orthogonality",
+        "Artisan command harness:eval-clustering executes deterministic benchmark quality gate"
+      ],
+      "verification_evidence": "Tests/Unit/Harness/* and Tests/Feature/Harness/* pass (1335 assertions); artisan harness:eval-clustering passes"
     }
   ]
 }
