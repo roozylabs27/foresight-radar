@@ -201,4 +201,17 @@ class ScenarioHarnessTest extends TestCase
         $this->assertInstanceOf(\Illuminate\Contracts\Queue\ShouldBeUnique::class, $job);
         $this->assertSame((string) $scenario->id, $job->uniqueId());
     }
+
+    public function test_concurrent_narrative_generation_is_rejected_when_job_is_pending(): void
+    {
+        $scenario = $this->createScenario($this->creator);
+        $scenario->update([
+            'generation_status' => \App\Enums\LlmJobStatus::QUEUED,
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->creator)->postJson("/scenarios/{$scenario->uuid}/generate");
+        $response->assertStatus(409);
+        $response->assertSee('Narasi skenario ini sedang dibuat');
+    }
 }

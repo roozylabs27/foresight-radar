@@ -42,23 +42,27 @@ class ScenarioNarrativeService
      */
     public function queue(Scenario $scenario, bool $overwriteEdited, ?int $userId): Scenario
     {
-        // A job older than the queue's retry window has died; the analyst may start again.
-        $stale = now()->subSeconds((int) config('queue.connections.database.retry_after', 360));
-        if ($scenario->generation_status?->isPending() && $scenario->updated_at?->greaterThan($stale)) {
-            throw new ConflictHttpException('Narasi skenario ini sedang dibuat. Tunggu sampai selesai.');
-        }
+        return DB::transaction(function () use ($scenario, $overwriteEdited, $userId) {
+            $locked = Scenario::where('id', $scenario->id)->lockForUpdate()->firstOrFail();
 
-        $this->assertGeneratable($scenario, $overwriteEdited);
+            // A job older than the queue's retry window has died; the analyst may start again.
+            $stale = now()->subSeconds((int) config('queue.connections.database.retry_after', 360));
+            if ($locked->generation_status?->isPending() && $locked->updated_at?->greaterThan($stale)) {
+                throw new ConflictHttpException('Narasi skenario ini sedang dibuat. Tunggu sampai selesai.');
+            }
 
-        $scenario->update([
-            'generation_status' => LlmJobStatus::QUEUED,
-            'generation_error' => null,
-            'generation_notice' => null,
-        ]);
+            $this->assertGeneratable($locked, $overwriteEdited);
 
-        GenerateScenarioNarrative::dispatch($scenario, $overwriteEdited, $userId);
+            $locked->update([
+                'generation_status' => LlmJobStatus::QUEUED,
+                'generation_error' => null,
+                'generation_notice' => null,
+            ]);
 
-        return $scenario->refresh();
+            GenerateScenarioNarrative::dispatch($locked, $overwriteEdited, $userId);
+
+            return $locked->refresh();
+        });
     }
 
     /**
