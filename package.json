@@ -6,7 +6,8 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "test:e2e": "e2e run"
+        "test:e2e": "e2e run",
+        "test:e2e:smoke": "e2e run tests/e2e/smoke.e2e.ts"
     },
     "devDependencies": {
         "@e2e-dev/web": "^0.12.0",
