@@ -60,14 +60,17 @@ class DrivingForceController extends Controller
     {
         try {
             DB::beginTransaction();
-            $request['uuid'] = Uuid::uuid1();
-            $request['created_by'] = auth()->user()->id;
-            $request['pic'] = $request['pic_id'];
-            $request['status'] = 'PENDING';
+            $validated = $request->validated();
 
-            $request = $request->all();
-
-            DrivingForce::create($request);
+            DrivingForce::create([
+                'uuid' => Uuid::uuid1(),
+                'dimension_id' => $validated['dimension_id'],
+                'pic' => $validated['pic_id'],
+                'created_by' => auth()->id(),
+                'keyword' => $validated['keyword'],
+                'description' => $validated['description'],
+                'status' => 'PENDING',
+            ]);
 
             DB::commit();
 
@@ -90,13 +93,13 @@ class DrivingForceController extends Controller
         try {
             DB::beginTransaction();
 
-            $request = $request->all();
+            $validated = $request->validated();
 
-            $driving_force->dimension_id = $request['dimension_id'];
-            $driving_force->updated_by = $request['updated_by'] ?? null;
-            $driving_force->pic = $request['pic_id'];
-            $driving_force->keyword = $request['keyword'];
-            $driving_force->description = $request['description'];
+            $driving_force->dimension_id = $validated['dimension_id'];
+            $driving_force->updated_by = auth()->id();
+            $driving_force->pic = $validated['pic_id'];
+            $driving_force->keyword = $validated['keyword'];
+            $driving_force->description = $validated['description'];
             $driving_force->save();
 
             DB::commit();

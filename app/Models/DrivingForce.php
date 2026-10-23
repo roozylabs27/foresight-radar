@@ -52,17 +52,17 @@ class DrivingForce extends Model
 
     public function created_by_user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by')->withTrashed();
     }
 
     public function pic_user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'pic');
+        return $this->belongsTo(User::class, 'pic')->withTrashed();
     }
 
     public function updated_by_user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->belongsTo(User::class, 'updated_by')->withTrashed();
     }
 
     public function rating(): HasOne

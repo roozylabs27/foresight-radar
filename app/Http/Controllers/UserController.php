@@ -19,9 +19,10 @@ class UserController extends Controller
     public function index()
     {
         $title = 'User';
-        if (auth()->user()->roles->pluck('name')[0] == 'developer') {
+        $user = auth()->user();
+        if ($user?->hasRole('developer')) {
             $roles = Role::select('id', 'display_name')->get();
-        } elseif (auth()->user()->roles->pluck('name')[0] == 'super-admin') {
+        } elseif ($user?->hasRole('super-admin')) {
             $roles = Role::select('id', 'display_name')->whereNotIn('name', ['developer'])->get();
         } else {
             $roles = Role::select('id', 'display_name')->whereNotIn('name', ['super-admin', 'developer'])->get();
@@ -62,11 +63,9 @@ class UserController extends Controller
                 'password' => bcrypt($request->password),
             ]);
 
-            $get_role = Role::where('id', $request->role_id)->first();
+            $get_role = Role::where('id', $request->role_id)->firstOrFail();
 
             $new_user->syncRoles($get_role->name);
-
-            $new_user->syncPermissions($get_role->permissions);
 
             DB::commit();
 
@@ -95,11 +94,10 @@ class UserController extends Controller
 
             $user->roles()->detach();
 
-            $get_role = Role::where('id', $request->role_id)->first();
+            $get_role = Role::where('id', $request->role_id)->firstOrFail();
 
             $user->syncRoles($get_role->name);
-
-            $user->syncPermissions($get_role->permissions);
+            $user->syncPermissions([]);
 
             DB::commit();
 

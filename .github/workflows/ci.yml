@@ -31,14 +31,14 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: pdo_mysql, pdo_sqlite, mbstring, bcmath, gd, zip
           coverage: none
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      # Security Policy: composer audit reports upstream advisories in the Laravel 10 ecosystem.
+      # Security Policy: composer audit reports upstream advisories in the Laravel 11 ecosystem.
       # Runs in advisory reporting mode pending major framework version upgrades.
       - name: Composer Security Audit (Advisory)
         run: composer audit
@@ -87,6 +87,9 @@ jobs:
       - name: NPM Security Audit (Block on Critical)
         run: npm audit --audit-level=critical
 
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
       - name: Build production assets
         run: npm run build
 
@@ -111,7 +114,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, redis
           coverage: none
 

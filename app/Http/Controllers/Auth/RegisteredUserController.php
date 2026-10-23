@@ -22,7 +22,7 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        if (! config('auth.allow_registration', true)) {
+        if (! config('auth.allow_registration', false)) {
             abort(403, 'Public account registration is restricted. Please contact your system administrator.');
         }
 
@@ -36,7 +36,7 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        if (! config('auth.allow_registration', true)) {
+        if (! config('auth.allow_registration', false)) {
             abort(403, 'Public account registration is restricted. Please contact your system administrator.');
         }
 

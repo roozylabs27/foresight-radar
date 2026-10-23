@@ -149,7 +149,17 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 4. Frontend Production Build (Vite)
+# 4. TypeScript Typecheck (tsc)
+# ------------------------------------------------------------------------------
+if [ "${RUN_FRONTEND}" = true ]; then
+    run_check "TypeScript Typecheck (tsc)" \
+        "run_npm run typecheck"
+else
+    run_check "TypeScript Typecheck (tsc)" "" true
+fi
+
+# ------------------------------------------------------------------------------
+# 5. Frontend Production Build (Vite)
 # ------------------------------------------------------------------------------
 if [ "${RUN_FRONTEND}" = true ]; then
     run_check "Frontend Production Build (Vite)" \
