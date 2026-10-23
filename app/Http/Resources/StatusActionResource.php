@@ -42,21 +42,23 @@ class StatusActionResource extends JsonResource
         }
 
         return [
-            'id' => $this->rating->uuid,
-            'dimension' => $this->dimension->name,
-            'dimension_id' => $this->dimension->id,
+            'id' => $this->rating?->uuid,
+            'dimension' => $this->dimension?->name,
+            'dimension_id' => $this->dimension?->id,
             'keyword' => $this->keyword,
             'description' => $this->description,
-            'time_horizon' => $this->rating->time_horizon->name,
-            'priority' => $this->rating->priority->name,
-            'uncertainty_analysis' => $this->rating->uncertainty_analysis,
-            'impact_analysis' => $this->rating->impact_analysis,
-            'status_action_id' => $this->rating->status_action_id,
-            'reasons' => collect($this->rating->action_reasons)->map(function ($data) {
-                $action = StatusAction::where('id', $data->status_action_id)->first();
+            'time_horizon' => $this->rating?->time_horizon?->name,
+            'priority' => $this->rating?->priority?->name,
+            'uncertainty_analysis' => $this->rating?->uncertainty_analysis,
+            'impact_analysis' => $this->rating?->impact_analysis,
+            'status_action_id' => $this->rating?->status_action_id,
+            'reasons' => collect($this->rating?->action_reasons)->map(function ($data) {
+                $action = $data->relationLoaded('status_action')
+                    ? $data->status_action
+                    : StatusAction::where('id', $data->status_action_id)->first();
 
                 return [
-                    'children' => $action->name.', '.$data->reason.' - '.Carbon::parse($data->date)->translatedFormat('Y-m-d H:i:s'),
+                    'children' => ($action?->name ?? '').', '.$data->reason.' - '.Carbon::parse($data->date)->translatedFormat('Y-m-d H:i:s'),
                 ];
             })->toArray(),
             'monitoring' => $monitoring,

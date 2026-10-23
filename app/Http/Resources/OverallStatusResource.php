@@ -48,18 +48,18 @@ class OverallStatusResource extends JsonResource
         }
 
         if ($this->status_action_id == 1) {
-            $monitoring = $this->status_action->code;
+            $monitoring = $this->status_action?->code;
         }
 
         if ($this->status_action_id == 2) {
-            $decided_plan = $this->status_action->code;
+            $decided_plan = $this->status_action?->code;
         }
 
         return [
             'id' => $this->uuid,
-            'dimension' => $this->driving_force->dimension->name,
-            'keyword' => $this->driving_force->keyword,
-            'description' => $this->driving_force->description,
+            'dimension' => $this->driving_force?->dimension?->name,
+            'keyword' => $this->driving_force?->keyword,
+            'description' => $this->driving_force?->description,
             'short_term' => $short_term,
             'mid_term' => $mid_term,
             'long_term' => $long_term,

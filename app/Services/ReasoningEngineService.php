@@ -56,6 +56,7 @@ class ReasoningEngineService
     public function getExecutiveOverview(?array $dateRange = null, mixed $dimension = null): array
     {
         $ratings = $this->loadRatings($dateRange, $dimension);
+        $dimensions = Dimension::orderBy('id')->get(['id', 'name']);
 
         $resilience = $this->explainResilienceIndex($ratings);
         $growth = $this->explainGrowthIndex($ratings);
@@ -81,13 +82,13 @@ class ReasoningEngineService
                 'growth' => $growth,
                 'resilience' => $resilience,
             ],
-            'eda_frequency' => $this->calculateEdaFrequency($ratings),
+            'eda_frequency' => $this->calculateEdaFrequency($ratings, $dimensions),
             'eda_distribution' => $this->calculateEdaDistribution($ratings),
             'eda_relationship' => $this->calculateEdaRelationship($ratings),
-            'eda_comparison' => $this->calculateEdaComparison($ratings),
+            'eda_comparison' => $this->calculateEdaComparison($ratings, $dimensions),
             'eda_trend' => $trend['data'],
             'eda_trend_range' => $trend['range'],
-            'history_trend' => $this->historyAnalytics->scoreTrend($trend['range'], $dimension),
+            'history_trend' => $this->historyAnalytics->scoreTrend($trend['range'], $dimension, $dimensions),
             'transition_velocity' => $this->historyAnalytics->transitionVelocity($trend['range'], $dimension),
         ];
     }
@@ -356,11 +357,12 @@ class ReasoningEngineService
     /**
      * EDA frequency: forces per dimension, split by status action.
      */
-    public function calculateEdaFrequency(Collection $ratings): array
+    public function calculateEdaFrequency(Collection $ratings, ?Collection $dimensions = null): array
     {
         $countsByDimension = $ratings->groupBy(fn ($rating) => $rating->driving_force?->dimension_id);
+        $dimensionList = $dimensions ?? Dimension::orderBy('id')->get(['id', 'name']);
 
-        return Dimension::orderBy('id')->get()->map(function ($dim) use ($countsByDimension) {
+        return $dimensionList->map(function ($dim) use ($countsByDimension) {
             $group = $countsByDimension->get($dim->id, collect());
 
             return [
@@ -431,12 +433,13 @@ class ReasoningEngineService
     /**
      * EDA comparison: spread of impact per dimension and per time horizon.
      */
-    public function calculateEdaComparison(Collection $ratings): array
+    public function calculateEdaComparison(Collection $ratings, ?Collection $dimensions = null): array
     {
         $byDimension = $ratings->groupBy(fn ($rating) => $rating->driving_force?->dimension?->name ?? 'Tanpa Dimensi');
         $byHorizon = $ratings->groupBy(fn ($rating) => TimeHorizonType::fromModel($rating->time_horizon)?->label() ?? 'Tanpa Horizon');
 
-        $dimensions = Dimension::orderBy('id')->pluck('name')
+        $dimensionNames = ($dimensions ?? Dimension::orderBy('id')->get(['id', 'name']))->pluck('name');
+        $dimensionRows = $dimensionNames
             ->filter(fn ($name) => $byDimension->has($name))
             ->map(fn ($name) => $this->groupSpread($name, $byDimension->get($name)))
             ->values()
@@ -450,7 +453,7 @@ class ReasoningEngineService
             ->values()
             ->all();
 
-        return ['by_dimension' => $dimensions, 'by_horizon' => $horizons];
+        return ['by_dimension' => $dimensionRows, 'by_horizon' => $horizons];
     }
 
     protected function groupSpread(string $name, Collection $ratings): array

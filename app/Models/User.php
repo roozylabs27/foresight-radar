@@ -71,7 +71,8 @@ class User extends Authenticatable
 
     public static function filter()
     {
-        $pagination = request('pagination.pageSize', 10);
+        $rawPagination = (int) request('pagination.pageSize', request('pageSize', 10));
+        $pagination = min(100, max(1, $rawPagination > 0 ? $rawPagination : 10));
         $search = request('search');
         $date_range = request('date');
         $has_date = is_array($date_range) && count($date_range) === 2 && ! empty($date_range[0]) && ! empty($date_range[1]);

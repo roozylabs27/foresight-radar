@@ -36,14 +36,20 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
-            'canRegister' => (bool) config('auth.allow_registration', true),
+            'canRegister' => (bool) config('auth.allow_registration', false),
         ];
 
         if ($user) {
             $data = [
                 ...$data,
                 'auth' => [
-                    'user' => $user,
+                    'user' => [
+                        'id' => $user->id,
+                        'uuid' => $user->uuid,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'email_verified_at' => $user->email_verified_at,
+                    ],
                     'role' => $user->roles->first()?->name ?? null,
                     'permissions' => method_exists($user, 'getAllPermissions')
                         ? $user->getAllPermissions()->pluck('name')->toArray()

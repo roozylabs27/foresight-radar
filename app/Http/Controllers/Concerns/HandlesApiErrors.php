@@ -21,9 +21,12 @@ trait HandlesApiErrors
             'line' => $th->getLine(),
         ]);
 
+        $message = $userMessage ?? "An error occurred during {$context}. Please try again.";
+
         return [
             'statusCode' => Response::HTTP_INTERNAL_SERVER_ERROR,
-            'message' => $userMessage ?? "An error occurred during {$context}. Please try again.",
+            'message' => $message,
+            'errors' => $message,
         ];
     }
 

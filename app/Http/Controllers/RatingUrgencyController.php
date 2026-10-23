@@ -46,6 +46,14 @@ class RatingUrgencyController extends Controller
 
     public function create(Request $request, DrivingForceRating $driving_force_rating)
     {
+        if ($driving_force_rating->driving_force?->status === 'CLOSED') {
+            return response()->json([
+                'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                'message' => 'Cannot modify rating of a closed driving force.',
+                'errors' => 'Cannot modify rating of a closed driving force.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $validated = $request->validate([
             'type' => ['required', 'string', 'in:impact,uncertainty'],
             'value' => ['required', 'integer', 'between:1,10'],

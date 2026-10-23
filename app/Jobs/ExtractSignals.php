@@ -6,6 +6,7 @@ use App\Enums\LlmJobStatus;
 use App\Models\Source;
 use App\Services\SignalExtractionService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -18,7 +19,7 @@ use Throwable;
  * failure already falls back to keyword rules inside the service, so a
  * failure here is a server error, and a retry would repeat a paid call.
  */
-class ExtractSignals implements ShouldQueue
+class ExtractSignals implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -27,6 +28,11 @@ class ExtractSignals implements ShouldQueue
     public int $timeout;
 
     public bool $failOnTimeout = true;
+
+    public function uniqueId(): string
+    {
+        return (string) $this->source->id;
+    }
 
     public function __construct(public Source $source)
     {
@@ -60,6 +66,10 @@ class ExtractSignals implements ShouldQueue
 
     public function failed(Throwable $e): void
     {
+        if ($this->source->extraction_status === LlmJobStatus::FAILED) {
+            return;
+        }
+
         Log::error('Signal extraction job failed', ['source' => $this->source->uuid, 'error' => $e->getMessage()]);
 
         $this->source->update([

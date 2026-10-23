@@ -4,16 +4,52 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `6ec749a` (`merge: runtime modernization (PHP 8.3, Laravel 11.57, TypeScript, React 19, Inertia 2.0)`)
+- **Last reviewed commit:** `83f532a` (`docs(agents): add frontend Clean Architecture and Atomic Design standards`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 238 files clean, Larastan: Level 5 / 137 files clean, PHPUnit: 244 passed / 2,440 assertions, Vite: 1m 47s build clean, NPM Audit: 0 critical vulnerabilities, Playwright E2E: 100% pass, Chrome DevTools MCP: clean console, 0 errors)
-- **Current objective:** Runtime modernization (PHP 8.3, Laravel 11.57, TypeScript, React 19, Inertia 2.0) merged into development.
+- **Baseline verification:** PASS (Pint: 241 files clean, Larastan: Level 5 / 137 files clean, PHPUnit: 259 passed / 2,503 assertions, TypeScript: 0 errors, Vite: 1m 27s build clean, NPM Audit: 0 critical vulnerabilities, Playwright E2E: 100% pass, Chrome DevTools MCP: clean console, 0 errors)
+- **Current objective:** Comprehensive Performance, Security, Robustness & Reliability Audit (`docs/audits/*`) AND Phases 0–3 Remediation Backlog completed and verified green.
 - **Current blocker:** None
-- **Highest-priority next task:** Proceed with next feature capability from feature roadmap.
+- **Highest-priority next task:** Optional Phase 2 database composite index migration (`PERF-006`) or `xlsx` library replacement (`SEC-002`) when next schema/dependency window opens.
 
 ---
 
 ## Completed
+
+- [x] **Audit Remediation Execution: Phases 0, 1, 2 & 3 (2026-10-23)**
+  - **Phase 0 (`tests/Feature/Audit/PhaseZeroRemediationTest.php` — 5/5 PASS):**
+    - `REL-001`: Aligned `.github/workflows/ci.yml` to `php-version: '8.3'`, added `development` branch trigger and `npm run typecheck`, and added TypeScript `tsc --noEmit` gate to `verify.sh`.
+    - `SEC-001`: Replaced `$request->all()` mass assignment in `DrivingForceController::create()` and `update()` with `$request->validated()`, enforcing `'status' => 'PENDING'`, `'created_by' => auth()->id()`, and `$driving_force->updated_by = auth()->id()`.
+    - `SEC-004`: Disabled unauthenticated public `/register` by default (`config('auth.allow_registration', false)`) and added `throttle:6,1` middleware to `POST /register`.
+    - `REL-002`: Added `->withTrashed()` to `DrivingForce` user relations (`created_by_user`, `pic_user`, `updated_by_user`), made `UserResource`, `ApprovalItemsResource`, `ClosedItemsResource`, `StatusActionResource`, and `OverallStatusResource` null-safe (`?->`), and replaced `roles->pluck('name')[0]` in `UserController::index()` with `$user?->hasRole(...)`.
+  - **Phase 1 (`tests/Feature/Audit/PhaseOneRemediationTest.php` — 6/6 PASS):**
+    - `PERF-001`: Clamped `pageSize` to `[1, 100]` across all 9 paginated endpoints (`DrivingForceService::resolvePageSize()`, `RegisteredListController`, `SignalIngestionController`, `User::filter()`).
+    - `PERF-002`: Eliminated 5+ N+1 queries per row in `ApprovalItemsResource`, `ClosedItemsResource`, and `StatusActionResource` via eager loading in `DrivingForceService` (reducing `/approval-items/fetch-data` query count for 10 rows from `56` queries down to `8` queries).
+    - `PERF-003`: Excluded `sources.raw_content` (`LONGTEXT`) from eager-loaded `source` relations across `SignalIngestionController`, `DrivingForceService`, and `ForesightReportingService`.
+    - `SEC-003`: Enforced creator/admin ownership check on `SignalIngestionController::extraction()` and blocked mutations on `CLOSED` driving forces (`422`) in `TimeHorizonController`, `RatingUrgencyController`, and `StatusActionController`.
+    - `SEC-005`: Removed redundant direct permission duplication (`syncPermissions`) on user creation and cleared stale direct permissions (`syncPermissions([])`) on role change in `UserController`.
+    - `REL-003` & `REL-004`: Moved `$signal->review_status !== 'PENDING'` inside `DB::transaction()` after `lockForUpdate()` in `SignalIngestionController::review()`, wrapped `CrossImpactService::score()` in `DB::transaction()`, and implemented `ShouldBeUnique` + idempotent `failed()` on `ExtractSignals`.
+  - **Phase 2 & Phase 3 (`tests/Feature/Audit/PhaseTwoThreeRemediationTest.php` — 4/4 PASS):**
+    - `REL-005`: Ordered `ForesightReportingService::getRegisteredListQuery()` by `dimension_id ASC` and replaced `lazy(100)` (`forPageAfterId`) in `RegisteredListController::export_data()` so exported rows remain contiguously grouped by dimension.
+    - `PERF-004`: Deduplicated `Dimension::orderBy('id')` queries across `ReasoningEngineService` and `RatingHistoryAnalyticsService` (`3` queries -> `1` query per `/dashboard/reasoning-data` request).
+    - `PERF-005` & `SEC-006`: Added `sanitizeSpreadsheetCell()` against spreadsheet formula injection (`=`, `+`, `-`, `@`, `\t`, `\r`), converted `xlsx` (`429.02 kB`) to a dynamic `await import("xlsx")` inside `OverallStatus.jsx`, and code-split `OverallStatus`, `PrioritizingChart`, and `Radar` tabs on `Dashboard.jsx`.
+    - `SEC-007` & `REL-006`: Minimized Inertia shared `auth.user` payload in `HandleInertiaRequests`, added baseline `throttle:120,1` middleware to authenticated routes in `routes/web.php`, and included both `'message'` and `'errors'` keys in `HandlesApiErrors`.
+
+- [x] **Comprehensive Performance, Security, Robustness & Reliability Audit (2026-10-23)**
+  - **Deliverables Generated (`docs/audits/` & `docs/audit/`):**
+    - `PERFORMANCE_AUDIT.md` (`7` findings: `PERF-001` to `PERF-007`)
+    - `SECURITY_AUDIT.md` (`7` findings: `SEC-001` to `SEC-007`)
+    - `ROBUSTNESS_RELIABILITY_AUDIT.md` (`6` findings: `REL-001` to `REL-006`)
+    - `AUDIT_SUMMARY.md` (Executive summary, baseline verification table, master register of `20` confirmed findings: `0` Critical, `7` High, `9` Medium, `4` Low)
+    - `AUDIT_REMEDIATION_PLAN.md` (Phased execution plan across Phases 0–3 with test requirements and rollback plans)
+    - `AUDIT_FINDINGS.json` (Validated machine-readable findings catalog)
+  - **Key High-Severity Findings Identified:**
+    - `SEC-001` (High): Mass assignment in `DrivingForceController::create()` (`$request->all()`) allows injecting `status: "APPROVED"` on creation, bypassing approval governance; `update()` allows spoofing `updated_by`.
+    - `REL-001` (High): `.github/workflows/ci.yml` provisions `php-version: '8.2'` instead of `'8.3'`, triggers on `develop` instead of `development`, and omits `npm run typecheck`.
+    - `REL-002` (High): Unhandled null dereferences in `UserResource` (`roles[0]`) and `ApprovalItemsResource` / `ClosedItemsResource` (`pic_user->name` without `withTrashed()` or `?->`) cause HTTP 500 crashes when a PIC user is soft-deleted or a roleless user exists.
+    - `PERF-001` (High): Unbounded `pageSize` across all 9 paginated endpoints allows memory/CPU exhaustion (`?pageSize=100000`).
+    - `PERF-002` (High): 5+ N+1 queries per row (`50+` extra queries per 10-row page) in `ApprovalItemsResource`, `ClosedItemsResource`, and `StatusActionResource`.
+    - `PERF-003` (High): Unconstrained eager-loading of `sources.raw_content` (`LONGTEXT` up to 60 KB/doc) in Signal, Driving Force, Radar, and Prioritizing endpoints.
+    - `SEC-002` (High): Unpatched Prototype Pollution/ReDoS in client-side `xlsx@0.18.5` (`288 kB` chunk) and non-strict `email` rule CRLF advisory (`CVE-2026-48019`) on `laravel/framework` `11.57.0`.
 
 - [x] **Runtime Modernization: PHP 8.3, Laravel 11.57, TypeScript, React 19 & Inertia 2.0**
   - **Evidence:** `cccd667` (`feat(upgrade): upgrade runtime to PHP 8.3, Laravel 11.57, and configure TypeScript`), `f938219` (`feat(frontend): upgrade to React 19 and Inertia 2.0`).
@@ -63,9 +99,7 @@
 
 ## In Progress
 
-- [ ] **Next Roadmap Feature Implementation**
-  - **Current state:** Harness Engineering Foundation committed to `development` (`4dbd313`). All baseline verification gates pass.
-  - **Awaiting:** User direction on which feature slice from `feature_list.json` to prioritize next (e.g. FEAT-015 Signal Ingestion, FEAT-016 Scenario Studio, FEAT-012 Simulation).
+*No active in-progress tasks. Audit deliverables and Phases 0–3 remediation slices are complete and verified.*
 
 ---
 
@@ -90,10 +124,47 @@
 | 2026-10-22 (`55c39c9`) | Full Test Suite (FEAT-018) | **PASS** | 242 tests, 2,410 assertions passed (0 failures) |
 | 2026-10-22 (`1f56dee`) | Full Test Suite (FEAT-012 Enhancement) | **PASS** | 244 tests, 2,422 assertions passed (0 failures) |
 | 2026-10-22 (`HEAD`) | `verify.sh --quick` Automated Suite | **PASS** | Pint: 238 files (PASS), Larastan L5: 137 files (PASS), Vite: 4,086 modules / 3m 16s (PASS), NPM Audit: 0 critical (PASS) |
+| 2026-10-23 (`83f532a`) | Full Audit Baseline Verification | **PASS** | Pint: 238 files PASS; Larastan L5: 137 files PASS; PHPUnit: 244 passed (2,440 assertions, 421.83s); `tsc --noEmit`: 0 errors; Vite build: 4,731 modules (1m 47s); Playwright smoke: 1/1 PASS (16.66s) |
+| 2026-10-23 (`HEAD`) | Audit Remediation Phases 0–3 Unified Gate | **PASS** | Pint: 241 files PASS; Larastan L5: 137 files PASS; PHPUnit: 259 passed (2,503 assertions, 195.86s); `tsc --noEmit`: 0 errors; Vite build: 4,728 modules (1m 27s); NPM Audit: 0 critical |
 
 ---
 
 ## Session Log
+
+### 2026-10-23 — Session 11 (Audit Remediation Execution: Phases 0, 1, 2 & 3)
+
+- **Goal:** Execute the approved remediation plan (`docs/audits/AUDIT_REMEDIATION_PLAN.md`) using TDD (`RED -> GREEN -> REFACTOR`) across Phases 0, 1, 2, and 3, and verify against the unified quality contract.
+- **Completed:**
+  - Created 3 dedicated regression test suites (`PhaseZeroRemediationTest.php`, `PhaseOneRemediationTest.php`, `PhaseTwoThreeRemediationTest.php` — 15 new tests, 63 new assertions).
+  - Remediated `REL-001`, `SEC-001`, `SEC-004`, `REL-002`, `PERF-001`, `PERF-002`, `PERF-003`, `SEC-003`, `SEC-005`, `REL-003`, `REL-004`, `REL-005`, `PERF-004`, `PERF-005`, `SEC-006`, `SEC-007`, and `REL-006`.
+- **Verification executed:**
+  - `docker exec laravel_app composer verify` -> Pint: 241 files PASS, Larastan Level 5: 137 files PASS, PHPUnit: 259 passed (2,503 assertions, 195.86s).
+  - `npm run typecheck` -> PASS (0 errors).
+  - `npm run build` -> PASS (4,728 modules in 1m 27s; `xlsx` dynamically imported; `Dashboard` manifest entry verified).
+  - `npm audit --audit-level=critical` -> PASS (0 critical vulnerabilities).
+- **Blockers and risks:** None.
+- **Next recommended action:** Commit audit deliverables and remediation slices cleanly to `development`.
+
+### 2026-10-23 — Session 10 (Comprehensive Performance, Security, Robustness & Reliability Audit)
+
+- **Goal:** Conduct an evidence-based, repository-wide Performance, Security, Robustness, and Reliability Audit of Foresight Radar (`development` at `83f532a`) without modifying application code, and produce all 6 structured audit deliverables.
+- **Completed:**
+  - Verified knowledge graph and coverage via `codebase-memory-mcp` (`Auditor` Tier 3: `41/41` evidence paths and `5/5` scopes verified with `no_recorded_issue`).
+  - Audited all 15 HTTP Controllers, 10 Domain Services, 10 Eloquent Resources, 6 FormRequests, 3 Policies, 2 Queue Jobs, LLM Clients, Routes, Middleware, React/Inertia Pages & Components, Vite bundle configuration, and GitHub Actions CI workflows.
+  - Identified and documented **20 confirmed findings** (`0` Critical, `7` High, `9` Medium, `4` Low):
+    - **Security (`7`):** `SEC-001` through `SEC-007` (`docs/audits/SECURITY_AUDIT.md`)
+    - **Performance (`7`):** `PERF-001` through `PERF-007` (`docs/audits/PERFORMANCE_AUDIT.md`)
+    - **Robustness & Reliability (`6`):** `REL-001` through `REL-006` (`docs/audits/ROBUSTNESS_RELIABILITY_AUDIT.md`)
+  - Generated `docs/audits/AUDIT_SUMMARY.md`, `docs/audits/AUDIT_REMEDIATION_PLAN.md`, and `docs/audits/AUDIT_FINDINGS.json` (and synced copies to `docs/audit/`).
+- **Verification executed:**
+  - `docker exec laravel_app composer verify` -> Pint: 238 files PASS, Larastan Level 5: 137 files PASS, PHPUnit: 244 passed (2,440 assertions, 421.83s).
+  - `npm run typecheck` -> PASS (0 errors).
+  - `npm run build` -> PASS (4,731 modules in 1m 47s).
+  - `npm audit --audit-level=critical` -> PASS (0 critical; 4 high, 3 moderate).
+  - `docker exec laravel_app composer audit --format=json` -> 4 advisories recorded on `laravel/framework` (`<12.69.0`).
+  - `npm run test:e2e:smoke` -> PASS (1/1 Chromium in 16.66s).
+- **Blockers and risks:** None blocking remediation; Phase 0 items (`REL-001`, `SEC-001`, `SEC-004`, `REL-002`) should be prioritized first.
+- **Next recommended action:** Execute Phase 0 and Phase 1 of `docs/audits/AUDIT_REMEDIATION_PLAN.md`.
 
 ### 2026-10-22 — Session 9 (Merge Feature Branches to Development)
 

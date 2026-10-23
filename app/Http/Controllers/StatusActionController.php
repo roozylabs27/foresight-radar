@@ -54,6 +54,14 @@ class StatusActionController extends Controller
 
     public function create(StatusActionRequest $request, DrivingForceRating $driving_force_rating)
     {
+        if ($driving_force_rating->driving_force?->status === 'CLOSED') {
+            return response()->json([
+                'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                'message' => 'Cannot modify status action of a closed driving force.',
+                'errors' => 'Cannot modify status action of a closed driving force.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         try {
             DB::beginTransaction();
 

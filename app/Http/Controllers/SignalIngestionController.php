@@ -85,7 +85,10 @@ class SignalIngestionController extends Controller
             $dimension = $request->query('dimension');
             $search = $request->query('search');
 
-            $signals = Signal::with(['source', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
+            $rawPageSize = (int) $request->query('pageSize', $request->input('pagination.pageSize', 10));
+            $pageSize = min(100, max(1, $rawPageSize > 0 ? $rawPageSize : 10));
+
+            $signals = Signal::with(['source:id,uuid,title,url,publisher,published_at', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
                 ->when($status && $status !== 'ALL', fn ($q) => $q->where('review_status', $status))
                 ->when($dimension, fn ($q) => $q->where('dimension_id', $dimension))
                 ->when($search, function ($q) use ($search) {
@@ -106,7 +109,7 @@ class SignalIngestionController extends Controller
                     ],
                     fn ($q) => $q->orderBy('created_at', 'desc')
                 ))
-                ->paginate($request->query('pageSize', 10));
+                ->paginate($pageSize);
 
             return response()->json($signals, Response::HTTP_OK);
         } catch (\Throwable $th) {
@@ -141,6 +144,16 @@ class SignalIngestionController extends Controller
      */
     public function extraction(Source $source): JsonResponse
     {
+        $user = auth()->user();
+        $isOwnerOrAdmin = $user && (
+            $source->created_by === $user->id
+            || $user->hasAnyRole(['developer', 'super-admin', 'admin'])
+        );
+
+        if (! $isOwnerOrAdmin) {
+            abort(Response::HTTP_FORBIDDEN, 'Anda tidak memiliki akses ke status ekstraksi sumber ini.');
+        }
+
         return response()->json($this->extractionService->progress($source), Response::HTTP_OK);
     }
 
@@ -153,13 +166,14 @@ class SignalIngestionController extends Controller
             $validated = $request->validated();
             $action = $validated['action'];
 
-            if ($signal->review_status !== 'PENDING') {
-                return response()->json([
-                    'errors' => 'Sinyal ini sudah direview ('.$signal->review_status.') dan tidak bisa diubah lagi.',
-                ], Response::HTTP_CONFLICT);
-            }
-
             return DB::transaction(function () use ($validated, $action, $signal) {
+                $signal = Signal::whereKey($signal->id)->lockForUpdate()->firstOrFail();
+
+                if ($signal->review_status !== 'PENDING') {
+                    return response()->json([
+                        'errors' => 'Sinyal ini sudah direview ('.$signal->review_status.') dan tidak bisa diubah lagi.',
+                    ], Response::HTTP_CONFLICT);
+                }
                 // Apply any edited fields
                 if (! empty($validated['title'])) {
                     $signal->title = $validated['title'];

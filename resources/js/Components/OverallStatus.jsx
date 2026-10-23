@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import qs from "qs";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { CheckIcon, FileSpreadsheetIcon, LoaderCircleIcon } from "lucide-react";
 
@@ -70,13 +69,21 @@ function markColumns(keys) {
     }));
 }
 
+export function sanitizeSpreadsheetCell(value) {
+    if (typeof value !== "string" || value.length === 0) {
+        return value;
+    }
+    return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
 // The xlsx rows merge the Dimension cells of consecutive rows, like the table.
-function exportWorkbook(records) {
+async function exportWorkbook(records) {
+    const XLSX = await import("xlsx");
     const rows = records.map((record, index) => ({
         No: index + 1,
-        Dimension: record.dimension,
-        Keyword: record.keyword,
-        Description: record.description,
+        Dimension: sanitizeSpreadsheetCell(record.dimension),
+        Keyword: sanitizeSpreadsheetCell(record.keyword),
+        Description: sanitizeSpreadsheetCell(record.description),
         "Short Term": record.short_term,
         "Mid Term": record.mid_term,
         "Long Term": record.long_term,
@@ -146,7 +153,7 @@ export default function OverallStatus({ date, selectedData, permissions = [], se
                 toast.info("Tidak ada data untuk diekspor.");
                 return;
             }
-            exportWorkbook(response.data);
+            await exportWorkbook(response.data);
         } catch (error) {
             toast.error("Export gagal", { description: error.response?.data?.message ?? error.message });
         } finally {

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Resources\ForesightRadarResource;
 use App\Http\Resources\PrioritizingResource;
 use App\Models\Dimension;
+use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -63,8 +64,8 @@ class ForesightReportingService
                         ->with([
                             'dimension',
                             'pic_user',
-                            'source_signal.source',
-                            'supporting_signals.source',
+                            'source_signal.source:id,uuid,title,url',
+                            'supporting_signals.source:id,uuid,title,url',
                         ]);
                 },
                 'time_horizon',
@@ -100,8 +101,8 @@ class ForesightReportingService
                     $q->with([
                         'dimension',
                         'pic_user',
-                        'source_signal.source',
-                        'supporting_signals.source',
+                        'source_signal.source:id,uuid,title,url',
+                        'supporting_signals.source:id,uuid,title,url',
                     ]);
                 },
                 'time_horizon',
@@ -138,9 +139,7 @@ class ForesightReportingService
 
         return $this->baseApprovedRatingQuery($dateRange, $dimension)
             ->with([
-                'driving_force' => function ($q) {
-                    $q->orderBy('dimension_id', 'ASC');
-                },
+                'driving_force.dimension',
                 'action_reasons' => function ($q) {
                     $q->whereIn('id', function ($query) {
                         $query->selectRaw('MAX(id)')
@@ -156,6 +155,12 @@ class ForesightReportingService
             ->when($timeHorizon, fn ($q) => $q->where('time_horizon_id', $timeHorizon))
             ->when($priority, fn ($q) => $q->where('priority_id', $priority))
             ->when($statusAction, fn ($q) => $q->where('status_action_id', $statusAction))
+            ->orderBy(
+                DrivingForce::select('dimension_id')
+                    ->whereColumn('driving_forces.id', 'driving_force_ratings.driving_force_id')
+                    ->limit(1),
+                'ASC'
+            )
             ->orderBy('created_at', 'ASC');
     }
 }

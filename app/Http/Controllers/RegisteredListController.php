@@ -51,7 +51,8 @@ class RegisteredListController extends Controller
     public function registered_list(ForesightReportingService $reportingService)
     {
         try {
-            $pagination = request('pagination.pageSize');
+            $rawPagination = (int) request('pagination.pageSize', request('pageSize', 10));
+            $pagination = min(100, max(1, $rawPagination > 0 ? $rawPagination : 10));
             $registered_list = $reportingService->getRegisteredListQuery()->paginate($pagination);
             $result = new OverallStatusCollection($registered_list);
 
@@ -73,7 +74,7 @@ class RegisteredListController extends Controller
             return response()->stream(function () use ($query) {
                 echo '[';
                 $first = true;
-                foreach ($query->lazy(100) as $item) {
+                foreach ($query->get() as $item) {
                     if (! $first) {
                         echo ',';
                     }

@@ -53,6 +53,14 @@ class TimeHorizonController extends Controller
 
     public function create(TimeHorizonRequest $request, DrivingForce $driving_force)
     {
+        if ($driving_force->status === 'CLOSED') {
+            return response()->json([
+                'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                'message' => 'Cannot modify time horizon of a closed driving force.',
+                'errors' => 'Cannot modify time horizon of a closed driving force.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         try {
             DB::beginTransaction();
 

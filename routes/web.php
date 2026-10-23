@@ -34,7 +34,7 @@ Route::get('/', function () {
     return to_route('login');
 });
 
-Route::prefix('/')->middleware(['auth', 'verified'])->group(function () {
+Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(function () {
     Route::prefix('/dashboard')->controller(DashboardController::class)->name('dashboard.')->group(function () {
         Route::get('/', 'index')->can('view-dashboard');
         Route::get('/reasoning-data', 'reasoning_data')->name('reasoning-data')->can('view-dashboard');
