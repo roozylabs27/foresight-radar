@@ -4,8 +4,8 @@
 
 Foresight Radar is an executive intelligence and strategic foresight platform designed to ingest signals of change, evaluate driving forces, detect systems-dynamics causal loops, and simulate 2x2 scenario planning matrices.
 
-- **Backend:** Laravel 10 (PHP 8.2), MySQL 8.0, Redis, Spatie Laravel Permission
-- **Frontend:** React 18, Inertia.js, Tailwind CSS v4 (`@tailwindcss/vite`), Radix UI (`radix-ui`), Lucide React
+- **Backend:** Laravel 11 (PHP 8.3), MySQL 8.0, Redis, Spatie Laravel Permission
+- **Frontend:** React 19, Inertia.js 2.0, TypeScript, Tailwind CSS v4 (`@tailwindcss/vite`), Radix UI (`radix-ui`), Lucide React
 - **Design System:** `shadcn/ui` patterns located in `resources/js/Components/ui/`
 - **LLM Gateway:** Multi-provider (`anthropic`, OpenAI-compatible) with background queues and deterministic offline fallbacks
 
@@ -117,3 +117,23 @@ A task is complete only when:
 4. **Regression Guard:** Any bug fix or behavioral change includes an automated test verifying reproduction and edge cases.
 5. **State Persisted:** `PROGRESS.md` and `feature_list.json` reflect the updated state, verification evidence, and next steps.
 6. **Clean Working Tree:** `git status` shows all changes are committed cleanly.
+
+---
+
+## 8. Frontend Engineering Standards: Clean Architecture & Atomic Design
+
+All frontend development strictly adheres to the combined **Clean Architecture** and **Atomic Design** system documented in `docs/architecture/frontend-clean-atomic-architecture.md`:
+
+1. **Clean Architecture Separation:**
+   - **Domain & Types (`resources/js/types/`, `resources/js/domain/`):** Pure TypeScript types, interfaces, and business logic calculations (zero React/DOM/Inertia imports).
+   - **Application Hooks (`resources/js/hooks/`):** Custom workflow hooks managing user interactions and Inertia actions (`router.post`, `useForm`).
+   - **Infrastructure Adapters (`resources/js/lib/`):** Utilities (`cn`, formatting, third-party adapters).
+   - **Presentation (`resources/js/Components/`, `resources/js/Pages/`):** Murni presentasional.
+
+2. **Atomic Design System:**
+   - **Atoms (`Components/ui/`):** Indivisible shadcn/radix primitives (`Button`, `Input`, `Badge`, `Switch`, `Skeleton`).
+   - **Molecules (`Components/molecules/` or composite primitives):** 2+ atoms combined (`FormField`, `ThemeToggle`, `SearchInput`).
+   - **Organisms (`Components/{Feature}/`):** Complex UI blocks (`RadarChart`, `ScenarioMatrix`, `DataTable`).
+   - **Templates (`Layouts/`):** Shell layouts (`AuthenticatedLayout`, `AuthSplitLayout`).
+   - **Pages (`Pages/`):** Lean orchestrator components (< 150 lines). Dilarang menulis inline math/business logic di dalam Page.
+
