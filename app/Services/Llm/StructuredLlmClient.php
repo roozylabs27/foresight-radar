@@ -24,4 +24,11 @@ interface StructuredLlmClient
      * @throws LlmException
      */
     public function generateJson(LlmRequest $request): LlmResponse;
+
+    /**
+     * Alias for generateJson for structured completion.
+     *
+     * @throws LlmException
+     */
+    public function generateStructured(LlmRequest $request): LlmResponse;
 }

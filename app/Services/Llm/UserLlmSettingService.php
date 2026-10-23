@@ -4,6 +4,7 @@ namespace App\Services\Llm;
 
 use App\Models\User;
 use App\Models\UserLlmSetting;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -91,11 +92,18 @@ class UserLlmSettingService
     /**
      * Get the full catalog of providers with current user settings merged.
      */
-    public function getProvidersCatalog(User $user): array
+    public function getProvidersCatalog(User|Authenticatable|null $user): array
     {
-        $userSettings = $user->llmSettings()
-            ->get()
-            ->keyBy('provider');
+        $userSettings = collect();
+        if ($user instanceof User) {
+            $userSettings = $user->llmSettings()
+                ->get()
+                ->keyBy('provider');
+        } elseif ($user !== null) {
+            $userSettings = UserLlmSetting::where('user_id', $user->getAuthIdentifier())
+                ->get()
+                ->keyBy('provider');
+        }
 
         $catalog = [];
         foreach (self::PROVIDERS as $key => $spec) {
@@ -119,13 +127,14 @@ class UserLlmSettingService
     /**
      * Save or update a user's LLM setting for a specific provider.
      */
-    public function saveProvider(User $user, array $data): UserLlmSetting
+    public function saveProvider(User|Authenticatable $user, array $data): UserLlmSetting
     {
+        $userId = $user instanceof User ? $user->id : (int) $user->getAuthIdentifier();
         $provider = $data['provider'];
         $spec = self::PROVIDERS[$provider] ?? null;
 
         $setting = UserLlmSetting::firstOrNew([
-            'user_id' => $user->id,
+            'user_id' => $userId,
             'provider' => $provider,
         ]);
 
@@ -150,14 +159,16 @@ class UserLlmSettingService
     /**
      * Activate exactly one provider for the user, atomically deactivating any others.
      */
-    public function activateProvider(User $user, string $provider): UserLlmSetting
+    public function activateProvider(User|Authenticatable $user, string $provider): UserLlmSetting
     {
-        return DB::transaction(function () use ($user, $provider) {
+        $userId = $user instanceof User ? $user->id : (int) $user->getAuthIdentifier();
+
+        return DB::transaction(function () use ($userId, $provider) {
             // Deactivate all providers for this user
-            UserLlmSetting::where('user_id', $user->id)->update(['is_active' => false]);
+            UserLlmSetting::where('user_id', $userId)->update(['is_active' => false]);
 
             // Find or initialize the setting for the selected provider
-            $setting = UserLlmSetting::where('user_id', $user->id)
+            $setting = UserLlmSetting::where('user_id', $userId)
                 ->where('provider', $provider)
                 ->firstOrFail();
 
@@ -175,9 +186,10 @@ class UserLlmSettingService
     /**
      * Deactivate a provider (or all providers) for a user.
      */
-    public function deactivateProvider(User $user, ?string $provider = null): void
+    public function deactivateProvider(User|Authenticatable $user, ?string $provider = null): void
     {
-        $query = UserLlmSetting::where('user_id', $user->id);
+        $userId = $user instanceof User ? $user->id : (int) $user->getAuthIdentifier();
+        $query = UserLlmSetting::where('user_id', $userId);
         if ($provider) {
             $query->where('provider', $provider);
         }
@@ -187,9 +199,10 @@ class UserLlmSettingService
     /**
      * Delete/reset a user's LLM configuration for a provider.
      */
-    public function deleteProvider(User $user, string $provider): void
+    public function deleteProvider(User|Authenticatable $user, string $provider): void
     {
-        UserLlmSetting::where('user_id', $user->id)
+        $userId = $user instanceof User ? $user->id : (int) $user->getAuthIdentifier();
+        UserLlmSetting::where('user_id', $userId)
             ->where('provider', $provider)
             ->delete();
     }

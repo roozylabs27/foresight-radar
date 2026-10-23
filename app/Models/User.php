@@ -8,6 +8,7 @@ use App\Http\Resources\UserCollection;
 use App\Support\TableSort;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -18,6 +19,15 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property string $name
+ * @property string $email
+ * @property-read Collection<int, UserLlmSetting> $llmSettings
+ *
+ * @method \Illuminate\Database\Eloquent\Relations\HasMany llmSettings()
+ */
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;

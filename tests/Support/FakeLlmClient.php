@@ -53,6 +53,11 @@ class FakeLlmClient implements StructuredLlmClient
         return 'claude-fake';
     }
 
+    public function generateStructured(LlmRequest $request): LlmResponse
+    {
+        return $this->generateJson($request);
+    }
+
     public function generateJson(LlmRequest $request): LlmResponse
     {
         $this->calls[] = ['request' => $request, 'transaction_level' => DB::transactionLevel()];

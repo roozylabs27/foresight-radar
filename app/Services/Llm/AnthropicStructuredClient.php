@@ -49,6 +49,11 @@ class AnthropicStructuredClient implements StructuredLlmClient
         return (string) ($this->config['model'] ?? 'claude-opus-5-5');
     }
 
+    public function generateStructured(LlmRequest $request): LlmResponse
+    {
+        return $this->generateJson($request);
+    }
+
     public function generateJson(LlmRequest $request): LlmResponse
     {
         if (! $this->isAvailable()) {

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ActivateUserLlmSettingRequest;
 use App\Http\Requests\SaveUserLlmSettingRequest;
 use App\Http\Requests\TestUserLlmSettingRequest;
+use App\Models\User;
 use App\Services\Llm\UserLlmSettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +29,9 @@ class UserLlmSettingController extends Controller
      */
     public function index(Request $request): Response
     {
-        $providers = $this->settingService->getProvidersCatalog($request->user());
+        /** @var User|null $user */
+        $user = $request->user();
+        $providers = $this->settingService->getProvidersCatalog($user);
 
         return Inertia::render('Settings/LlmSettings', [
             'providers' => $providers,
@@ -42,7 +45,9 @@ class UserLlmSettingController extends Controller
     public function store(SaveUserLlmSettingRequest $request): RedirectResponse
     {
         try {
-            $this->settingService->saveProvider($request->user(), $request->validated());
+            /** @var User $user */
+            $user = $request->user();
+            $this->settingService->saveProvider($user, $request->validated());
 
             return back()->with('success', 'Provider configuration saved.');
         } catch (\Throwable $th) {
@@ -55,15 +60,17 @@ class UserLlmSettingController extends Controller
      */
     public function activate(ActivateUserLlmSettingRequest $request): RedirectResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $provider = $request->validated('provider');
         $shouldActivate = $request->boolean('active', true);
 
         try {
             if ($shouldActivate) {
-                $this->settingService->activateProvider($request->user(), $provider);
+                $this->settingService->activateProvider($user, $provider);
                 $message = 'Provider activated as primary LLM.';
             } else {
-                $this->settingService->deactivateProvider($request->user(), $provider);
+                $this->settingService->deactivateProvider($user, $provider);
                 $message = 'Provider deactivated. Falling back to system default.';
             }
 
@@ -83,7 +90,9 @@ class UserLlmSettingController extends Controller
 
             // If API key is not provided in test payload, use stored key if present
             if (empty($data['api_key'])) {
-                $existing = $request->user()?->llmSettings()->where('provider', $data['provider'])->first();
+                /** @var User|null $user */
+                $user = $request->user();
+                $existing = $user?->llmSettings()->where('provider', $data['provider'])->first();
                 if ($existing && ! empty($existing->api_key)) {
                     $data['api_key'] = $existing->api_key;
                 }
@@ -106,7 +115,9 @@ class UserLlmSettingController extends Controller
     public function destroy(string $provider, Request $request): RedirectResponse
     {
         try {
-            $this->settingService->deleteProvider($request->user(), $provider);
+            /** @var User $user */
+            $user = $request->user();
+            $this->settingService->deleteProvider($user, $provider);
 
             return back()->with('success', 'Provider configuration reset.');
         } catch (\Throwable $th) {

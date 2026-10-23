@@ -2,12 +2,45 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Ramsey\Uuid\Uuid;
 
+/**
+ * App\Models\UserLlmSetting
+ *
+ * @property int $id
+ * @property string $uuid
+ * @property int $user_id
+ * @property string $provider
+ * @property string $label
+ * @property string|null $api_key
+ * @property string $model
+ * @property string|null $base_url
+ * @property bool $is_active
+ * @property array<string, mixed>|null $settings
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User|null $user
+ * @property-read string|null $masked_api_key
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder|UserLlmSetting newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|UserLlmSetting newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|UserLlmSetting query()
+ * @method static \Illuminate\Database\Eloquent\Builder|UserLlmSetting where($column, $operator = null, $value = null, $boolean = 'and')
+ * @method static \Illuminate\Database\Eloquent\Builder|UserLlmSetting whereUserId(int $value)
+ * @method static \Illuminate\Database\Eloquent\Builder|UserLlmSetting whereProvider(string $value)
+ * @method static \Illuminate\Database\Eloquent\Builder|UserLlmSetting whereIsActive(bool $value)
+ * @method static UserLlmSetting firstOrNew(array $attributes = [], array $values = [])
+ * @method static UserLlmSetting firstOrFail(array $columns = ['*'])
+ * @method static UserLlmSetting create(array $attributes = [])
+ *
+ * @mixin Builder
+ */
 class UserLlmSetting extends Model
 {
     use HasFactory;

@@ -46,6 +46,11 @@ class OpenAiCompatibleClient implements StructuredLlmClient
         return (string) ($this->config['model'] ?? '');
     }
 
+    public function generateStructured(LlmRequest $request): LlmResponse
+    {
+        return $this->generateJson($request);
+    }
+
     public function generateJson(LlmRequest $request): LlmResponse
     {
         if (! $this->isAvailable()) {

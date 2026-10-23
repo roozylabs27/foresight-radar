@@ -27,6 +27,11 @@ class NullLlmClient implements StructuredLlmClient
         return '';
     }
 
+    public function generateStructured(LlmRequest $request): LlmResponse
+    {
+        return $this->generateJson($request);
+    }
+
     public function generateJson(LlmRequest $request): LlmResponse
     {
         throw new LlmException('unavailable', 'No LLM provider is configured.');
