@@ -3,17 +3,33 @@
 ## Current Verified State
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
-- **Current branch:** `development`
-- **Last reviewed commit:** `a7644ad` (`docs(simulation): record propagated cross impact what-if simulation enhancement`)
+- **Current branch:** `feature/upgrade-laravel11-react19-php83`
+- **Last reviewed commit:** `f938219` (`feat(frontend): upgrade to React 19 and Inertia 2.0`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 238 files clean, Larastan: Level 5 / 137 files clean, PHPUnit: 244 passed / 2,422 assertions, Vite: 3m 16s build clean, NPM Audit: 0 critical vulnerabilities)
-- **Current objective:** Both Option 1 (Synthetic Cluster Harness) and Option 2 (Propagated What-If Simulation) merged into development.
+- **Baseline verification:** PASS (Pint: 238 files clean, Larastan: Level 5 / 137 files clean, PHPUnit: 244 passed / 2,440 assertions, Vite: 1m 47s build clean, NPM Audit: 0 critical vulnerabilities, Playwright E2E: 100% pass, Chrome DevTools MCP: clean console, 0 errors)
+- **Current objective:** Full runtime upgrade (PHP 8.3 runtime patch for CVE-2024-4577, Laravel 11.57, TypeScript support, React 19, Inertia 2.0) complete and verified in live browser.
 - **Current blocker:** None
-- **Highest-priority next task:** Continue feature roadmap execution or advance to next product capability.
+- **Highest-priority next task:** Merge `feature/upgrade-laravel11-react19-php83` into `development` upon user confirmation.
 
 ---
 
 ## Completed
+
+- [x] **Runtime Modernization: PHP 8.3, Laravel 11.57, TypeScript, React 19 & Inertia 2.0**
+  - **Evidence:** `cccd667` (`feat(upgrade): upgrade runtime to PHP 8.3, Laravel 11.57, and configure TypeScript`), `f938219` (`feat(frontend): upgrade to React 19 and Inertia 2.0`).
+  - **Runtime & Security:** Upgraded Docker container to `php:8.3-fpm` (PHP 8.3.36) to permanently patch PHP RCE CVE-2024-4577. Pinned Symfony components to `^7.0` with `"config": { "platform": { "php": "8.3.36" } }`.
+  - **Laravel 11 Skeleton:** Migrated kernel & exception handling architecture to fluent `bootstrap/app.php` with Spatie permission middleware and custom Inertia status error rendering (403, 404, 500). Fixed SQLite in-memory foreign key prerequisites in approval/closed item tests.
+  - **TypeScript:** Configured `tsconfig.json` for React 19 with bundler module resolution, added `foresight.ts` domain types, and established `"typecheck": "tsc --noEmit"` gate (0 errors).
+  - **Frontend Modernization:** Upgraded `react` & `react-dom` to `^19.0.0` (19.3.1) and `@inertiajs/react` to `^2.0.0` (2.3.29). Streamlined `ThemeProvider` to use direct React 19 Context provider syntax `<ThemeContext value={...}>`.
+  - **Live Browser Verification (Chrome DevTools MCP):** Verified `/login`, theme switching (light/dark mode toggle), Inertia 2 form authentication, `/visualization/foresight-radar`, and `/scenarios` (2x2 matrix with evidence citations) with zero console errors and zero warnings.
+  - **Verification Quality Gate:**
+    - Pint: 238 files PASS (0 style issues).
+    - Larastan Level 5: 137 files clean (0 errors).
+    - PHPUnit: 244 tests passed (2,440 assertions).
+    - TypeScript: 0 errors (`npm run typecheck`).
+    - Vite Build: 4,731 modules transformed cleanly in 1m 47s.
+    - Playwright Smoke: 1/1 passed in Chromium (16.66s).
+    - NPM Audit: 0 critical vulnerabilities.
 
 - [x] **Harness Phase 6: Propagated Cross-Impact What-If Simulation (FEAT-012 Enhancement)**
   - **Evidence:** `1f56dee` (`feat(simulation): implement propagated cross impact scenario simulation`), `917437f` (`feat(ui): add cross impact propagation toggle and ripple trace to scenario simulation`).
