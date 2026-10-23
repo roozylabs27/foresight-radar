@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,7 +23,7 @@ class ErrorPagesTest extends TestCase
 
     private function inertiaHeaders(): array
     {
-        $version = app(\App\Http\Middleware\HandleInertiaRequests::class)->version(request());
+        $version = app(HandleInertiaRequests::class)->version(request());
 
         return array_filter([
             'X-Inertia' => 'true',

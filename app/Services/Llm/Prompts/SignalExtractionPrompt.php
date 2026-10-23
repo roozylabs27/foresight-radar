@@ -2,6 +2,8 @@
 
 namespace App\Services\Llm\Prompts;
 
+use App\Models\Dimension;
+use App\Models\TimeHorizon;
 use App\Services\Llm\LlmRequest;
 use Illuminate\Support\Collection;
 
@@ -35,8 +37,8 @@ Return at most eight signals, the most decision-relevant first. Return fewer whe
 PROMPT;
 
     /**
-     * @param  Collection<int, \App\Models\Dimension>  $dimensions
-     * @param  Collection<int, \App\Models\TimeHorizon>  $horizons
+     * @param  Collection<int, Dimension>  $dimensions
+     * @param  Collection<int, TimeHorizon>  $horizons
      * @param  array<string, string>  $forces  reference (F1..Fn) => "keyword (dimension)"
      */
     public static function request(string $title, string $content, Collection $dimensions, Collection $horizons, array $forces, string $effort): LlmRequest

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Ramsey\Uuid\Uuid;
 
 /**
  * Analyst judgement of how driving force `source` affects `target`:
@@ -33,7 +34,7 @@ class CrossImpact extends Model
     {
         static::creating(function ($model) {
             if (empty($model->uuid)) {
-                $model->uuid = (string) \Ramsey\Uuid\Uuid::uuid4();
+                $model->uuid = (string) Uuid::uuid4();
             }
         });
     }

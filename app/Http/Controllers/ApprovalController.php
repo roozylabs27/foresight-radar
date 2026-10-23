@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -67,7 +68,7 @@ class ApprovalController extends Controller
 
         try {
             $driving_force->transitionTo($validated['status']);
-        } catch (\App\Exceptions\InvalidStateTransitionException $e) {
+        } catch (InvalidStateTransitionException $e) {
             return response()->json([
                 'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
                 'errors' => $e->getMessage(),

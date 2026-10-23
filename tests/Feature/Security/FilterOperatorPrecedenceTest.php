@@ -4,9 +4,11 @@ namespace Tests\Feature\Security;
 
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\Environment;
 use App\Models\User;
 use App\Services\DrivingForceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class FilterOperatorPrecedenceTest extends TestCase
@@ -16,24 +18,24 @@ class FilterOperatorPrecedenceTest extends TestCase
     public function test_keyword_search_does_not_leak_records_with_unmatched_status_or_dimension(): void
     {
         $user = User::factory()->create();
-        $env = \App\Models\Environment::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        $env = Environment::create([
+            'uuid' => (string) Str::uuid(),
             'name' => 'Internal',
         ]);
         $dimension1 = Dimension::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'name' => 'Technology',
             'environment_id' => $env->id,
         ]);
         $dimension2 = Dimension::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'name' => 'Economy',
             'environment_id' => $env->id,
         ]);
 
         // Record A matches dimension 1, status CLOSED, description contains "quantum"
         $closedDf = DrivingForce::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'dimension_id' => $dimension1->id,
             'created_by' => $user->id,
             'keyword' => 'Computing',
@@ -43,7 +45,7 @@ class FilterOperatorPrecedenceTest extends TestCase
 
         // Record B is dimension 2, status PENDING (Draft), keyword contains "quantum"
         $draftDf = DrivingForce::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'dimension_id' => $dimension2->id,
             'created_by' => $user->id,
             'keyword' => 'quantum secret',
@@ -69,23 +71,23 @@ class FilterOperatorPrecedenceTest extends TestCase
     public function test_filter_does_not_leak_records_with_unmatched_status_or_dimension(): void
     {
         $user = User::factory()->create();
-        $env = \App\Models\Environment::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        $env = Environment::create([
+            'uuid' => (string) Str::uuid(),
             'name' => 'Internal',
         ]);
         $dimension1 = Dimension::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'name' => 'Technology',
             'environment_id' => $env->id,
         ]);
         $dimension2 = Dimension::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'name' => 'Economy',
             'environment_id' => $env->id,
         ]);
 
         $closedDf = DrivingForce::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'dimension_id' => $dimension1->id,
             'created_by' => $user->id,
             'keyword' => 'Computing',
@@ -94,7 +96,7 @@ class FilterOperatorPrecedenceTest extends TestCase
         ]);
 
         $draftDf = DrivingForce::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'dimension_id' => $dimension2->id,
             'created_by' => $user->id,
             'keyword' => 'quantum secret',

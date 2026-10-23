@@ -4,6 +4,7 @@ namespace Tests\Feature\Llm;
 
 use App\Services\Llm\AnthropicStructuredClient;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\LlmRequest;
 use App\Services\Llm\NullLlmClient;
 use App\Services\Llm\StructuredLlmClient;
 use Illuminate\Support\Facades\Log;
@@ -99,6 +100,6 @@ class AnthropicStructuredClientTest extends TestCase
         $this->assertInstanceOf(NullLlmClient::class, $client);
         $this->assertFalse($client->isAvailable());
         $this->expectException(LlmException::class);
-        $client->generateJson(new \App\Services\Llm\LlmRequest('test', 'system', 'user', ['type' => 'object']));
+        $client->generateJson(new LlmRequest('test', 'system', 'user', ['type' => 'object']));
     }
 }
