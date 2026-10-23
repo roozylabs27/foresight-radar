@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RatingUrgencyController;
 use App\Http\Controllers\RegisteredListController;
 use App\Http\Controllers\ScenarioController;
+use App\Http\Controllers\Settings\UserLlmSettingController;
 use App\Http\Controllers\SignalIngestionController;
 use App\Http\Controllers\StatusActionController;
 use App\Http\Controllers\TimeHorizonController;
@@ -145,6 +146,16 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         // Route::prefix('role')->controller(App\Http\Controllers\RoleController::class)->name('role.')->group(function () {
         //     Route::get('/', 'index');
         // });
+    });
+
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::prefix('llm')->name('llm.')->controller(UserLlmSettingController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::post('/activate', 'activate')->name('activate');
+            Route::post('/test', 'test')->name('test');
+            Route::delete('/{provider}', 'destroy')->name('destroy');
+        });
     });
 
     Route::controller(ProfileController::class)->name('profile.')->group(function () {

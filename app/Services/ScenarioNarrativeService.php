@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\LlmJobStatus;
 use App\Jobs\GenerateScenarioNarrative;
 use App\Models\Scenario;
+use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
 use App\Services\Llm\Prompts\ScenarioNarrativePrompt;
 use App\Services\Llm\StructuredLlmClient;
@@ -76,13 +77,16 @@ class ScenarioNarrativeService
     {
         $evidence = $this->assertGeneratable($scenario, $overwriteEdited);
 
+        $userLlm = $userId ? app(LlmClientResolver::class)->resolveForUserId($userId, false) : null;
+        $llm = $userLlm ?? $this->llm;
+
         $notice = null;
         $quadrants = null;
         $model = null;
 
-        if ($this->llm->isAvailable()) {
+        if ($llm->isAvailable()) {
             try {
-                $response = $this->llm->generateJson(ScenarioNarrativePrompt::request(
+                $response = $llm->generateJson(ScenarioNarrativePrompt::request(
                     $scenario,
                     $evidence,
                     (string) config('services.anthropic.narrative_effort', 'medium'),
@@ -102,7 +106,7 @@ class ScenarioNarrativeService
             }
         }
 
-        $provider = $quadrants === null ? self::PROVIDER_TEMPLATE : $this->llm->provider();
+        $provider = $quadrants === null ? self::PROVIDER_TEMPLATE : $llm->provider();
         $quadrants ??= $this->template($scenario, $evidence);
 
         $signalIds = collect($evidence)->mapWithKeys(fn ($item) => [$item['ref'] => $item['signal']->id]);

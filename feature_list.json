@@ -249,6 +249,21 @@
         "Artisan command harness:eval-clustering executes deterministic benchmark quality gate"
       ],
       "verification_evidence": "Tests/Unit/Harness/* and Tests/Feature/Harness/* pass (1335 assertions); artisan harness:eval-clustering passes"
+    },
+    {
+      "id": "FEAT-019",
+      "name": "User LLM Settings & Multi-Provider Gateway",
+      "description": "Per-user configuration and credential encryption for LLM providers (Google Gemini, Anthropic Claude, OpenAI ChatGPT, OpenRouter / Custom), enforcing single active provider with live connection testing and masked display.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Users can configure API keys and model selections per provider (Claude, ChatGPT, Gemini, OpenRouter/Custom)",
+        "API keys are encrypted at rest with AES-256 and masked in UI and Inertia props",
+        "Exactly one provider can be active per user, atomically enforced via DB transaction",
+        "Live connection test validates credentials before activation",
+        "SignalExtractionService and ScenarioNarrativeService dynamically resolve active user client with offline fallback"
+      ],
+      "verification_evidence": "Tests/Feature/Settings/UserLlmSettingsTest passes (7 tests, 48 assertions); ScenarioNarrativeBenchmarkTest & SignalExtractionBenchmarkTest pass"
     }
   ]
 }

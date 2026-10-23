@@ -6,14 +6,34 @@
 - **Current branch:** `development`
 - **Last reviewed commit:** `83f532a` (`docs(agents): add frontend Clean Architecture and Atomic Design standards`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 241 files clean, Larastan: Level 5 / 137 files clean, PHPUnit: 259 passed / 2,503 assertions, TypeScript: 0 errors, Vite: 1m 27s build clean, NPM Audit: 0 critical vulnerabilities, Playwright E2E: 100% pass, Chrome DevTools MCP: clean console, 0 errors)
-- **Current objective:** Comprehensive Performance, Security, Robustness & Reliability Audit (`docs/audits/*`) AND Phases 0–3 Remediation Backlog completed and verified green.
+- **Baseline verification:** PASS (Pint: 250 files clean, Larastan: Level 5 / 144 files clean, PHPUnit: 266 passed / 2,551 assertions, TypeScript: 0 errors, Vite: 1m 42s build clean)
+- **Current objective:** User LLM Settings & Multi-Provider Gateway (`/settings/llm`) completed and verified green.
 - **Current blocker:** None
-- **Highest-priority next task:** Optional Phase 2 database composite index migration (`PERF-006`) or `xlsx` library replacement (`SEC-002`) when next schema/dependency window opens.
+- **Highest-priority next task:** Ready for user review or further feature requests.
 
 ---
 
 ## Completed
+
+- [x] **User LLM Settings & Multi-Provider Gateway (2026-10-23)**
+  - **Feature Spec & Migration:** `user_llm_settings` table (`database/migrations/2026_10_23_000001_create_user_llm_settings_table.php`), `UserLlmSetting` model with encrypted `api_key` (`Crypt::encryptString`) and masked display (`••••••••abcd`).
+  - **Curated Model Options:**
+    - Google Gemini: `gemini-3.8-flash` (Recommended), `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`.
+    - Claude (Anthropic): `claude-sonnet-5-5` (Recommended), `claude-opus-5-5`, `claude-3-7-sonnet-latest`, `claude-3-7-sonnet-20250219`, `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest`.
+    - OpenAI ChatGPT: `gpt-4o` (Recommended), `gpt-4o-mini`, `o3-mini`, `o1`, `gpt-4.5-preview`, `chatgpt-4o-latest`.
+    - OpenRouter / Custom: `openrouter/auto`, `deepseek/deepseek-r1`, `anthropic/claude-3.7-sonnet`, `meta-llama/llama-3.3-70b-instruct` + custom text input.
+  - **Single Active Provider Rule:** Enforced atomically via `UserLlmSettingService::activateProvider()` using `DB::transaction()` to ensure exactly one provider is active per user.
+  - **Live Connection Test:** `POST /settings/llm/test` executes non-destructive test prompt (`generateJson`) with active or temporary API key.
+  - **Dynamic Resolver:** `LlmClientResolver` integrates into `SignalExtractionService` and `ScenarioNarrativeService`, seamlessly falling back to system `.env` client when no user provider is configured.
+  - **Frontend UI & Clean Architecture:** Built strictly with `shadcn/ui` + `radix-ui` + Tailwind CSS v4 in `resources/js/Pages/Settings/LlmSettings.jsx`, `resources/js/Components/Settings/ProviderCard.jsx`, and `resources/js/Components/ui/card.jsx`. Navigation added to desktop sidebar and user avatar dropdown in `AuthenticatedLayout.jsx`.
+  - **Quality Gates:**
+    - `Tests\Feature\Settings\UserLlmSettingsTest`: 7/7 tests passing (48 assertions).
+    - `Tests\Feature\Llm\ScenarioNarrativeBenchmarkTest`: 3/3 tests passing.
+    - `Tests\Feature\Llm\SignalExtractionBenchmarkTest`: 4/4 tests passing.
+    - Pint: 250 files clean.
+    - Larastan Level 5: 144 files clean, 0 errors.
+    - TypeScript: 0 errors (`tsc --noEmit`).
+    - Vite Build: `public/build/assets/LlmSettings-*.js` bundled cleanly.
 
 - [x] **Audit Remediation Execution: Phases 0, 1, 2 & 3 (2026-10-23)**
   - **Phase 0 (`tests/Feature/Audit/PhaseZeroRemediationTest.php` — 5/5 PASS):**

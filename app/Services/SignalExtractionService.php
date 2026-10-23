@@ -10,6 +10,7 @@ use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TimeHorizon;
 use App\Services\Extraction\LlmSignalExtractor;
+use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
 use App\Services\Llm\StructuredLlmClient;
 use App\Support\EvidenceVerifier;
@@ -102,20 +103,24 @@ class SignalExtractionService
 
         $content = (string) $source->raw_content;
         $title = (string) $source->title;
-        $mode = $this->mode();
+        $userLlm = $source->created_by ? app(LlmClientResolver::class)->resolveForUserId((int) $source->created_by, false) : null;
+        $llm = $userLlm ?? ($this->llm ?? $this->llm());
+        $isLlmAvailable = config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC && $llm->isAvailable();
+        $mode = $isLlmAvailable ? $llm->provider() : self::PROVIDER_HEURISTIC;
         $notice = null;
         $candidates = null;
         $meta = [];
 
         if ($mode !== self::PROVIDER_HEURISTIC) {
             try {
-                $result = $this->llmExtractor()->extract($title, $content);
+                $extractor = $userLlm ? new LlmSignalExtractor($userLlm) : ($this->llmExtractor ?? $this->llmExtractor());
+                $result = $extractor->extract($title, $content);
                 $candidates = array_map(fn ($item) => $item + [
                     'extraction_provider' => $result['meta']['provider'],
                     'extraction_model' => $result['meta']['model'],
                     'prompt_version' => $result['meta']['prompt_version'],
                 ], $result['candidates']);
-                $meta = $result['meta'] + ['label' => $this->llm()->label()];
+                $meta = $result['meta'] + ['label' => $llm->label()];
             } catch (LlmException $e) {
                 Log::warning('Signal extraction fell back to keyword rules', ['reason' => $e->reason]);
                 $notice = $e->userMessage().' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';

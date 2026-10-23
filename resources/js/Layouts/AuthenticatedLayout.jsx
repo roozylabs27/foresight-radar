@@ -17,6 +17,7 @@ import {
     PanelLeftCloseIcon,
     PanelLeftOpenIcon,
     RadarIcon,
+    SlidersIcon,
     UserIcon,
     WifiIcon,
     ZapIcon,
@@ -56,6 +57,7 @@ const NAV_ITEMS = [
     { label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
     { label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
     { label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
+    { label: "LLM Settings", route: "settings.llm.index", match: "/settings", icon: SlidersIcon },
 ];
 
 function readCollapsed() {
@@ -172,6 +174,12 @@ function UserMenu({ user }) {
                     <Link href={route("profile.edit")}>
                         <UserIcon aria-hidden="true" />
                         <span>Profil Pengguna</span>
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link href={route("settings.llm.index")}>
+                        <SlidersIcon aria-hidden="true" />
+                        <span>LLM Settings</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
