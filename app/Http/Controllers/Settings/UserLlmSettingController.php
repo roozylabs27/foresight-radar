@@ -35,7 +35,7 @@ class UserLlmSettingController extends Controller
 
         return Inertia::render('Settings/LlmSettings', [
             'providers' => $providers,
-            'title' => 'LLM Configuration',
+            'title' => 'Mesin AI & Reasoning',
         ]);
     }
 

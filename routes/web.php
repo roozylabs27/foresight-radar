@@ -149,6 +149,20 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
     });
 
     Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', function () {
+            return redirect()->route('settings.llm.index');
+        })->name('index');
+
+        // AI & Reasoning Engine settings
+        Route::prefix('ai')->name('ai.')->controller(UserLlmSettingController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::post('/activate', 'activate')->name('activate');
+            Route::post('/test', 'test')->name('test');
+            Route::delete('/{provider}', 'destroy')->name('destroy');
+        });
+
+        // Backward-compatible alias for llm endpoints
         Route::prefix('llm')->name('llm.')->controller(UserLlmSettingController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
