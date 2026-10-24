@@ -2,6 +2,7 @@ import { useState } from "react";
 import { router } from "@inertiajs/react";
 import axios from "axios";
 import {
+    AlertCircleIcon,
     BotIcon,
     CheckCircle2Icon,
     CheckIcon,
@@ -12,7 +13,6 @@ import {
     PlayIcon,
     RotateCcwIcon,
     SaveIcon,
-    SparklesIcon,
     ZapIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -336,7 +336,7 @@ export default function ProviderCard({ providerData }) {
                         {testResult.success ? (
                             <CheckCircle2Icon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
                         ) : (
-                            <SparklesIcon className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                            <AlertCircleIcon className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
                         )}
                         <div className="flex flex-col gap-0.5 min-w-0">
                             <span className="font-semibold">{testResult.success ? "Koneksi Berhasil" : "Koneksi Gagal"}</span>

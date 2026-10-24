@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { AlertCircleIcon, ArrowRightIcon, GitForkIcon, RotateCcwIcon, SlidersHorizontalIcon, SparklesIcon } from "lucide-react";
+import { AlertCircleIcon, ArrowRightIcon, GitForkIcon, RotateCcwIcon, ShieldCheckIcon, SlidersHorizontalIcon, TrendingUpIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import Panel from "@/Components/Panel";
@@ -174,7 +174,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {/* Resilience Gauge */}
                 <Panel
-                    icon={<SparklesIcon className="size-4 text-emerald-500" />}
+                    icon={<ShieldCheckIcon className="size-4 text-emerald-500" />}
                     title="Resilience Index (Simulasi)"
                     badge={
                         deltas.resilience !== 0 ? (
@@ -195,7 +195,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
 
                 {/* Growth Gauge */}
                 <Panel
-                    icon={<SparklesIcon className="size-4 text-sky-500" />}
+                    icon={<TrendingUpIcon className="size-4 text-sky-500" />}
                     title="Growth Index (Simulasi)"
                     badge={
                         deltas.growth !== 0 ? (

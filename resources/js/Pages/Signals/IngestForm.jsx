@@ -2,7 +2,7 @@ import { useId, useMemo } from "react";
 import { Link } from "@inertiajs/react";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
-import { InfoIcon, LoaderCircleIcon, SparklesIcon, ZapIcon } from "lucide-react";
+import { InfoIcon, LoaderCircleIcon, SlidersHorizontalIcon, ZapIcon } from "lucide-react";
 
 import FormField, { fieldControlProps } from "@/Components/FormField";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -65,7 +65,7 @@ function ProvenanceNote({ mode, model, label }) {
                         href={route("settings.llm.index")}
                         className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                     >
-                        <SparklesIcon aria-hidden="true" className="size-3" />
+                        <SlidersHorizontalIcon aria-hidden="true" className="size-3" />
                         <span>Ubah Mesin AI</span>
                     </Link>
                 </div>

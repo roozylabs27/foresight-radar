@@ -137,3 +137,20 @@ All frontend development strictly adheres to the combined **Clean Architecture**
    - **Templates (`Layouts/`):** Shell layouts (`AuthenticatedLayout`, `AuthSplitLayout`).
    - **Pages (`Pages/`):** Lean orchestrator components (< 150 lines). Dilarang menulis inline math/business logic di dalam Page.
 
+---
+
+## 9. Iconography Standards: Anti-AI Slop (Zero Sparkles Policy)
+
+To preserve executive credibility and strategic intelligence rigor:
+
+- **Strictly Prohibit `SparklesIcon` / `Sparkles`:** Never introduce `SparklesIcon`, `Sparkles`, or magic wand symbols anywhere in the platform.
+- **Enforce Semantic Domain Iconography:**
+  - `CpuIcon` for machine intelligence, processor engine badges, and active AI model state.
+  - `BotIcon` for synthetic narrative generation and automated assistant workflows.
+  - `SlidersHorizontalIcon` for AI settings, model selection, and parameter configuration.
+  - `ShieldCheckIcon` for resilience metrics and governance indicators.
+  - `TrendingUpIcon` for growth, market acceleration, and trend indicators.
+  - `AlertCircleIcon` for operational failures, connection errors, and validation alerts.
+- **Rule Reference:** Follow `docs/guidelines/iconography-standards.md` on all future feature and UI iterations.
+
+

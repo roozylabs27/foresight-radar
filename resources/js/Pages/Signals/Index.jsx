@@ -7,12 +7,13 @@ import {
     CircleXIcon,
     ClipboardCheckIcon,
     CloudUploadIcon,
+    CpuIcon,
     EyeIcon,
     LinkIcon,
     LoaderCircleIcon,
     ShieldAlertIcon,
     ShieldCheckIcon,
-    SparklesIcon,
+    SlidersHorizontalIcon,
     ZapIcon,
 } from "lucide-react";
 
@@ -523,7 +524,7 @@ export default function SignalIndex({
                                     : "bg-muted text-muted-foreground"
                             )}
                         >
-                            <SparklesIcon aria-hidden="true" className="mr-1 inline-block size-3.5" />
+                            <CpuIcon aria-hidden="true" className="mr-1 inline-block size-3.5" />
                             {extractionMode !== "heuristic"
                                 ? `Mesin AI: ${extractionLabel}${extractionModel ? ` (${extractionModel})` : ""}`
                                 : "Ekstraksi: Aturan Kata Kunci (Non-AI)"}
@@ -534,7 +535,7 @@ export default function SignalIndex({
                             href={route("settings.llm.index")}
                             className="inline-flex items-center gap-1.5 rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
                         >
-                            <SparklesIcon aria-hidden="true" className="size-3.5 text-primary" />
+                            <SlidersHorizontalIcon aria-hidden="true" className="size-3.5 text-primary" />
                             <span>Pengaturan Mesin AI</span>
                         </Link>
                     }

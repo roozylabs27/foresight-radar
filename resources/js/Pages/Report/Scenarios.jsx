@@ -3,10 +3,10 @@ import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
+    BotIcon,
     LayersIcon,
     LoaderCircleIcon,
     PlusIcon,
-    SparklesIcon,
     Trash2Icon,
     TriangleAlertIcon,
 } from "lucide-react";
@@ -264,7 +264,7 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                             disabled={generating}
                             aria-busy={generating || undefined}
                         >
-                            {generating ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <SparklesIcon aria-hidden="true" />}
+                            {generating ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <BotIcon aria-hidden="true" />}
                             {scenario.quadrants.length > 0 ? "Buat ulang narasi" : "Buat narasi"}
                         </Button>
                         <ConfirmDialog
