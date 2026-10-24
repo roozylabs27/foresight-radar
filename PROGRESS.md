@@ -4,10 +4,10 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `2eb273a` (`fix(llm): force ipv4 resolution in OpenAiCompatibleClient to eliminate docker network hang`)
+- **Last reviewed commit:** `8f51f61` (`feat(signals): adapt signal workspace to user active llm provider and model`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: clean, Larastan: Level 5 clean, PHPUnit: 7/7 LLM tests clean, Chrome DevTools MCP: Live 200 OK & green verified in browser)
-- **Current objective:** User LLM Settings & Multi-Provider Gateway tested live via Chrome DevTools MCP with Google Gemini 3.8 Flash passing end-to-end.
+- **Baseline verification:** PASS (Pint: 250 files clean, Larastan: Level 5 clean, PHPUnit: 8/8 signal tests + 7/7 LLM tests clean, Vite: clean, Chrome DevTools MCP: verified live)
+- **Current objective:** User LLM Settings and Signal Ingestion Workspace fully integrated and synchronized with active user AI model.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
 
