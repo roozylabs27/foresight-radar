@@ -4,10 +4,10 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `7dbcb5f` (`perf(llm): increase LLM client HTTP timeout from 120s to 240s for background queue resilience`)
+- **Last reviewed commit:** `ed2ff6f` (`style(settings): improve responsive layout and card styling for LLM settings across mobile, tablet, and desktop`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 58/58 LLM tests clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Multi-language & Resilient LLM background queue extraction.
+- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 58/58 LLM tests clean, Vite: clean 1m 18s build, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
+- **Current objective:** Multi-language & Resilient LLM background queue extraction with responsive UI.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
 
