@@ -179,36 +179,38 @@ export default function ProviderCard({ providerData }) {
 
     return (
         <Card className={cn("flex flex-col transition-all", is_active && "border-primary ring-1 ring-primary/40 shadow-sm")}>
-            <CardHeader className="pb-4">
+            <CardHeader className="p-4 sm:p-5 pb-3 sm:pb-4">
                 <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                        <div className={cn("flex size-9 items-center justify-center rounded-lg", is_active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                    <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                        <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg mt-0.5 sm:mt-0", is_active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
                             {is_active ? <ZapIcon className="size-4" /> : <BotIcon className="size-4" />}
                         </div>
-                        <div>
-                            <CardTitle className="text-base font-semibold">{label}</CardTitle>
-                            <CardDescription className="text-xs">{description}</CardDescription>
+                        <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm sm:text-base font-semibold truncate">{label}</CardTitle>
+                            <CardDescription className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mt-0.5">{description}</CardDescription>
                         </div>
                     </div>
-                    {is_active ? (
-                        <Badge variant="default" className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600 dark:bg-emerald-700">
-                            <CheckIcon className="size-3" />
-                            Aktif
-                        </Badge>
-                    ) : is_configured ? (
-                        <Badge variant="secondary" className="text-xs">Tersimpan</Badge>
-                    ) : (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">Belum Diatur</Badge>
-                    )}
+                    <div className="shrink-0 pt-0.5 sm:pt-0">
+                        {is_active ? (
+                            <Badge variant="default" className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600 dark:bg-emerald-700 text-[11px] sm:text-xs">
+                                <CheckIcon className="size-3" />
+                                <span>Aktif</span>
+                            </Badge>
+                        ) : is_configured ? (
+                            <Badge variant="secondary" className="text-[11px] sm:text-xs">Tersimpan</Badge>
+                        ) : (
+                            <Badge variant="outline" className="text-[11px] sm:text-xs text-muted-foreground">Belum Diatur</Badge>
+                        )}
+                    </div>
                 </div>
             </CardHeader>
 
-            <CardContent className="flex flex-1 flex-col gap-4 text-sm">
+            <CardContent className="flex flex-1 flex-col gap-4 p-4 sm:p-5 pt-0 sm:pt-0 text-sm">
                 {/* Active switch toggle */}
-                <div className="flex items-center justify-between rounded-lg border border-border/80 bg-muted/40 p-3">
-                    <div className="flex flex-col">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-muted/40 p-3 sm:p-3.5">
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="text-xs font-semibold text-foreground">Gunakan Sebagai Provider Utama</span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-[11px] text-muted-foreground leading-snug">
                             {is_active ? "Provider ini saat ini aktif digunakan untuk ekstraksi & skenario." : "Aktifkan provider ini untuk akun Anda (hanya 1 provider aktif)."}
                         </span>
                     </div>
@@ -217,6 +219,7 @@ export default function ProviderCard({ providerData }) {
                         onCheckedChange={handleToggleActive}
                         disabled={toggling || (!is_configured && !apiKey)}
                         aria-label={`Aktifkan ${label}`}
+                        className="shrink-0"
                     />
                 </div>
 
@@ -227,7 +230,7 @@ export default function ProviderCard({ providerData }) {
                     </Label>
                     {!isCustomModel ? (
                         <Select value={selectedModel} onValueChange={handleModelSelectChange}>
-                            <SelectTrigger id={`model-${provider}`} className="h-9 text-xs">
+                            <SelectTrigger id={`model-${provider}`} className="h-9 text-xs w-full min-w-0">
                                 <SelectValue placeholder="Pilih model..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -242,20 +245,20 @@ export default function ProviderCard({ providerData }) {
                             </SelectContent>
                         </Select>
                     ) : (
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <Input
                                 id={`model-${provider}`}
                                 value={customModelInput}
                                 onChange={(e) => setCustomModelInput(e.target.value)}
                                 placeholder="Contoh: gemini-3.8-flash atau claude-sonnet-5-5"
-                                className="h-9 text-xs"
+                                className="h-9 text-xs min-w-0 flex-1"
                             />
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setIsCustomModel(false)}
-                                className="h-9 text-xs shrink-0"
+                                className="h-9 text-xs shrink-0 w-full sm:w-auto"
                             >
                                 Daftar Pilihan
                             </Button>
@@ -288,7 +291,7 @@ export default function ProviderCard({ providerData }) {
                             value={apiKey}
                             onChange={(e) => setApiKey(e.target.value)}
                             placeholder={is_configured ? `Tersimpan: ${masked_api_key}` : key_placeholder}
-                            className="h-9 pr-9 text-xs font-mono"
+                            className="h-9 pr-9 text-xs font-mono min-w-0 w-full"
                             autoComplete="off"
                         />
                         <button
@@ -318,7 +321,7 @@ export default function ProviderCard({ providerData }) {
                             value={baseUrl}
                             onChange={(e) => setBaseUrl(e.target.value)}
                             placeholder={default_base_url || "https://api.openai.com/v1"}
-                            className="h-9 text-xs font-mono"
+                            className="h-9 text-xs font-mono min-w-0 w-full"
                         />
                     </div>
                 )}
@@ -349,31 +352,31 @@ export default function ProviderCard({ providerData }) {
                 )}
             </CardContent>
 
-            <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+            <CardFooter className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-t border-border/60 p-4 sm:p-5 pt-3 sm:pt-3">
                 <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleTestConnection}
                     disabled={testing || saving || (!is_configured && !apiKey)}
-                    className="h-8 gap-1.5 text-xs"
+                    className="h-8.5 w-full sm:w-auto gap-1.5 text-xs justify-center"
                 >
                     {testing ? <Loader2Icon className="size-3.5 animate-spin" /> : <PlayIcon className="size-3.5" />}
                     <span>Test Koneksi</span>
                 </Button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                     {is_configured && (
                         <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={handleReset}
-                            className="h-8 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                            className="h-8.5 gap-1 text-xs text-muted-foreground hover:text-destructive flex-1 sm:flex-none justify-center"
                             title="Reset konfigurasi provider ini"
                         >
                             <RotateCcwIcon className="size-3.5" />
-                            <span className="sr-only sm:not-sr-only">Reset</span>
+                            <span>Reset</span>
                         </Button>
                     )}
                     <Button
@@ -381,7 +384,7 @@ export default function ProviderCard({ providerData }) {
                         size="sm"
                         onClick={handleSave}
                         disabled={saving}
-                        className="h-8 gap-1.5 text-xs"
+                        className="h-8.5 gap-1.5 text-xs flex-1 sm:flex-none justify-center"
                     >
                         {saving ? <Loader2Icon className="size-3.5 animate-spin" /> : <SaveIcon className="size-3.5" />}
                         <span>Simpan</span>

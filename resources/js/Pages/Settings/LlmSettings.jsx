@@ -51,7 +51,7 @@ export default function LlmSettings({ auth, providers = [], title = "Mesin AI & 
                     <span className="text-xs text-muted-foreground">Tepat 1 mesin aktif per pengguna</span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                     {providers.map((providerData) => (
                         <ProviderCard key={providerData.provider} providerData={providerData} />
                     ))}
