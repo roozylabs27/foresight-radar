@@ -41,6 +41,11 @@ function interpolate(template, params) {
  * Lightweight, accessible I18nProvider for React 19 + Inertia.js 2.0.
  */
 export function I18nProvider({ children }) {
+    const parentContext = useContext(I18nContext);
+    if (parentContext) {
+        return children;
+    }
+
     const page = usePage();
     const [isChanging, setIsChanging] = useState(false);
 
@@ -117,11 +122,18 @@ export function I18nProvider({ children }) {
 
 /**
  * Hook to consume current translation dictionary and language switching action.
+ * Returns safe fallback if invoked outside an I18nProvider to prevent uncaught runtime errors.
  */
 export function useTranslation() {
     const context = useContext(I18nContext);
     if (!context) {
-        throw new Error("useTranslation must be used within an I18nProvider");
+        return {
+            locale: "id",
+            supportedLocales: DEFAULT_SUPPORTED_LOCALES,
+            t: (key) => key,
+            changeLanguage: () => {},
+            isChanging: false,
+        };
     }
     return context;
 }

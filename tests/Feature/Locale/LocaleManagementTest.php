@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Locale;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class LocaleManagementTest extends TestCase
@@ -24,12 +23,12 @@ class LocaleManagementTest extends TestCase
 
         $response->assertRedirect('/login');
         $response->assertSessionHas('locale', 'en');
-        $response->assertCookie('app_locale', 'en');
+        $response->assertPlainCookie('app_locale', 'en');
     }
 
     public function test_it_respects_cookie_locale_on_subsequent_requests(): void
     {
-        $response = $this->withCookies(['app_locale' => 'en'])->get('/login');
+        $response = $this->withUnencryptedCookie('app_locale', 'en')->get('/login');
 
         $response->assertOk();
         $response->assertHeader('Content-Language', 'en');
