@@ -4,9 +4,9 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `833a16f` (`feat(signals): add floating ingestion progress widget and header notification bell`)
+- **Last reviewed commit:** `e45a87f` (`fix(signals): replace auth() helper with Auth facade to resolve Intelephense undefined method warning`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 14/14 SignalIngestionTest clean, Vite: clean 48s build, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
+- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 14/14 SignalIngestionTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
 - **Current objective:** Floating ingestion progress widget & header notification bell active platform-wide.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
