@@ -6,6 +6,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ThemeProvider } from '@/Components/ThemeProvider';
 import { I18nProvider } from '@/context/I18nContext';
+import { IngestionProvider } from '@/context/IngestionContext';
 import { Toaster } from '@/Components/ui/sonner';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -19,7 +20,9 @@ createInertiaApp({
         const PageComponent = page.default;
         const WrappedPage = (props) => (
             <I18nProvider>
-                <PageComponent {...props} />
+                <IngestionProvider>
+                    <PageComponent {...props} />
+                </IngestionProvider>
             </I18nProvider>
         );
         Object.assign(WrappedPage, PageComponent);

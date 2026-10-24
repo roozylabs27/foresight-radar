@@ -168,6 +168,27 @@ class SignalIngestionController extends Controller
     }
 
     /**
+     * Active extractions currently queued or processing for the authenticated user.
+     */
+    public function activeExtractions(): JsonResponse
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return response()->json([], Response::HTTP_OK);
+        }
+
+        $sources = Source::where('created_by', $user->id)
+            ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+            ->where('created_at', '>=', now()->subHours(12))
+            ->latest()
+            ->get()
+            ->map(fn ($source) => $this->extractionService->progress($source))
+            ->values();
+
+        return response()->json($sources, Response::HTTP_OK);
+    }
+
+    /**
      * Review, edit, accept, or reject candidate signal.
      */
     public function review(ReviewSignalRequest $request, Signal $signal): JsonResponse

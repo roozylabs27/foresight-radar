@@ -41,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
 import { fromPaginator } from "@/hooks/use-server-table";
 import { useReturnFocus } from "@/hooks/use-return-focus";
 import { isPending, pollUntil, providerLabel } from "@/lib/llm";
+import { useIngestion } from "@/context/IngestionContext";
 import { cn } from "@/lib/utils";
 import IngestForm from "./IngestForm";
 import ReviewForm, { REVIEW_ACTIONS } from "./ReviewForm";
@@ -313,6 +314,7 @@ export default function SignalIndex({
     maxContentChars = 60000,
     pendingExtractions = [],
 }) {
+    const { startTracking } = useIngestion();
     const statusFieldId = useId();
     const [tab, setTab] = useState("review");
 
@@ -405,6 +407,7 @@ export default function SignalIndex({
             if (isPending(source.status)) {
                 toast.info(response.data.message);
                 setExtractions((current) => [source, ...current]);
+                startTracking(source);
             } else {
                 // Without a queue worker (QUEUE_CONNECTION=sync) the job has already run.
                 finishExtraction(source)(source);

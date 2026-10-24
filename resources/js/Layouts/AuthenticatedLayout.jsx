@@ -27,6 +27,8 @@ import {
 import BrandMark from "@/Components/BrandMark";
 import Breadcrumb from "@/Components/Breadcrumb";
 import LanguageSwitcher from "@/Components/LanguageSwitcher";
+import NotificationBell from "@/Components/NotificationBell";
+import FloatingIngestionProgress from "@/Components/Ingestion/FloatingIngestionProgress";
 import { ThemeMenuItem } from "@/Components/ThemeToggle";
 import { I18nProvider, useTranslation } from "@/context/I18nContext";
 import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
@@ -334,6 +336,7 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
                             )}
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2">
+                            <NotificationBell />
                             <LanguageSwitcher />
                             <UserMenu user={user} />
                         </div>
@@ -346,6 +349,8 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
                     )}
 
                     {children}
+
+                    <FloatingIngestionProgress />
 
                     <footer className="mt-auto px-6 py-2.5 text-center text-xs text-subtle-foreground">
                         Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.

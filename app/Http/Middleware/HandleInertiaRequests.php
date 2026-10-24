@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\LlmJobStatus;
+use App\Models\Source;
+use App\Services\SignalExtractionService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,8 +48,17 @@ class HandleInertiaRequests extends Middleware
         ];
 
         if ($user) {
+            $activeExtractions = Source::where('created_by', $user->id)
+                ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+                ->where('created_at', '>=', now()->subHours(12))
+                ->latest()
+                ->get()
+                ->map(fn ($source) => app(SignalExtractionService::class)->progress($source))
+                ->values();
+
             $data = [
                 ...$data,
+                'active_extractions' => $activeExtractions,
                 'auth' => [
                     'user' => [
                         'id' => $user->id,
