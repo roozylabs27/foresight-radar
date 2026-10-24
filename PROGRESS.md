@@ -4,9 +4,9 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `838c2ee` (`style(ui): purge SparklesIcon across platform and enforce semantic iconography standards`)
+- **Last reviewed commit:** `56ea177` (`fix(i18n): wrap Inertia pages with global I18nProvider and add safe fallback to useTranslation`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 250 files clean, Larastan: Level 5 clean, PHPUnit: 4/4 LocaleManagementTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
+- **Baseline verification:** PASS (Pint: 0 style issues, Larastan: Level 5 clean 0 errors, PHPUnit: 4/4 LocaleManagementTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
 - **Current objective:** Multi-language (Default: ID, Option: EN) implemented & verified via pure session & cookie (no URL prefixes, no user DB relation).
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
@@ -19,16 +19,19 @@
   - **Architecture Decision:** Implemented Native Lightweight `I18nProvider` + hook `useTranslation()` (Option B): zero extra npm packages, 100% React 19 / Inertia 2.0 compatible, no state duplication, no URL mutation, and no database user coupling.
   - **Backend (Laravel 11):**
     - Middleware `App\Http\Middleware\SetAppLocale`: Resolves locale from session `locale` -> cookie `app_locale` -> header `X-Locale` -> fallback default `id`. Sets `app()->setLocale()` and `Carbon::setLocale()`.
+    - Plain Cookie Exclusion: Added `app_locale` to `bootstrap/app.php` encryptCookies exception so JavaScript can read/write cookie seamlessly without AES payload decrypt mismatch.
     - Route & Controller `POST /locale`: Validates locale against `['id', 'en']`, stores in session, attaches persistent cookie `app_locale`, and redirects back.
     - Inertia Shared Props: `HandleInertiaRequests` shares `locale` (`id` | `en`) and `supported_locales` dictionary metadata to all Inertia pages.
     - Backend Translations: Configured `lang/id/messages.php`, `lang/en/messages.php`, and `lang/id/validation.php`.
     - Automated Regression Guard: `Tests\Feature\Locale\LocaleManagementTest` (4 tests, 15 assertions — 100% PASS).
   - **Frontend (React 19 / Inertia):**
+    - Root Global Provider: Wrapped Inertia page components in `resources/js/app.jsx` inside `<I18nProvider>`, ensuring nested layouts (e.g. `SettingsLayout.jsx`) and all pages have immediate access to context before execution.
+    - Defensive Context Fallback: Hardened `resources/js/context/I18nContext.jsx` with nested provider deduplication and a safe fallback object in `useTranslation()`, eliminating any possibility of uncaught fatal errors when called outside context.
     - Locales: `resources/js/locales/id.json` and `resources/js/locales/en.json` (organized by `common`, `nav`, `settings`, `profile`, `signals`, `auth`).
-    - Context & Hook: `resources/js/context/I18nContext.jsx` with `useTranslation()` providing `t()`, `locale`, `changeLanguage()`, and fallback handling.
     - Component: `resources/js/Components/LanguageSwitcher.jsx` (accessible dropdown with executive `GlobeIcon`, check indicators, and zero sparkles).
-    - Integrated into `AuthenticatedLayout.jsx`, `GuestLayout.jsx`, `AuthSplitLayout.jsx`, and `SettingsLayout.jsx`.
-    - Dynamic navigation bar: Sidebar items dynamically translate via `t('nav.{key}')`.
+    - Live Verification with Chrome DevTools MCP:
+      - Verified `http://127.0.0.1:8080/settings/llm` loads with zero console exceptions.
+      - Verified switching language between ID and EN dynamically updates page title, breadcrumbs, sidebar navigation, and settings categories in real-time.
 
 - [x] **Unified Accessible Breadcrumb Navigation Across All Authenticated Pages (2026-10-24)**
   - **Audit Findings:** Previously, breadcrumbs only existed on 2 pages (`SettingsLayout.jsx` and `Profile/Edit.jsx`) through duplicated hardcoded markup. All 14 other authenticated pages had zero breadcrumbs.
