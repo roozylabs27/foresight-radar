@@ -4,16 +4,40 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `cacf17d`
+- **Last reviewed commit:** `d278fa8`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
 - **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 14/14 SignalIngestionTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Floating ingestion progress widget persistent across browser refresh and cross-page navigation.
+- **Current objective:** Contextual executive tooltips for Signal Ingestion & Review workspace.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review.
 
 ---
 
 ## Completed
+
+- [x] **Contextual Executive Tooltips Across Signal Ingestion & Review Interface (2026-10-24)**
+  - **User Request:** Add tooltips explaining foresight concepts, provenance metrics, and form fields that could confuse users.
+  - **Implementation Details:**
+    1. **Table Column Headers (`Index.jsx`):**
+       - Added `HeaderWithTooltip` component across table headers: `Signal Title & Evidence`, `Taxonomy & Origin`, `Assessment & Confidence`, `Status`, and `Action`.
+       - Headers stop propagation when tooltips are interacted with so TanStack sorting triggers aren't accidentally fired.
+    2. **Assessment & Confidence Metrics (`Index.jsx`):**
+       - **Provider Badge (`ProviderBadge`):** Differentiates between `Aturan` (heuristic offline fallback when AI server is unreachable) and AI engines (`Google Gemini` / `Claude` with model name).
+       - **Confidence Score:** Explains 0–100% confidence level based on source text alignment and factual consistency.
+       - **Est. Impact & Uncertainty:** Tooltips explain scale 1–10 (1 = minimal impact/predictable, 10 = transformative/highly unpredictable).
+    3. **Evidence Verification & Taxonomy (`Index.jsx`):**
+       - **Quote Status:** Clarifies "Kutipan terverifikasi" (100% verbatim sentence match in raw document) vs "Kutipan tidak ditemukan".
+       - **Taxonomy Chips & Time Horizons:** Explains STEEP-V dimensions and Time Horizons (Short Term < 1 yr, Mid Term 1–3 yrs, Long Term > 3 yrs).
+       - **Inspect Modal:** Tooltip on `Content SHA-256 Hash` explaining cryptographic tamper-proof provenance.
+    4. **Ingest Form Fields (`IngestForm.jsx`):**
+       - Added `LabelWithTooltip` on all 5 form fields: `Document / Article Title`, `Publisher / Source Organization`, `Source URL (Optional)`, `Publication Date`, and `Raw Content / Document Text`.
+       - Explains why raw text is required (AI verbatim extraction & SHA-256 fingerprint) while URL is saved strictly as metadata.
+  - **Verification Evidence:**
+    - Chrome DevTools MCP: Navigated to `http://127.0.0.1:8080/signals`, hovered over table header info icons, badges, and form inputs. Tooltip popovers verified rendering smoothly with high contrast, proper z-index, and clear Indonesian explanations.
+    - PHPUnit: `tests/Feature/SignalIngestionTest.php` 14 passed (102 assertions).
+    - Laravel Pint: 260 files passed with 0 style issues.
+    - Vite Build: `npm run build` succeeded with code 0.
+
 
 - [x] **Persistence of Floating Ingestion Progress Across Page Refresh and Navigations (2026-10-24)**
   - **Problem Solved:** When a user started signal ingestion and refreshed the browser (or navigated between pages), the bottom-right `FloatingIngestionProgress` widget previously flashed or disappeared because state was held only in transient React memory.
