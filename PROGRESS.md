@@ -4,16 +4,31 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `ed2ff6f` (`style(settings): improve responsive layout and card styling for LLM settings across mobile, tablet, and desktop`)
+- **Last reviewed commit:** `833a16f` (`feat(signals): add floating ingestion progress widget and header notification bell`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 58/58 LLM tests clean, Vite: clean 1m 18s build, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Multi-language & Resilient LLM background queue extraction with responsive UI.
+- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 14/14 SignalIngestionTest clean, Vite: clean 48s build, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
+- **Current objective:** Floating ingestion progress widget & header notification bell active platform-wide.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
 
 ---
 
 ## Completed
+
+- [x] **Global Ingestion Progress Widget & Header Notification Bell (2026-10-24)**
+  - **Feature Overview:**
+    1. **Bottom-Right Floating Widget (`FloatingIngestionProgress.jsx`):** Automatically appears in the bottom-right corner across all authenticated pages whenever document extractions are running in the background. Shows live status (`queued` -> `processing` -> `completed`), spinning loader, title, and can be minimized to a floating pill.
+    2. **Header Notification Bell (`NotificationBell.jsx`):** Positioned in the header navigation directly next to `LanguageSwitcher`. Displays a badge counter for unread completed/failed extractions. Clicking the bell opens a popover detailing completed extractions (with signal counts, timestamps, and direct link to `/signals`).
+    3. **Global Ingestion Context (`IngestionContext.jsx`):** Shared provider handling background polling, Sonner toast notifications upon completion, and persistence of notification history in `localStorage`.
+    4. **Backend Integration:**
+       - Added `Route::get('/signals/extractions/active', ...)` in `routes/web.php` and `SignalIngestionController::activeExtractions()`.
+       - Shared `active_extractions` in `HandleInertiaRequests.php` for seamless multi-page continuity.
+  - **Verification Evidence:**
+    - Chrome DevTools MCP verified: `NotificationBell` renders in header next to `LanguageSwitcher` on `/dashboard`, opens cleanly on click with empty state and notification item handling.
+    - PHPUnit: `tests/Feature/SignalIngestionTest.php` 14/14 tests passing (102 assertions).
+    - Larastan Level 5: `[OK] No errors`.
+    - Laravel Pint: 260 files formatted cleanly (`PASS`).
+    - Vite build: completed cleanly in 48s.
 
 - [x] **Pure SaaS Multi-Language Support (ID & EN) with Zero-URL / Session & Cookie Persistence (2026-10-24)**
   - **Architecture Decision:** Implemented Native Lightweight `I18nProvider` + hook `useTranslation()` (Option B): zero extra npm packages, 100% React 19 / Inertia 2.0 compatible, no state duplication, no URL mutation, and no database user coupling.
