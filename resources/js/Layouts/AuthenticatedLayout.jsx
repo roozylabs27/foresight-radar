@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import BrandMark from "@/Components/BrandMark";
+import Breadcrumb from "@/Components/Breadcrumb";
 import { ThemeMenuItem } from "@/Components/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
 import { Button } from "@/Components/ui/button";
@@ -80,6 +81,31 @@ function writeCollapsed(value) {
 function isActive(url, match) {
     const path = url.split("?")[0];
     return path === match || path.startsWith(`${match}/`);
+}
+
+function resolveBreadcrumbs(customBreadcrumbs, url, navItems) {
+    if (customBreadcrumbs === false) {
+        return null;
+    }
+    if (Array.isArray(customBreadcrumbs) && customBreadcrumbs.length > 0) {
+        return customBreadcrumbs;
+    }
+
+    const path = url.split("?")[0];
+    if (path === "/dashboard" || path === "/" || path === "") {
+        return null;
+    }
+
+    if (path === "/profile" || path.startsWith("/profile/")) {
+        return [{ label: "Profil Pengguna" }];
+    }
+
+    const matched = navItems.find((item) => isActive(url, item.match));
+    if (matched) {
+        return [{ label: matched.label }];
+    }
+
+    return null;
 }
 
 function Brand({ collapsed = false }) {
@@ -197,7 +223,7 @@ function UserMenu({ user }) {
     );
 }
 
-export default function Authenticated({ auth, user: propUser, header, children }) {
+export default function Authenticated({ auth, user: propUser, header, breadcrumbs, children }) {
     const page = usePage();
     const effectiveAuth = auth || page.props.auth || {};
     const user = effectiveAuth.user || propUser;
@@ -211,6 +237,8 @@ export default function Authenticated({ auth, user: propUser, header, children }
             role === "super-admin" ||
             permissions.includes(item.permission)
     );
+
+    const resolvedBreadcrumbs = resolveBreadcrumbs(breadcrumbs, page.url, items);
 
     const isDesktop = useMediaQuery("(min-width: 1024px)");
     const [collapsed, setCollapsed] = useState(readCollapsed);
@@ -300,6 +328,12 @@ export default function Authenticated({ auth, user: propUser, header, children }
                         </div>
                         <UserMenu user={user} />
                     </header>
+
+                    {resolvedBreadcrumbs && resolvedBreadcrumbs.length > 0 && (
+                        <div className="border-b border-border/50 bg-muted/20 px-4 py-2 sm:px-6">
+                            <Breadcrumb items={resolvedBreadcrumbs} />
+                        </div>
+                    )}
 
                     {children}
 

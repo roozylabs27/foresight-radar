@@ -6,14 +6,30 @@
 - **Current branch:** `development`
 - **Last reviewed commit:** `838c2ee` (`style(ui): purge SparklesIcon across platform and enforce semantic iconography standards`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 250 files clean, Larastan: Level 5 clean, PHPUnit: full suite clean, Vite: clean, 0 Sparkles icons platform-wide)
-- **Current objective:** Anti-AI Slop Iconography Standard enforced (zero Sparkles policy) & semantic icon mapping codified in AGENTS.md.
+- **Baseline verification:** PASS (Pint: 250 files clean, Larastan: Level 5 clean, PHPUnit: full suite clean, Vite: clean, 0 Sparkles icons platform-wide, Unified Breadcrumbs active across all pages)
+- **Current objective:** Unified Accessible Breadcrumb Navigation implemented & verified platform-wide.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
 
 ---
 
 ## Completed
+
+- [x] **Unified Accessible Breadcrumb Navigation Across All Authenticated Pages (2026-10-24)**
+  - **Audit Findings:** Previously, breadcrumbs only existed on 2 pages (`SettingsLayout.jsx` and `Profile/Edit.jsx`) through duplicated hardcoded markup. All 14 other authenticated pages had zero breadcrumbs.
+  - **Shared Component Created:** `resources/js/Components/Breadcrumb.jsx` following W3C WAI-ARIA breadcrumb pattern (`<nav aria-label="Breadcrumb">`, `<ol>`, `<li>`, `aria-current="page"`, `aria-hidden="true"` separators, Lucide `HouseIcon` / `ChevronRightIcon`, and responsive truncation).
+  - **Layout Auto-Resolution:** Added `resolveBreadcrumbs()` to `resources/js/Layouts/AuthenticatedLayout.jsx`:
+    - Automatically derives breadcrumbs for all standard pages from sidebar navigation mappings (`NAV_ITEMS`) and `page.url`.
+    - Automatically suppresses breadcrumbs on root `/dashboard`.
+    - Supports explicit custom breadcrumb trails via `breadcrumbs={[{ label, href }]}` (e.g. multi-level `Pengaturan > Mesin AI & Reasoning` and `Profil Pengguna`).
+    - Dedicated clean placement bar below header with `border-b border-border/50 bg-muted/20`.
+  - **Verification Evidence:**
+    - Chrome DevTools MCP verified on `/time-horizon`: renders `Dashboard > Time Horizon`.
+    - Chrome DevTools MCP verified on `/signals`: renders `Dashboard > Signal Ingestion`.
+    - Chrome DevTools MCP verified on `/settings/llm`: renders `Dashboard > Pengaturan > Mesin AI & Reasoning`.
+    - Chrome DevTools MCP verified on `/visualization/cross-impact`: renders `Dashboard > Cross-Impact`.
+    - Chrome DevTools MCP verified on `/dashboard`: breadcrumb bar gracefully suppressed on home.
+    - Production Vite Build: `npm run build` completed cleanly in 5m 28s.
 
 - [x] **User LLM Settings & Multi-Provider Gateway (2026-10-23)**
   - **Feature Spec & Migration:** `user_llm_settings` table (`database/migrations/2026_10_23_000001_create_user_llm_settings_table.php`), `UserLlmSetting` model with encrypted `api_key` (`Crypt::encryptString`) and masked display (`••••••••abcd`).

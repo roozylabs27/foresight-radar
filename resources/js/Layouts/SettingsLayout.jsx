@@ -1,8 +1,6 @@
 import { Link, usePage } from "@inertiajs/react";
 import {
     BrainCircuitIcon,
-    ChevronRightIcon,
-    HouseIcon,
     KeyRoundIcon,
     SettingsIcon,
     UserIcon,
@@ -41,6 +39,10 @@ export default function SettingsLayout({
     return (
         <AuthenticatedLayout
             auth={auth}
+            breadcrumbs={[
+                { label: "Pengaturan", href: route("settings.index") },
+                { label: title },
+            ]}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <SettingsIcon aria-hidden="true" className="size-5 text-primary" />
@@ -49,38 +51,6 @@ export default function SettingsLayout({
             }
         >
             <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 lg:px-8 lg:py-6">
-                {/* Breadcrumb Navigation */}
-                <nav aria-label="Breadcrumb">
-                    <ol className="m-0 flex list-none items-center gap-2 p-0 text-sm text-muted-foreground">
-                        <li>
-                            <Link
-                                href={route("dashboard.")}
-                                className="inline-flex items-center gap-1.5 rounded-sm text-muted-foreground no-underline outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                            >
-                                <HouseIcon aria-hidden="true" className="size-4" />
-                                Dashboard
-                            </Link>
-                        </li>
-                        <li aria-hidden="true">
-                            <ChevronRightIcon className="size-3.5" />
-                        </li>
-                        <li>
-                            <Link
-                                href={route("settings.index")}
-                                className="inline-flex items-center gap-1.5 rounded-sm text-muted-foreground no-underline outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                            >
-                                Pengaturan
-                            </Link>
-                        </li>
-                        <li aria-hidden="true">
-                            <ChevronRightIcon className="size-3.5" />
-                        </li>
-                        <li aria-current="page" className="font-medium text-foreground">
-                            {title}
-                        </li>
-                    </ol>
-                </nav>
-
                 {/* Settings Layout Shell: Sidebar + Content */}
                 <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
                     {/* Settings Sub-Sidebar */}
