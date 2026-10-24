@@ -9,6 +9,7 @@ import {
     CloudUploadIcon,
     CpuIcon,
     EyeIcon,
+    InfoIcon,
     LinkIcon,
     LoaderCircleIcon,
     ShieldAlertIcon,
@@ -42,6 +43,7 @@ import { fromPaginator } from "@/hooks/use-server-table";
 import { useReturnFocus } from "@/hooks/use-return-focus";
 import { isPending, pollUntil, providerLabel } from "@/lib/llm";
 import { useIngestion } from "@/context/IngestionContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import IngestForm from "./IngestForm";
 import ReviewForm, { REVIEW_ACTIONS } from "./ReviewForm";
@@ -64,40 +66,123 @@ const STATUS_BADGES = {
 
 const confidence = (signal) => Math.round((signal.confidence_score || 0.8) * 100);
 
+function HeaderWithTooltip({ title, tooltip }) {
+    return (
+        <span className="inline-flex items-center gap-1.5 font-semibold">
+            <span>{title}</span>
+            {tooltip && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span
+                            role="button"
+                            aria-label={`Informasi tentang ${title}`}
+                            className="inline-flex cursor-help text-muted-foreground/70 transition-colors hover:text-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <InfoIcon className="size-3.5" />
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs font-normal text-left">
+                        {tooltip}
+                    </TooltipContent>
+                </Tooltip>
+            )}
+        </span>
+    );
+}
+
 /** Who proposed the signal: an LLM provider, keyword rules, or unknown (created before provenance was recorded). */
 function ProviderBadge({ signal }) {
     if (signal.extraction_provider === "heuristic") {
-        return <span className={cn(statusBadge(), "bg-muted text-muted-foreground")}>Aturan</span>;
-    }
-    if (signal.extraction_provider) {
         return (
-            <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>
-                {providerLabel(signal.extraction_provider)}
-            </span>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className={cn(statusBadge(), "cursor-help bg-muted text-muted-foreground")}>
+                        Aturan
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs text-left">
+                    <p className="mb-0.5 font-semibold text-foreground">Metode Aturan (Heuristik Offline)</p>
+                    <p className="text-muted-foreground">
+                        Skor dan sinyal diekstrak menggunakan aturan kata kunci lokal tanpa AI (terjadi saat server AI sibuk atau model nonaktif).
+                    </p>
+                </TooltipContent>
+            </Tooltip>
         );
     }
-    return <span className={statusBadge()}>Asal tidak tercatat</span>;
+    if (signal.extraction_provider) {
+        const providerName = providerLabel(signal.extraction_provider);
+        const modelName = signal.extraction_model ?? "AI Model";
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className={cn(statusBadge(), "cursor-help bg-primary text-primary-foreground")}>
+                        {providerName}
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs text-left">
+                    <p className="mb-0.5 font-semibold text-foreground">Dianalisis oleh AI ({providerName})</p>
+                    <p className="text-muted-foreground">
+                        Sinyal, estimasi dampak, dan confidence dinilai langsung oleh model kecerdasan buatan <b className="text-foreground">{modelName}</b> berdasarkan makna semantik dokumen.
+                    </p>
+                </TooltipContent>
+            </Tooltip>
+        );
+    }
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className={cn(statusBadge(), "cursor-help")}>Asal tidak tercatat</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs text-left">
+                Data lama sebelum pencatatan mesin provenance disimpan.
+            </TooltipContent>
+        </Tooltip>
+    );
 }
 
 /** Whether the evidence quote was found verbatim in the source text. */
 function QuoteStatus({ verified }) {
     if (verified === true) {
         return (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success">
-                <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-                Kutipan terverifikasi
-            </span>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="inline-flex cursor-help items-center gap-1 text-[11px] font-medium text-success">
+                        <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
+                        Kutipan terverifikasi
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs text-left">
+                    Kutipan bukti ini telah diverifikasi verbatim (100% cocok huruf-demi-huruf) dengan teks sumber asli untuk menjamin anti-halusinasi.
+                </TooltipContent>
+            </Tooltip>
         );
     }
     if (verified === false) {
         return (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-destructive">
-                <ShieldAlertIcon aria-hidden="true" className="size-3.5" />
-                Kutipan tidak ditemukan di sumber
-            </span>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="inline-flex cursor-help items-center gap-1 text-[11px] font-medium text-destructive">
+                        <ShieldAlertIcon aria-hidden="true" className="size-3.5" />
+                        Kutipan tidak ditemukan di sumber
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs text-left">
+                    Kutipan tidak ditemukan persis di dokumen sumber. Sinyal ini ditahan dan tidak bisa di-approve demi integritas data strategis.
+                </TooltipContent>
+            </Tooltip>
         );
     }
-    return <span className="text-[11px] text-muted-foreground">Kutipan belum diverifikasi (data lama)</span>;
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="cursor-help text-[11px] text-muted-foreground">Kutipan belum diverifikasi (data lama)</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs text-left">
+                Sinyal historis yang dibuat sebelum sistem verifikasi kutipan otomatis diaktifkan.
+            </TooltipContent>
+        </Tooltip>
+    );
 }
 
 function extractedBy(signal) {
@@ -237,7 +322,24 @@ function InspectDialog({ signal, open, onOpenChange }) {
                                     </a>
                                 </DetailItem>
                             )}
-                            <DetailItem label="Content SHA-256 Hash" className="sm:col-span-2">
+                            <DetailItem
+                                label={
+                                    <span className="inline-flex items-center gap-1">
+                                        <span>Content SHA-256 Hash</span>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span role="button" aria-label="Info SHA-256" className="cursor-help text-muted-foreground/70 hover:text-foreground">
+                                                    <InfoIcon className="size-3" />
+                                                </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="max-w-xs text-xs font-normal text-left">
+                                                Sidik jari kriptografi 256-bit unik dari dokumen sumber mentah untuk audit forensik dan jaminan data tidak dimanipulasi (anti-tampering).
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </span>
+                                }
+                                className="sm:col-span-2"
+                            >
                                 <code className="font-mono text-[11px] break-all">{signal.source?.content_hash || "N/A"}</code>
                             </DetailItem>
                             {signal.rejection_reason && (
@@ -439,22 +541,59 @@ export default function SignalIndex({
             {
                 accessorKey: "title",
                 enableSorting: true,
-                header: "Signal Title & Evidence",
+                header: () => (
+                    <HeaderWithTooltip
+                        title="Signal Title & Evidence"
+                        tooltip="Judul indikasi perubahan masa depan dan kutipan bukti verbatim dari teks sumber yang mendasarinya."
+                    />
+                ),
                 cell: ({ row }) => <SignalCell signal={row.original} />,
             },
             {
                 id: "taxonomy",
                 enableSorting: true,
-                header: "Taxonomy & Origin",
+                header: () => (
+                    <HeaderWithTooltip
+                        title="Taxonomy & Origin"
+                        tooltip="Klasifikasi dimensi makro (STEEP-V), estimasi cakrawala waktu (Time Horizon), dan identitas penerbit dokumen sumber."
+                    />
+                ),
                 cell: ({ row }) => {
                     const signal = row.original;
+                    const horizonName = signal.suggested_time_horizon?.name;
+                    const horizonTooltip =
+                        horizonName === "Short Term"
+                            ? "Cakrawala Waktu Pendek: dampak diperkirakan terjadi dalam kurun < 1 tahun."
+                            : horizonName === "Mid Term"
+                            ? "Cakrawala Waktu Menengah: dampak diperkirakan terjadi dalam kurun 1–3 tahun."
+                            : horizonName === "Long Term"
+                            ? "Cakrawala Waktu Panjang: dampak transformasional diperkirakan terjadi > 3 tahun."
+                            : "Estimasi cakrawala waktu implementasi sinyal.";
+
                     return (
                         <div className="flex min-w-[150px] flex-col items-start gap-1.5">
-                            <DimensionChip name={signal.dimension?.name || "Unassigned"} />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="cursor-help">
+                                        <DimensionChip name={signal.dimension?.name || "Unassigned"} />
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs text-xs">
+                                    Dimensi Taksonomi Analisis Lingkungan Makro (STEEP-V)
+                                </TooltipContent>
+                            </Tooltip>
+
                             {signal.suggested_time_horizon && (
-                                <span className={cn(statusBadge(), "bg-accent text-primary")}>
-                                    {signal.suggested_time_horizon.name}
-                                </span>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className={cn(statusBadge(), "cursor-help bg-accent text-primary")}>
+                                            {signal.suggested_time_horizon.name}
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-xs">
+                                        {horizonTooltip}
+                                    </TooltipContent>
+                                </Tooltip>
                             )}
                             <span className="text-[11px] text-muted-foreground">
                                 Source: {signal.source?.publisher || signal.source?.title || "Manual entry"}
@@ -466,23 +605,58 @@ export default function SignalIndex({
             {
                 id: "assessment",
                 enableSorting: true,
-                header: "Assessment & Confidence",
+                header: () => (
+                    <HeaderWithTooltip
+                        title="Assessment & Confidence"
+                        tooltip="Metrik evaluasi sinyal: Confidence (keyakinan bukti), Est. Impact (skala pengaruh 1–10), Uncertainty (tingkat ketidakpastian 1–10), dan Mesin pengekstrak."
+                    />
+                ),
                 cell: ({ row }) => {
                     const signal = row.original;
                     const percent = confidence(signal);
                     return (
                         <div className="flex min-w-[170px] flex-col items-start gap-1.5 text-xs">
-                            <span className="flex items-center gap-1.5 font-medium text-foreground">
-                                <span
-                                    aria-hidden="true"
-                                    className={cn("size-2 rounded-full", percent >= 80 ? "bg-success" : "bg-warning")}
-                                />
-                                {percent}% confidence
-                            </span>
-                            <span className="text-[11px] text-muted-foreground">
-                                Est. Impact: <b className="text-foreground">{signal.preliminary_impact ?? "N/A"}</b> |
-                                Uncertainty: <b className="text-foreground">{signal.preliminary_uncertainty ?? "N/A"}</b>
-                            </span>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className="flex cursor-help items-center gap-1.5 font-medium text-foreground">
+                                        <span
+                                            aria-hidden="true"
+                                            className={cn("size-2 rounded-full", percent >= 80 ? "bg-success" : "bg-warning")}
+                                        />
+                                        {percent}% confidence
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs text-xs text-left">
+                                    <p className="mb-0.5 font-semibold text-foreground">Confidence Score ({percent}%)</p>
+                                    <p className="text-muted-foreground">
+                                        Tingkat keyakinan bahwa kalimat kutipan bukti secara solid dan akurat mendukung usulan sinyal strategis ini.
+                                    </p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className="cursor-help text-[11px] text-muted-foreground">
+                                        Est. Impact: <b className="text-foreground">{signal.preliminary_impact ?? "N/A"}</b> |
+                                        Uncertainty: <b className="text-foreground">{signal.preliminary_uncertainty ?? "N/A"}</b>
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs text-xs text-left space-y-1.5">
+                                    <div>
+                                        <span className="font-semibold text-foreground">Est. Impact (1–10):</span>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Pengaruh terhadap organisasi (1 = minor/lokal, 5 = penting di divisi terkait, 10 = disrupsi industri).
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold text-foreground">Uncertainty (1–10):</span>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Tingkat ketidakpastian peristiwa (1 = sudah terkonfirmasi/terjadi, 5 = tren kuat tapi jadwal belum pasti, 10 = spekulatif).
+                                        </p>
+                                    </div>
+                                </TooltipContent>
+                            </Tooltip>
+
                             <ProviderBadge signal={signal} />
                         </div>
                     );
@@ -491,7 +665,12 @@ export default function SignalIndex({
             {
                 accessorKey: "review_status",
                 enableSorting: true,
-                header: "Status",
+                header: () => (
+                    <HeaderWithTooltip
+                        title="Status"
+                        tooltip="Status kurasi analis: PENDING (menunggu review), ACCEPTED (diterima menjadi Driving Force), atau REJECTED."
+                    />
+                ),
                 cell: ({ getValue }) => {
                     const badge = STATUS_BADGES[getValue()];
                     return <StatusBadge status={badge?.status ?? getValue()} label={badge?.label} />;
@@ -499,7 +678,12 @@ export default function SignalIndex({
             },
             {
                 id: "actions",
-                header: "Action",
+                header: () => (
+                    <HeaderWithTooltip
+                        title="Action"
+                        tooltip="Tindakan analisis: Inspect (rincian lengkap & SHA-256), Accept as New DF (luluskan jadi Driving Force), Link to DF, atau Reject."
+                    />
+                ),
                 cell: ({ row }) => <ActionButtons signal={row.original} onInspect={openInspect} onAction={openReview} />,
             },
         ],
