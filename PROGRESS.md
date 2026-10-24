@@ -4,10 +4,10 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `56ea177` (`fix(i18n): wrap Inertia pages with global I18nProvider and add safe fallback to useTranslation`)
+- **Last reviewed commit:** `7dbcb5f` (`perf(llm): increase LLM client HTTP timeout from 120s to 240s for background queue resilience`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 0 style issues, Larastan: Level 5 clean 0 errors, PHPUnit: 4/4 LocaleManagementTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Multi-language (Default: ID, Option: EN) implemented & verified via pure session & cookie (no URL prefixes, no user DB relation).
+- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 58/58 LLM tests clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
+- **Current objective:** Multi-language & Resilient LLM background queue extraction.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
 
