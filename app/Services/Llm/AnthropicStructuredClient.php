@@ -165,7 +165,7 @@ class AnthropicStructuredClient implements StructuredLlmClient
             requestOptions: [
                 'maxRetries' => (int) ($this->config['max_retries'] ?? 1),
                 'transporter' => new GuzzleClient([
-                    'timeout' => (float) ($this->config['timeout'] ?? 120),
+                    'timeout' => (float) ($this->config['timeout'] ?? 240),
                     'connect_timeout' => 10,
                 ]),
             ],

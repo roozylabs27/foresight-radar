@@ -166,7 +166,7 @@ class OpenAiCompatibleClient implements StructuredLlmClient
             ->asJson()
             ->withHeaders($headers)
             ->withOptions(['force_ip_resolve' => 'v4'])
-            ->timeout((int) ($this->config['timeout'] ?? 120))
+            ->timeout((int) ($this->config['timeout'] ?? 240))
             ->connectTimeout(10)
             ->retry(
                 max(0, (int) ($this->config['max_retries'] ?? 1)) + 1,

@@ -72,7 +72,7 @@ class LlmClientResolver
             'anthropic' => new AnthropicStructuredClient([
                 'api_key' => $apiKey,
                 'model' => $model,
-                'timeout' => $settings['timeout'] ?? 120,
+                'timeout' => $settings['timeout'] ?? (float) config('services.anthropic.timeout', 240),
                 'max_retries' => $settings['max_retries'] ?? 1,
             ]),
             'openai' => new OpenAiCompatibleClient([
@@ -82,7 +82,7 @@ class LlmClientResolver
                 'api_key' => $apiKey,
                 'model' => $model,
                 'structured_output' => 'json_schema',
-                'timeout' => $settings['timeout'] ?? 120,
+                'timeout' => $settings['timeout'] ?? (int) config('services.openai_compatible.timeout', 240),
                 'max_retries' => $settings['max_retries'] ?? 1,
             ]),
             'gemini' => new OpenAiCompatibleClient([
@@ -93,7 +93,7 @@ class LlmClientResolver
                 'model' => $model,
                 'structured_output' => 'json_object',
                 'reasoning_effort' => $settings['reasoning_effort'] ?? 'low',
-                'timeout' => $settings['timeout'] ?? 120,
+                'timeout' => $settings['timeout'] ?? (int) config('services.openai_compatible.timeout', 240),
                 'max_retries' => $settings['max_retries'] ?? 0,
             ]),
             default => new OpenAiCompatibleClient([
@@ -103,7 +103,7 @@ class LlmClientResolver
                 'api_key' => $apiKey,
                 'model' => $model,
                 'structured_output' => $settings['structured_output'] ?? 'json_schema',
-                'timeout' => $settings['timeout'] ?? 120,
+                'timeout' => $settings['timeout'] ?? (int) config('services.openai_compatible.timeout', 240),
                 'max_retries' => $settings['max_retries'] ?? 1,
             ]),
         };
