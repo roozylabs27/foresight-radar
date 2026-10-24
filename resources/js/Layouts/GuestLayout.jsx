@@ -1,13 +1,17 @@
 import { Link } from "@inertiajs/react";
 
 import BrandMark from "@/Components/BrandMark";
+import LanguageSwitcher from "@/Components/LanguageSwitcher";
 import ThemeToggle from "@/Components/ThemeToggle";
+import { I18nProvider } from "@/context/I18nContext";
 
-/** Centred card layout for the secondary auth pages (forgot / reset / confirm password, verify email). */
-export default function GuestLayout({ children }) {
+function GuestLayoutContent({ children }) {
     return (
         <div className="relative flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8 font-sans text-foreground">
-            <ThemeToggle className="absolute top-3 right-3" />
+            <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                <LanguageSwitcher />
+                <ThemeToggle />
+            </div>
             <main className="flex w-full max-w-[440px] flex-col items-center">
                 <Link
                     href="/"
@@ -33,6 +37,15 @@ export default function GuestLayout({ children }) {
                 </p>
             </main>
         </div>
+    );
+}
+
+/** Centred card layout for secondary auth pages. */
+export default function GuestLayout({ children }) {
+    return (
+        <I18nProvider>
+            <GuestLayoutContent>{children}</GuestLayoutContent>
+        </I18nProvider>
     );
 }
 

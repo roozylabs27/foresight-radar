@@ -7,10 +7,12 @@ import {
 } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { useTranslation } from "@/context/I18nContext";
 import { cn } from "@/lib/utils";
 
-const SETTINGS_NAV = [
+const SETTINGS_NAV_CONFIG = [
     {
+        key: "ai_engine",
         title: "Mesin AI & Reasoning",
         description: "Provider & model kecerdasan buatan untuk analisis",
         icon: BrainCircuitIcon,
@@ -18,6 +20,7 @@ const SETTINGS_NAV = [
         match: "/settings",
     },
     {
+        key: "profile_account",
         title: "Profil & Akun",
         description: "Informasi identitas dan alamat surel",
         icon: UserIcon,
@@ -28,25 +31,27 @@ const SETTINGS_NAV = [
 
 export default function SettingsLayout({
     auth,
-    title = "Pengaturan",
-    subtitle = "Kelola konfigurasi sistem, mesin kecerdasan buatan, dan preferensi akun Anda.",
+    title,
+    subtitle,
     activeTab = "ai",
     children,
 }) {
     const page = usePage();
+    const { t } = useTranslation();
     const currentUrl = page.url || "";
+    const resolvedTitle = title || t("settings.title", "Pengaturan");
 
     return (
         <AuthenticatedLayout
             auth={auth}
             breadcrumbs={[
-                { label: "Pengaturan", href: route("settings.index") },
-                { label: title },
+                { label: t("settings.title", "Pengaturan"), href: route("settings.index") },
+                { label: resolvedTitle },
             ]}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <SettingsIcon aria-hidden="true" className="size-5 text-primary" />
-                    <h1 className="m-0 truncate text-lg font-bold text-foreground">Pengaturan</h1>
+                    <h1 className="m-0 truncate text-lg font-bold text-foreground">{resolvedTitle}</h1>
                 </div>
             }
         >
@@ -60,13 +65,15 @@ export default function SettingsLayout({
                     >
                         <div className="mb-3 px-1">
                             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                Kategori Pengaturan
+                                {t("settings.categories", "Kategori Pengaturan")}
                             </h2>
                         </div>
                         <nav className="flex flex-row gap-1.5 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
-                            {SETTINGS_NAV.map((item) => {
+                            {SETTINGS_NAV_CONFIG.map((item) => {
                                 const Icon = item.icon;
                                 const isActive = currentUrl.startsWith(item.match);
+                                const itemTitle = t(`settings.${item.key}`, item.title);
+                                const itemDesc = t(`settings.${item.key}_desc`, item.description);
 
                                 return (
                                     <Link
@@ -96,10 +103,10 @@ export default function SettingsLayout({
                                                     isActive ? "font-semibold text-foreground" : "font-medium"
                                                 )}
                                             >
-                                                {item.title}
+                                                {itemTitle}
                                             </div>
                                             <p className="hidden text-xs text-muted-foreground/80 line-clamp-1 lg:block">
-                                                {item.description}
+                                                {itemDesc}
                                             </p>
                                         </div>
                                     </Link>

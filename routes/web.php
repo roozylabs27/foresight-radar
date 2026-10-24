@@ -6,6 +6,7 @@ use App\Http\Controllers\CrossImpactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DrivingForceController;
 use App\Http\Controllers\ForesightRadarController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PrioritizingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RatingUrgencyController;
@@ -34,6 +35,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return to_route('login');
 });
+
+Route::post('/locale', [LocaleController::class, 'update'])
+    ->name('locale.update')
+    ->middleware('throttle:60,1');
 
 Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(function () {
     Route::prefix('/dashboard')->controller(DashboardController::class)->name('dashboard.')->group(function () {

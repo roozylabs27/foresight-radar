@@ -33,6 +33,11 @@ class HandleInertiaRequests extends Middleware
 
         $data = [
             ...parent::share($request),
+            'locale' => app()->getLocale(),
+            'supported_locales' => [
+                'id' => ['code' => 'id', 'name' => 'Bahasa Indonesia', 'short' => 'ID'],
+                'en' => ['code' => 'en', 'name' => 'English', 'short' => 'EN'],
+            ],
             'auth' => [
                 'user' => $user,
             ],
