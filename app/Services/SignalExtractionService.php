@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Ramsey\Uuid\Uuid;
 
 class SignalExtractionService
@@ -300,9 +301,9 @@ class SignalExtractionService
             $firstWords = implode(' ', array_slice($paraWords, 0, 6));
             $candidateTitle = count($selectedParagraphs) === 1
                 ? ($sourceTitle ?: $firstWords)
-                : ($firstWords.'...');
+                : $firstWords;
 
-            $summary = strlen($para) > 300 ? substr($para, 0, 297).'...' : $para;
+            $summary = strlen($para) > 300 ? Str::limit($para, 297) : $para;
             $significance = 'Indicates emerging changes in '.($matchedDimension?->name ?? 'operating environment').' that may alter organizational planning assumptions.';
 
             $candidates[] = [

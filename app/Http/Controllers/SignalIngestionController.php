@@ -279,8 +279,9 @@ class SignalIngestionController extends Controller
                 }
 
                 if ($action === 'accept_create') {
-                    // Normalize keyword to first 4 words to respect WordCountRule
-                    $words = explode(' ', trim($signal->title));
+                    // Normalize keyword to first 4 words to respect WordCountRule and strip trailing dots/punctuation
+                    $cleanTitle = trim(preg_replace('/[\.\,\;\:\s]+$/', '', (string) $signal->title));
+                    $words = preg_split('/\s+/', $cleanTitle) ?: [];
                     $keyword = implode(' ', array_slice($words, 0, 4));
 
                     $drivingForce = DrivingForce::create([
