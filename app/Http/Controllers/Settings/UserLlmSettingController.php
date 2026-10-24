@@ -95,7 +95,16 @@ class UserLlmSettingController extends Controller
                 $existing = $user?->llmSettings()->where('provider', $data['provider'])->first();
                 if ($existing && ! empty($existing->api_key)) {
                     $data['api_key'] = $existing->api_key;
+                } elseif ($data['provider'] === 'gemini' && ! empty(config('services.openai_compatible.api_key'))) {
+                    $data['api_key'] = config('services.openai_compatible.api_key');
                 }
+            }
+
+            if (empty($data['api_key'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'API Key belum diisi. Masukkan API Key terlebih dahulu.',
+                ], HttpResponse::HTTP_UNPROCESSABLE_ENTITY);
             }
 
             $result = $this->settingService->testConnection($data);

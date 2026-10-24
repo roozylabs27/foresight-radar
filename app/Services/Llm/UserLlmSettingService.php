@@ -236,7 +236,7 @@ class UserLlmSettingService
                     'required' => ['status'],
                     'additionalProperties' => false,
                 ],
-                maxTokens: 50,
+                maxTokens: 2048,
             );
 
             $response = $client->generateJson($request);
@@ -252,11 +252,14 @@ class UserLlmSettingService
             ];
         } catch (Throwable $th) {
             $latencyMs = round((microtime(true) - $startTime) * 1000);
+            $message = $th instanceof LlmException
+                ? $th->userMessage()
+                : $th->getMessage();
 
             return [
                 'success' => false,
                 'latency_ms' => $latencyMs,
-                'message' => 'Connection test failed: '.$th->getMessage(),
+                'message' => 'Uji koneksi gagal: '.$message,
             ];
         }
     }
