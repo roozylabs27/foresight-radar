@@ -4,10 +4,10 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `8f51f61` (`feat(signals): adapt signal workspace to user active llm provider and model`)
+- **Last reviewed commit:** `838c2ee` (`style(ui): purge SparklesIcon across platform and enforce semantic iconography standards`)
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 250 files clean, Larastan: Level 5 clean, PHPUnit: 8/8 signal tests + 7/7 LLM tests clean, Vite: clean, Chrome DevTools MCP: verified live)
-- **Current objective:** User LLM Settings and Signal Ingestion Workspace fully integrated and synchronized with active user AI model.
+- **Baseline verification:** PASS (Pint: 250 files clean, Larastan: Level 5 clean, PHPUnit: full suite clean, Vite: clean, 0 Sparkles icons platform-wide)
+- **Current objective:** Anti-AI Slop Iconography Standard enforced (zero Sparkles policy) & semantic icon mapping codified in AGENTS.md.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review or further feature requests.
 
