@@ -104,7 +104,7 @@ class SignalIngestionController extends Controller
             $rawPageSize = (int) $request->query('pageSize', $request->input('pagination.pageSize', 10));
             $pageSize = min(100, max(1, $rawPageSize > 0 ? $rawPageSize : 10));
 
-            $signals = Signal::with(['source:id,uuid,title,url,publisher,published_at', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
+            $signals = Signal::with(['source:id,uuid,title,url,publisher,published_at,content_hash', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
                 ->when($status && $status !== 'ALL', fn ($q) => $q->where('review_status', $status))
                 ->when($dimension, fn ($q) => $q->where('dimension_id', $dimension))
                 ->when($search, function ($q) use ($search) {
