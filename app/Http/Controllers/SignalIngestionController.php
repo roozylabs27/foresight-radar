@@ -18,6 +18,7 @@ use App\Support\EvidenceVerifier;
 use App\Support\TableSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -57,7 +58,7 @@ class SignalIngestionController extends Controller
             ]);
 
         /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
 
         return Inertia::render('Signals/Index', [
             'title' => 'Signal Ingestion & Review',
@@ -75,7 +76,7 @@ class SignalIngestionController extends Controller
             ],
             'maxContentChars' => (int) config('services.signal_extraction.max_chars', 60000),
             // The analyst's extractions still in the queue, so the page resumes polling them.
-            'pendingExtractions' => Source::where('created_by', auth()->id())
+            'pendingExtractions' => Source::where('created_by', Auth::id())
                 ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
                 ->where('created_at', '>=', now()->subDay())
                 ->latest()
@@ -136,7 +137,7 @@ class SignalIngestionController extends Controller
     public function ingest(IngestSourceRequest $request): JsonResponse
     {
         try {
-            $source = $this->extractionService->ingest($request->validated(), auth()->id());
+            $source = $this->extractionService->ingest($request->validated(), (int) Auth::id());
 
             return response()->json([
                 'message' => 'Sumber disimpan. Sinyal sedang diekstrak di latar belakang.',
@@ -154,7 +155,7 @@ class SignalIngestionController extends Controller
      */
     public function extraction(Source $source): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $isOwnerOrAdmin = $user && (
             $source->created_by === $user->id
             || $user->hasAnyRole(['developer', 'super-admin', 'admin'])
@@ -172,7 +173,7 @@ class SignalIngestionController extends Controller
      */
     public function activeExtractions(): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (! $user) {
             return response()->json([], Response::HTTP_OK);
         }
@@ -233,7 +234,7 @@ class SignalIngestionController extends Controller
                 if ($action === 'reject') {
                     $signal->review_status = 'REJECTED';
                     $signal->rejection_reason = $validated['rejection_reason'] ?? 'Rejected by analyst';
-                    $signal->reviewed_by = auth()->id();
+                    $signal->reviewed_by = Auth::id();
                     $signal->reviewed_at = now();
                     $signal->save();
 
@@ -253,7 +254,7 @@ class SignalIngestionController extends Controller
                 if ($action === 'accept_link') {
                     $dfId = $validated['driving_force_id'];
                     $signal->review_status = 'ACCEPTED';
-                    $signal->reviewed_by = auth()->id();
+                    $signal->reviewed_by = Auth::id();
                     $signal->reviewed_at = now();
                     $signal->save();
 
@@ -275,8 +276,8 @@ class SignalIngestionController extends Controller
                     $drivingForce = DrivingForce::create([
                         'uuid' => (string) Uuid::uuid4(),
                         'dimension_id' => $signal->dimension_id ?? Dimension::first()->id,
-                        'created_by' => auth()->id(),
-                        'pic' => auth()->id(),
+                        'created_by' => Auth::id(),
+                        'pic' => Auth::id(),
                         'keyword' => $keyword,
                         'description' => $signal->summary,
                         'status' => 'PENDING',
@@ -298,7 +299,7 @@ class SignalIngestionController extends Controller
 
                     $signal->review_status = 'ACCEPTED';
                     $signal->created_driving_force_id = $drivingForce->id;
-                    $signal->reviewed_by = auth()->id();
+                    $signal->reviewed_by = Auth::id();
                     $signal->reviewed_at = now();
                     $signal->save();
 
