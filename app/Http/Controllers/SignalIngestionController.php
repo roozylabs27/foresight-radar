@@ -12,6 +12,7 @@ use App\Models\DrivingForceRating;
 use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TimeHorizon;
+use App\Models\User;
 use App\Services\SignalExtractionService;
 use App\Support\EvidenceVerifier;
 use App\Support\TableSort;
@@ -55,14 +56,23 @@ class SignalIngestionController extends Controller
                 'label' => $df->keyword.' ('.($df->dimension->name ?? 'General').') ['.$df->status.']',
             ]);
 
+        /** @var User|null $user */
+        $user = auth()->user();
+
         return Inertia::render('Signals/Index', [
             'title' => 'Signal Ingestion & Review',
             'dimensions' => $dimensions,
             'timeHorizons' => $timeHorizons,
             'existingDrivingForces' => $drivingForces,
-            'extractionMode' => $this->extractionService->mode(),
-            'extractionModel' => $this->extractionService->modelName(),
-            'extractionLabel' => $this->extractionService->modeLabel(),
+            'extractionMode' => $this->extractionService->mode($user),
+            'extractionModel' => $this->extractionService->modelName($user),
+            'extractionLabel' => $this->extractionService->modeLabel($user),
+            'activeLlm' => [
+                'mode' => $this->extractionService->mode($user),
+                'model' => $this->extractionService->modelName($user),
+                'label' => $this->extractionService->modeLabel($user),
+                'isCustom' => (bool) $user?->llmSettings()->where('is_active', true)->exists(),
+            ],
             'maxContentChars' => (int) config('services.signal_extraction.max_chars', 60000),
             // The analyst's extractions still in the queue, so the page resumes polling them.
             'pendingExtractions' => Source::where('created_by', auth()->id())

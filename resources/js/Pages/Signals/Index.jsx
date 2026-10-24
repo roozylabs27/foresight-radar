@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -12,6 +12,7 @@ import {
     LoaderCircleIcon,
     ShieldAlertIcon,
     ShieldCheckIcon,
+    SparklesIcon,
     ZapIcon,
 } from "lucide-react";
 
@@ -307,6 +308,7 @@ export default function SignalIndex({
     extractionMode = "heuristic",
     extractionModel = null,
     extractionLabel = "Aturan",
+    activeLlm = null,
     maxContentChars = 60000,
     pendingExtractions = [],
 }) {
@@ -512,6 +514,30 @@ export default function SignalIndex({
                     icon={<ZapIcon />}
                     title="Signal-to-Insight Workspace"
                     description="Ingest external publications and review evidence-backed candidate signals before formal repository graduation."
+                    badge={
+                        <span
+                            className={cn(
+                                statusBadge(),
+                                extractionMode !== "heuristic"
+                                    ? "border border-primary/20 bg-primary/10 text-primary font-medium"
+                                    : "bg-muted text-muted-foreground"
+                            )}
+                        >
+                            <SparklesIcon aria-hidden="true" className="mr-1 inline-block size-3.5" />
+                            {extractionMode !== "heuristic"
+                                ? `Mesin AI: ${extractionLabel}${extractionModel ? ` (${extractionModel})` : ""}`
+                                : "Ekstraksi: Aturan Kata Kunci (Non-AI)"}
+                        </span>
+                    }
+                    actions={
+                        <Link
+                            href={route("settings.llm.index")}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                        >
+                            <SparklesIcon aria-hidden="true" className="size-3.5 text-primary" />
+                            <span>Pengaturan Mesin AI</span>
+                        </Link>
+                    }
                 />
 
                 {/* Outside the tabs, so polling continues on either tab. */}

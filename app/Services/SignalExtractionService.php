@@ -9,6 +9,7 @@ use App\Models\Dimension;
 use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TimeHorizon;
+use App\Models\User;
 use App\Services\Extraction\LlmSignalExtractor;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
@@ -34,30 +35,52 @@ class SignalExtractionService
     ) {}
 
     /**
-     * The LLM provider id (e.g. "claude", "openrouter") when signals will be
+     * Resolve the structured LLM client for a specific user, falling back to system default.
+     */
+    public function clientForUser(int|User|null $user = null): StructuredLlmClient
+    {
+        $userId = $user instanceof User ? $user->id : $user;
+        if ($userId) {
+            $userLlm = app(LlmClientResolver::class)->resolveForUserId((int) $userId, false);
+            if ($userLlm !== null) {
+                return $userLlm;
+            }
+        }
+
+        return $this->llm ?? $this->llm();
+    }
+
+    /**
+     * The LLM provider id (e.g. "claude", "gemini", "openrouter") when signals will be
      * extracted by the LLM, otherwise "heuristic".
      */
-    public function mode(): string
+    public function mode(int|User|null $user = null): string
     {
-        return config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC && $this->llm()->isAvailable()
-            ? $this->llm()->provider()
+        $client = $this->clientForUser($user ?? auth()->user());
+
+        return config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC && $client->isAvailable()
+            ? $client->provider()
             : self::PROVIDER_HEURISTIC;
     }
 
-    public function usesLlm(): bool
+    public function usesLlm(int|User|null $user = null): bool
     {
-        return $this->mode() !== self::PROVIDER_HEURISTIC;
+        return $this->mode($user) !== self::PROVIDER_HEURISTIC;
     }
 
-    public function modelName(): ?string
+    public function modelName(int|User|null $user = null): ?string
     {
-        return $this->usesLlm() ? $this->llm()->model() : null;
+        $client = $this->clientForUser($user ?? auth()->user());
+
+        return $this->usesLlm($user) ? $client->model() : null;
     }
 
     /** Display name of the extractor: the provider's label, or "Aturan". */
-    public function modeLabel(): string
+    public function modeLabel(int|User|null $user = null): string
     {
-        return $this->usesLlm() ? $this->llm()->label() : 'Aturan';
+        $client = $this->clientForUser($user ?? auth()->user());
+
+        return $this->usesLlm($user) ? $client->label() : 'Aturan';
     }
 
     /**

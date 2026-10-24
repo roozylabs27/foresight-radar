@@ -1,7 +1,8 @@
 import { useId, useMemo } from "react";
+import { Link } from "@inertiajs/react";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
-import { InfoIcon, LoaderCircleIcon, ZapIcon } from "lucide-react";
+import { InfoIcon, LoaderCircleIcon, SparklesIcon, ZapIcon } from "lucide-react";
 
 import FormField, { fieldControlProps } from "@/Components/FormField";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -52,16 +53,25 @@ function ProvenanceNote({ mode, model, label }) {
     return (
         <div className="flex gap-3 rounded-lg border border-solid border-primary/30 bg-accent p-4" role="note">
             <InfoIcon aria-hidden="true" className="mt-0.5 shrink-0 text-primary" />
-            <div className="flex flex-col gap-1">
-                <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-                    Evidence Provenance Guarantee
-                    <span className={cn(statusBadge(), ai ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                        {ai ? `${label} · ${model}` : "Aturan"}
-                    </span>
-                </p>
+            <div className="flex flex-col gap-1 w-full">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+                        Evidence Provenance Guarantee
+                        <span className={cn(statusBadge(), ai ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                            {ai ? `${label} · ${model}` : "Aturan"}
+                        </span>
+                    </p>
+                    <Link
+                        href={route("settings.llm.index")}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    >
+                        <SparklesIcon aria-hidden="true" className="size-3" />
+                        <span>Ubah Mesin AI</span>
+                    </Link>
+                </div>
                 <p className="m-0 text-[13px] text-muted-foreground">
                     {ai
-                        ? `Teks dokumen dikirim ke ${label} untuk diusulkan sebagai sinyal. Setiap kutipan bukti dicocokkan verbatim ke teks yang Anda tempel; kutipan yang tidak ditemukan dibuang. Semua sinyal masuk sebagai PENDING dan tetap Anda putuskan.`
+                        ? `Teks dokumen dikirim ke ${label} (${model}) untuk diusulkan sebagai sinyal. Setiap kutipan bukti dicocokkan verbatim ke teks yang Anda tempel; kutipan yang tidak ditemukan dibuang. Semua sinyal masuk sebagai PENDING dan tetap Anda putuskan.`
                         : "Sinyal diusulkan dengan aturan kata kunci, tanpa AI, dan teks tidak keluar dari server."}{" "}
                     Setiap sinyal menyimpan kutipan verbatim dan sidik jari SHA-256 dari teks sumber untuk audit. URL hanya
                     disimpan sebagai metadata; isinya tidak diambil.
