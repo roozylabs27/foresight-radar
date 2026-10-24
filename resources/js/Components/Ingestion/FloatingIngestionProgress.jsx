@@ -16,6 +16,8 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/Components/ui/card"
 import { useIngestion } from "@/context/IngestionContext";
 import { cn } from "@/lib/utils";
 
+import { isPending } from "@/lib/llm";
+
 export default function FloatingIngestionProgress() {
     const {
         activeExtractions,
@@ -28,7 +30,7 @@ export default function FloatingIngestionProgress() {
         return null;
     }
 
-    const hasProcessing = activeExtractions.some((e) => e.status === "processing" || e.status === "queued");
+    const hasProcessing = activeExtractions.some((e) => isPending(e.status));
 
     // Minimized Pill view
     if (isWidgetMinimized) {
@@ -139,7 +141,7 @@ export default function FloatingIngestionProgress() {
                                         {isProcessing
                                             ? "AI sedang membaca dokumen & mengekstrak sinyal..."
                                             : isCompleted
-                                            ? `${item.extraction?.returned ?? item.signalsCount ?? 0} sinyal berhasil ditemukan.`
+                                            ? `${item.extraction?.signals ?? item.extraction?.returned ?? item.signalsCount ?? 0} sinyal berhasil ditemukan.`
                                             : isFailed
                                             ? "Ekstraksi gagal."
                                             : "Menunggu antrean pemrosesan..."}

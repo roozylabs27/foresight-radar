@@ -48,9 +48,14 @@ class HandleInertiaRequests extends Middleware
         ];
 
         if ($user) {
-            $activeExtractions = Source::where('created_by', $user->id)
-                ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+            $activeExtractions = Source::whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
                 ->where('created_at', '>=', now()->subHours(12))
+                ->where(function ($q) use ($user) {
+                    $q->where('created_by', $user->id);
+                    if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
+                        $q->orWhereNull('created_by');
+                    }
+                })
                 ->latest()
                 ->get()
                 ->map(fn ($source) => app(SignalExtractionService::class)->progress($source))

@@ -2,17 +2,18 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { usePage, router } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { CheckCircle2Icon, AlertCircleIcon, BotIcon } from "lucide-react";
+import { CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
 import { isPending } from "@/lib/llm";
 
 const IngestionContext = createContext(null);
 
-const STORAGE_KEY = "foresight_ingestion_notifications";
+const NOTIF_STORAGE_KEY = "foresight_ingestion_notifications";
+const ACTIVE_STORAGE_KEY = "foresight_active_extractions";
 const MAX_NOTIFICATIONS = 30;
 
 function loadStoredNotifications() {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(NOTIF_STORAGE_KEY);
         return stored ? JSON.parse(stored) : [];
     } catch {
         return [];
@@ -21,39 +22,144 @@ function loadStoredNotifications() {
 
 function saveStoredNotifications(items) {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_NOTIFICATIONS)));
+        localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(items.slice(0, MAX_NOTIFICATIONS)));
     } catch {
         // LocalStorage quota or unavailable
     }
 }
 
+function loadStoredActiveExtractions() {
+    try {
+        const stored = localStorage.getItem(ACTIVE_STORAGE_KEY);
+        if (!stored) return [];
+        const items = JSON.parse(stored);
+        if (!Array.isArray(items)) return [];
+        // Keep pending extractions indefinitely; keep recent finished items for 10 minutes
+        const cutoff = Date.now() - 10 * 60 * 1000;
+        return items.filter((item) => {
+            if (!item || !item.id) return false;
+            if (isPending(item.status)) return true;
+            return item.updatedAt && item.updatedAt >= cutoff;
+        });
+    } catch {
+        return [];
+    }
+}
+
+function saveStoredActiveExtractions(items) {
+    try {
+        if (!Array.isArray(items)) return;
+        localStorage.setItem(ACTIVE_STORAGE_KEY, JSON.stringify(items));
+    } catch {
+        // LocalStorage quota or unavailable
+    }
+}
+
+function getInitialActiveExtractions(pageProps) {
+    const fromStorage = loadStoredActiveExtractions();
+    const fromProps = Array.isArray(pageProps?.active_extractions) ? pageProps.active_extractions : [];
+    const fromPending = Array.isArray(pageProps?.pendingExtractions) ? pageProps.pendingExtractions : [];
+
+    const map = new Map();
+    // 1. Initial state from persistent storage so it renders immediately on page refresh
+    for (const item of fromStorage) {
+        if (item && item.id) {
+            map.set(item.id, item);
+        }
+    }
+    // 2. Hydrate / overwrite with fresher server props if present
+    for (const item of [...fromProps, ...fromPending]) {
+        if (item && item.id) {
+            const existing = map.get(item.id);
+            map.set(item.id, existing ? { ...existing, ...item } : item);
+        }
+    }
+    return Array.from(map.values());
+}
+
 export function IngestionProvider({ children }) {
     const page = usePage();
-    const initialActive = page?.props?.active_extractions || [];
 
-    const [activeExtractions, setActiveExtractions] = useState(() => initialActive);
+    const [activeExtractions, setActiveExtractions] = useState(() =>
+        getInitialActiveExtractions(page?.props)
+    );
     const [notifications, setNotifications] = useState(loadStoredNotifications);
     const [isWidgetMinimized, setIsWidgetMinimized] = useState(false);
 
-    // Keep activeExtractions synchronized when initialActive changes from Inertia navigation
+    // Keep activeExtractions synchronized when page props update on Inertia visits
     useEffect(() => {
-        if (Array.isArray(page?.props?.active_extractions) && page.props.active_extractions.length > 0) {
-            setActiveExtractions((current) => {
-                const map = new Map(current.map((item) => [item.id, item]));
-                for (const item of page.props.active_extractions) {
-                    if (!map.has(item.id)) {
-                        map.set(item.id, item);
-                    }
+        const fromProps = Array.isArray(page?.props?.active_extractions) ? page.props.active_extractions : [];
+        const fromPending = Array.isArray(page?.props?.pendingExtractions) ? page.props.pendingExtractions : [];
+        const combined = [...fromProps, ...fromPending];
+
+        if (combined.length === 0) return;
+
+        setActiveExtractions((current) => {
+            const map = new Map(current.map((item) => [item.id, item]));
+            let hasChanged = false;
+            for (const item of combined) {
+                if (!item || !item.id) continue;
+                const existing = map.get(item.id);
+                if (!existing) {
+                    map.set(item.id, item);
+                    hasChanged = true;
+                } else if (existing.status !== item.status) {
+                    map.set(item.id, { ...existing, ...item });
+                    hasChanged = true;
                 }
-                return Array.from(map.values());
-            });
-        }
-    }, [page?.props?.active_extractions]);
+            }
+            return hasChanged ? Array.from(map.values()) : current;
+        });
+    }, [page?.props?.active_extractions, page?.props?.pendingExtractions]);
+
+    // Persist active extractions to localStorage whenever they change
+    useEffect(() => {
+        saveStoredActiveExtractions(activeExtractions);
+    }, [activeExtractions]);
 
     // Persist notifications to localStorage
     useEffect(() => {
         saveStoredNotifications(notifications);
     }, [notifications]);
+
+    // Re-verify with backend active extractions endpoint on mount & on window focus
+    useEffect(() => {
+        let isMounted = true;
+        const syncActiveWithServer = async () => {
+            try {
+                const res = await axios.get(route("signals.active-extractions"));
+                if (!isMounted || !Array.isArray(res.data)) return;
+
+                setActiveExtractions((current) => {
+                    const map = new Map(current.map((item) => [item.id, item]));
+                    let hasChanged = false;
+                    for (const item of res.data) {
+                        if (!item || !item.id) continue;
+                        const existing = map.get(item.id);
+                        if (!existing) {
+                            map.set(item.id, item);
+                            hasChanged = true;
+                        } else if (existing.status !== item.status) {
+                            map.set(item.id, { ...existing, ...item });
+                            hasChanged = true;
+                        }
+                    }
+                    return hasChanged ? Array.from(map.values()) : current;
+                });
+            } catch {
+                // Ignore transient network failure; background poller will retry
+            }
+        };
+
+        syncActiveWithServer();
+
+        const handleFocus = () => syncActiveWithServer();
+        window.addEventListener("focus", handleFocus);
+        return () => {
+            isMounted = false;
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, []);
 
     const addNotification = useCallback((notif) => {
         setNotifications((prev) => [notif, ...prev.filter((n) => n.id !== notif.id)].slice(0, MAX_NOTIFICATIONS));
@@ -85,11 +191,15 @@ export function IngestionProvider({ children }) {
                     if (!isPending(progress.status)) {
                         // Status changed to completed or failed!
                         setActiveExtractions((prev) =>
-                            prev.map((e) => (e.id === item.id ? { ...e, ...progress } : e))
+                            prev.map((e) =>
+                                e.id === item.id
+                                    ? { ...e, ...progress, updatedAt: Date.now() }
+                                    : e
+                            )
                         );
 
                         const isSuccess = progress.status === "completed";
-                        const signalsFound = progress.extraction?.returned ?? 0;
+                        const signalsFound = progress.extraction?.signals ?? progress.extraction?.returned ?? 0;
 
                         // Create notification record
                         const notifRecord = {
@@ -103,7 +213,7 @@ export function IngestionProvider({ children }) {
                             signalsCount: signalsFound,
                             fallback: progress.extraction?.fallback ?? false,
                             fallbackNotice: progress.extraction?.notice ?? null,
-                            provider: progress.extraction?.provider,
+                            provider: progress.extraction?.label ?? progress.extraction?.provider,
                             model: progress.extraction?.model,
                             timestamp: Date.now(),
                             read: false,
@@ -129,16 +239,16 @@ export function IngestionProvider({ children }) {
                             });
                         }
 
-                        // Schedule auto-dismiss from bottom-right active widget after 7 seconds
+                        // Auto-dismiss completed card from widget after 12 seconds
                         setTimeout(() => {
                             setActiveExtractions((prev) => prev.filter((e) => e.id !== item.id));
-                        }, 7000);
+                        }, 12000);
                     }
                 } catch {
                     // Ignore network polling glitches; will retry next interval
                 }
             }
-        }, 3500);
+        }, 3000);
 
         return () => {
             clearInterval(pollInterval);
@@ -149,16 +259,21 @@ export function IngestionProvider({ children }) {
     const startTracking = useCallback((source) => {
         if (!source || !source.id) return;
         setActiveExtractions((prev) => {
+            const updatedItem = { ...source, updatedAt: Date.now() };
             if (prev.some((item) => item.id === source.id)) {
-                return prev.map((item) => (item.id === source.id ? { ...item, ...source } : item));
+                return prev.map((item) => (item.id === source.id ? { ...item, ...updatedItem } : item));
             }
-            return [source, ...prev];
+            return [updatedItem, ...prev];
         });
         setIsWidgetMinimized(false);
     }, []);
 
     const dismissExtraction = useCallback((id) => {
-        setActiveExtractions((prev) => prev.filter((item) => item.id !== id));
+        setActiveExtractions((prev) => {
+            const next = prev.filter((item) => item.id !== id);
+            saveStoredActiveExtractions(next);
+            return next;
+        });
     }, []);
 
     const markAsRead = useCallback((id) => {
@@ -215,4 +330,3 @@ export function useIngestion() {
     }
     return context;
 }
-

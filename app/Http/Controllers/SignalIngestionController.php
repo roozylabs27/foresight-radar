@@ -76,9 +76,14 @@ class SignalIngestionController extends Controller
             ],
             'maxContentChars' => (int) config('services.signal_extraction.max_chars', 60000),
             // The analyst's extractions still in the queue, so the page resumes polling them.
-            'pendingExtractions' => Source::where('created_by', Auth::id())
-                ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+            'pendingExtractions' => Source::whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
                 ->where('created_at', '>=', now()->subDay())
+                ->where(function ($q) use ($user) {
+                    $q->where('created_by', $user?->id ?? Auth::id());
+                    if ($user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
+                        $q->orWhereNull('created_by');
+                    }
+                })
                 ->latest()
                 ->get()
                 ->map(fn ($source) => $this->extractionService->progress($source))
@@ -178,9 +183,14 @@ class SignalIngestionController extends Controller
             return response()->json([], Response::HTTP_OK);
         }
 
-        $sources = Source::where('created_by', $user->id)
-            ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+        $sources = Source::whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
             ->where('created_at', '>=', now()->subHours(12))
+            ->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id);
+                if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
+                    $q->orWhereNull('created_by');
+                }
+            })
             ->latest()
             ->get()
             ->map(fn ($source) => $this->extractionService->progress($source))

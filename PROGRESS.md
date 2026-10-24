@@ -4,16 +4,33 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `e45a87f` (`fix(signals): replace auth() helper with Auth facade to resolve Intelephense undefined method warning`)
+- **Last reviewed commit:** `cacf17d`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
 - **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 14/14 SignalIngestionTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Floating ingestion progress widget & header notification bell active platform-wide.
+- **Current objective:** Floating ingestion progress widget persistent across browser refresh and cross-page navigation.
 - **Current blocker:** None
-- **Highest-priority next task:** Ready for user review or further feature requests.
+- **Highest-priority next task:** Ready for user review.
 
 ---
 
 ## Completed
+
+- [x] **Persistence of Floating Ingestion Progress Across Page Refresh and Navigations (2026-10-24)**
+  - **Problem Solved:** When a user started signal ingestion and refreshed the browser (or navigated between pages), the bottom-right `FloatingIngestionProgress` widget previously flashed or disappeared because state was held only in transient React memory.
+  - **Implementation Details:**
+    1. **Dual-Layer Persistence Engine (`IngestionContext.jsx`):**
+       - Integrated `localStorage` persistence under `foresight_active_extractions`.
+       - On page mount/refresh, `getInitialActiveExtractions()` immediately restores ongoing processes from `localStorage` merged with server props, guaranteeing zero flicker and zero disappearance during browser reload.
+       - Added mount & window focus synchronization with `GET /signals/extractions/active` via API to ensure latest backend status.
+       - Kept active extractions alive until confirmed completed or explicitly dismissed.
+    2. **Backend Query Hardening (`HandleInertiaRequests.php` & `SignalIngestionController.php`):**
+       - Updated extraction queries in `HandleInertiaRequests.php`, `SignalIngestionController::activeExtractions()`, and `SignalIngestionController::index()` to include sources where `created_by = $user->id` or null (for developers/admins).
+    3. **Live Verification with Real Gemini LLM & Queue Worker:**
+       - Ingested new source: *"Pengembangan Robotika Otonom dan AI Fisik 2026"*.
+       - Refreshed browser at `/signals` while job was `queued`/`processing`. Widget remained visible and active.
+       - Navigated to `/dashboard` and executed hard browser refresh. Widget remained firmly visible at bottom-right showing active status.
+       - Background queue completed extraction in 55 seconds using Google Gemini (`gemini-3.8-flash`).
+       - Widget updated to show `2 sinyal berhasil ditemukan`, toast fired, and header `NotificationBell` showed badge `1` with item details.
 
 - [x] **Global Ingestion Progress Widget & Header Notification Bell (2026-10-24)**
   - **Feature Overview:**

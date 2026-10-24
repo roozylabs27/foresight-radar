@@ -373,6 +373,14 @@ export default function SignalIndex({
     const [ingesting, setIngesting] = useState(false);
     const [extractions, setExtractions] = useState(pendingExtractions);
 
+    useEffect(() => {
+        if (Array.isArray(pendingExtractions) && pendingExtractions.length > 0) {
+            pendingExtractions.forEach((source) => {
+                startTracking(source);
+            });
+        }
+    }, [pendingExtractions, startTracking]);
+
     const showReview = () => {
         setTab("review");
         setStatus("PENDING");
