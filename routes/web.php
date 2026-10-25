@@ -13,6 +13,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RatingUrgencyController;
 use App\Http\Controllers\RegisteredListController;
 use App\Http\Controllers\ScenarioController;
+use App\Http\Controllers\Settings\OrganizationController;
+use App\Http\Controllers\Settings\TenantMemberController;
 use App\Http\Controllers\Settings\UserLlmSettingController;
 use App\Http\Controllers\SignalIngestionController;
 use App\Http\Controllers\StatusActionController;
@@ -182,6 +184,21 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
             Route::post('/activate', 'activate')->name('activate');
             Route::post('/test', 'test')->name('test');
             Route::delete('/{provider}', 'destroy')->name('destroy');
+        });
+
+        // Tenant Workspace / Organization settings
+        Route::prefix('organization')->name('organization.')->controller(OrganizationController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::patch('/', 'update')->name('update');
+        });
+
+        // Tenant Members & Team Invitations
+        Route::prefix('members')->name('members.')->controller(TenantMemberController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/invite', 'invite')->name('invite');
+            Route::patch('/{user}/role', 'updateRole')->name('role');
+            Route::delete('/{user}', 'removeMember')->name('destroy');
+            Route::delete('/invitations/{invitation}', 'cancelInvite')->name('invitations.cancel');
         });
     });
 

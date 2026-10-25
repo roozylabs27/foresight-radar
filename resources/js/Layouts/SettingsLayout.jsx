@@ -1,9 +1,11 @@
 import { Link, usePage } from "@inertiajs/react";
 import {
     BrainCircuitIcon,
+    Building2Icon,
     KeyRoundIcon,
     SettingsIcon,
     UserIcon,
+    UsersIcon,
 } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
@@ -12,15 +14,31 @@ import { cn } from "@/lib/utils";
 
 const SETTINGS_NAV_CONFIG = [
     {
-        key: "ai_engine",
+        key: "ai",
         title: "Mesin AI & Reasoning",
         description: "Provider & model kecerdasan buatan untuk analisis",
         icon: BrainCircuitIcon,
         href: "/settings/llm",
-        match: "/settings",
+        match: "/settings/llm",
     },
     {
-        key: "profile_account",
+        key: "organization",
+        title: "Organisasi & Workspace",
+        description: "Pengaturan identitas dan kuota tenant",
+        icon: Building2Icon,
+        href: "/settings/organization",
+        match: "/settings/organization",
+    },
+    {
+        key: "members",
+        title: "Anggota & Undangan Tim",
+        description: "Kelola anggota dan buat undangan baru",
+        icon: UsersIcon,
+        href: "/settings/members",
+        match: "/settings/members",
+    },
+    {
+        key: "profile",
         title: "Profil & Akun",
         description: "Informasi identitas dan alamat surel",
         icon: UserIcon,

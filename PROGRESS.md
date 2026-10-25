@@ -15,6 +15,35 @@
 
 ## Completed
 
+- [x] **Organization Workspace Settings & Team Member Invitation Management (2026-10-25)**
+  - **User Request:** "untung setting tenant dimana belum ada ya? dan member2 nya serta buat invitation member"
+  - **Implementation Details:**
+    1. **Database Foundation (`tenant_invitations` table):**
+       - Created [`database/migrations/2026_10_25_000004_create_tenant_invitations_table.php`](file:///c:/laragon/www/foresight-radar/database/migrations/2026_10_25_000004_create_tenant_invitations_table.php) with columns `tenant_id`, `email`, `name`, `role`, `token`, `invited_by`, `expires_at`, `accepted_at`.
+       - Created [`app/Models/TenantInvitation.php`](file:///c:/laragon/www/foresight-radar/app/Models/TenantInvitation.php) with `BelongsToTenant` trait and expiration verification methods.
+       - Added `invitations()` relation to [`app/Models/Tenant.php`](file:///c:/laragon/www/foresight-radar/app/Models/Tenant.php).
+    2. **Backend Controllers & 1-User-1-Tenant Policy:**
+       - Created [`OrganizationController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/Settings/OrganizationController.php): displays organization profile and resource metrics (`members`, `sources`, `signals`, `driving_forces`, `scenarios`), and allows organization admins to update workspace profile.
+       - Created [`TenantMemberController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/Settings/TenantMemberController.php):
+         - `index`: lists tenant members with roles and pending invitations.
+         - `invite`: enforces `max_users` capacity and strict 1-User-1-Tenant policy (rejects email registered in another tenant), generating invitation token and temporary credentials.
+         - `updateRole`: updates member role (`admin`, `bod`).
+         - `removeMember`: removes member from tenant (with anti-self-removal check).
+         - `cancelInvite`: cancels pending invitation.
+    3. **Frontend UI Architecture (React 19 / Inertia 2.0 / Radix UI / Tailwind CSS v4):**
+       - Updated [`SettingsLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Layouts/SettingsLayout.jsx) with unified sidebar navigation items (`Mesin AI & Reasoning`, `Organisasi & Workspace`, `Anggota & Undangan Tim`, `Profil & Akun`).
+       - Created [`Organization.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Organization.jsx): executive metrics cards, plan details, and organization profile form.
+       - Created [`Members.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx): team member table, Radix `Dialog` invitation modal, role dropdown actions, and pending invitation list.
+    4. **Standards & Compliance:**
+       - Zero `auth()` helper (strictly `Auth::...`).
+       - Zero `SparklesIcon` / Anti-AI Slop (strictly semantic icons: `Building2Icon`, `UsersIcon`, `UserPlusIcon`, `ShieldCheckIcon`).
+       - Zero `curl` verification (strictly Chrome DevTools MCP with DOM evaluation and screenshots).
+    5. **Automated Quality Verification:**
+       - PHPUnit: 8/8 tests passing in [`tests/Feature/Settings/TenantManagementTest.php`](file:///c:/laragon/www/foresight-radar/tests/Feature/Settings/TenantManagementTest.php).
+       - Pint: 0 code style errors (`vendor/bin/pint --test`).
+       - Larastan Level 5: `[OK] No errors` (`vendor/bin/phpstan analyse --memory-limit=2G`).
+       - Chrome DevTools MCP: live DOM inspection and visual screenshot verification on `/settings/organization` and `/settings/members` with 0 console errors.
+
 - [x] **Active AI Provider Prioritization on Settings Page (2026-10-25)**
   - **User Request:** "untuk provider yg aktif urutan pertama http://127.0.0.1:8080/settings/llm"
   - **Implementation Details:**

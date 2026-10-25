@@ -88,6 +88,11 @@ class Tenant extends Model
         return $this->hasOne(TenantLlmSetting::class);
     }
 
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(TenantInvitation::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';
