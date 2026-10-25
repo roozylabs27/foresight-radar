@@ -15,7 +15,6 @@ import {
     RotateCcwIcon,
     SearchIcon,
     SlidersHorizontalIcon,
-    SparklesIcon,
     ZapIcon,
     ZoomInIcon,
     ZoomOutIcon,
@@ -25,34 +24,96 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import DimensionChip, { dimensionColor } from "@/Components/DimensionChip";
 import Panel from "@/Components/Panel";
 import { statusBadge } from "@/Components/StatusBadge";
+import { useTheme } from "@/Components/ThemeProvider";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Skeleton } from "@/Components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 
-const DIMENSION_COLORS = {
-    Technology: "#3b82f6", // Blue
-    Economic: "#10b981", // Emerald
-    Political: "#f59e0b", // Amber
-    Regulation: "#f59e0b",
-    Social: "#8b5cf6", // Purple
-    Environmental: "#06b6d4", // Cyan
-    Ecology: "#06b6d4",
-    Competitor: "#ef4444", // Red
-    Customer: "#ec4899", // Pink
-    Supplier: "#6366f1", // Indigo
-    Substitute: "#f97316", // Orange
-    General: "#94a3b8", // Slate
-    Source: "#64748b",
+const DIMENSION_COLORS_DARK = {
+    Technology: "#2fd1c2",
+    Economic: "#e3b23c",
+    Economy: "#e3b23c",
+    Political: "#a98bff",
+    Regulation: "#a98bff",
+    Social: "#f07ab3",
+    Environmental: "#7bd36a",
+    Ecology: "#7bd36a",
+    Competitor: "#ff7a6e",
+    Customer: "#f07ab3",
+    Supplier: "#c9a36b",
+    Substitute: "#ff9d4d",
+    General: "#a3b2c9",
+    Source: "#8797b0",
 };
 
-function getNodeColor(node) {
-    if (node.type === "source") return DIMENSION_COLORS.Source;
-    return DIMENSION_COLORS[node.dimension] ?? dimensionColor(node.dimension) ?? "#94a3b8";
+const DIMENSION_COLORS_LIGHT = {
+    Technology: "#0b8f8a",
+    Economic: "#b07d00",
+    Economy: "#b07d00",
+    Political: "#6a4cc0",
+    Regulation: "#6a4cc0",
+    Social: "#c0397a",
+    Environmental: "#3d8a2c",
+    Ecology: "#3d8a2c",
+    Competitor: "#d1433a",
+    Customer: "#c0397a",
+    Supplier: "#7a5a2e",
+    Substitute: "#e0741c",
+    General: "#4a5872",
+    Source: "#5f6d84",
+};
+
+const THEME_CANVAS_DARK = {
+    background: "#08101e",
+    gridDot: "rgba(233, 238, 247, 0.08)",
+    linkDefault: "rgba(163, 178, 201, 0.28)",
+    linkSignalToDf: "rgba(163, 178, 201, 0.38)",
+    linkSourceToSignal: "rgba(135, 151, 176, 0.22)",
+    linkActive: "#6aa5ff",
+    hubFill: "#0f1a2d",
+    sourceFill: "#16233a",
+    sourceBorder: "#8797b0",
+    signalBorder: "#08101e",
+    labelPillBg: "rgba(8, 16, 30, 0.88)",
+    labelPillBorder: "rgba(34, 49, 75, 0.85)",
+    labelText: "#e9eef7",
+    labelTextActive: "#6aa5ff",
+};
+
+const THEME_CANVAS_LIGHT = {
+    background: "#f5f7fb",
+    gridDot: "rgba(11, 27, 51, 0.07)",
+    linkDefault: "rgba(74, 88, 114, 0.22)",
+    linkSignalToDf: "rgba(74, 88, 114, 0.32)",
+    linkSourceToSignal: "rgba(95, 109, 132, 0.18)",
+    linkActive: "#1a5fd6",
+    hubFill: "#ffffff",
+    sourceFill: "#eef2f8",
+    sourceBorder: "#7b889c",
+    signalBorder: "#ffffff",
+    labelPillBg: "rgba(255, 255, 255, 0.94)",
+    labelPillBorder: "rgba(225, 231, 239, 0.95)",
+    labelText: "#0b1b33",
+    labelTextActive: "#1a5fd6",
+};
+
+function getNodeColor(node, isDark = true) {
+    const palette = isDark ? DIMENSION_COLORS_DARK : DIMENSION_COLORS_LIGHT;
+    if (node.type === "source") return palette.Source;
+    return palette[node.dimension] ?? palette.General;
 }
 
 export default function KnowledgeGraph({ auth, title }) {
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
+    const isDarkRef = useRef(isDark);
+
+    useEffect(() => {
+        isDarkRef.current = isDark;
+    }, [isDark]);
+
     const [graphData, setGraphData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -261,8 +322,8 @@ export default function KnowledgeGraph({ auth, title }) {
                         s.vy += fy;
                     }
                     if (t !== sim.draggedNode) {
-                        t.vx -= fx;
-                        t.vy -= fy;
+                        t.vx += fx;
+                        t.vy += fy;
                     }
                 }
 
@@ -278,15 +339,40 @@ export default function KnowledgeGraph({ auth, title }) {
                 }
             }
 
+            const currentDark = isDarkRef.current;
+            const themeColors = currentDark ? THEME_CANVAS_DARK : THEME_CANVAS_LIGHT;
+
             // Render Frame
             ctx.save();
             ctx.scale(dpr, dpr);
-            ctx.clearRect(0, 0, width, height);
+
+            // Fill canvas with theme background
+            ctx.fillStyle = themeColors.background;
+            ctx.fillRect(0, 0, width, height);
 
             // Apply Pan & Zoom
             const { x: panX, y: panY, k: zoom } = sim.transform;
             ctx.translate(panX, panY);
             ctx.scale(zoom, zoom);
+
+            // Draw subtle blueprint grid dots in world coordinates
+            const gridSize = 64;
+            const worldLeft = -panX / zoom;
+            const worldTop = -panY / zoom;
+            const worldRight = (width - panX) / zoom;
+            const worldBottom = (height - panY) / zoom;
+
+            const startX = Math.floor(worldLeft / gridSize) * gridSize;
+            const startY = Math.floor(worldTop / gridSize) * gridSize;
+
+            ctx.fillStyle = themeColors.gridDot;
+            for (let gx = startX; gx < worldRight; gx += gridSize) {
+                for (let gy = startY; gy < worldBottom; gy += gridSize) {
+                    ctx.beginPath();
+                    ctx.arc(gx, gy, 1.1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
 
             // Connected set for highlighting
             const activeId = activeNode?.id || hoveredNode?.id;
@@ -306,16 +392,16 @@ export default function KnowledgeGraph({ auth, title }) {
                 const t = l.targetNode;
 
                 let isConnected = false;
-                let opacity = 0.28;
+                let opacity = currentDark ? 0.32 : 0.42;
                 let lineWidth = 1;
 
                 if (connectedIds) {
                     if (connectedIds.has(s.id) && connectedIds.has(t.id)) {
                         isConnected = true;
-                        opacity = 0.9;
-                        lineWidth = 2.2;
+                        opacity = 0.95;
+                        lineWidth = 2.4;
                     } else {
-                        opacity = 0.05;
+                        opacity = currentDark ? 0.05 : 0.08;
                     }
                 }
 
@@ -323,10 +409,10 @@ export default function KnowledgeGraph({ auth, title }) {
                 ctx.moveTo(s.x, s.y);
                 ctx.lineTo(t.x, t.y);
                 ctx.strokeStyle = isConnected
-                    ? "var(--primary, #3b82f6)"
+                    ? themeColors.linkActive
                     : l.type === "signal_to_df"
-                      ? "rgba(148, 163, 184, 0.4)"
-                      : "rgba(100, 116, 139, 0.25)";
+                      ? themeColors.linkSignalToDf
+                      : themeColors.linkSourceToSignal;
                 ctx.globalAlpha = opacity;
                 ctx.lineWidth = lineWidth;
                 ctx.stroke();
@@ -342,7 +428,7 @@ export default function KnowledgeGraph({ auth, title }) {
 
                 const baseRadius = n.val;
                 const radius = isSelected || isHovered ? baseRadius * 1.25 : baseRadius;
-                const color = getNodeColor(n);
+                const color = getNodeColor(n, currentDark);
 
                 ctx.globalAlpha = isHighlighted ? 1 : 0.15;
 
@@ -351,7 +437,7 @@ export default function KnowledgeGraph({ auth, title }) {
                     ctx.beginPath();
                     ctx.arc(n.x, n.y, radius + 6, 0, Math.PI * 2);
                     ctx.fillStyle = color;
-                    ctx.globalAlpha = 0.25;
+                    ctx.globalAlpha = currentDark ? 0.28 : 0.22;
                     ctx.fill();
                     ctx.globalAlpha = isHighlighted ? 1 : 0.15;
                 }
@@ -361,24 +447,24 @@ export default function KnowledgeGraph({ auth, title }) {
                 ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
 
                 if (n.type === "driving_force") {
-                    // Hub: solid card background with colored ring
-                    ctx.fillStyle = "var(--card, #1e293b)";
+                    // Hub: card background with colored ring
+                    ctx.fillStyle = themeColors.hubFill;
                     ctx.fill();
                     ctx.lineWidth = 3;
                     ctx.strokeStyle = color;
                     ctx.stroke();
                 } else if (n.type === "source") {
-                    ctx.fillStyle = "var(--muted, #334155)";
+                    ctx.fillStyle = themeColors.sourceFill;
                     ctx.fill();
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = "#94a3b8";
+                    ctx.strokeStyle = themeColors.sourceBorder;
                     ctx.stroke();
                 } else {
                     // Signal: filled circle
                     ctx.fillStyle = color;
                     ctx.fill();
                     ctx.lineWidth = 1.5;
-                    ctx.strokeStyle = "#ffffff";
+                    ctx.strokeStyle = themeColors.signalBorder;
                     ctx.stroke();
                 }
 
@@ -393,10 +479,25 @@ export default function KnowledgeGraph({ auth, title }) {
                     const textWidth = ctx.measureText(label).width;
                     const textY = n.y + radius + 11;
 
-                    ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
-                    ctx.fillRect(n.x - textWidth / 2 - 4, textY - 6, textWidth + 8, 14);
+                    const pillX = n.x - textWidth / 2 - 5;
+                    const pillY = textY - 7;
+                    const pillW = textWidth + 10;
+                    const pillH = 15;
 
-                    ctx.fillStyle = isSelected ? "var(--primary, #38bdf8)" : "#f8fafc";
+                    ctx.fillStyle = themeColors.labelPillBg;
+                    ctx.strokeStyle = themeColors.labelPillBorder;
+                    ctx.lineWidth = 1;
+
+                    ctx.beginPath();
+                    if (typeof ctx.roundRect === "function") {
+                        ctx.roundRect(pillX, pillY, pillW, pillH, 3);
+                    } else {
+                        ctx.rect(pillX, pillY, pillW, pillH);
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = isSelected ? themeColors.labelTextActive : themeColors.labelText;
                     ctx.fillText(label, n.x, textY);
                 }
 
@@ -488,22 +589,31 @@ export default function KnowledgeGraph({ auth, title }) {
         sim.draggedNode = null;
     };
 
-    const handleWheel = (e) => {
-        e.preventDefault();
-        const sim = simulationRef.current;
-        const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-        const newK = Math.max(0.35, Math.min(3.5, sim.transform.k * zoomFactor));
-
-        // Zoom toward mouse pointer
+    // Wheel zoom with non-passive event listener
+    useEffect(() => {
         const canvas = canvasRef.current;
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+        if (!canvas) return;
 
-        sim.transform.x = mx - (mx - sim.transform.x) * (newK / sim.transform.k);
-        sim.transform.y = my - (my - sim.transform.y) * (newK / sim.transform.k);
-        sim.transform.k = newK;
-    };
+        const onWheel = (e) => {
+            e.preventDefault();
+            const sim = simulationRef.current;
+            const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+            const newK = Math.max(0.35, Math.min(3.5, sim.transform.k * zoomFactor));
+
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            sim.transform.x = mx - (mx - sim.transform.x) * (newK / sim.transform.k);
+            sim.transform.y = my - (my - sim.transform.y) * (newK / sim.transform.k);
+            sim.transform.k = newK;
+        };
+
+        canvas.addEventListener("wheel", onWheel, { passive: false });
+        return () => {
+            canvas.removeEventListener("wheel", onWheel);
+        };
+    }, []);
 
     const zoomBy = (factor) => {
         const sim = simulationRef.current;
@@ -531,7 +641,7 @@ export default function KnowledgeGraph({ auth, title }) {
                     <NetworkIcon aria-hidden="true" className="text-lg text-primary" />
                     <h1 className="m-0 truncate text-lg font-bold text-foreground">{title}</h1>
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
-                        Topologi Jejaring Sinyal & Driving Force
+                        Topologi Jejaring Sinyal &amp; Driving Force
                     </span>
                 </div>
             }
@@ -554,18 +664,22 @@ export default function KnowledgeGraph({ auth, title }) {
                                         <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                                         <Input
                                             type="text"
+                                            id="knowledge-graph-search"
+                                            name="knowledge-graph-search"
                                             placeholder="Cari sinyal atau force…"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="h-8 pl-8 text-xs"
+                                            className="h-8 pl-8 text-xs bg-background text-foreground"
                                         />
                                     </div>
 
                                     {/* Dimensi Selector */}
                                     <select
+                                        id="knowledge-graph-dimension"
+                                        name="knowledge-graph-dimension"
                                         value={selectedDimension}
                                         onChange={(e) => setSelectedDimension(e.target.value)}
-                                        className="h-8 rounded-md border border-input bg-card px-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
+                                        className="h-8 rounded-md border border-input bg-background px-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
                                     >
                                         <option value="all">Semua Dimensi</option>
                                         {graphData.dimensions.map((dim) => (
@@ -582,7 +696,7 @@ export default function KnowledgeGraph({ auth, title }) {
                                         size="sm"
                                         value={signalStatusFilter}
                                         onValueChange={(val) => val && setSignalStatusFilter(val)}
-                                        className="bg-card"
+                                        className="bg-background"
                                     >
                                         <ToggleGroupItem value="all" className="h-8 px-2.5 text-xs">
                                             Semua Status
@@ -620,14 +734,14 @@ export default function KnowledgeGraph({ auth, title }) {
                         </div>
 
                         {/* Graph Workspace with Canvas & Floating Inspector */}
-                        <div className="relative flex flex-col overflow-hidden rounded-lg border border-border bg-slate-950 shadow-inner">
+                        <div className="relative flex flex-col overflow-hidden rounded-lg border border-border bg-background shadow-inner transition-colors duration-200">
                             {/* Canvas Toolbar Controls */}
-                            <div className="absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-md border border-border/60 bg-card/85 p-1 shadow-md backdrop-blur-md">
+                            <div className="absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-md border border-border/70 bg-card/90 p-1 shadow-md backdrop-blur-md">
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="size-7"
+                                    className="size-7 text-foreground hover:bg-muted"
                                     title="Perbesar (Zoom In)"
                                     onClick={() => zoomBy(1.2)}
                                 >
@@ -637,7 +751,7 @@ export default function KnowledgeGraph({ auth, title }) {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="size-7"
+                                    className="size-7 text-foreground hover:bg-muted"
                                     title="Perkecil (Zoom Out)"
                                     onClick={() => zoomBy(0.8)}
                                 >
@@ -647,7 +761,7 @@ export default function KnowledgeGraph({ auth, title }) {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="size-7"
+                                    className="size-7 text-foreground hover:bg-muted"
                                     title="Reset Tampilan"
                                     onClick={resetView}
                                 >
@@ -661,18 +775,17 @@ export default function KnowledgeGraph({ auth, title }) {
                                 onMouseDown={handleMouseDown}
                                 onMouseMove={handleMouseMove}
                                 onMouseUp={handleMouseUp}
-                                onWheel={handleWheel}
                                 className="block w-full touch-none"
                             />
 
                             {/* Floating Inspector HUD (Side or Bottom Card) */}
                             {activeNode && (
-                                <div className="absolute right-3 top-3 z-20 max-w-sm w-full rounded-lg border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-md transition-all">
+                                <div className="absolute right-3 top-3 z-20 max-w-sm w-full rounded-lg border border-border bg-card/95 p-4 shadow-xl backdrop-blur-md transition-all">
                                     <div className="flex items-start justify-between gap-2 border-b border-border pb-2.5">
                                         <div className="flex items-center gap-2">
                                             <span
                                                 className="size-3.5 shrink-0 rounded-full"
-                                                style={{ backgroundColor: getNodeColor(activeNode) }}
+                                                style={{ backgroundColor: getNodeColor(activeNode, isDark) }}
                                             />
                                             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                                                 {activeNode.type === "driving_force"
@@ -686,7 +799,7 @@ export default function KnowledgeGraph({ auth, title }) {
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="h-6 px-1.5 text-xs"
+                                            className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
                                             onClick={() => setActiveNode(null)}
                                         >
                                             ✕
@@ -712,7 +825,7 @@ export default function KnowledgeGraph({ auth, title }) {
                                                     <div>
                                                         Confidence:{" "}
                                                         <b className="text-foreground">
-                                                            {Math.round((activeNode.confidence || 0.8) * 100)}%
+                                                             {Math.round((activeNode.confidence || 0.8) * 100)}%
                                                         </b>
                                                     </div>
                                                     <div>
@@ -772,20 +885,26 @@ export default function KnowledgeGraph({ auth, title }) {
                             )}
 
                             {/* Legend Bar at Bottom */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-card/85 px-4 py-2.5 text-xs backdrop-blur-md">
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-card/90 px-4 py-2.5 text-xs backdrop-blur-md">
                                 <div className="flex flex-wrap items-center gap-3">
                                     <span className="font-semibold text-foreground">Legenda Node:</span>
                                     <span className="flex items-center gap-1.5">
                                         <span className="size-3 rounded-full border-2 border-primary bg-card" />
-                                        <span>Driving Force (Hub Inti)</span>
+                                        <span className="text-foreground">Driving Force (Hub Inti)</span>
                                     </span>
                                     <span className="flex items-center gap-1.5">
-                                        <span className="size-2.5 rounded-full bg-emerald-500" />
-                                        <span>Sinyal (Satelit Bukti)</span>
+                                        <span
+                                            className="size-2.5 rounded-full"
+                                            style={{ backgroundColor: isDark ? "#2fd1c2" : "#0b8f8a" }}
+                                        />
+                                        <span className="text-foreground">Sinyal (Satelit Bukti)</span>
                                     </span>
                                     <span className="flex items-center gap-1.5">
-                                        <span className="size-2.5 rounded-full bg-slate-500" />
-                                        <span>Dokumen Sumber</span>
+                                        <span
+                                            className="size-2.5 rounded-full"
+                                            style={{ backgroundColor: isDark ? "#8797b0" : "#5f6d84" }}
+                                        />
+                                        <span className="text-foreground">Dokumen Sumber</span>
                                     </span>
                                 </div>
                                 <div className="text-[11px] text-muted-foreground">
@@ -799,4 +918,3 @@ export default function KnowledgeGraph({ auth, title }) {
         </AuthenticatedLayout>
     );
 }
-
