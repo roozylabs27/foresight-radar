@@ -71,7 +71,7 @@ export function I18nProvider({ children }) {
             }
 
             if (value === undefined) {
-                return key;
+                return typeof params === "string" ? params : key;
             }
 
             return interpolate(value, params);

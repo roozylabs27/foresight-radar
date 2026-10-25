@@ -190,7 +190,7 @@ export default function Members({ auth, members = [], invitations = [], availabl
                 <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
                     <div className="border-b border-border/60 px-5 py-3.5 bg-muted/20 flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-foreground">Daftar Anggota Aktif ({members.length})</h3>
-                        <span className="text-xs text-muted-foreground">Model 1-User-1-Tenant</span>
+                        <span className="text-xs text-muted-foreground">Kapasitas: {members.length} / {maxUsers || 100} Anggota</span>
                     </div>
 
                     <div className="overflow-x-auto">

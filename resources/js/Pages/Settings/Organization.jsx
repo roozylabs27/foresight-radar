@@ -54,9 +54,9 @@ export default function Organization({ auth, organization, stats, title = "Penga
                             </div>
                         </div>
 
-                        <Badge variant="secondary" className="gap-1.5 px-3 py-1 font-medium text-xs">
+                        <Badge variant="secondary" className="gap-1.5 px-3 py-1 font-medium text-xs border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                             <ShieldCheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>1-User-1-Tenant Terisolasi</span>
+                            <span>Ruang Kerja Terverifikasi</span>
                         </Badge>
                     </div>
 
