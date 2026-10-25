@@ -3,17 +3,46 @@
 ## Current Verified State
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
-- **Current branch:** `development`
-- **Last reviewed commit:** `29b4b9a`
+- **Current branch:** `feat/multi-tenant-isolation`
+- **Last reviewed commit:** `91aed3c`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 5/5 CrossImpactTest clean, 14/14 SignalIngestionTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Interactive Causal Loop Network Graph view in Cross-Impact workspace.
+- **Baseline verification:** PASS (Pint: 275 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 6/6 TenantIsolationTest clean, TableSortTest clean, PhaseOne/Two/Three clean, Vite: clean, 0 Sparkles icons platform-wide)
+- **Current objective:** Strict Single-Tenant Membership & Defensive Scoping Engine on isolated branch.
 - **Current blocker:** None
-- **Highest-priority next task:** Ready for user review.
+- **Highest-priority next task:** User review on `feat/multi-tenant-isolation` branch prior to merge into `development`.
 
 ---
 
 ## Completed
+
+- [x] **Strict Multi-Tenant Architecture & Defensive Scoping Engine (2026-10-25)**
+  - **User Request:** "design 1 user belongs to 1 tenant only", "pertimbangkan juga masalah security dan isolation each tenant", "proceed tapi buat branch baru dulu untuk pengerjaan ini jangan di development, kalau sudah selesai dan saya review baru merge ke development".
+  - **Feature Overview & Implementation Details:**
+    1. **Dedicated Branching:** Created branch `feat/multi-tenant-isolation` branched off clean `development`.
+    2. **Database Foundation & Safe Backfill:**
+       - Created `tenants` table (`uuid`, `name`, `slug`, `domain`, `status`, `plan`, `max_users`, `storage_quota_mb`, `llm_monthly_token_quota`, `settings`).
+       - Added direct `users.tenant_id` foreign key (NULL only for platform superusers/developers).
+       - Added `tenant_id` column and composite indexes to all domain tables: `sources`, `signals`, `driving_forces`, `driving_force_ratings`, `driving_force_rating_histories`, `cross_impacts`, `scenarios`, `scenario_quadrants`, `user_llm_settings`.
+       - Created `tenant_llm_settings` table for corporate encrypted API keys, model parameters, and token quota tracking.
+       - Backfilled existing database records into `Default Organization` (`id = 1`) with zero downtime.
+    3. **Defensive Eloquent Scoping & Anti-Tampering Engine:**
+       - Created `App\Services\TenantContext` singleton managing active tenant identity with lazy resolution.
+       - Created `App\Scopes\TenantScope` global scope automatically applying `WHERE tenant_id = ?`. If an authenticated request lacks tenant context, defensive starvation (`WHERE 0 = 1`) is triggered to prevent cross-tenant data leakage.
+       - Created `App\Traits\BelongsToTenant` trait with anti-tampering guards: automatically stamps `tenant_id` on model creation, and rejects attempts to create records with mismatching tenant IDs by throwing `TenantSecurityException`.
+    4. **Middleware & Inertia Integration:**
+       - Created `App\Http\Middleware\EnforceTenantContext` registered in `bootstrap/app.php` inside the `web` pipeline.
+       - Validates active tenant status (suspends blocked accounts with 403 Forbidden).
+       - Lazy-shared active tenant information via Inertia closure in `HandleInertiaRequests.php` (`auth.tenant`), ensuring zero query overhead on JSON API data endpoints.
+    5. **Background Queue Job Context Preservation:**
+       - Updated `ExtractSignals` and `GenerateScenarioNarrative` background jobs to restore and bind `TenantContext` upon execution in queue worker processes.
+    6. **Frontend Executive Branding:**
+       - Updated `AuthenticatedLayout.jsx` and `UserMenu` to display organization badge with `Building2Icon` next to user profile.
+    7. **Automated Security Quality Verification:**
+       - Created `tests/Feature/TenantIsolationTest.php` with 6 exhaustive negative isolation and authorization tests.
+       - Laravel Pint: 275 files PASS (0 style issues).
+       - Larastan Level 5: `[OK] No errors`.
+       - Vite Build: `npm run build` completed cleanly in 1m 26s.
+       - Commit: `91aed3c` on branch `feat/multi-tenant-isolation`.
 
 - [x] **Signal Knowledge Graph Topology in Visualization Workspace (2026-10-25)**
   - **User Request:** Opsi 2 (Signal Knowledge Graph) — Memetakan kluster ratusan sinyal dari dokumen terhadap Driving Force di menu Visualization.
