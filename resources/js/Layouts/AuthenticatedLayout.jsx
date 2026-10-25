@@ -14,6 +14,7 @@ import {
     ListIcon,
     LogOutIcon,
     MenuIcon,
+    NetworkIcon,
     PanelLeftCloseIcon,
     PanelLeftOpenIcon,
     RadarIcon,
@@ -62,6 +63,7 @@ const NAV_ITEMS = [
     { key: "registered_list", label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
     { key: "foresight_radar", label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
     { key: "cross_impact", label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
+    { key: "knowledge_graph", label: "Knowledge Graph", route: "visualization.knowledge-graph.", match: "/visualization/knowledge-graph", icon: NetworkIcon, permission: "view-foresight-radar" },
     { key: "scenarios", label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
     { key: "settings", label: "Settings", route: "settings.index", match: "/settings", icon: SettingsIcon },
 ];

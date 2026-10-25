@@ -6,6 +6,7 @@ use App\Http\Controllers\CrossImpactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DrivingForceController;
 use App\Http\Controllers\ForesightRadarController;
+use App\Http\Controllers\KnowledgeGraphController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PrioritizingController;
 use App\Http\Controllers\ProfileController;
@@ -67,6 +68,12 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::prefix('/cross-impact')->name('cross-impact.')->group(function () {
             Route::get('/', [CrossImpactController::class, 'index'])->can('view-cross-impact');
             Route::get('/get-data', [CrossImpactController::class, 'data'])->name('get-data')->can('view-cross-impact');
+        });
+        Route::prefix('/knowledge-graph')->name('knowledge-graph.')->group(function () {
+            Route::get('/', [KnowledgeGraphController::class, 'index'])->can('view-foresight-radar');
+            Route::get('/index', [KnowledgeGraphController::class, 'index'])->name('index')->can('view-foresight-radar');
+            Route::get('/data', [KnowledgeGraphController::class, 'data'])->name('data')->can('view-foresight-radar');
+            Route::get('/get-data', [KnowledgeGraphController::class, 'data'])->name('get-data')->can('view-foresight-radar');
         });
     });
 
