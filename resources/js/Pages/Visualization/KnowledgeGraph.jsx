@@ -127,6 +127,18 @@ export default function KnowledgeGraph({ auth, title }) {
     const [activeNode, setActiveNode] = useState(null);
     const [hoveredNode, setHoveredNode] = useState(null);
 
+    // Synchronize refs for 60 FPS animation loop without effect re-triggers
+    const activeNodeRef = useRef(null);
+    const hoveredNodeRef = useRef(null);
+
+    useEffect(() => {
+        activeNodeRef.current = activeNode;
+    }, [activeNode]);
+
+    useEffect(() => {
+        hoveredNodeRef.current = hoveredNode;
+    }, [hoveredNode]);
+
     const canvasRef = useRef(null);
     const simulationRef = useRef({
         nodes: [],
@@ -136,6 +148,7 @@ export default function KnowledgeGraph({ auth, title }) {
         draggedNode: null,
         panStart: { x: 0, y: 0 },
         animId: null,
+        alpha: 1.0,
     });
 
     // 1. Fetch graph dataset
@@ -199,7 +212,7 @@ export default function KnowledgeGraph({ auth, title }) {
         return { nodes: filteredNodes, links: filteredLinks };
     }, [graphData, selectedDimension, signalStatusFilter, showSources, searchQuery]);
 
-    // 3. Initialize & Run Physics Simulation
+    // 3. Initialize & Run Physics Simulation (Only re-runs when graph dataset/filter changes)
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || !filteredGraph.nodes.length) return;
@@ -226,16 +239,16 @@ export default function KnowledgeGraph({ auth, title }) {
 
         const simNodes = filteredGraph.nodes.map((n, i) => {
             const existing = prevPos.get(n.id);
-            if (existing) {
+            if (existing && Number.isFinite(existing.x) && Number.isFinite(existing.y)) {
                 return { ...n, ...existing };
             }
-            // Seed layout: Driving Forces spread out, signals orbit their parent
+            // Seed layout: Driving Forces clustered in center, signals orbit around them
             const angle = (2 * Math.PI * i) / filteredGraph.nodes.length;
-            const dist = n.type === "driving_force" ? 180 + (i % 3) * 40 : 260 + (i % 5) * 30;
+            const dist = n.type === "driving_force" ? 140 + (i % 3) * 35 : 230 + (i % 5) * 25;
             return {
                 ...n,
-                x: centerX + Math.cos(angle) * dist + (Math.random() - 0.5) * 30,
-                y: centerY + Math.sin(angle) * dist + (Math.random() - 0.5) * 30,
+                x: centerX + Math.cos(angle) * dist + (Math.random() - 0.5) * 20,
+                y: centerY + Math.sin(angle) * dist + (Math.random() - 0.5) * 20,
                 vx: 0,
                 vy: 0,
             };
@@ -253,13 +266,14 @@ export default function KnowledgeGraph({ auth, title }) {
 
         sim.nodes = simNodes;
         sim.links = simLinks;
+        sim.alpha = 1.0; // Start cooling loop
 
-        let alpha = 1.0; // Cooling factor
-        const minAlpha = 0.005;
+        const minAlpha = 0.003;
 
         function tick() {
-            if (alpha > minAlpha) {
-                alpha *= 0.985;
+            if (sim.alpha > minAlpha) {
+                sim.alpha *= 0.985;
+                const alpha = sim.alpha;
 
                 // 1. Center gravitational pull
                 for (let i = 0; i < simNodes.length; i++) {
@@ -267,12 +281,12 @@ export default function KnowledgeGraph({ auth, title }) {
                     if (n === sim.draggedNode) continue;
                     const dx = centerX - n.x;
                     const dy = centerY - n.y;
-                    const gravity = n.type === "driving_force" ? 0.003 : 0.0015;
+                    const gravity = n.type === "driving_force" ? 0.0025 : 0.0015;
                     n.vx += dx * gravity * alpha;
                     n.vy += dy * gravity * alpha;
                 }
 
-                // 2. Repulsion between all nodes (Coulomb's law)
+                // 2. Repulsion between all nodes (Coulomb's law) with safe distance clamp
                 for (let i = 0; i < simNodes.length; i++) {
                     const a = simNodes[i];
                     for (let j = i + 1; j < simNodes.length; j++) {
@@ -281,9 +295,10 @@ export default function KnowledgeGraph({ auth, title }) {
                         let dy = b.y - a.y;
                         let dist = Math.hypot(dx, dy) || 1;
 
-                        const minDist = (a.val + b.val) * 2.8;
+                        const minDist = (a.val + b.val) * 2.5;
                         if (dist < minDist * 2.5) {
-                            const force = ((minDist * minDist) / (dist * dist)) * 0.35 * alpha;
+                            const safeDist = Math.max(dist, 14);
+                            const force = Math.min(18, ((minDist * minDist) / (safeDist * safeDist)) * 0.35 * alpha);
                             const fx = (dx / dist) * force;
                             const fy = (dy / dist) * force;
 
@@ -299,7 +314,7 @@ export default function KnowledgeGraph({ auth, title }) {
                     }
                 }
 
-                // 3. Spring attraction along links (Hooke's law)
+                // 3. Spring attraction along links (Hooke's law) with capped force
                 for (let i = 0; i < simLinks.length; i++) {
                     const link = simLinks[i];
                     const s = link.sourceNode;
@@ -314,35 +329,49 @@ export default function KnowledgeGraph({ auth, title }) {
                     const displacement = dist - targetDist;
                     const strength = (link.type === "signal_to_df" ? 0.08 : 0.04) * alpha;
 
-                    const fx = (dx / dist) * displacement * strength;
-                    const fy = (dy / dist) * displacement * strength;
+                    const force = Math.max(-18, Math.min(18, displacement * strength));
+                    const fx = (dx / dist) * force;
+                    const fy = (dy / dist) * force;
 
                     if (s !== sim.draggedNode) {
                         s.vx += fx;
                         s.vy += fy;
                     }
                     if (t !== sim.draggedNode) {
-                        t.vx += fx;
-                        t.vy += fy;
+                        t.vx -= fx;
+                        t.vy -= fy;
                     }
                 }
 
-                // 4. Update velocity & position with damping
+                // 4. Update velocity & position with damping & velocity clamping
                 const damping = 0.72;
                 for (let i = 0; i < simNodes.length; i++) {
                     const n = simNodes[i];
                     if (n === sim.draggedNode) continue;
-                    n.vx *= damping;
-                    n.vy *= damping;
+                    n.vx = Math.max(-12, Math.min(12, n.vx * damping));
+                    n.vy = Math.max(-12, Math.min(12, n.vy * damping));
                     n.x += n.vx;
                     n.y += n.vy;
+
+                    // Prevent runaway nodes
+                    const distFromCenter = Math.hypot(n.x - centerX, n.y - centerY);
+                    if (distFromCenter > 1200) {
+                        n.x = centerX + (n.x - centerX) * 0.92;
+                        n.y = centerY + (n.y - centerY) * 0.92;
+                    }
                 }
             }
 
             const currentDark = isDarkRef.current;
             const themeColors = currentDark ? THEME_CANVAS_DARK : THEME_CANVAS_LIGHT;
 
-            // Render Frame
+            // 1. Clean raw backing store
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // 2. Render Frame
             ctx.save();
             ctx.scale(dpr, dpr);
 
@@ -371,11 +400,14 @@ export default function KnowledgeGraph({ auth, title }) {
                     ctx.beginPath();
                     ctx.arc(gx, gy, 1.1, 0, Math.PI * 2);
                     ctx.fill();
+                    ctx.closePath();
                 }
             }
 
-            // Connected set for highlighting
-            const activeId = activeNode?.id || hoveredNode?.id;
+            // Connected set for highlighting using refs (no effect re-triggers!)
+            const currentActive = activeNodeRef.current;
+            const currentHovered = hoveredNodeRef.current;
+            const activeId = currentActive?.id || currentHovered?.id;
             let connectedIds = null;
             if (activeId) {
                 connectedIds = new Set([activeId]);
@@ -385,7 +417,7 @@ export default function KnowledgeGraph({ auth, title }) {
                 }
             }
 
-            // 1. Draw Links
+            // 3. Draw Links
             for (let i = 0; i < simLinks.length; i++) {
                 const l = simLinks[i];
                 const s = l.sourceNode;
@@ -416,14 +448,15 @@ export default function KnowledgeGraph({ auth, title }) {
                 ctx.globalAlpha = opacity;
                 ctx.lineWidth = lineWidth;
                 ctx.stroke();
+                ctx.closePath();
                 ctx.globalAlpha = 1;
             }
 
-            // 2. Draw Nodes
+            // 4. Draw Nodes
             for (let i = 0; i < simNodes.length; i++) {
                 const n = simNodes[i];
-                const isSelected = activeNode?.id === n.id;
-                const isHovered = hoveredNode?.id === n.id;
+                const isSelected = currentActive?.id === n.id;
+                const isHovered = currentHovered?.id === n.id;
                 const isHighlighted = !connectedIds || connectedIds.has(n.id);
 
                 const baseRadius = n.val;
@@ -439,6 +472,7 @@ export default function KnowledgeGraph({ auth, title }) {
                     ctx.fillStyle = color;
                     ctx.globalAlpha = currentDark ? 0.28 : 0.22;
                     ctx.fill();
+                    ctx.closePath();
                     ctx.globalAlpha = isHighlighted ? 1 : 0.15;
                 }
 
@@ -447,7 +481,6 @@ export default function KnowledgeGraph({ auth, title }) {
                 ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
 
                 if (n.type === "driving_force") {
-                    // Hub: card background with colored ring
                     ctx.fillStyle = themeColors.hubFill;
                     ctx.fill();
                     ctx.lineWidth = 3;
@@ -460,13 +493,13 @@ export default function KnowledgeGraph({ auth, title }) {
                     ctx.strokeStyle = themeColors.sourceBorder;
                     ctx.stroke();
                 } else {
-                    // Signal: filled circle
                     ctx.fillStyle = color;
                     ctx.fill();
                     ctx.lineWidth = 1.5;
                     ctx.strokeStyle = themeColors.signalBorder;
                     ctx.stroke();
                 }
+                ctx.closePath();
 
                 // Node Text Label
                 if (n.type === "driving_force" || isSelected || isHovered || zoom > 1.2) {
@@ -474,7 +507,6 @@ export default function KnowledgeGraph({ auth, title }) {
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
 
-                    // Background pill for label
                     const label = n.label.length > 22 ? n.label.slice(0, 20) + "…" : n.label;
                     const textWidth = ctx.measureText(label).width;
                     const textY = n.y + radius + 11;
@@ -496,6 +528,7 @@ export default function KnowledgeGraph({ auth, title }) {
                     }
                     ctx.fill();
                     ctx.stroke();
+                    ctx.closePath();
 
                     ctx.fillStyle = isSelected ? themeColors.labelTextActive : themeColors.labelText;
                     ctx.fillText(label, n.x, textY);
@@ -513,81 +546,7 @@ export default function KnowledgeGraph({ auth, title }) {
         return () => {
             if (sim.animId) cancelAnimationFrame(sim.animId);
         };
-    }, [filteredGraph, activeNode, hoveredNode]);
-
-    // Mouse & Touch events on Canvas
-    const handleMouseDown = (e) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const sim = simulationRef.current;
-
-        const mouseX = (e.clientX - rect.left - sim.transform.x) / sim.transform.k;
-        const mouseY = (e.clientY - rect.top - sim.transform.y) / sim.transform.k;
-
-        // Check if clicked a node
-        let clicked = null;
-        for (let i = sim.nodes.length - 1; i >= 0; i--) {
-            const n = sim.nodes[i];
-            const dist = Math.hypot(n.x - mouseX, n.y - mouseY);
-            if (dist <= n.val + 4) {
-                clicked = n;
-                break;
-            }
-        }
-
-        if (clicked) {
-            sim.isDragging = true;
-            sim.draggedNode = clicked;
-            setActiveNode(clicked);
-        } else {
-            sim.isDragging = true;
-            sim.panStart = { x: e.clientX - sim.transform.x, y: e.clientY - sim.transform.y };
-        }
-    };
-
-    const handleMouseMove = (e) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const sim = simulationRef.current;
-
-        const mouseX = (e.clientX - rect.left - sim.transform.x) / sim.transform.k;
-        const mouseY = (e.clientY - rect.top - sim.transform.y) / sim.transform.k;
-
-        if (sim.isDragging) {
-            if (sim.draggedNode) {
-                sim.draggedNode.x = mouseX;
-                sim.draggedNode.y = mouseY;
-                sim.draggedNode.vx = 0;
-                sim.draggedNode.vy = 0;
-            } else {
-                sim.transform.x = e.clientX - sim.panStart.x;
-                sim.transform.y = e.clientY - sim.panStart.y;
-            }
-        } else {
-            // Hover check
-            let hovered = null;
-            for (let i = sim.nodes.length - 1; i >= 0; i--) {
-                const n = sim.nodes[i];
-                const dist = Math.hypot(n.x - mouseX, n.y - mouseY);
-                if (dist <= n.val + 4) {
-                    hovered = n;
-                    break;
-                }
-            }
-            if (hovered?.id !== hoveredNode?.id) {
-                setHoveredNode(hovered);
-                canvas.style.cursor = hovered ? "pointer" : "default";
-            }
-        }
-    };
-
-    const handleMouseUp = () => {
-        const sim = simulationRef.current;
-        sim.isDragging = false;
-        sim.draggedNode = null;
-    };
+    }, [filteredGraph]);
 
     // Wheel zoom with non-passive event listener
     useEffect(() => {
@@ -630,7 +589,85 @@ export default function KnowledgeGraph({ auth, title }) {
     const resetView = () => {
         const sim = simulationRef.current;
         sim.transform = { x: 0, y: 0, k: 1 };
+        activeNodeRef.current = null;
         setActiveNode(null);
+    };
+
+    // Mouse & Touch events on Canvas
+    const handleMouseDown = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const sim = simulationRef.current;
+
+        const mouseX = (e.clientX - rect.left - sim.transform.x) / sim.transform.k;
+        const mouseY = (e.clientY - rect.top - sim.transform.y) / sim.transform.k;
+
+        // Check if clicked a node
+        let clicked = null;
+        for (let i = sim.nodes.length - 1; i >= 0; i--) {
+            const n = sim.nodes[i];
+            const dist = Math.hypot(n.x - mouseX, n.y - mouseY);
+            if (dist <= n.val + 4) {
+                clicked = n;
+                break;
+            }
+        }
+
+        if (clicked) {
+            sim.isDragging = true;
+            sim.draggedNode = clicked;
+            activeNodeRef.current = clicked;
+            setActiveNode(clicked);
+        } else {
+            sim.isDragging = true;
+            sim.panStart = { x: e.clientX - sim.transform.x, y: e.clientY - sim.transform.y };
+        }
+    };
+
+    const handleMouseMove = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const sim = simulationRef.current;
+
+        const mouseX = (e.clientX - rect.left - sim.transform.x) / sim.transform.k;
+        const mouseY = (e.clientY - rect.top - sim.transform.y) / sim.transform.k;
+
+        if (sim.isDragging) {
+            if (sim.draggedNode) {
+                sim.draggedNode.x = mouseX;
+                sim.draggedNode.y = mouseY;
+                sim.draggedNode.vx = 0;
+                sim.draggedNode.vy = 0;
+                if (sim.alpha < 0.15) sim.alpha = 0.15; // Gentle wake-up during drag
+            } else {
+                sim.transform.x = e.clientX - sim.panStart.x;
+                sim.transform.y = e.clientY - sim.panStart.y;
+            }
+        } else {
+            // Hover check without triggering effect restarts
+            let hovered = null;
+            for (let i = sim.nodes.length - 1; i >= 0; i--) {
+                const n = sim.nodes[i];
+                const dist = Math.hypot(n.x - mouseX, n.y - mouseY);
+                if (dist <= n.val + 4) {
+                    hovered = n;
+                    break;
+                }
+            }
+            if (hovered?.id !== hoveredNodeRef.current?.id) {
+                hoveredNodeRef.current = hovered;
+                setHoveredNode(hovered);
+                canvas.style.cursor = hovered ? "pointer" : "default";
+            }
+        }
+    };
+
+    const handleMouseUp = () => {
+        const sim = simulationRef.current;
+        sim.isDragging = false;
+        sim.draggedNode = null;
     };
 
     return (
@@ -800,7 +837,10 @@ export default function KnowledgeGraph({ auth, title }) {
                                             variant="ghost"
                                             size="sm"
                                             className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
-                                            onClick={() => setActiveNode(null)}
+                                            onClick={() => {
+                                                activeNodeRef.current = null;
+                                                setActiveNode(null);
+                                            }}
                                         >
                                             ✕
                                         </Button>
