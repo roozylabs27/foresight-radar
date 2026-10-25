@@ -207,4 +207,29 @@ class UserLlmSettingsTest extends TestCase
             'provider' => 'anthropic',
         ]);
     }
+
+    public function test_active_provider_is_sorted_first_in_providers_catalog(): void
+    {
+        $user = User::factory()->create();
+
+        // Configure and activate Gemini (normally 3rd in default catalog)
+        $this->actingAs($user)->post(route('settings.llm.store'), [
+            'provider' => 'gemini',
+            'model' => 'gemini-3.8-flash',
+            'api_key' => 'AIzaSyGeminiKey12345678',
+        ]);
+        $this->actingAs($user)->post(route('settings.llm.activate'), [
+            'provider' => 'gemini',
+            'active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('settings.llm.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Settings/LlmSettings')
+            ->where('providers.0.provider', 'gemini')
+            ->where('providers.0.is_active', true)
+        );
+    }
 }

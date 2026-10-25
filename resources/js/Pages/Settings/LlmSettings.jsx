@@ -5,7 +5,12 @@ import SettingsLayout from "@/Layouts/SettingsLayout";
 import ProviderCard from "@/Components/Settings/ProviderCard";
 
 export default function LlmSettings({ auth, providers = [], title = "Mesin AI & Reasoning" }) {
-    const activeProvider = providers.find((p) => p.is_active);
+    const sortedProviders = [...providers].sort((a, b) => {
+        if (a.is_active && !b.is_active) return -1;
+        if (!a.is_active && b.is_active) return 1;
+        return 0;
+    });
+    const activeProvider = sortedProviders.find((p) => p.is_active);
 
     return (
         <SettingsLayout
@@ -52,7 +57,7 @@ export default function LlmSettings({ auth, providers = [], title = "Mesin AI & 
                 </div>
 
                 <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                    {providers.map((providerData) => (
+                    {sortedProviders.map((providerData) => (
                         <ProviderCard key={providerData.provider} providerData={providerData} />
                     ))}
                 </div>

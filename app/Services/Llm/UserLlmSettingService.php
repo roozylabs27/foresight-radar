@@ -121,6 +121,15 @@ class UserLlmSettingService
             ];
         }
 
+        // Active provider always appears first in the catalog
+        usort($catalog, function (array $a, array $b) {
+            if ($a['is_active'] !== $b['is_active']) {
+                return $a['is_active'] ? -1 : 1;
+            }
+
+            return 0;
+        });
+
         return $catalog;
     }
 
