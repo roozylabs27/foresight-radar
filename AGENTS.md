@@ -165,5 +165,18 @@ To ensure static analysis clarity (Larastan Level 5), deterministic IDE auto-com
   - In controller actions or middleware where `Request $request` is injected, `$request->user()` is also permitted.
 - **Rule Scope:** Controllers, Services, Models, Middleware, Policies, Observers, Jobs, and Feature/Unit Tests.
 
+---
+
+## 11. Verification Standards: Chrome DevTools MCP over `curl` (Zero `curl` Verification Policy)
+
+To ensure genuine browser rendering, real JavaScript runtime execution, DOM state verification, and console error detection:
+
+- **Strictly Prohibit `curl` for Web / UI Verification:** Never use `curl`, `Invoke-WebRequest`, or raw terminal HTTP scrapers to test web routes, user journeys, UI behavior, or page rendering.
+- **Enforce Chrome DevTools MCP:**
+  - Always use `chrome-devtools-mcp` tools (`list_pages`, `new_page`, `navigate_page`, `evaluate_script`, `take_screenshot`, `list_console_messages`, `list_network_requests`).
+  - Verify live DOM elements, evaluate runtime state, ensure 0 console errors or warnings, inspect network responses, and capture visual screenshots for proof of work.
+- **Rule Scope:** All developer and AI coding agent workflows testing UI, layouts, interactive graphs, forms, settings, and web endpoints.
+
+
 
 
