@@ -15,6 +15,24 @@
 
 ## Completed
 
+- [x] **Standard DataTable in Member Management & Unified Settings Sidebar in Profile (2026-10-25)**
+  - **User Request:** "component tablenya samakan dengan page lain yang di http://127.0.0.1:8080/settings/members dan page http://127.0.0.1:8080/profile ikuti sample yg lain seperti /settings/llm /settings/organizations belum ada sidebarnya"
+  - **Implementation Details:**
+    1. **Standardized Member DataTable ([`Members.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx)):**
+       - Replaced raw HTML table with platform standard `<DataTable>` from [`resources/js/Components/DataTable.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/DataTable.jsx).
+       - Integrated standard [`SearchInput`](file:///c:/laragon/www/foresight-radar/resources/js/Components/SearchInput.jsx) with Enter/clear debounce matching `DrivingForce` and `Signals` pages.
+       - Wired TanStack table pagination state (`pageIndex`, `pageSize`, `rowCount`) directly with Inertia server-side navigation and page size selection (`[10, 20, 50]`).
+       - Converted pending invitations list to standard `<DataTable>` with unified typography and actions.
+    2. **Unified Settings Sidebar in Profile ([`Profile/Edit.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Profile/Edit.jsx)):**
+       - Migrated `/profile` from standalone `AuthenticatedLayout` to [`SettingsLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Layouts/SettingsLayout.jsx) with `activeTab="profile"`.
+       - Structured layout with executive Profile Overview banner (user initials avatar, name, email, role badge, organization badge) followed by modular cards: Profile Information, Password Security, and Account Danger Zone.
+       - Seamless navigation between `Mesin AI`, `Organisasi & Workspace`, `Anggota & Undangan Tim`, and `Profil & Akun`.
+    3. **Automated Quality Verification:**
+       - PHPUnit: 9/9 tests in `TenantManagementTest.php` passing cleanly.
+       - PHPUnit: 5/5 tests in `ProfileTest.php` passing cleanly.
+       - Frontend Build: `npm run build` compiled without errors.
+       - Chrome DevTools MCP: verified live DOM on `/settings/members` (standard DataTable, rows=10, pagination controls) and `/profile` (`hasSettingsSidebar: true`, active sidebar item). 0 console errors.
+
 - [x] **Member Table Pagination & Removal of Redundant Global User Management (2026-10-25)**
   - **User Request:** "berarti tidak perlu ada user management lagi, dan buat pagination untuk data http://127.0.0.1:8080/settings/members"
   - **Implementation Details:**

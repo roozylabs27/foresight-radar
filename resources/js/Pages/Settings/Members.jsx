@@ -1,35 +1,21 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Head, router, useForm } from "@inertiajs/react";
 import {
-    AlertCircleIcon,
     Building2Icon,
-    CheckIcon,
-    ChevronLeftIcon,
-    ChevronRightIcon,
     ClockIcon,
-    MailIcon,
     MoreHorizontalIcon,
-    SearchIcon,
-    ShieldAlertIcon,
-    ShieldCheckIcon,
     Trash2Icon,
     UserPlusIcon,
     UsersIcon,
-    XIcon,
 } from "lucide-react";
 
 import SettingsLayout from "@/Layouts/SettingsLayout";
+import DataTable from "@/Components/DataTable";
+import SearchInput from "@/Components/SearchInput";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/Components/ui/select";
 import {
     Dialog,
     DialogClose,
@@ -60,7 +46,6 @@ export default function Members({
 }) {
     const [inviteOpen, setInviteOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters?.search || "");
-    const [perPage, setPerPage] = useState(String(filters?.per_page || 10));
 
     const isPaginated = Boolean(members && typeof members === "object" && !Array.isArray(members) && members.data);
     const memberList = Array.isArray(members) ? members : (members?.data || []);
@@ -73,9 +58,6 @@ export default function Members({
             total: memberList.length,
             from: memberList.length > 0 ? 1 : 0,
             to: memberList.length,
-            links: [],
-            prev_page_url: null,
-            next_page_url: null,
         };
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -84,48 +66,17 @@ export default function Members({
         role: "admin",
     });
 
-    const handleSearchSubmit = (e) => {
-        e.preventDefault();
+    const handleSearch = (keyword) => {
+        setSearchTerm(keyword);
         router.get(
             route("settings.members.index"),
             {
-                search: searchTerm,
-                per_page: perPage,
+                search: keyword,
+                per_page: pagination.per_page || 10,
                 page: 1,
             },
             { preserveState: true, replace: true }
         );
-    };
-
-    const handleClearSearch = () => {
-        setSearchTerm("");
-        router.get(
-            route("settings.members.index"),
-            {
-                search: "",
-                per_page: perPage,
-                page: 1,
-            },
-            { preserveState: true, replace: true }
-        );
-    };
-
-    const handlePerPageChange = (val) => {
-        setPerPage(val);
-        router.get(
-            route("settings.members.index"),
-            {
-                search: searchTerm,
-                per_page: val,
-                page: 1,
-            },
-            { preserveState: true, replace: true }
-        );
-    };
-
-    const handlePageChange = (url) => {
-        if (!url) return;
-        router.get(url, {}, { preserveState: true, replace: true });
     };
 
     const handleInviteSubmit = (e) => {
@@ -155,6 +106,153 @@ export default function Members({
             router.delete(route("settings.members.invitations.cancel", { invitation: inviteId }));
         }
     };
+
+    const columns = useMemo(
+        () => [
+            {
+                accessorKey: "name",
+                header: "Pengguna",
+                cell: ({ row }) => (
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2 font-medium text-foreground">
+                            <span>{row.original.name}</span>
+                            {row.original.is_current_user && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                    Anda
+                                </Badge>
+                            )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{row.original.email}</span>
+                    </div>
+                ),
+            },
+            {
+                accessorKey: "role",
+                header: "Peran Akses",
+                cell: ({ row }) => (
+                    <Badge
+                        variant={row.original.role === "admin" ? "default" : "secondary"}
+                        className="text-xs capitalize font-medium"
+                    >
+                        {row.original.role_display || row.original.role}
+                    </Badge>
+                ),
+            },
+            {
+                accessorKey: "created_at",
+                header: "Tanggal Bergabung",
+                cell: ({ getValue }) => {
+                    const val = getValue();
+                    return (
+                        <span className="text-xs text-muted-foreground">
+                            {val ? new Date(val).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                            }) : "-"}
+                        </span>
+                    );
+                },
+            },
+            {
+                id: "actions",
+                header: () => <span className="sr-only">Aksi</span>,
+                meta: { align: "right", width: "56px" },
+                cell: ({ row }) => {
+                    const member = row.original;
+                    if (member.is_current_user) return null;
+                    return (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="size-8">
+                                    <MoreHorizontalIcon className="size-4" />
+                                    <span className="sr-only">Menu aksi</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel className="text-xs">Ubah Peran</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleRoleChange(member.id, "admin")}>
+                                    Jadikan Admin
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRoleChange(member.id, "bod")}>
+                                    Jadikan BOD (Viewer)
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => handleRemoveMember(member.id, member.name)}
+                                >
+                                    <Trash2Icon className="size-3.5 mr-1 text-destructive" />
+                                    <span>Keluarkan dari Tim</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    );
+                },
+            },
+        ],
+        []
+    );
+
+    const invitationColumns = useMemo(
+        () => [
+            {
+                accessorKey: "name",
+                header: "Calon Anggota",
+                cell: ({ row }) => (
+                    <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{row.original.name || row.original.email}</span>
+                        <span className="text-xs text-muted-foreground">{row.original.email}</span>
+                    </div>
+                ),
+            },
+            {
+                accessorKey: "role",
+                header: "Peran Akses",
+                cell: ({ getValue }) => (
+                    <Badge variant="outline" className="text-xs capitalize font-medium">
+                        {getValue()}
+                    </Badge>
+                ),
+            },
+            {
+                accessorKey: "invited_by",
+                header: "Diundang Oleh",
+                cell: ({ getValue }) => (
+                    <span className="text-xs text-muted-foreground">{getValue()}</span>
+                ),
+            },
+            {
+                accessorKey: "expires_at",
+                header: "Kedaluwarsa",
+                cell: ({ getValue }) => (
+                    <span className="text-xs text-muted-foreground">
+                        {new Date(getValue()).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                        })}
+                    </span>
+                ),
+            },
+            {
+                id: "actions",
+                header: () => <span className="sr-only">Aksi</span>,
+                meta: { align: "right", width: "80px" },
+                cell: ({ row }) => (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-destructive hover:bg-destructive/10"
+                        onClick={() => handleCancelInvite(row.original.id)}
+                    >
+                        Batalkan
+                    </Button>
+                ),
+            },
+        ],
+        []
+    );
 
     return (
         <SettingsLayout auth={auth} title={title} activeTab="members">
@@ -273,251 +371,77 @@ export default function Members({
                     </Dialog>
                 </div>
 
-                {/* Active Members Card */}
-                <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
-                    {/* Card Header & Toolbar */}
-                    <div className="border-b border-border/60 px-5 py-3.5 bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {/* Active Members Section with Standard DataTable */}
+                <section aria-labelledby="members-list-heading" className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
-                            <h3 className="text-sm font-semibold text-foreground">
+                            <h3 id="members-list-heading" className="m-0 text-base font-semibold text-foreground">
                                 Daftar Anggota Aktif ({pagination.total})
                             </h3>
                             <Badge variant="outline" className="text-[11px] px-2 py-0.5">
                                 Kapasitas: {pagination.total} / {maxUsers || 100}
                             </Badge>
                         </div>
-
-                        {/* Search & Filter Toolbar */}
-                        <div className="flex items-center gap-2">
-                            <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-                                <SearchIcon className="absolute left-2.5 size-3.5 text-muted-foreground pointer-events-none" />
-                                <Input
-                                    type="text"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    placeholder="Cari nama atau email..."
-                                    className="h-8 pl-8 pr-7 text-xs w-48 sm:w-60"
-                                />
-                                {searchTerm && (
-                                    <button
-                                        type="button"
-                                        onClick={handleClearSearch}
-                                        className="absolute right-2 text-muted-foreground hover:text-foreground"
-                                    >
-                                        <XIcon className="size-3.5" />
-                                    </button>
-                                )}
-                            </form>
-
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Select value={perPage} onValueChange={handlePerPageChange}>
-                                    <SelectTrigger className="h-8 w-[95px] text-xs">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent align="end">
-                                        <SelectItem value="10">10 / hal</SelectItem>
-                                        <SelectItem value="20">20 / hal</SelectItem>
-                                        <SelectItem value="50">50 / hal</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                            <SearchInput
+                                value={searchTerm}
+                                onSearch={handleSearch}
+                                label="Cari nama atau email"
+                                placeholder="Cari nama atau email..."
+                                className="flex-1 sm:w-[240px] sm:flex-none"
+                            />
                         </div>
                     </div>
 
-                    {/* Members Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="border-b border-border/60 bg-muted/10 text-xs uppercase tracking-wider text-muted-foreground">
-                                <tr>
-                                    <th className="px-5 py-3 font-semibold">Pengguna</th>
-                                    <th className="px-4 py-3 font-semibold">Peran Akses</th>
-                                    <th className="px-4 py-3 font-semibold">Tanggal Bergabung</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/40">
-                                {memberList.map((member) => (
-                                    <tr key={member.id} className="hover:bg-muted/20 transition-colors">
-                                        <td className="px-5 py-3.5">
-                                            <div className="flex flex-col">
-                                                <div className="flex items-center gap-2 font-medium text-foreground">
-                                                    <span>{member.name}</span>
-                                                    {member.is_current_user && (
-                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                                            Anda
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <span className="text-xs text-muted-foreground">{member.email}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            <Badge
-                                                variant={member.role === "admin" ? "default" : "secondary"}
-                                                className="text-xs capitalize font-medium"
-                                            >
-                                                {member.role_display || member.role}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                                            {member.created_at ? new Date(member.created_at).toLocaleDateString("id-ID", {
-                                                day: "numeric",
-                                                month: "short",
-                                                year: "numeric",
-                                            }) : "-"}
-                                        </td>
-                                        <td className="px-4 py-3.5 text-right">
-                                            {!member.is_current_user && (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="size-8">
-                                                            <MoreHorizontalIcon className="size-4" />
-                                                            <span className="sr-only">Menu aksi</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel className="text-xs">Ubah Peran</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => handleRoleChange(member.id, "admin")}>
-                                                            Jadikan Admin
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleRoleChange(member.id, "bod")}>
-                                                            Jadikan BOD (Viewer)
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            variant="destructive"
-                                                            onClick={() => handleRemoveMember(member.id, member.name)}
-                                                        >
-                                                            <Trash2Icon className="size-3.5 mr-1 text-destructive" />
-                                                            <span>Keluarkan dari Tim</span>
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {memberList.length === 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="px-5 py-8 text-center text-sm text-muted-foreground">
-                                            {searchTerm ? (
-                                                <div className="flex flex-col items-center gap-1.5">
-                                                    <p>Tidak ada anggota yang cocok dengan kata kunci "{searchTerm}".</p>
-                                                    <Button variant="link" size="sm" onClick={handleClearSearch} className="text-xs">
-                                                        Reset Pencarian
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <p>Belum ada anggota lain yang terdaftar dalam workspace ini.</p>
-                                            )}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <DataTable
+                        columns={columns}
+                        data={memberList}
+                        rowCount={pagination.total}
+                        pagination={{
+                            pageIndex: Math.max(0, (pagination.current_page || 1) - 1),
+                            pageSize: pagination.per_page || 10,
+                        }}
+                        onPaginationChange={(updater) => {
+                            const currentPagination = {
+                                pageIndex: Math.max(0, (pagination.current_page || 1) - 1),
+                                pageSize: pagination.per_page || 10,
+                            };
+                            const nextState = typeof updater === "function" ? updater(currentPagination) : updater;
+                            router.get(
+                                route("settings.members.index"),
+                                {
+                                    search: searchTerm,
+                                    page: nextState.pageIndex + 1,
+                                    per_page: nextState.pageSize,
+                                },
+                                { preserveState: true, replace: true }
+                            );
+                        }}
+                        pageSizeOptions={[10, 20, 50]}
+                        getRowId={(row) => row.id}
+                        caption="Daftar Anggota Aktif"
+                        emptyMessage={searchTerm ? `Tidak ada anggota yang cocok dengan kata kunci "${searchTerm}".` : "Belum ada anggota lain yang terdaftar."}
+                    />
+                </section>
 
-                    {/* Pagination Footer */}
-                    <div className="border-t border-border/60 px-5 py-3 bg-muted/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted-foreground">
-                        <div>
-                            Menampilkan <span className="font-semibold text-foreground">{pagination.from ?? 0}</span>–
-                            <span className="font-semibold text-foreground">{pagination.to ?? 0}</span> dari{" "}
-                            <span className="font-semibold text-foreground">{pagination.total ?? 0}</span> anggota
-                        </div>
-
-                        {pagination.last_page > 1 && (
-                            <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-2.5 text-xs gap-1"
-                                    disabled={pagination.current_page <= 1}
-                                    onClick={() => handlePageChange(pagination.prev_page_url)}
-                                >
-                                    <ChevronLeftIcon className="size-3.5" />
-                                    <span>Sebelumnya</span>
-                                </Button>
-
-                                <span className="px-2 text-xs">
-                                    Halaman <strong className="text-foreground">{pagination.current_page}</strong> dari{" "}
-                                    <strong className="text-foreground">{pagination.last_page}</strong>
-                                </span>
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-2.5 text-xs gap-1"
-                                    disabled={pagination.current_page >= pagination.last_page}
-                                    onClick={() => handlePageChange(pagination.next_page_url)}
-                                >
-                                    <span>Berikutnya</span>
-                                    <ChevronRightIcon className="size-3.5" />
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Pending Invitations Table (If any) */}
+                {/* Pending Invitations Section (If any) */}
                 {invitations.length > 0 && (
-                    <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
-                        <div className="border-b border-border/60 px-5 py-3.5 bg-muted/20 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <ClockIcon className="size-4 text-amber-500" />
-                                <h3 className="text-sm font-semibold text-foreground">Undangan Menunggu Aktivasi ({invitations.length})</h3>
-                            </div>
+                    <section aria-labelledby="invitations-heading" className="flex flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                            <ClockIcon className="size-4 text-amber-500" />
+                            <h3 id="invitations-heading" className="m-0 text-sm font-semibold text-foreground">
+                                Undangan Menunggu Aktivasi ({invitations.length})
+                            </h3>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b border-border/60 bg-muted/10 text-xs uppercase tracking-wider text-muted-foreground">
-                                    <tr>
-                                        <th className="px-5 py-3 font-semibold">Calon Anggota</th>
-                                        <th className="px-4 py-3 font-semibold">Peran Akses</th>
-                                        <th className="px-4 py-3 font-semibold">Diundang Oleh</th>
-                                        <th className="px-4 py-3 font-semibold">Kedaluwarsa</th>
-                                        <th className="px-4 py-3 font-semibold text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border/40">
-                                    {invitations.map((inv) => (
-                                        <tr key={inv.id} className="hover:bg-muted/20 transition-colors">
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-foreground">{inv.name || inv.email}</span>
-                                                    <span className="text-xs text-muted-foreground">{inv.email}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3.5">
-                                                <Badge variant="outline" className="text-xs capitalize font-medium">
-                                                    {inv.role}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                                                {inv.invited_by}
-                                            </td>
-                                            <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                                                {new Date(inv.expires_at).toLocaleDateString("id-ID", {
-                                                    day: "numeric",
-                                                    month: "short",
-                                                    year: "numeric",
-                                                })}
-                                            </td>
-                                            <td className="px-4 py-3.5 text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-xs text-destructive hover:bg-destructive/10"
-                                                    onClick={() => handleCancelInvite(inv.id)}
-                                                >
-                                                    Batalkan
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                        <DataTable
+                            columns={invitationColumns}
+                            data={invitations}
+                            rowCount={invitations.length}
+                            getRowId={(row) => row.id}
+                            caption="Daftar Undangan Menunggu Aktivasi"
+                        />
+                    </section>
                 )}
             </div>
         </SettingsLayout>
