@@ -92,8 +92,21 @@ class TenantManagementTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('Settings/Members')
-            ->has('members', 2)
-            ->where('members.0.email', 'alice@acme.com')
+            ->has('members.data', 2)
+            ->where('members.data.0.email', 'alice@acme.com')
+            ->where('members.current_page', 1)
+        );
+    }
+
+    public function test_user_can_filter_members_by_search_keyword(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get(route('settings.members.index', ['search' => 'Alice']));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Settings/Members')
+            ->has('members.data', 1)
+            ->where('members.data.0.name', 'Alice Admin')
         );
     }
 

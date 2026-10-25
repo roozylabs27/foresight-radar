@@ -59,7 +59,6 @@ const NAV_ITEMS = [
     { key: "status_action", label: "Status of Action", route: "status-action.", match: "/status-action", icon: CircleCheckIcon, permission: "view-status-action" },
     { key: "approval_items", label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileCheckIcon, permission: "view-approval-items" },
     { key: "closed_items", label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxIcon, permission: "view-closed-items" },
-    { key: "user_management", label: "User Management", route: "user-management.user.", match: "/user-management", icon: UserIcon, permission: "view-user" },
     { key: "prioritizing", label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },
     { key: "registered_list", label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
     { key: "foresight_radar", label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },

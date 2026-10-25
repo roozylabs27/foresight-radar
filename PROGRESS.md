@@ -15,6 +15,25 @@
 
 ## Completed
 
+- [x] **Member Table Pagination & Removal of Redundant Global User Management (2026-10-25)**
+  - **User Request:** "berarti tidak perlu ada user management lagi, dan buat pagination untuk data http://127.0.0.1:8080/settings/members"
+  - **Implementation Details:**
+    1. **Removal of Redundant Global User Management from Navigation:**
+       - Removed `{ key: "user_management" }` from [`resources/js/Layouts/AuthenticatedLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Layouts/AuthenticatedLayout.jsx), completely removing the legacy global user management menu from the application sidebar.
+       - Centralized team and user governance within tenant-scoped [`/settings/members`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx).
+    2. **Robust Backend Pagination & Search Filtering:**
+       - Updated [`TenantMemberController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/Settings/TenantMemberController.php) to support `search`, `per_page` (10, 20, 50), and page navigation using Laravel's `LengthAwarePaginator->through()`.
+       - Filter members dynamically by name or email within the active tenant workspace.
+    3. **Executive Frontend Pagination & Filter Toolbar:**
+       - Added live keyword search input with clear button in [`resources/js/Pages/Settings/Members.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx).
+       - Added per-page select dropdown (`10 / hal`, `20 / hal`, `50 / hal`).
+       - Built accessible pagination footer bar with "Menampilkan X-Y dari Z anggota", previous/next controls, and page indicator.
+    4. **Automated Quality Verification:**
+       - PHPUnit: 9/9 tests passing in [`tests/Feature/Settings/TenantManagementTest.php`](file:///c:/laragon/www/foresight-radar/tests/Feature/Settings/TenantManagementTest.php) (including `test_user_can_filter_members_by_search_keyword`).
+       - Pint: PASS (0 code style errors).
+       - Larastan Level 5: `[OK] No errors`.
+       - Chrome DevTools MCP: verified live navigation across pages (`?page=2`), search keyword filtering (`?search=Fajar`), and confirmation that "User Management" is absent from sidebar navigation. 0 console errors.
+
 - [x] **Organization Workspace Settings & Team Member Invitation Management (2026-10-25)**
   - **User Request:** "untung setting tenant dimana belum ada ya? dan member2 nya serta buat invitation member"
   - **Implementation Details:**

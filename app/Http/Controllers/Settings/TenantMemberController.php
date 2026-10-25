@@ -29,7 +29,7 @@ class TenantMemberController extends Controller
     /**
      * Display members of the active tenant workspace.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $tenant = $this->tenantContext->getTenant();
         if (! $tenant) {
@@ -44,11 +44,22 @@ class TenantMemberController extends Controller
             abort(403, 'Akses ditolak: Tidak ada workspace aktif.');
         }
 
-        $members = User::where('tenant_id', $tenant->id)
+        $search = trim((string) $request->input('search', ''));
+        $perPage = min(100, max(5, (int) $request->input('per_page', 10)));
+
+        $membersQuery = User::where('tenant_id', $tenant->id)
             ->with('roles')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (User $u) => [
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name');
+
+        $members = $membersQuery->paginate($perPage)
+            ->withQueryString()
+            ->through(fn (User $u) => [
                 'id' => $u->id,
                 'uuid' => $u->uuid,
                 'name' => $u->name,
@@ -87,6 +98,10 @@ class TenantMemberController extends Controller
             'invitations' => $invitations,
             'availableRoles' => $availableRoles,
             'maxUsers' => $tenant->max_users,
+            'filters' => [
+                'search' => $search,
+                'per_page' => $perPage,
+            ],
             'title' => 'Kelola Anggota & Undangan Tim',
         ]);
     }
