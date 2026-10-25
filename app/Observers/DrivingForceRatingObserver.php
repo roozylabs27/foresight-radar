@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\DrivingForceRating;
 use App\Models\DrivingForceRatingHistory;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Keeps driving_force_rating_histories: one row when a rating is created and
@@ -37,7 +38,7 @@ class DrivingForceRatingObserver
             'driving_force_rating_id' => $rating->id,
             'driving_force_id' => $rating->driving_force_id,
             'event' => $event,
-            'changed_by' => auth()->id(),
+            'changed_by' => Auth::id(),
         ] + $rating->only(self::TRACKED));
     }
 }

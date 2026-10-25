@@ -17,6 +17,7 @@ use App\Services\Llm\StructuredLlmClient;
 use App\Support\EvidenceVerifier;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -57,7 +58,7 @@ class SignalExtractionService
      */
     public function mode(int|User|null $user = null): string
     {
-        $client = $this->clientForUser($user ?? auth()->user());
+        $client = $this->clientForUser($user ?? Auth::user());
 
         return config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC && $client->isAvailable()
             ? $client->provider()
@@ -71,7 +72,7 @@ class SignalExtractionService
 
     public function modelName(int|User|null $user = null): ?string
     {
-        $client = $this->clientForUser($user ?? auth()->user());
+        $client = $this->clientForUser($user ?? Auth::user());
 
         return $this->usesLlm($user) ? $client->model() : null;
     }
@@ -79,7 +80,7 @@ class SignalExtractionService
     /** Display name of the extractor: the provider's label, or "Aturan". */
     public function modeLabel(int|User|null $user = null): string
     {
-        $client = $this->clientForUser($user ?? auth()->user());
+        $client = $this->clientForUser($user ?? Auth::user());
 
         return $this->usesLlm($user) ? $client->label() : 'Aturan';
     }

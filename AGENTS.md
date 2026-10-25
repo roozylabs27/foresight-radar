@@ -153,4 +153,17 @@ To preserve executive credibility and strategic intelligence rigor:
   - `AlertCircleIcon` for operational failures, connection errors, and validation alerts.
 - **Rule Reference:** Follow `docs/guidelines/iconography-standards.md` on all future feature and UI iterations.
 
+---
+
+## 10. Backend Coding Standards: Explicit `Auth` Facade (Zero `auth()` Helper Policy)
+
+To ensure static analysis clarity (Larastan Level 5), deterministic IDE auto-completion, and clean refactoring:
+
+- **Strictly Prohibit `auth()->user()`, `auth()->id()`, `auth()->check()`:** Never use the global `auth()` helper function anywhere in the backend codebase.
+- **Enforce Explicit `Illuminate\Support\Facades\Auth`:**
+  - Always use `Auth::user()`, `Auth::id()`, `Auth::check()`.
+  - In controller actions or middleware where `Request $request` is injected, `$request->user()` is also permitted.
+- **Rule Scope:** Controllers, Services, Models, Middleware, Policies, Observers, Jobs, and Feature/Unit Tests.
+
+
 
