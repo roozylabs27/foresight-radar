@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnforceTenantContext;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetAppLocale;
 use Illuminate\Foundation\Application;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             SetAppLocale::class,
+            EnforceTenantContext::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

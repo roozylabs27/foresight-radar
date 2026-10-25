@@ -40,7 +40,7 @@ class KnowledgeGraphService
 
         // 1. Driving Force Nodes (Primary Hubs)
         foreach ($drivingForces as $df) {
-            $nodeId = 'df-' . $df->uuid;
+            $nodeId = 'df-'.$df->uuid;
             $nodeIdSet[$nodeId] = true;
 
             $nodes[] = [
@@ -58,7 +58,7 @@ class KnowledgeGraphService
 
         // 2. Source Document Nodes (Origin Hubs)
         foreach ($sources as $source) {
-            $nodeId = 'src-' . $source->uuid;
+            $nodeId = 'src-'.$source->uuid;
             $nodeIdSet[$nodeId] = true;
 
             $nodes[] = [
@@ -76,7 +76,7 @@ class KnowledgeGraphService
 
         // 3. Signal Nodes (Satellite / Evidence Nodes) & Edges
         foreach ($signals as $signal) {
-            $signalNodeId = 'sig-' . $signal->uuid;
+            $signalNodeId = 'sig-'.$signal->uuid;
             $nodeIdSet[$signalNodeId] = true;
 
             $nodes[] = [
@@ -100,7 +100,7 @@ class KnowledgeGraphService
 
             // Edge: Source -> Signal
             if ($signal->source) {
-                $sourceNodeId = 'src-' . $signal->source->uuid;
+                $sourceNodeId = 'src-'.$signal->source->uuid;
                 if (isset($nodeIdSet[$sourceNodeId])) {
                     $links[] = [
                         'source' => $sourceNodeId,
@@ -139,7 +139,7 @@ class KnowledgeGraphService
             $linkedDfUuids = array_unique($linkedDfUuids);
 
             foreach ($linkedDfUuids as $dfUuid) {
-                $dfNodeId = 'df-' . $dfUuid;
+                $dfNodeId = 'df-'.$dfUuid;
                 if (isset($nodeIdSet[$dfNodeId])) {
                     $links[] = [
                         'source' => $signalNodeId,

@@ -6,6 +6,7 @@ use App\Services\Llm\AnthropicStructuredClient;
 use App\Services\Llm\NullLlmClient;
 use App\Services\Llm\OpenAiCompatibleClient;
 use App\Services\Llm\StructuredLlmClient;
+use App\Services\TenantContext;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\ServiceProvider;
 
@@ -16,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(TenantContext::class, function () {
+            return new TenantContext;
+        });
+
         // The configured provider when it is fully set up, otherwise a client that is never available.
         $this->app->singleton(StructuredLlmClient::class, function () {
             $client = match (config('services.llm.provider', 'anthropic')) {

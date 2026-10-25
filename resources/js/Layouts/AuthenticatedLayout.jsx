@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import {
+    Building2Icon,
     ChartColumnIcon,
     ChevronDownIcon,
     CircleCheckIcon,
@@ -176,7 +177,7 @@ function NavList({ items, url, collapsed = false, onNavigate }) {
     );
 }
 
-function UserMenu({ user }) {
+function UserMenu({ user, tenant }) {
     const { t } = useTranslation();
     const name = user?.name || "Pengguna";
     const initial = name.charAt(0).toUpperCase();
@@ -200,6 +201,12 @@ function UserMenu({ user }) {
                     {user?.email && (
                         <span className="truncate text-xs font-normal text-muted-foreground">
                             {user.email}
+                        </span>
+                    )}
+                    {tenant?.name && (
+                        <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-primary">
+                            <Building2Icon aria-hidden="true" className="size-3.5 shrink-0" />
+                            <span className="truncate">{tenant.name}</span>
                         </span>
                     )}
                 </DropdownMenuLabel>
@@ -235,6 +242,7 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
     const { t } = useTranslation();
     const effectiveAuth = auth || page.props.auth || {};
     const user = effectiveAuth.user || propUser;
+    const tenant = effectiveAuth.tenant;
     const permissions = effectiveAuth.permissions || [];
     const role = effectiveAuth.role;
 
@@ -338,9 +346,15 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
                             )}
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2">
+                            {tenant?.name && (
+                                <div className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground sm:flex">
+                                    <Building2Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+                                    <span className="max-w-36 truncate">{tenant.name}</span>
+                                </div>
+                            )}
                             <NotificationBell />
                             <LanguageSwitcher />
-                            <UserMenu user={user} />
+                            <UserMenu user={user} tenant={tenant} />
                         </div>
                     </header>
 

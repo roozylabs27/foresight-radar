@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LlmJobStatus;
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,12 +12,21 @@ use Ramsey\Uuid\Uuid;
 /**
  * A 2x2 scenario matrix built on two driving forces. Quadrant positions are
  * two letters: axis A pole then axis B pole (H = high, L = low).
+ *
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $uuid
+ * @property string $name
+ * @property LlmJobStatus|null $generation_status
  */
 class Scenario extends Model
 {
+    use BelongsToTenant;
+
     public const POSITIONS = ['HH', 'HL', 'LH', 'LL'];
 
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'name',
         'focal_question',
