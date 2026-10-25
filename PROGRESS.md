@@ -15,6 +15,24 @@
 
 ## Completed
 
+- [x] **Signal Knowledge Graph Topology in Visualization Workspace (2026-10-25)**
+  - **User Request:** Opsi 2 (Signal Knowledge Graph) — Memetakan kluster ratusan sinyal dari dokumen terhadap Driving Force di menu Visualization.
+  - **Feature Overview:**
+    1. **Dedicated Menu & Route:** Added `/visualization/knowledge-graph` under VISUALIZATION in the sidebar with `NetworkIcon`.
+    2. **Multi-tier Network Assembly (`KnowledgeGraphService.php`):**
+       - Queries `Source` (origin hub), `Signal` (satellite evidence), and `DrivingForce` (primary strategic hub).
+       - Generates directed edges: `Source -> Signal` (extraction provenance) and `Signal -> DrivingForce` (causal support).
+       - Automatically calculates topological degree centrality to scale node radii ($18$ to $36$px).
+    3. **Interactive Physics-based Canvas Simulation (`KnowledgeGraph.jsx`):**
+       - Custom n-body Coulomb repulsion, Hooke spring attraction, center gravity, and kinetic damping with 60 FPS animation loop.
+       - Dimension-based color coding adhering to STEEP-V standards with high contrast.
+       - Interactive controls: search box, STEEP-V dimension filter dropdown, review status toggle group (`Semua`, `Accepted`, `Pending`), document origin toggle (`Sertakan Dokumen`), dynamic entity & link counter badge.
+       - Pan, zoom, node drag-and-drop, and floating HUD inspector card on node click/hover with link to candidate review queue.
+    4. **Automated Test & Code Quality:**
+       - Added `tests/Feature/Visualization/KnowledgeGraphTest.php` with 4 test cases verifying authentication, authorization, Inertia rendering, and JSON data schema.
+       - Verified in real browser via Chrome DevTools MCP: clean canvas render, inspector HUD functioning, 0 runtime errors.
+
+
 - [x] **Interactive Causal Loop & System Dynamics Network Graph View in Cross-Impact (2026-10-25)**
   - **Feature Overview:**
     1. **View Toggle in Cross-Impact Panel (`CrossImpact.jsx`):** Allows analysts and executives to seamlessly switch between the traditional **`Matriks` (Grid Table)** and the new **`Network Graph` (Jejaring Sistemik)**.
