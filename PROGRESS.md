@@ -4,9 +4,9 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `feat/multi-tenant-isolation`
-- **Last reviewed commit:** `1c13c46`
+- **Last reviewed commit:** `2aa1be2`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 275 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 6/6 TenantIsolationTest clean, TableSortTest clean, PhaseOne/Two/Three clean, Vite: clean, 0 Sparkles icons platform-wide, Zero auth() helper policy active)
+- **Baseline verification:** PASS (Pint: 275 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 8/8 UserLlmSettingsTest clean, 6/6 TenantIsolationTest clean, TableSortTest clean, PhaseOne/Two/Three clean, Vite: clean, 0 Sparkles icons platform-wide, Zero auth() helper policy active)
 - **Current objective:** Strict Single-Tenant Membership & Defensive Scoping Engine on isolated branch.
 - **Current blocker:** None
 - **Highest-priority next task:** User review on `feat/multi-tenant-isolation` branch prior to merge into `development`.
@@ -14,6 +14,19 @@
 ---
 
 ## Completed
+
+- [x] **Active AI Provider Prioritization on Settings Page (2026-10-25)**
+  - **User Request:** "untuk provider yg aktif urutan pertama http://127.0.0.1:8080/settings/llm"
+  - **Implementation Details:**
+    1. **Backend Service Sorting ([`UserLlmSettingService.php`](file:///c:/laragon/www/foresight-radar/app/Services/Llm/UserLlmSettingService.php#L125-L135)):**
+       - Implemented `usort()` on `$catalog` in `getProvidersCatalog()` to place the provider with `'is_active' => true` at index `0`.
+    2. **Frontend Defense-in-Depth ([`LlmSettings.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/LlmSettings.jsx#L7-L13)):**
+       - Sorted `providers` array in React component so that active provider card is rendered as the first card in the grid.
+    3. **Automated Verification:**
+       - Added `test_active_provider_is_sorted_first_in_providers_catalog` in [`UserLlmSettingsTest.php`](file:///c:/laragon/www/foresight-radar/tests/Feature/Settings/UserLlmSettingsTest.php).
+       - Full 8/8 tests in `UserLlmSettingsTest.php` passing.
+       - Production frontend asset build `npm run build` passing.
+       - Commit: `2aa1be2` on `feat/multi-tenant-isolation`.
 
 - [x] **Strict Multi-Tenant Architecture & Defensive Scoping Engine (2026-10-25)**
   - **User Request:** "design 1 user belongs to 1 tenant only", "pertimbangkan juga masalah security dan isolation each tenant", "proceed tapi buat branch baru dulu untuk pengerjaan ini jangan di development, kalau sudah selesai dan saya review baru merge ke development".
