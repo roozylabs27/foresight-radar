@@ -4,16 +4,32 @@
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `d278fa8`
+- **Last reviewed commit:** `29b4b9a`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 14/14 SignalIngestionTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Contextual executive tooltips for Signal Ingestion & Review workspace.
+- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 5/5 CrossImpactTest clean, 14/14 SignalIngestionTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
+- **Current objective:** Interactive Causal Loop Network Graph view in Cross-Impact workspace.
 - **Current blocker:** None
 - **Highest-priority next task:** Ready for user review.
 
 ---
 
 ## Completed
+
+- [x] **Interactive Causal Loop & System Dynamics Network Graph View in Cross-Impact (2026-10-25)**
+  - **Feature Overview:**
+    1. **View Toggle in Cross-Impact Panel (`CrossImpact.jsx`):** Allows analysts and executives to seamlessly switch between the traditional **`Matriks` (Grid Table)** and the new **`Network Graph` (Jejaring Sistemik)**.
+    2. **High-Performance Interactive SVG Network Graph (`CrossImpactNetworkGraph.jsx`):**
+       - **Circular Topology & Node Layout:** Automatically places all APPROVED Driving Forces along a circular coordinate space with dimension-coded borders (`DimensionChip`), central index numbers, and responsive radial labels.
+       - **Curved Directed Bézier Edges:** Connects forces based on matrix scores. Bidirectional edges curve independently using perpendicular normal offsets to avoid overlaps.
+       - **Polarity & Weight Visualization:** Green/emerald arrows indicate amplifying influence (`+`), red/rose arrows indicate suppressing influence (`−`), with stroke width directly proportional to influence magnitude ($1$ to $3$).
+       - **Causal Loop Synchronization:** When a feedback loop (Reinforcing `R` or Balancing `B`) is selected in the lower panel, loop edges glow with pulse animations while non-loop edges dim to 0.08 opacity.
+       - **Quick Filters & Edge/Node Inspector:** Top toolbar with quick filters (`Semua`, `Memperkuat +`, `Menekan −`, `Kuat |≥2|`). Hovering or clicking on a Driving Force highlights its inbound/outbound ego network and displays a floating HUD card with Vester active, passive, and net influence metrics.
+  - **Verification Evidence:**
+    - Chrome DevTools MCP: Navigated to `http://127.0.0.1:8080/visualization/cross-impact`, toggled between `Matriks` and `Network Graph`. Tested node selection on "TKDN Regulation", verified floating HUD card renders with Vester metrics (`Aktif: 4 · Pasif: 0 · Net: +4`), and confirmed visual fidelity without errors.
+    - PHPUnit: `tests/Feature/Reasoning/CrossImpactTest.php` 5 passed (58 assertions).
+    - Laravel Pint: 260 files passed with 0 style issues.
+    - Vite Build: `npm run build` completed cleanly in 42s.
+
 
 - [x] **Contextual Executive Tooltips Across Signal Ingestion & Review Interface (2026-10-24)**
   - **User Request:** Add tooltips explaining foresight concepts, provenance metrics, and form fields that could confuse users.
