@@ -38,10 +38,12 @@ export default function AuthCarousel({ slides, interval = 5000, label = "Sorotan
                 aria-live={paused ? "polite" : "off"}
                 className="min-h-[170px]"
             >
-                <p className="m-0 text-[28px] leading-tight font-bold tracking-[-0.01em] text-on-night lg:text-[32px]">
+                <p className="m-0 text-[28px] leading-tight font-bold tracking-[-0.01em] text-foreground dark:text-on-night lg:text-[32px]">
                     {slide.title}
                 </p>
-                <p className="m-0 mt-4 text-base leading-relaxed text-on-night/80">{slide.description}</p>
+                <p className="m-0 mt-4 text-base leading-relaxed text-muted-foreground dark:text-on-night/80">
+                    {slide.description}
+                </p>
             </div>
 
             <div className="flex items-center gap-1">
@@ -57,8 +59,10 @@ export default function AuthCarousel({ slides, interval = 5000, label = "Sorotan
                         <span
                             aria-hidden="true"
                             className={cn(
-                                "block h-1 rounded-full transition-[width] motion-reduce:transition-none",
-                                slideIndex === index ? "w-6 bg-on-night" : "w-2 bg-on-night/40"
+                                "block h-1 rounded-full transition-[width,background-color] motion-reduce:transition-none",
+                                slideIndex === index
+                                    ? "w-6 bg-primary dark:bg-scan"
+                                    : "w-2 bg-foreground/25 dark:bg-on-night/35"
                             )}
                         />
                     </button>

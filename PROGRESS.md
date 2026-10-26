@@ -15,6 +15,21 @@
 
 ## Completed
 
+- [x] **Enhance AuthSplitLayout Visual Depth & Light/Dark Theme Adaptation (2026-10-26)**
+  - **User Request:** "@[c:\laragon\www\foresight-radar\resources\js\Components\auth\AuthSplitLayout.jsx] bg-night bisa ditambahkan something biar tidak flat warna saja, dan sesuaikan untuk dark dan light theme"
+  - **Implementation Details:**
+    1. **Architectural Polar Radar Backdrop (`HorizonRadarBackdrop` in [`AuthSplitLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/auth/AuthSplitLayout.jsx)):**
+       - Replaced the flat solid `bg-night` surface with a multi-layered domain-authentic Horizon Scanning Radar composition:
+         - Subtle radial illumination (`bg-primary/12`, `bg-scan/12`) and a radial-masked technical coordinate grid.
+         - Precision SVG polar radar (`600x600` viewBox) with concentric Horizon 1 / Horizon 2 / Horizon 3 rings, orthogonal & diagonal polar axes, a 45° radar sweep sector + sweep vector line, and plotted foresight signal nodes across horizons.
+         - Added Horizon Telemetry pills (`H1 Short Term`, `H2 Mid Term`, `H3 Long Term`) above the carousel.
+    2. **Light & Dark Theme Adaptation ([`AuthSplitLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/auth/AuthSplitLayout.jsx) & [`AuthCarousel.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/auth/AuthCarousel.jsx)):**
+       - **Light Theme:** Uses a soft horizon gradient (`from-[#eef4fc] via-[#e5effb] to-[#d8e6f8]`), crisp navy typography (`text-foreground` / `text-muted-foreground`), cobalt/teal radar rings (`text-primary/25`), and `bg-primary` active carousel indicator.
+       - **Dark Theme:** Uses deep midnight radar gradient (`dark:bg-night dark:from-[#071326] dark:via-[#050b16] dark:to-[#0a1b34]`), ice-white typography (`dark:text-on-night`), cyan scan radar rings (`dark:text-scan/25`), and `dark:bg-scan` active carousel indicator.
+  - **Verification Evidence:**
+    - `npm run build`: PASS (`built in 44.10s`, 0 errors).
+    - Chrome DevTools MCP (`http://127.0.0.1:8080/login`): Verified both Light Mode and Dark Mode rendering via `ThemeToggle` switch and screenshots.
+
 - [x] **Standardize Invite Member Modal & Organization Settings Form Architecture (2026-10-26)**
   - **User Request:** "button kirim undangan dan batal mepet adjust jarak, dan select belum pakai @[resources/js/Components/ui/select.jsx] dan check kenapa form ini berbeda dari form di page lain, belum ada form required asteriks"
   - **Root Cause Analysis:**
