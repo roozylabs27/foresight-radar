@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { Head, router, useForm } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
+import { Controller } from "react-hook-form";
+import { z } from "zod";
 import {
     Building2Icon,
     ClockIcon,
@@ -11,21 +13,19 @@ import {
 
 import SettingsLayout from "@/Layouts/SettingsLayout";
 import DataTable from "@/Components/DataTable";
+import FormDialog from "@/Components/FormDialog";
+import FormField, { fieldControlProps } from "@/Components/FormField";
 import SearchInput from "@/Components/SearchInput";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
-import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/Components/ui/dialog";
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/Components/ui/select";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,6 +34,20 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
+import { useDialogForm } from "@/hooks/use-dialog-form";
+import { inertiaVisit } from "@/lib/inertia-submit";
+
+const INVITE_FORM_ID = "invite-member-form";
+
+const inviteSchema = z.object({
+    email: z
+        .string()
+        .trim()
+        .min(1, "Alamat surel (email) wajib diisi.")
+        .email("Format alamat surel (email) tidak valid."),
+    name: z.string().trim().max(255, "Nama lengkap maksimal 255 karakter.").optional(),
+    role: z.string().min(1, "Peran akses wajib dipilih."),
+});
 
 export default function Members({
     auth,
@@ -47,6 +61,7 @@ export default function Members({
     // Mirrors the server-side manage-members gate; the server stays the authority.
     const canManage = Boolean(auth?.permissions?.includes("manage-members"));
     const [inviteOpen, setInviteOpen] = useState(false);
+    const [inviting, setInviting] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters?.search || "");
 
     const isPaginated = Boolean(members && typeof members === "object" && !Array.isArray(members) && members.data);
@@ -62,11 +77,48 @@ export default function Members({
             to: memberList.length,
         };
 
-    const { data, setData, post, processing, errors, reset } = useForm({
-        email: "",
-        name: "",
-        role: "admin",
+    const roleOptions = useMemo(
+        () =>
+            availableRoles.length > 0
+                ? availableRoles
+                : [
+                    { name: "admin", display_name: "Admin" },
+                    { name: "bod", display_name: "Board of Directors" },
+                ],
+        [availableRoles]
+    );
+
+    const inviteIds = {
+        email: "invite-email",
+        name: "invite-name",
+        role: "invite-role",
+    };
+
+    const inviteForm = useDialogForm({
+        schema: inviteSchema,
+        defaultValues: {
+            email: "",
+            name: "",
+            role: "admin",
+        },
+        ids: inviteIds,
+        loading: inviting,
+        onSubmit: (values) => {
+            setInviting(true);
+            return inertiaVisit("post", route("settings.members.invite"), values, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    inviteForm.reset();
+                    setInviteOpen(false);
+                },
+            }).finally(() => setInviting(false));
+        },
     });
+
+    const closeInvite = () => {
+        setInviteOpen(false);
+        inviteForm.reset();
+    };
 
     const handleSearch = (keyword) => {
         setSearchTerm(keyword);
@@ -79,16 +131,6 @@ export default function Members({
             },
             { preserveState: true, replace: true }
         );
-    };
-
-    const handleInviteSubmit = (e) => {
-        e.preventDefault();
-        post(route("settings.members.invite"), {
-            onSuccess: () => {
-                reset();
-                setInviteOpen(false);
-            },
-        });
     };
 
     const handleRoleChange = (memberUuid, newRole) => {
@@ -274,104 +316,104 @@ export default function Members({
                     </div>
 
                     {canManage && (
-                    <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="gap-2 h-10 px-4 self-start sm:self-auto">
+                        <>
+                            <Button
+                                type="button"
+                                className="gap-2 h-10 px-4 self-start sm:self-auto"
+                                onClick={() => setInviteOpen(true)}
+                            >
                                 <UserPlusIcon className="size-4" />
                                 <span>Undang Anggota Baru</span>
                             </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <form onSubmit={handleInviteSubmit}>
-                                <DialogHeader>
-                                    <DialogTitle>Undang Anggota Tim Baru</DialogTitle>
-                                    <DialogDescription className="text-xs">
-                                        Kirim email undangan ke rekan kerja. Akun dibuat saat penerima membuka tautan dan menerima undangan; tautan berlaku 7 hari dan hanya dapat dipakai sekali.
-                                    </DialogDescription>
-                                </DialogHeader>
 
-                                <div className="flex flex-col gap-4 py-4">
-                                    <div className="flex flex-col gap-1.5">
-                                        <Label htmlFor="invite-email" className="text-xs font-semibold">
-                                            Alamat Surel (Email)
-                                        </Label>
-                                        <Input
-                                            id="invite-email"
+                            <FormDialog
+                                title="Undang Anggota Tim Baru"
+                                description="Kirim email undangan ke rekan kerja. Akun dibuat saat penerima membuka tautan dan menerima undangan; tautan berlaku 7 hari dan hanya dapat dipakai sekali."
+                                open={inviteOpen}
+                                onOpenChange={setInviteOpen}
+                                onCancel={closeInvite}
+                                formId={INVITE_FORM_ID}
+                                btnText="Kirim Undangan"
+                                cancelText="Batal"
+                                loading={inviting}
+                                width={520}
+                            >
+                                <form id={INVITE_FORM_ID} noValidate onSubmit={inviteForm.submit}>
+                                    <fieldset disabled={inviting} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                                        <Controller
                                             name="email"
-                                            type="email"
-                                            value={data.email}
-                                            onChange={(e) => setData("email", e.target.value)}
-                                            placeholder="nama@perusahaan.co.id"
-                                            required
-                                            className="h-9"
-                                        />
-                                        {errors.email && (
-                                            <p className="text-xs text-destructive">{errors.email}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-1.5">
-                                        <Label htmlFor="invite-name" className="text-xs font-semibold">
-                                            Nama Lengkap (Opsional)
-                                        </Label>
-                                        <Input
-                                            id="invite-name"
-                                            name="name"
-                                            value={data.name}
-                                            onChange={(e) => setData("name", e.target.value)}
-                                            placeholder="Contoh: Budi Pratama"
-                                            className="h-9"
-                                        />
-                                        {errors.name && (
-                                            <p className="text-xs text-destructive">{errors.name}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-1.5">
-                                        <Label htmlFor="invite-role" className="text-xs font-semibold">
-                                            Peran Akses
-                                        </Label>
-                                        <select
-                                            id="invite-role"
-                                            value={data.role}
-                                            onChange={(e) => setData("role", e.target.value)}
-                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                        >
-                                            {availableRoles.map((role) => (
-                                                <option key={role.name} value={role.name}>
-                                                    {role.display_name} {role.name === "admin" ? "(Admin Workspace)" : "(Read-Only & Review)"}
-                                                </option>
-                                            ))}
-                                            {availableRoles.length === 0 && (
-                                                <>
-                                                    <option value="admin">Admin Organisasi</option>
-                                                    <option value="bod">Board of Directors</option>
-                                                </>
+                                            control={inviteForm.control}
+                                            render={({ field, fieldState }) => (
+                                                <FormField id={inviteIds.email} label="Alamat Surel (Email)" error={fieldState.error}>
+                                                    <Input
+                                                        {...fieldControlProps(inviteIds.email, fieldState)}
+                                                        type="email"
+                                                        name={field.name}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        onBlur={field.onBlur}
+                                                        placeholder="nama@perusahaan.co.id"
+                                                        autoComplete="off"
+                                                        autoFocus
+                                                    />
+                                                </FormField>
                                             )}
-                                        </select>
-                                    </div>
+                                        />
 
-                                    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground flex gap-2.5">
-                                        <Building2Icon className="size-4 shrink-0 text-primary mt-0.5" />
-                                        <p>
-                                            Penerima menerima email berisi tautan undangan. Akun dibuat dan dihubungkan ke organisasi ini hanya setelah penerima menerima undangan; kata sandi ditentukan sendiri oleh penerima.
-                                        </p>
-                                    </div>
-                                </div>
+                                        <Controller
+                                            name="name"
+                                            control={inviteForm.control}
+                                            render={({ field, fieldState }) => (
+                                                <FormField id={inviteIds.name} label="Nama Lengkap" required={false} error={fieldState.error}>
+                                                    <Input
+                                                        {...fieldControlProps(inviteIds.name, fieldState, { required: false })}
+                                                        name={field.name}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        onBlur={field.onBlur}
+                                                        placeholder="Contoh: Budi Pratama"
+                                                        autoComplete="off"
+                                                    />
+                                                </FormField>
+                                            )}
+                                        />
 
-                                <DialogFooter className="gap-2 sm:gap-0">
-                                    <DialogClose asChild>
-                                        <Button type="button" variant="outline" size="sm">
-                                            Batal
-                                        </Button>
-                                    </DialogClose>
-                                    <Button type="submit" disabled={processing} size="sm">
-                                        {processing ? "Memproses..." : "Kirim Undangan"}
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                                        <Controller
+                                            name="role"
+                                            control={inviteForm.control}
+                                            render={({ field, fieldState }) => (
+                                                <FormField id={inviteIds.role} label="Peran Akses" error={fieldState.error}>
+                                                    <Select
+                                                        name={field.name}
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        onOpenChange={(open) => !open && field.onBlur()}
+                                                    >
+                                                        <SelectTrigger {...fieldControlProps(inviteIds.role, fieldState)} className="w-full">
+                                                            <SelectValue placeholder="Pilih peran akses" />
+                                                        </SelectTrigger>
+                                                        <SelectContent position="popper">
+                                                            {roleOptions.map((role) => (
+                                                                <SelectItem key={role.name} value={role.name}>
+                                                                    {role.display_name} {role.name === "admin" ? "(Admin Workspace)" : "(Read-Only & Review)"}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormField>
+                                            )}
+                                        />
+
+                                        <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground flex gap-2.5">
+                                            <Building2Icon className="size-4 shrink-0 text-primary mt-0.5" />
+                                            <p>
+                                                Penerima menerima email berisi tautan undangan. Akun dibuat dan dihubungkan ke organisasi ini hanya setelah penerima menerima undangan; kata sandi ditentukan sendiri oleh penerima.
+                                            </p>
+                                        </div>
+                                    </fieldset>
+                                </form>
+                            </FormDialog>
+                        </>
                     )}
                 </div>
 

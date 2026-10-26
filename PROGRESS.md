@@ -8,12 +8,32 @@
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
 - **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
 - **Current objective:** Tenant isolation & invitation production-readiness audit. **Verdict: NOT READY** (`docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`).
-- **Current blocker:** All P0 and P1 audit findings fixed and verified by automated tests (uncommitted). Before production: fix P2 TENANT-002 (queue tenant context), TENANT-005 (unscoped `exists:` rules) and INVITE-006 (last admin).
-- **Highest-priority next task:** Remaining P2: TENANT-002 (reset `TenantContext` between queued jobs; fail jobs for missing/inactive tenants), then TENANT-005 and INVITE-006.
+- **Current blocker:** All P0 and P1 audit findings fixed and verified by automated tests (uncommitted). Before production: fix P2 TENANT-005 (unscoped `exists:` rules) and INVITE-006 (last admin).
+- **Highest-priority next task:** Remaining P2: TENANT-005 (tenant-aware `exists:` rules; signal review can link another tenant's driving force), then INVITE-006 (keep at least one admin).
 
 ---
 
 ## Completed
+
+- [x] **Standardize Invite Member Modal & Organization Settings Form Architecture (2026-10-26)**
+  - **User Request:** "button kirim undangan dan batal mepet adjust jarak, dan select belum pakai @[resources/js/Components/ui/select.jsx] dan check kenapa form ini berbeda dari form di page lain, belum ada form required asteriks"
+  - **Root Cause Analysis:**
+    1. **Button Spacing:** `Members.jsx` used `<DialogFooter className="gap-2 sm:gap-0">`, where `sm:gap-0` removed the `8px` (`gap-2`) gap between "Batal" and "Kirim Undangan" on desktop screens.
+    2. **Dropdown Component:** `Members.jsx` used a raw native HTML `<select>` element instead of Radix/shadcn `<Select>`, `<SelectTrigger>`, `<SelectValue>`, `<SelectContent position="popper">`, `<SelectItem>` from [`resources/js/Components/ui/select.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/ui/select.jsx).
+    3. **Form Architecture & Required Asterisk (`*`):** Other forms across the application (`UserManagement/User/Form.jsx`, `DrivingForce/Form.jsx`, `Profile/Partials/*.jsx`) use [`FormDialog.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/FormDialog.jsx), [`FormField.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/FormField.jsx) + `fieldControlProps`, and `useDialogForm` (`react-hook-form` + `zod`). `FormField` automatically renders `<span aria-hidden="true" className="-ml-1 text-destructive">*</span>` when `required={true}` (default), whereas `Members.jsx` and `Organization.jsx` used raw `<Label>` tags without `FormField`.
+  - **Implementation Details:**
+    1. Refactored [`Members.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx) Invite Member modal to use `<FormDialog>`, `<FormField>`, `fieldControlProps`, `useDialogForm` (`zod` + `Controller`), and `<Select>` from `resources/js/Components/ui/select.jsx`.
+       - `Alamat Surel (Email)` (`required={true}` -> red `*` asterisk).
+       - `Nama Lengkap` (`required={false}` -> optional, no asterisk).
+       - `Peran Akses` (`required={true}` -> red `*` asterisk + Radix `<Select>`).
+       - `<FormDialog>` footer restores `gap-2` (`8px`) spacing between "Batal" and "Kirim Undangan".
+    2. Refactored [`Organization.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Organization.jsx) to use `<FormField>` with `required={true}` on `Nama Organisasi / Perusahaan` (red `*` asterisk) and `required={false}` on `Domain Email Resmi` and `URL Workspace Slug`.
+    3. Updated [`UserSeeder.php`](file:///c:/laragon/www/foresight-radar/database/seeders/UserSeeder.php) to ensure `default-org` tenant is created and assigned to seeded users on fresh database seeds.
+  - **Verification Evidence:**
+    - `npm run build`: PASS (`built in 3m 7s`, 0 errors).
+    - `docker exec laravel_app php artisan test tests/Feature/Settings/TenantManagementTest.php tests/Feature/Settings/MembersUiContractTest.php tests/Feature/Settings/TenantInvitationLifecycleTest.php`: PASS (27 passed, 231 assertions).
+    - `docker exec laravel_app ./vendor/bin/pint --test`: PASS (292 files, 0 issues).
+    - Chrome DevTools MCP (`http://127.0.0.1:8080/settings/members` & `/settings/organization`): Verified `gapBetweenButtonsPx: 8`, `hasShadcnSelectTrigger: true`, `hasRequiredAsterisk: true` on `Alamat Surel (Email)*`, `Peran Akses*`, and `Nama Organisasi / Perusahaan*`, and 0 console errors.
 
 - [x] **Standard DataTable in Member Management & Unified Settings Sidebar in Profile (2026-10-25)**
   - **User Request:** "component tablenya samakan dengan page lain yang di http://127.0.0.1:8080/settings/members dan page http://127.0.0.1:8080/profile ikuti sample yg lain seperti /settings/llm /settings/organizations belum ada sidebarnya"
@@ -385,10 +405,20 @@
 | 2026-10-26 (uncommitted) | TENANT-003 Remediation | **PASS** | `composer verify`: Pint 285 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 308 passed (2,733 assertions, 445.59s); `tests/Audit` 7 failed / 4 passed (remaining P1/P2 findings) |
 | 2026-10-26 (uncommitted) | INVITE-003/004/005/007/009 Remediation | **PASS** | `composer verify`: Pint 289 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 321 passed (2,851 assertions, 196.26s); `npm run build` PASS (1m 4s); `tests/Audit` 4 failed / 4 passed (remaining P2 findings) |
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
+| 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 
 ---
 
 ## Session Log
+
+### 2026-10-26 — Session 19 (TENANT-002 Remediation: queued job tenant context)
+
+- **RED:** `tests/Feature/Security/QueuedJobTenantContextTest.php` (6 tests, via `dispatchSync` so job middleware runs as in the worker): 5 failed (scope reset kept tenant A; job leaked tenant B into the dispatching request; deleted/suspended tenant jobs ran; suspended-tenant narrative ran), 1 passed (narrative runs as its own tenant).
+- **GREEN:** `TenantContext` registered with `scoped()` (the worker forgets scoped instances before each job); `TenantContext::runAs()` saves and restores context; new `app/Jobs/Middleware/RunInTenantContext.php` fails jobs whose tenant is missing, soft-deleted or inactive (the job's `failed()` marks the source/scenario FAILED; no LLM call) and otherwise runs the job via `runAs()`. `ExtractSignals` and `GenerateScenarioNarrative` use it via `middleware()`; their inline `setTenant()` is removed. The superseded audit reproduction (it called `handle()` directly, bypassing middleware) was removed from `tests/Audit`.
+- **Extra defect fixed:** on the `sync` queue the old jobs left their tenant in the dispatching request's context (TENANT-002b).
+- **Verification executed:** targeted run of the new tests plus `tests/Feature/Llm`, `ScenarioHarnessTest`, `TenantIsolationTest`, `SignalIngestionTest` -> 85 passed. `docker exec laravel_app composer verify` -> Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s). `php artisan test tests/Audit` -> 2 failed / 4 passed. `laravel_queue` restarted (queue idle) so the worker runs the new job code.
+- **Not covered:** jobs do not re-check that the dispatching user is still a member or permitted; no real worker run with a suspended tenant was executed (covered by `dispatchSync` tests).
+- **Next recommended action:** TENANT-005, then INVITE-006.
 
 ### 2026-10-26 — Session 18 (UX-001 + browser-run follow-ups E2E-001..004)
 

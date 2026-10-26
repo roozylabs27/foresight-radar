@@ -278,7 +278,7 @@
         "No User query or exists rule returns or accepts another tenant's records",
         "Suspended or deleted tenants are denied on every request type, including JSON and queued jobs"
       ],
-      "verification_evidence": "2026-10-26: all P0/P1 findings plus UX-001 and E2E-001..004 fixed; end-to-end browser check of invite -> email -> accept passed. composer verify 326 passed. tests/Audit 3 failed / 4 passed. Still blocked on P2 TENANT-002, TENANT-005, INVITE-006."
+      "verification_evidence": "2026-10-26: all P0/P1 findings, UX-001, E2E-001..004 and P2 TENANT-002 fixed; end-to-end browser check passed. composer verify 332 passed. tests/Audit 2 failed / 4 passed. Still blocked on P2 TENANT-005, INVITE-006."
     }
   ]
 }

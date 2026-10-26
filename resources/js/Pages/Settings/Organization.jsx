@@ -1,21 +1,15 @@
 import { Head, useForm } from "@inertiajs/react";
 import {
-    ActivityIcon,
     Building2Icon,
-    DatabaseIcon,
-    LayersIcon,
-    RadarIcon,
+    LoaderCircleIcon,
     SaveIcon,
     ShieldCheckIcon,
-    UsersIcon,
-    WifiIcon,
-    ZapIcon,
 } from "lucide-react";
 
 import SettingsLayout from "@/Layouts/SettingsLayout";
+import FormField from "@/Components/FormField";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
-import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
 
 export default function Organization({ auth, organization, stats, title = "Pengaturan Organisasi & Workspace" }) {
@@ -99,62 +93,64 @@ export default function Organization({ auth, organization, stats, title = "Penga
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-5 max-w-xl">
-                        <fieldset disabled={!canManage} className="contents">
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="org-name" className="text-xs font-semibold">
-                                Nama Organisasi / Perusahaan
-                            </Label>
-                            <Input
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-5 max-w-xl" noValidate>
+                        <fieldset disabled={!canManage || processing} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                            <FormField
                                 id="org-name"
-                                name="org-name"
-                                value={data.name}
-                                onChange={(e) => setData("name", e.target.value)}
-                                placeholder="Contoh: PT Strategic Indonesia"
+                                label="Nama Organisasi / Perusahaan"
                                 required
-                                className="h-10"
-                            />
-                            {errors.name && (
-                                <p className="text-xs text-destructive">{errors.name}</p>
-                            )}
-                        </div>
+                                error={errors.name ? { message: errors.name } : undefined}
+                            >
+                                <Input
+                                    id="org-name"
+                                    name="org-name"
+                                    value={data.name}
+                                    onChange={(e) => setData("name", e.target.value)}
+                                    placeholder="Contoh: PT Strategic Indonesia"
+                                    aria-required="true"
+                                    aria-invalid={errors.name ? true : undefined}
+                                    aria-describedby={errors.name ? "org-name-error" : undefined}
+                                    className="h-10"
+                                />
+                            </FormField>
 
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="org-domain" className="text-xs font-semibold">
-                                Domain Email Resmi (Opsional)
-                            </Label>
-                            <Input
+                            <FormField
                                 id="org-domain"
-                                name="org-domain"
-                                value={data.domain}
-                                onChange={(e) => setData("domain", e.target.value)}
-                                placeholder="contoh: strategic.co.id"
-                                className="h-10 font-mono text-sm"
-                            />
-                            <p className="text-[11px] text-muted-foreground">
-                                Hanya anggota dengan domain email ini yang dapat diundang ke workspace organisasi ini.
-                            </p>
-                            {errors.domain && (
-                                <p className="text-xs text-destructive">{errors.domain}</p>
-                            )}
-                        </div>
+                                label="Domain Email Resmi"
+                                required={false}
+                                error={errors.domain ? { message: errors.domain } : undefined}
+                            >
+                                <Input
+                                    id="org-domain"
+                                    name="org-domain"
+                                    value={data.domain}
+                                    onChange={(e) => setData("domain", e.target.value)}
+                                    placeholder="contoh: strategic.co.id"
+                                    aria-invalid={errors.domain ? true : undefined}
+                                    aria-describedby={errors.domain ? "org-domain-error" : undefined}
+                                    className="h-10 font-mono text-sm"
+                                />
+                                <p className="m-0 text-[11px] text-muted-foreground">
+                                    Opsional. Hanya anggota dengan domain email ini yang dapat diundang ke workspace organisasi ini.
+                                </p>
+                            </FormField>
 
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="org-slug" className="text-xs font-semibold">
-                                URL Workspace Slug
-                            </Label>
-                            <Input
+                            <FormField
                                 id="org-slug"
-                                name="org-slug"
-                                value={organization.slug}
-                                disabled
-                                className="h-10 font-mono text-sm bg-muted/40 cursor-not-allowed"
-                            />
-                            <p className="text-[11px] text-muted-foreground">
-                                Slug unik ini dibuat otomatis dari nama awal dan tidak dapat diubah setelah terdaftar.
-                            </p>
-                        </div>
-
+                                label="URL Workspace Slug"
+                                required={false}
+                            >
+                                <Input
+                                    id="org-slug"
+                                    name="org-slug"
+                                    value={organization.slug}
+                                    disabled
+                                    className="h-10 font-mono text-sm bg-muted/40 cursor-not-allowed"
+                                />
+                                <p className="m-0 text-[11px] text-muted-foreground">
+                                    Slug unik ini dibuat otomatis dari nama awal dan tidak dapat diubah setelah terdaftar.
+                                </p>
+                            </FormField>
                         </fieldset>
 
                         {!canManage && (
@@ -164,17 +160,17 @@ export default function Organization({ auth, organization, stats, title = "Penga
                         )}
 
                         {canManage && (
-                        <div className="flex items-center gap-3 pt-2">
-                            <Button type="submit" disabled={processing} className="h-10 gap-2 px-5">
-                                <SaveIcon className="size-4" />
-                                <span>{processing ? "Menyimpan..." : "Simpan Perubahan"}</span>
-                            </Button>
-                            {recentlySuccessful && (
-                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                                    Tersimpan berhasil!
-                                </span>
-                            )}
-                        </div>
+                            <div className="flex items-center gap-3 pt-1">
+                                <Button type="submit" disabled={processing} aria-busy={processing || undefined} className="h-10 gap-2 px-5">
+                                    {processing ? <LoaderCircleIcon aria-hidden="true" className="size-4 animate-spin" /> : <SaveIcon aria-hidden="true" className="size-4" />}
+                                    <span>{processing ? "Menyimpan..." : "Simpan Perubahan"}</span>
+                                </Button>
+                                {recentlySuccessful && (
+                                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                        Tersimpan berhasil!
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </form>
                 </div>
