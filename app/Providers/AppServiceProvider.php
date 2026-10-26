@@ -17,7 +17,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(TenantContext::class, function () {
+        // Scoped, not singleton: queue:work forgets scoped instances before every job,
+        // so one job's tenant can never carry over into the next.
+        $this->app->scoped(TenantContext::class, function () {
             return new TenantContext;
         });
 

@@ -189,16 +189,16 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         // Tenant Workspace / Organization settings
         Route::prefix('organization')->name('organization.')->controller(OrganizationController::class)->group(function () {
             Route::get('/', 'index')->name('index');
-            Route::patch('/', 'update')->name('update');
+            Route::patch('/', 'update')->name('update')->can('manage-organization');
         });
 
         // Tenant Members & Team Invitations
         Route::prefix('members')->name('members.')->controller(TenantMemberController::class)->group(function () {
             Route::get('/', 'index')->name('index');
-            Route::post('/invite', 'invite')->name('invite');
-            Route::patch('/{user}/role', 'updateRole')->name('role');
-            Route::delete('/{user}', 'removeMember')->name('destroy');
-            Route::delete('/invitations/{invitation}', 'cancelInvite')->name('invitations.cancel');
+            Route::post('/invite', 'invite')->name('invite')->can('manage-members');
+            Route::patch('/{user}/role', 'updateRole')->name('role')->can('manage-members');
+            Route::delete('/{user}', 'removeMember')->name('destroy')->can('manage-members');
+            Route::delete('/invitations/{invitation}', 'cancelInvite')->name('invitations.cancel')->can('manage-members');
         });
     });
 

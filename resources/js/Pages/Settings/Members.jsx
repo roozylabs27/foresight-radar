@@ -44,6 +44,8 @@ export default function Members({
     filters = {},
     title = "Kelola Anggota & Undangan Tim",
 }) {
+    // Mirrors the server-side manage-members gate; the server stays the authority.
+    const canManage = Boolean(auth?.permissions?.includes("manage-members"));
     const [inviteOpen, setInviteOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters?.search || "");
 
@@ -89,15 +91,15 @@ export default function Members({
         });
     };
 
-    const handleRoleChange = (memberId, newRole) => {
-        router.patch(route("settings.members.role", { user: memberId }), {
+    const handleRoleChange = (memberUuid, newRole) => {
+        router.patch(route("settings.members.role", { user: memberUuid }), {
             role: newRole,
         });
     };
 
-    const handleRemoveMember = (memberId, memberName) => {
+    const handleRemoveMember = (memberUuid, memberName) => {
         if (confirm(`Apakah Anda yakin ingin mengeluarkan ${memberName} dari organisasi ini?`)) {
-            router.delete(route("settings.members.destroy", { user: memberId }));
+            router.delete(route("settings.members.destroy", { user: memberUuid }));
         }
     };
 
@@ -160,7 +162,7 @@ export default function Members({
                 meta: { align: "right", width: "56px" },
                 cell: ({ row }) => {
                     const member = row.original;
-                    if (member.is_current_user) return null;
+                    if (!canManage || member.is_current_user) return null;
                     return (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -171,16 +173,16 @@ export default function Members({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel className="text-xs">Ubah Peran</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleRoleChange(member.id, "admin")}>
+                                <DropdownMenuItem onClick={() => handleRoleChange(member.uuid, "admin")}>
                                     Jadikan Admin
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleRoleChange(member.id, "bod")}>
+                                <DropdownMenuItem onClick={() => handleRoleChange(member.uuid, "bod")}>
                                     Jadikan BOD (Viewer)
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     variant="destructive"
-                                    onClick={() => handleRemoveMember(member.id, member.name)}
+                                    onClick={() => handleRemoveMember(member.uuid, member.name)}
                                 >
                                     <Trash2Icon className="size-3.5 mr-1 text-destructive" />
                                     <span>Keluarkan dari Tim</span>
@@ -191,7 +193,7 @@ export default function Members({
                 },
             },
         ],
-        []
+        [canManage]
     );
 
     const invitationColumns = useMemo(
@@ -239,7 +241,7 @@ export default function Members({
                 id: "actions",
                 header: () => <span className="sr-only">Aksi</span>,
                 meta: { align: "right", width: "80px" },
-                cell: ({ row }) => (
+                cell: ({ row }) => canManage && (
                     <Button
                         variant="ghost"
                         size="sm"
@@ -251,7 +253,7 @@ export default function Members({
                 ),
             },
         ],
-        []
+        [canManage]
     );
 
     return (
@@ -271,6 +273,7 @@ export default function Members({
                         </p>
                     </div>
 
+                    {canManage && (
                     <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
                         <DialogTrigger asChild>
                             <Button className="gap-2 h-10 px-4 self-start sm:self-auto">
@@ -283,7 +286,7 @@ export default function Members({
                                 <DialogHeader>
                                     <DialogTitle>Undang Anggota Tim Baru</DialogTitle>
                                     <DialogDescription className="text-xs">
-                                        Tambahkan rekan kerja ke workspace ini. Akun akan dibuatkan secara otomatis dengan peran akses yang dipilih.
+                                        Kirim email undangan ke rekan kerja. Akun dibuat saat penerima membuka tautan dan menerima undangan; tautan berlaku 7 hari dan hanya dapat dipakai sekali.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -351,7 +354,7 @@ export default function Members({
                                     <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground flex gap-2.5">
                                         <Building2Icon className="size-4 shrink-0 text-primary mt-0.5" />
                                         <p>
-                                            Anggota baru akan otomatis dihubungkan dengan ruang kerja organisasi Anda dengan kredensial akses awal.
+                                            Penerima menerima email berisi tautan undangan. Akun dibuat dan dihubungkan ke organisasi ini hanya setelah penerima menerima undangan; kata sandi ditentukan sendiri oleh penerima.
                                         </p>
                                     </div>
                                 </div>
@@ -363,12 +366,13 @@ export default function Members({
                                         </Button>
                                     </DialogClose>
                                     <Button type="submit" disabled={processing} size="sm">
-                                        {processing ? "Memproses..." : "Kirim Undangan & Buat Akun"}
+                                        {processing ? "Memproses..." : "Kirim Undangan"}
                                     </Button>
                                 </DialogFooter>
                             </form>
                         </DialogContent>
                     </Dialog>
+                    )}
                 </div>
 
                 {/* Active Members Section with Standard DataTable */}

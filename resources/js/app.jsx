@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/Components/ThemeProvider';
 import { I18nProvider } from '@/context/I18nContext';
 import { IngestionProvider } from '@/context/IngestionContext';
 import { Toaster } from '@/Components/ui/sonner';
+import { registerFlashToasts } from '@/lib/flash-toast';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -30,6 +31,7 @@ createInertiaApp({
     },
     setup({ el, App, props }) {
         const root = createRoot(el);
+        registerFlashToasts(props.initialPage);
 
         root.render(
             <ThemeProvider>

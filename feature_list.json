@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": "Foresight Radar",
   "version": "1.1.0",
-  "last_updated": "2026-10-23",
+  "last_updated": "2026-10-26",
   "status_vocabulary": [
     "not_started",
     "in_progress",
@@ -264,7 +264,21 @@
         "SignalExtractionService and ScenarioNarrativeService dynamically resolve active user client with offline fallback"
       ],
       "verification_evidence": "Tests/Feature/Settings/UserLlmSettingsTest passes (7 tests, 48 assertions); ScenarioNarrativeBenchmarkTest & SignalExtractionBenchmarkTest pass"
+    },
+    {
+      "id": "FEAT-020",
+      "name": "Multi-Tenant Isolation, Team Membership & Invitations",
+      "description": "Tenant scoping engine (TenantScope, BelongsToTenant, EnforceTenantContext), organization settings, member role management, and team invitation lifecycle.",
+      "priority": "P0",
+      "status": "blocked",
+      "acceptance_criteria": [
+        "Only tenant admins can invite, change roles, remove members, or edit the organization",
+        "Tenant endpoints never attach or modify accounts outside the caller's tenant, including platform users",
+        "Invitations stay pending until the intended recipient accepts; tokens are single-use, expiring, and revocable",
+        "No User query or exists rule returns or accepts another tenant's records",
+        "Suspended or deleted tenants are denied on every request type, including JSON and queued jobs"
+      ],
+      "verification_evidence": "2026-10-26: all P0/P1 findings plus UX-001 and E2E-001..004 fixed; end-to-end browser check of invite -> email -> accept passed. composer verify 326 passed. tests/Audit 3 failed / 4 passed. Still blocked on P2 TENANT-002, TENANT-005, INVITE-006."
     }
   ]
 }
-

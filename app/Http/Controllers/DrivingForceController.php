@@ -8,6 +8,7 @@ use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\User;
 use App\Services\DrivingForceService;
+use App\Services\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
@@ -27,16 +28,20 @@ class DrivingForceController extends Controller
                 'label' => $dimension->name,
             ];
         });
-        $users = User::select('id', 'name')->with('roles:id,name,display_name')->whereHas('roles', function ($q) {
-            $q->where('name', 'admin');
-        })->orderBy('name', 'asc')->get()->map(function ($user) {
-            $roleName = $user->roles->first()?->display_name ?? 'Admin';
+        // User has no tenant scope, so filter by hand. Only the platform bypass has no tenant id.
+        $tenantId = app(TenantContext::class)->getTenantId();
+        $users = User::select('id', 'name')->with('roles:id,name,display_name')
+            ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+            ->whereHas('roles', function ($q) {
+                $q->where('name', 'admin');
+            })->orderBy('name', 'asc')->get()->map(function ($user) {
+                $roleName = $user->roles->first()?->display_name ?? 'Admin';
 
-            return [
-                'value' => $user->id,
-                'label' => $user->name.' - '.$roleName,
-            ];
-        });
+                return [
+                    'value' => $user->id,
+                    'label' => $user->name.' - '.$roleName,
+                ];
+            });
 
         $title = 'Driving Force';
 

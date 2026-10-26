@@ -3,13 +3,13 @@
 ## Current Verified State
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
-- **Current branch:** `development`
-- **Last reviewed commit:** `ccd5cf3`
+- **Current branch:** `development` (audit run on `claude/tenant-isolation-audit-791e36` @ `3d25019`, tree identical to `ff8502d`)
+- **Last reviewed commit:** `3d25019`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 280 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 20/20 multi-tenant & profile test suite clean, Vite: clean, 0 Sparkles icons platform-wide, Zero auth() helper policy active, Zero curl verification policy active)
-- **Current objective:** Multi-Tenant Architecture & Workspace Management merged into development.
-- **Current blocker:** None
-- **Highest-priority next task:** Platform hardening & readiness for production deployment.
+- **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
+- **Current objective:** Tenant isolation & invitation production-readiness audit. **Verdict: NOT READY** (`docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`).
+- **Current blocker:** All P0 and P1 audit findings fixed and verified by automated tests (uncommitted). Before production: fix P2 TENANT-002 (queue tenant context), TENANT-005 (unscoped `exists:` rules) and INVITE-006 (last admin).
+- **Highest-priority next task:** Remaining P2: TENANT-002 (reset `TenantContext` between queued jobs; fail jobs for missing/inactive tenants), then TENANT-005 and INVITE-006.
 
 ---
 
@@ -357,7 +357,7 @@
 
 ## Blocked
 
-*No active blockers. The repository is healthy, and the environment is fully operational.*
+- **FEAT-020 Multi-Tenant Isolation, Team Membership & Invitations**: blocked for production by P2 TENANT-002, TENANT-005, INVITE-006, UX-001 (end-to-end browser/mail check passed 2026-10-26). See `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md` §10.
 
 ---
 
@@ -378,10 +378,103 @@
 | 2026-10-22 (`HEAD`) | `verify.sh --quick` Automated Suite | **PASS** | Pint: 238 files (PASS), Larastan L5: 137 files (PASS), Vite: 4,086 modules / 3m 16s (PASS), NPM Audit: 0 critical (PASS) |
 | 2026-10-23 (`83f532a`) | Full Audit Baseline Verification | **PASS** | Pint: 238 files PASS; Larastan L5: 137 files PASS; PHPUnit: 244 passed (2,440 assertions, 421.83s); `tsc --noEmit`: 0 errors; Vite build: 4,731 modules (1m 47s); Playwright smoke: 1/1 PASS (16.66s) |
 | 2026-10-23 (`HEAD`) | Audit Remediation Phases 0–3 Unified Gate | **PASS** | Pint: 241 files PASS; Larastan L5: 137 files PASS; PHPUnit: 259 passed (2,503 assertions, 195.86s); `tsc --noEmit`: 0 errors; Vite build: 4,728 modules (1m 27s); NPM Audit: 0 critical |
+| 2026-10-26 (`3d25019`) | Tenant/Invitation Audit Baseline | **PASS** | Pint 280 files PASS; Larastan L5 `[OK] No errors`; PHPUnit 290 passed (2,680 assertions, 407.11s); Vite build 1m 29s; npm audit 0 critical (3 moderate, 5 high) |
+| 2026-10-26 (`3d25019`) | Tenant/Invitation Reproduction Suite | **FAIL (expected)** | `tests/Audit/TenantInvitationReadinessAuditTest.php`: 16 failed / 4 passed (34 assertions, 135.10s); each failure proves one finding |
+| 2026-10-26 (uncommitted) | P0 Remediation (INVITE-001/002, TENANT-004) | **PASS** | `composer verify`: Pint 283 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 300 passed (2,707 assertions, 509.05s); `npm run build` PASS (4m 18s); `tests/Audit` 9 failed / 4 passed (remaining P1/P2 findings) |
+| 2026-10-26 (uncommitted) | TENANT-001 Remediation | **PASS** | `composer verify`: Pint 284 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 304 passed (2,728 assertions, 201.45s); `tests/Audit` 8 failed / 4 passed (remaining P1/P2 findings) |
+| 2026-10-26 (uncommitted) | TENANT-003 Remediation | **PASS** | `composer verify`: Pint 285 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 308 passed (2,733 assertions, 445.59s); `tests/Audit` 7 failed / 4 passed (remaining P1/P2 findings) |
+| 2026-10-26 (uncommitted) | INVITE-003/004/005/007/009 Remediation | **PASS** | `composer verify`: Pint 289 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 321 passed (2,851 assertions, 196.26s); `npm run build` PASS (1m 4s); `tests/Audit` 4 failed / 4 passed (remaining P2 findings) |
+| 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 
 ---
 
 ## Session Log
+
+### 2026-10-26 — Session 18 (UX-001 + browser-run follow-ups E2E-001..004)
+
+- **RED:** `tests/Feature/Settings/MembersUiContractTest.php` (3 tests) and 2 new tests in `TenantInvitationLifecycleTest`: 4 failed (flash success, flash error, referrer meta, role display name), 1 passed (uuid contract; the server side was already right, the bug was in the JS).
+- **GREEN:** `HandleInertiaRequests` shares `flash`; `resources/js/lib/flash-toast.js` registered in `app.jsx`; `Members.jsx` sends `member.uuid` and has corrected invite copy; `TenantMemberController::removeMember` flashes `error`; `app.blade.php` referrer meta on `invitations.*`; `AcceptInvitationController` sends the role display name; `AcceptInvitation.jsx` signed-in state has a sign-out button. `TenantManagementTest` self-removal assertion moved to `assertSessionHas('error')`. The UX-001 reproduction was removed from `tests/Audit`.
+- **Design correction during the run:** a first version showed toasts from a `useEffect` on `page.props.flash` in `AuthenticatedLayout`; the browser showed the first toast but not repeated identical ones, so it was replaced by the global `router.on('success')` listener (verified: three consecutive toasts).
+- **Verification executed:** `docker exec laravel_app composer verify` -> Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s). `npm run build` -> PASS (1m 18s). Browser (test tenant `E2E Invite Audit`): role change and revert via the action menu hit `/settings/members/{uuid}/role` and toasted; repeated identical action toasted again; accept link while signed in shows "Keluar dari akun ini", which signs out; guest accept page shows "Board of Directors" and a `no-referrer` meta before the fonts link. `php artisan test tests/Audit` -> 3 failed / 4 passed.
+- **Left in the dev database:** pending test invitation 2 (`e2e-invitee2@invite-audit.test`, tenant 2), created directly via tinker without email.
+- **Next recommended action:** TENANT-002.
+
+### 2026-10-26 — Session 17 (End-to-end browser verification of the invitation flow)
+
+- **Setup:** `MAIL_MAILER` set to `log` in `.env` and `laravel_queue` restarted; isolated tenant `E2E Invite Audit` (id 2) with admin `e2e-admin@invite-audit.test` created via tinker (generated password kept in the session scratchpad, not in the repo).
+- **Executed in the built-in browser against http://127.0.0.1:8080:** admin login, invite `e2e-invitee@invite-audit.test` as BOD, email processed by `laravel_queue` into `laravel.log`, link refused while signed in (403), accepted as guest (account created in tenant 2 as bod, verified, signed in), Members page as the new member (2 members, no management controls), reused link 410, forged signature 403. All PASS; details in the audit doc "End-to-end browser verification" section.
+- **Found:** E2E-001 nginx overrides the accept page `Referrer-Policy`; E2E-002 stale invite dialog copy; E2E-003 accept page shows the role key; E2E-004 signed-in state has no sign-out action. Pre-existing: no flash message after invite; extraction poller 401s on guest pages.
+- **Restored:** `MAIL_MAILER=smtp`, `laravel_queue` restarted (`config('mail.default') = smtp`).
+- **Left in the dev database:** tenant 2, users `e2e-admin@invite-audit.test` and `e2e-invitee@invite-audit.test`, invitation 1 (accepted).
+- **Next recommended action:** UX-001 plus E2E-001..004.
+
+### 2026-10-26 — Session 16 (Invitation Lifecycle: INVITE-003/004/005/007/009)
+
+- **RED:** `tests/Feature/Settings/TenantInvitationLifecycleTest.php` (13 tests): 12 failed, 1 false pass (old code returned 500 after writing the row; the test now also asserts a redirect).
+- **GREEN:**
+  - `app/Services/TenantInvitationService.php`: pending invitations only; `sha256` token hash; transaction with the tenant row locked for the capacity check; re-invite rotates the token; `resolve()` returns valid / invalid / expired / accepted / unavailable; `accept()` re-checks under `lockForUpdate`, refuses existing emails, creates the verified account with the invited tenant and role, and consumes the invitation.
+  - `app/Notifications/TenantInvitationNotification.php`: queued mail (afterCommit, 3 tries, 60s backoff) carrying the signed link.
+  - `app/Http/Controllers/Auth/AcceptInvitationController.php` + `routes/auth.php`: `signed` routes `GET/POST /invitations/{id}/accept` (throttle 30/10 per minute); signed-in visitors get 403; blocked states render 410; `Referrer-Policy: no-referrer`.
+  - `resources/js/Pages/Auth/AcceptInvitation.jsx` (new) and Members invite dialog copy.
+  - `TenantMemberController::invite` delegates to the service; the success message says the email was scheduled.
+  - `TenantManagementTest::test_admin_can_invite_and_create_new_member` rewritten as `..._new_member_as_pending_invitation` (the old behaviour was the defect).
+- **Verification executed:** `docker exec laravel_app composer verify` -> first run 1 Larastan error (`Response::header()` on a Symfony response, fixed); rerun Pint 289 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 321 passed (2,851 assertions, 196.26s). `npm run build` -> PASS (1m 4s; `table.jsx`/`alert-dialog.jsx` sourcemap warnings are pre-existing). `php artisan test tests/Audit` -> 4 failed / 4 passed.
+- **Not executed:** browser check of invite and accept pages, real email delivery (dev `MAIL_MAILER=smtp` untested), MySQL concurrency.
+- **Next recommended action:** End-to-end browser/mail verification, then UX-001.
+
+### 2026-10-26 — Session 15 (TENANT-003 Remediation)
+
+- **RED:** `tests/Feature/Security/TenantStatusEnforcementTest.php` (4 tests): 3 failed (suspended JSON read 200, suspended JSON write 201, soft-deleted JSON read 200), 1 passed (active tenant control).
+- **GREEN:** `EnforceTenantContext` checks tenant status on every request instead of only non-JSON/Inertia ones. Soft-deleted tenants resolve to null and are denied. The matching reproduction was removed from `tests/Audit`.
+- **Side effect:** one extra constant query per JSON request. `PhaseOneRemediationTest::test_perf_002_...` budget raised from 12 to 13 with a comment; the test still detects N+1 (10 rows). A cache was rejected because it would let a suspended tenant through for its TTL.
+- **Verification executed:** `docker exec laravel_app composer verify` -> first run 1 failed (the perf budget above, 13 > 12); after the adjustment Pint 285 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 308 passed (2,733 assertions, 445.59s). `php artisan test tests/Audit` -> 7 failed / 4 passed.
+- **Not executed:** browser check; queued jobs still ignore tenant status (part of TENANT-002).
+- **Files changed:** `app/Http/Middleware/EnforceTenantContext.php`, `tests/Feature/Security/TenantStatusEnforcementTest.php`, `tests/Feature/Audit/PhaseOneRemediationTest.php`, `tests/Audit/TenantInvitationReadinessAuditTest.php`, audit doc, `PROGRESS.md`, `feature_list.json`.
+- **Next recommended action:** P1 INVITE-003/004.
+
+### 2026-10-26 — Session 14 (TENANT-001 Remediation + permissions migration)
+
+- **Migration:** `docker exec laravel_app php artisan migrate --force` ran `2026_10_26_000001_add_tenant_management_permissions` on the dev database; admin, super-admin and developer now hold `manage-members` and `manage-organization`, bod holds neither.
+- **RED:** `tests/Feature/Security/DrivingForcePicTenantScopeTest.php` (4 tests): 3 failed, 1 passed (own-tenant PIC control).
+- **GREEN:** `DrivingForceController::index` filters PIC options by the `TenantContext` tenant; `DrivingForceRequest` uses `Rule::exists('users','id')->where('tenant_id', ...)` on create and update. The platform bypass (no tenant id) is unchanged (TENANT-007). The matching reproduction was removed from `tests/Audit`.
+- **Verification executed:** `docker exec laravel_app composer verify` -> Pint 284 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 304 passed (2,728 assertions, 201.45s). An earlier run was killed with exit 137 while other container commands ran in parallel; the rerun alone passed. `php artisan test tests/Audit` -> 8 failed / 4 passed.
+- **Not executed:** `npm run build` (no frontend change), browser check of `/driving-force`.
+- **Files changed:** `app/Http/Controllers/DrivingForceController.php`, `app/Http/Requests/DrivingForceRequest.php`, `tests/Feature/Security/DrivingForcePicTenantScopeTest.php`, `tests/Audit/TenantInvitationReadinessAuditTest.php`, audit doc, `PROGRESS.md`, `feature_list.json`.
+- **Next recommended action:** P1 TENANT-003.
+
+### 2026-10-26 — Session 13 (P0 Remediation: INVITE-002, INVITE-001, TENANT-004)
+
+- **Goal:** Fix the P0 audit findings with TDD in the root checkout.
+- **RED:** `tests/Feature/Settings/TenantMemberAuthorizationTest.php` (10 tests): 9 failed, 1 passed (members can still view the pages).
+- **GREEN:**
+  - `manage-members` and `manage-organization` permissions (`database/data/permission.json`, `role.json`, migration `2026_10_26_000001_add_tenant_management_permissions.php`, granted through roles only).
+  - `routes/web.php`: `->can('manage-members')` on invite / role / remove / cancel; `->can('manage-organization')` on `PATCH /settings/organization`.
+  - `TenantMemberController::invite`: rejects any existing account (any tenant, no tenant, soft-deleted); the direct-attach branch is removed. `updateRole` and `removeMember` also clear direct permission grants.
+  - `Members.jsx` / `Organization.jsx`: controls hidden or disabled without the permission.
+  - `TenantManagementTest` setup grants the new permissions to its admin role; the fixed reproductions were removed from `tests/Audit`.
+- **Verification executed:** `docker exec laravel_app composer verify` -> Pint 283 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 300 passed (2,707 assertions, 509.05s). `npm run build` -> PASS (4m 18s; the `alert-dialog.jsx` sourcemap warning was already present in the baseline). `php artisan test tests/Audit` -> 9 failed / 4 passed, every failure an unfixed P1/P2 finding.
+- **Not executed:** `php artisan migrate` on the dev database, browser check of the Members and Organization pages, `npm audit` (dependencies unchanged).
+- **Files changed:** see the list above, plus the audit doc remediation table.
+- **Next recommended action:** run the migration, then P1 TENANT-001.
+
+### 2026-10-26 — Session 12 (Tenant Isolation & Invitation Production-Readiness Audit)
+
+- **Goal:** Audit-first review of tenant isolation, tenant-scoped authorization, invitations, and the membership lifecycle.
+- **Inspected:** routes, `bootstrap/app.php`, `EnforceTenantContext`, `HandleInertiaRequests`, `TenantScope`, `BelongsToTenant`, `TenantContext`, Settings/User/DrivingForce/SignalIngestion/Registration/Profile controllers, Form Requests, `UserPolicy`, jobs, LLM resolver, tenant migrations, role seed data, `Members.jsx`/`Organization.jsx`, docker-compose queue worker.
+- **Completed:**
+  - Wrote `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`: 1 Critical, 4 High, 6 Medium, 4 Low, 3 Informational findings; state machine; matrices; threat model; P0–P3 backlog.
+  - Added `tests/Audit/TenantInvitationReadinessAuditTest.php` (20 tests). It sits outside the default suites, so `composer verify` is unaffected.
+  - Added FEAT-020 (`blocked`) to `feature_list.json`.
+- **Verification executed:**
+  - `docker exec laravel_app vendor/bin/pint --test` -> PASS (280 files).
+  - `docker exec laravel_app vendor/bin/phpstan analyse --memory-limit=2G` -> `[OK] No errors`.
+  - `docker exec laravel_app php artisan test` -> 290 passed (2,680 assertions, 407.11s).
+  - `npm run build` -> PASS (1m 29s). `npm audit --audit-level=critical` -> exit 0 (8 non-critical).
+  - `docker exec laravel_app php artisan test /tmp/audit/TenantInvitationReadinessAuditTest.php` -> 16 failed, 4 passed (135.10s).
+- **Not executed:** `./init.sh`, browser/Chrome DevTools MCP flows (not available; would have created accounts in the shared dev DB), MySQL concurrency, load tests.
+- **Files changed:** `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md` (new, gitignored `docs/`), `tests/Audit/TenantInvitationReadinessAuditTest.php` (new), `feature_list.json`, `PROGRESS.md`.
+- **Blockers and risks:** INVITE-002 is exploitable by any authenticated tenant user, chained with INVITE-001.
+- **Next recommended action:** Remediate P0 (INVITE-002, INVITE-001) with TDD.
 
 ### 2026-10-23 — Session 11 (Audit Remediation Execution: Phases 0, 1, 2 & 3)
 

@@ -35,12 +35,11 @@ class EnforceTenantContext
             } else {
                 $this->tenantContext->setTenantId((int) $user->tenant_id);
 
-                // For web page visits (Inertia visits), verify tenant status
-                if (! $request->expectsJson() || $request->header('X-Inertia')) {
-                    $tenant = $this->tenantContext->getTenant();
-                    if (! $tenant || ! $tenant->isActive()) {
-                        abort(403, 'Access denied: Tenant workspace is suspended or unavailable.');
-                    }
+                // Every request type, JSON included: suspension must also stop API reads and writes.
+                // getTenant() excludes soft-deleted tenants, so a deleted workspace is denied too.
+                $tenant = $this->tenantContext->getTenant();
+                if (! $tenant || ! $tenant->isActive()) {
+                    abort(403, 'Access denied: Tenant workspace is suspended or unavailable.');
                 }
             }
         }

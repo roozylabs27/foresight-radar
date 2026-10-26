@@ -46,6 +46,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
             ],
             'canRegister' => (bool) config('auth.allow_registration', false),
+            // back()->with('success'|'error') messages; AuthenticatedLayout shows them as toasts.
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
         ];
 
         if ($user) {

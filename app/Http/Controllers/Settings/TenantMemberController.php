@@ -8,12 +8,11 @@ use App\Models\Tenant;
 use App\Models\TenantInvitation;
 use App\Models\User;
 use App\Services\TenantContext;
+use App\Services\TenantInvitationService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -23,7 +22,8 @@ class TenantMemberController extends Controller
     use HandlesApiErrors;
 
     public function __construct(
-        protected TenantContext $tenantContext
+        protected TenantContext $tenantContext,
+        protected TenantInvitationService $invitations,
     ) {}
 
     /**
@@ -124,63 +124,21 @@ class TenantMemberController extends Controller
 
         $email = strtolower(trim($validated['email']));
 
-        // Check if user is already a member of this tenant
-        $existingMember = User::where('email', $email)->where('tenant_id', $tenant->id)->first();
-        if ($existingMember) {
+        // An invite only ever creates a new account. Existing accounts, including platform users,
+        // accounts without a tenant, and soft-deleted ones, are never attached or changed here.
+        $existingUser = User::withTrashed()->where('email', $email)->first();
+        if ($existingUser && ! $existingUser->trashed() && (int) $existingUser->tenant_id === (int) $tenant->id) {
             return back()->withErrors(['email' => 'Pengguna dengan surel ini sudah menjadi anggota organisasi ini.']);
         }
-
-        // Check if user belongs to another tenant (Single-Tenant Membership Policy)
-        $userOtherTenant = User::where('email', $email)->whereNotNull('tenant_id')->where('tenant_id', '!=', $tenant->id)->first();
-        if ($userOtherTenant) {
-            return back()->withErrors(['email' => 'Pengguna dengan surel ini sudah terdaftar di organisasi lain. Kebijakan keamanan 1-User-1-Tenant membatasi akun hanya untuk satu organisasi.']);
+        if ($existingUser) {
+            return back()->withErrors(['email' => 'Surel ini sudah terdaftar sebagai akun lain sehingga tidak dapat diundang. Kebijakan keamanan 1-User-1-Tenant membatasi akun hanya untuk satu organisasi.']);
         }
 
-        // Check tenant user capacity
-        $currentCount = User::where('tenant_id', $tenant->id)->count();
-        $pendingCount = TenantInvitation::where('tenant_id', $tenant->id)
-            ->whereNull('accepted_at')
-            ->where('expires_at', '>', now())
-            ->count();
+        // Capacity, token, and the queued email live in the service. Persisting the invitation
+        // is not delivery: the message only says the email was scheduled.
+        $this->invitations->invite($tenant, $email, $validated['name'] ?? null, $validated['role'], $request->user());
 
-        if (($currentCount + $pendingCount) >= $tenant->max_users) {
-            return back()->withErrors(['email' => 'Batas maksimal kuota anggota organisasi ('.$tenant->max_users.') telah tercapai.']);
-        }
-
-        // Check if existing unassigned user exists
-        $unassignedUser = User::where('email', $email)->whereNull('tenant_id')->first();
-        if ($unassignedUser) {
-            $unassignedUser->update(['tenant_id' => $tenant->id]);
-            $unassignedUser->syncRoles([$validated['role']]);
-
-            return back()->with('success', "Pengguna {$unassignedUser->name} berhasil ditambahkan langsung ke organisasi.");
-        }
-
-        // Create Invitation record
-        $invitation = TenantInvitation::updateOrCreate(
-            ['tenant_id' => $tenant->id, 'email' => $email],
-            [
-                'name' => $validated['name'] ?? null,
-                'role' => $validated['role'],
-                'token' => Str::random(40),
-                'invited_by' => Auth::id(),
-                'expires_at' => now()->addDays(7),
-                'accepted_at' => null,
-            ]
-        );
-
-        // Also create the user account with a temporary secure password so they can log in immediately
-        $tempPassword = Str::random(12);
-        $newUser = User::create([
-            'tenant_id' => $tenant->id,
-            'name' => $validated['name'] ?: explode('@', $email)[0],
-            'email' => $email,
-            'password' => Hash::make($tempPassword),
-        ]);
-        $newUser->syncRoles([$validated['role']]);
-        $invitation->update(['accepted_at' => now()]);
-
-        return back()->with('success', "Anggota {$newUser->name} berhasil diundang. Kata sandi sementara: {$tempPassword}");
+        return back()->with('success', "Undangan untuk {$email} telah dibuat. Email undangan dijadwalkan untuk dikirim dan berlaku ".TenantInvitationService::EXPIRY_DAYS.' hari.');
     }
 
     /**
@@ -197,7 +155,9 @@ class TenantMemberController extends Controller
             'role' => ['required', 'string', 'in:admin,bod'],
         ]);
 
+        // Direct grants would otherwise outlive the role, as in UserController::update.
         $user->syncRoles([$validated['role']]);
+        $user->syncPermissions([]);
 
         return back()->with('success', 'Peran anggota berhasil diperbarui.');
     }
@@ -213,11 +173,12 @@ class TenantMemberController extends Controller
         }
 
         if ($user->id === Auth::id()) {
-            return back()->withErrors(['message' => 'Anda tidak dapat menghapus akun Anda sendiri dari organisasi.']);
+            return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri dari organisasi.');
         }
 
         $user->update(['tenant_id' => null]);
         $user->roles()->detach();
+        $user->syncPermissions([]);
 
         return back()->with('success', 'Anggota berhasil dikeluarkan dari organisasi.');
     }

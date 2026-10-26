@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -34,6 +35,18 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+});
+
+// Invitation links work for guests; a signed-in visitor is shown a "sign out first" state.
+Route::middleware('signed')->controller(AcceptInvitationController::class)->group(function () {
+    Route::get('invitations/{invitation}/accept', 'show')
+        ->whereNumber('invitation')
+        ->middleware('throttle:30,1')
+        ->name('invitations.accept');
+    Route::post('invitations/{invitation}/accept', 'store')
+        ->whereNumber('invitation')
+        ->middleware('throttle:10,1')
+        ->name('invitations.accept.store');
 });
 
 Route::middleware('auth')->group(function () {

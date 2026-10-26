@@ -3,10 +3,9 @@
 namespace App\Jobs;
 
 use App\Enums\LlmJobStatus;
+use App\Jobs\Middleware\RunInTenantContext;
 use App\Models\Source;
-use App\Models\Tenant;
 use App\Services\SignalExtractionService;
-use App\Services\TenantContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,15 +40,16 @@ class ExtractSignals implements ShouldBeUnique, ShouldQueue
         $this->timeout = (int) config('queue.llm_job_timeout', 300);
     }
 
+    /**
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [new RunInTenantContext($this->source->tenant_id)];
+    }
+
     public function handle(SignalExtractionService $extraction): void
     {
-        if ($this->source->tenant_id) {
-            $tenant = Tenant::find($this->source->tenant_id);
-            if ($tenant) {
-                app(TenantContext::class)->setTenant($tenant);
-            }
-        }
-
         if ($this->source->extraction_status === LlmJobStatus::COMPLETED) {
             return;
         }

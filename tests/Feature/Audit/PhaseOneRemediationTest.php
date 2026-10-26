@@ -173,11 +173,13 @@ class PhaseOneRemediationTest extends TestCase
             $response->assertStatus(200);
             $this->assertCount(10, $response->json('data'));
 
+            // 12 for the endpoint itself, plus 1 constant tenant status lookup in
+            // EnforceTenantContext, which now runs on JSON requests too (TENANT-003).
             $queryCount = count(DB::getQueryLog());
             $this->assertLessThanOrEqual(
-                12,
+                13,
                 $queryCount,
-                "Endpoint {$endpoint} executed {$queryCount} queries for 10 rows (expected <= 12 without N+1)."
+                "Endpoint {$endpoint} executed {$queryCount} queries for 10 rows (expected <= 13 without N+1)."
             );
         }
     }

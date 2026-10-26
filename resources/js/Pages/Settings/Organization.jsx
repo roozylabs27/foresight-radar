@@ -19,6 +19,8 @@ import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
 
 export default function Organization({ auth, organization, stats, title = "Pengaturan Organisasi & Workspace" }) {
+    // Mirrors the server-side manage-organization gate; the server stays the authority.
+    const canManage = Boolean(auth?.permissions?.includes("manage-organization"));
     const { data, setData, patch, processing, errors, recentlySuccessful } = useForm({
         name: organization.name || "",
         domain: organization.domain || "",
@@ -98,6 +100,7 @@ export default function Organization({ auth, organization, stats, title = "Penga
                     </div>
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-5 max-w-xl">
+                        <fieldset disabled={!canManage} className="contents">
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="org-name" className="text-xs font-semibold">
                                 Nama Organisasi / Perusahaan
@@ -152,6 +155,15 @@ export default function Organization({ auth, organization, stats, title = "Penga
                             </p>
                         </div>
 
+                        </fieldset>
+
+                        {!canManage && (
+                            <p className="text-xs text-muted-foreground">
+                                Hanya admin organisasi yang dapat mengubah profil ini.
+                            </p>
+                        )}
+
+                        {canManage && (
                         <div className="flex items-center gap-3 pt-2">
                             <Button type="submit" disabled={processing} className="h-10 gap-2 px-5">
                                 <SaveIcon className="size-4" />
@@ -163,6 +175,7 @@ export default function Organization({ auth, organization, stats, title = "Penga
                                 </span>
                             )}
                         </div>
+                        )}
                     </form>
                 </div>
             </div>

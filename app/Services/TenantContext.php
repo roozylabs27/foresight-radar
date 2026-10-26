@@ -54,6 +54,29 @@ class TenantContext
         return $this->superuserBypass;
     }
 
+    /**
+     * Run $callback as $tenant, then put back whatever context was active before,
+     * so a job run inline (sync queue) does not change the dispatching request's tenant.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public function runAs(Tenant $tenant, callable $callback): mixed
+    {
+        [$previousTenant, $previousTenantId, $previousBypass] = [$this->tenant, $this->tenantId, $this->superuserBypass];
+
+        $this->setTenant($tenant);
+        $this->superuserBypass = false;
+
+        try {
+            return $callback();
+        } finally {
+            [$this->tenant, $this->tenantId, $this->superuserBypass] = [$previousTenant, $previousTenantId, $previousBypass];
+        }
+    }
+
     public function reset(): void
     {
         $this->tenant = null;
