@@ -8,6 +8,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Inertia\Inertia;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -32,6 +33,13 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Tenant context must exist before implicit route-model binding, otherwise
+        // TenantScope sees no tenant and every bound model resolves to 404.
+        $middleware->prependToPriorityList(
+            SubstituteBindings::class,
+            EnforceTenantContext::class,
+        );
 
         $middleware->alias([
             'role' => RoleMiddleware::class,
