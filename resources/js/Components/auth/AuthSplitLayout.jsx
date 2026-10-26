@@ -8,12 +8,6 @@ import { I18nProvider } from "@/context/I18nContext";
 
 const COPYRIGHT = "© 2026 Foresight Radar. Hak cipta dilindungi.";
 
-const HORIZON_PILLS = [
-    { code: "H1", label: "Short Term", dotClass: "bg-primary dark:bg-primary" },
-    { code: "H2", label: "Mid Term", dotClass: "bg-scan dark:bg-scan" },
-    { code: "H3", label: "Long Term", dotClass: "bg-amber-600 dark:bg-amber-400" },
-];
-
 /**
  * Architectural polar horizon-scanning radar SVG backdrop.
  * Adapts stroke/fill opacities between light mode (cobalt/teal on soft horizon blue)
@@ -141,20 +135,7 @@ function AuthSplitContent({ slides, children }) {
                     </span>
                 </Link>
 
-                <div className="relative z-10 hidden lg:flex lg:flex-col lg:gap-6">
-                    <div className="flex flex-wrap items-center gap-2" aria-hidden="true">
-                        {HORIZON_PILLS.map((horizon) => (
-                            <span
-                                key={horizon.code}
-                                className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-card/75 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-foreground/85 shadow-2xs backdrop-blur-xs dark:border-white/10 dark:bg-white/6 dark:text-on-night/85"
-                            >
-                                <span className={`size-1.5 rounded-full ${horizon.dotClass}`} />
-                                <span className="font-mono font-bold text-primary dark:text-scan">{horizon.code}</span>
-                                <span className="text-muted-foreground dark:text-on-night/70">{horizon.label}</span>
-                            </span>
-                        ))}
-                    </div>
-
+                <div className="relative z-10 hidden lg:block">
                     <AuthCarousel slides={slides} />
                 </div>
 
