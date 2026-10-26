@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Ramsey\Uuid\Uuid;
 
 /**
  * Analyst judgement of how driving force `source` affects `target`:
@@ -11,10 +13,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CrossImpact extends Model
 {
+    use BelongsToTenant;
+
     public const MIN_SCORE = -3;
+
     public const MAX_SCORE = 3;
 
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'source_driving_force_id',
         'target_driving_force_id',
@@ -32,7 +38,7 @@ class CrossImpact extends Model
     {
         static::creating(function ($model) {
             if (empty($model->uuid)) {
-                $model->uuid = (string) \Ramsey\Uuid\Uuid::uuid4();
+                $model->uuid = (string) Uuid::uuid4();
             }
         });
     }

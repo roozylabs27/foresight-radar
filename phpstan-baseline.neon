@@ -1,0 +1,696 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Parameter \\#1 \\$user of class Illuminate\\\\Auth\\\\Events\\\\Verified constructor expects Illuminate\\\\Contracts\\\\Auth\\\\MustVerifyEmail, App\\\\Models\\\\User\\|null given\\.$#"
+			count: 1
+			path: app/Http/Controllers/Auth/VerifyEmailController.php
+
+		-
+			message: "#^Parameter \\#1 \\$perPage of method Illuminate\\\\Database\\\\Eloquent\\\\Builder\\<App\\\\Models\\\\Signal\\>\\:\\:paginate\\(\\) expects int\\|null, array\\|string\\|null given\\.$#"
+			count: 1
+			path: app/Http/Controllers/SignalIngestionController.php
+
+		-
+			message: "#^Parameter \\#2 \\$default of method Illuminate\\\\Http\\\\Request\\:\\:query\\(\\) expects array\\|string\\|null, int given\\.$#"
+			count: 1
+			path: app/Http/Controllers/SignalIngestionController.php
+
+		-
+			message: "#^Access to an undefined property Spatie\\\\Permission\\\\Models\\\\Role\\:\\:\\$display_name\\.$#"
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: "#^Ternary operator condition is always true\\.$#"
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ApprovalItemsCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ApprovalItemsCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/ApprovalItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ApprovalItemsCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ApprovalItemsCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ApprovalItemsCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ApprovalItemsCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ApprovalItemsCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/ApprovalItemsCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$approved_at\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$dimension\\.$#"
+			count: 2
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$keyword\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$pic_user\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$rating\\.$#"
+			count: 6
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$status\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ApprovalItemsResource\\:\\:\\$uuid\\.$#"
+			count: 1
+			path: app/Http/Resources/ApprovalItemsResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ClosedItemsCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ClosedItemsCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/ClosedItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ClosedItemsCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ClosedItemsCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ClosedItemsCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ClosedItemsCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ClosedItemsCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/ClosedItemsCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$closed_at\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$dimension\\.$#"
+			count: 2
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$keyword\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$pic_user\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$rating\\.$#"
+			count: 6
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$status\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ClosedItemsResource\\:\\:\\$uuid\\.$#"
+			count: 1
+			path: app/Http/Resources/ClosedItemsResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/DrivingForceCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/DrivingForceCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$dimension\\.$#"
+			count: 2
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$keyword\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$pic_user\\.$#"
+			count: 2
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$rating\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$source_signal\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$status\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$supporting_signals\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:\\$uuid\\.$#"
+			count: 1
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\DrivingForceResource\\:\\:relationLoaded\\(\\)\\.$#"
+			count: 3
+			path: app/Http/Resources/DrivingForceResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:\\$action_reasons\\.$#"
+			count: 1
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:\\$driving_force\\.$#"
+			count: 2
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:\\$impact_analysis\\.$#"
+			count: 2
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:\\$priority\\.$#"
+			count: 2
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:\\$status_action\\.$#"
+			count: 3
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:\\$time_horizon\\.$#"
+			count: 2
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:\\$uncertainty_analysis\\.$#"
+			count: 1
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\ForesightRadarResource\\:\\:relationLoaded\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/ForesightRadarResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\OverallStatusCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/OverallStatusCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\OverallStatusCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/OverallStatusCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\OverallStatusCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/OverallStatusCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\OverallStatusCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/OverallStatusCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\OverallStatusCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/OverallStatusCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\OverallStatusCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/OverallStatusCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\OverallStatusCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/OverallStatusCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\OverallStatusResource\\:\\:\\$action_reasons\\.$#"
+			count: 2
+			path: app/Http/Resources/OverallStatusResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\OverallStatusResource\\:\\:\\$driving_force\\.$#"
+			count: 3
+			path: app/Http/Resources/OverallStatusResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\OverallStatusResource\\:\\:\\$priority_id\\.$#"
+			count: 3
+			path: app/Http/Resources/OverallStatusResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\OverallStatusResource\\:\\:\\$status_action\\.$#"
+			count: 2
+			path: app/Http/Resources/OverallStatusResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\OverallStatusResource\\:\\:\\$status_action_id\\.$#"
+			count: 2
+			path: app/Http/Resources/OverallStatusResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\OverallStatusResource\\:\\:\\$time_horizon_id\\.$#"
+			count: 3
+			path: app/Http/Resources/OverallStatusResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\OverallStatusResource\\:\\:\\$uuid\\.$#"
+			count: 1
+			path: app/Http/Resources/OverallStatusResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:\\$action_reasons\\.$#"
+			count: 1
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:\\$driving_force\\.$#"
+			count: 1
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:\\$impact_analysis\\.$#"
+			count: 2
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:\\$priority\\.$#"
+			count: 1
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:\\$status_action\\.$#"
+			count: 2
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:\\$time_horizon\\.$#"
+			count: 1
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:\\$uncertainty_analysis\\.$#"
+			count: 2
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\PrioritizingResource\\:\\:relationLoaded\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/PrioritizingResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\RatingUrgencyCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\RatingUrgencyCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/RatingUrgencyCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\RatingUrgencyCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\RatingUrgencyCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\RatingUrgencyCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\RatingUrgencyCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\RatingUrgencyCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/RatingUrgencyCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\RatingUrgencyResource\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\RatingUrgencyResource\\:\\:\\$dimension\\.$#"
+			count: 2
+			path: app/Http/Resources/RatingUrgencyResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\RatingUrgencyResource\\:\\:\\$id\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\RatingUrgencyResource\\:\\:\\$keyword\\.$#"
+			count: 1
+			path: app/Http/Resources/RatingUrgencyResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\RatingUrgencyResource\\:\\:\\$rating\\.$#"
+			count: 2
+			path: app/Http/Resources/RatingUrgencyResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\StatusActionCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/StatusActionCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\StatusActionCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/StatusActionCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\StatusActionCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/StatusActionCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\StatusActionCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/StatusActionCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\StatusActionCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/StatusActionCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\StatusActionCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/StatusActionCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\StatusActionCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/StatusActionCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\StatusActionResource\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/StatusActionResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\StatusActionResource\\:\\:\\$dimension\\.$#"
+			count: 2
+			path: app/Http/Resources/StatusActionResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\StatusActionResource\\:\\:\\$keyword\\.$#"
+			count: 1
+			path: app/Http/Resources/StatusActionResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\StatusActionResource\\:\\:\\$rating\\.$#"
+			count: 15
+			path: app/Http/Resources/StatusActionResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\TimeHorizonCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\TimeHorizonCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/TimeHorizonCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\TimeHorizonCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\TimeHorizonCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\TimeHorizonCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\TimeHorizonCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\TimeHorizonCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/TimeHorizonCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\TimeHorizonResource\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\TimeHorizonResource\\:\\:\\$dimension\\.$#"
+			count: 2
+			path: app/Http/Resources/TimeHorizonResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\TimeHorizonResource\\:\\:\\$id\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\TimeHorizonResource\\:\\:\\$keyword\\.$#"
+			count: 1
+			path: app/Http/Resources/TimeHorizonResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\TimeHorizonResource\\:\\:\\$rating\\.$#"
+			count: 4
+			path: app/Http/Resources/TimeHorizonResource.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\UserCollection\\:\\:currentPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/UserCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\UserCollection\\:\\:lastPage\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/UserCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\UserCollection\\:\\:nextPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/UserCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\UserCollection\\:\\:perPage\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/UserCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\UserCollection\\:\\:previousPageUrl\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/UserCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\UserCollection\\:\\:total\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/UserCollection.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Http\\\\Resources\\\\UserCollection\\:\\:url\\(\\)\\.$#"
+			count: 2
+			path: app/Http/Resources/UserCollection.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\UserResource\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\UserResource\\:\\:\\$email\\.$#"
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\UserResource\\:\\:\\$name\\.$#"
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\UserResource\\:\\:\\$roles\\.$#"
+			count: 2
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\UserResource\\:\\:\\$uuid\\.$#"
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: "#^Offset 'score' on array\\{source\\: string, target\\: string, score\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: app/Services/CausalLoopService.php
+
+		-
+			message: "#^Offset 'source' on array\\{source\\: string, target\\: string, score\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: app/Services/CausalLoopService.php
+
+		-
+			message: "#^Offset 'target' on array\\{source\\: string, target\\: string, score\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: app/Services/CausalLoopService.php
+
+		-
+			message: "#^Access to an undefined property Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Services/ReasoningEngineService.php
+
+		-
+			message: "#^Using nullsafe property access on non\\-nullable type App\\\\Models\\\\DrivingForceRating\\. Use \\-\\> instead\\.$#"
+			count: 1
+			path: app/Services/ScenarioService.php
+
+		-
+			message: "#^Offset 'force' on array\\{force\\: string, status_action\\?\\: string, impact\\?\\: int, uncertainty\\?\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: app/Services/ScenarioSimulationService.php
+
+		-
+			message: "#^Undefined variable\\: \\$this$#"
+			count: 1
+			path: routes/console.php

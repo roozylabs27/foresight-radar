@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Rules\WordCountRule;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class DrivingForceRequest extends FormRequest
@@ -18,23 +19,23 @@ class DrivingForceRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        if (request()->isMethod("POST")) {
+        if (request()->isMethod('POST')) {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(20)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', 'exists:users,id']
+                'pic_id' => ['required', 'exists:users,id'],
             ];
         } else {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(30)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', 'exists:users,id']
+                'pic_id' => ['required', 'exists:users,id'],
             ];
         }
     }

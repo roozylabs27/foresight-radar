@@ -52,7 +52,7 @@
     {
         "dimension_id" : 2,
         "keyword" : "COP 28",
-        "description" : "Concessus on COP28 to accelearte the emission reduction by each countries"
+        "description" : "Consensus on COP28 to accelerate emission reduction commitments across participating countries."
     },
     {
         "dimension_id" : 2,
@@ -87,11 +87,11 @@
     {
         "dimension_id" : 8,
         "keyword" : "New comers",
-        "description" : "Some suppliers has an intention invest new technology of xEV in near future"
+        "description" : "New automotive market entrants and global OEMs are aggressively investing in localized xEV technology."
     },
     {
         "dimension_id" : 6,
         "keyword" : "Invest xEV Technology",
-        "description" : "The number of car sharing apps increase."
+        "description" : "Tier-1 component suppliers are expanding capital investments for xEV powertrain and battery technologies."
     }
 ]

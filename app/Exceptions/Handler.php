@@ -3,7 +3,9 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
@@ -33,9 +35,8 @@ class Handler extends ExceptionHandler
     /**
      * Render an exception into an HTTP response.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Throwable  $e
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @param  Request  $request
+     * @return Response
      */
     public function render($request, Throwable $e)
     {
@@ -44,14 +45,14 @@ class Handler extends ExceptionHandler
         $statusCode = $response->getStatusCode();
 
         // Pass through pure JSON API requests that are not Inertia requests
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return $response;
         }
 
         // Handle specific HTTP error status codes for Inertia visits
         if (in_array($statusCode, [403, 404, 419, 500, 503])) {
             // In local debug mode, let unexpected 500 exceptions show details unless requested via Inertia
-            if ($statusCode === 500 && config('app.debug') && !$request->header('X-Inertia') && !app()->runningUnitTests()) {
+            if ($statusCode === 500 && config('app.debug') && ! $request->header('X-Inertia') && ! app()->runningUnitTests()) {
                 return $response;
             }
 

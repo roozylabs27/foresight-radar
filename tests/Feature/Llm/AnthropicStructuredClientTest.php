@@ -4,6 +4,7 @@ namespace Tests\Feature\Llm;
 
 use App\Services\Llm\AnthropicStructuredClient;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\LlmRequest;
 use App\Services\Llm\NullLlmClient;
 use App\Services\Llm\StructuredLlmClient;
 use Illuminate\Support\Facades\Log;
@@ -80,11 +81,12 @@ class AnthropicStructuredClientTest extends TestCase
 
         Log::shouldHaveReceived('info')->withArgs(function ($message, $context) {
             $encoded = json_encode($context);
+
             return $message === 'llm.call'
                 && $context['purpose'] === 'signal_extraction'
                 && $context['usage']['input_tokens'] === 1200
-                && !str_contains($encoded, 'CONFIDENTIAL')
-                && !str_contains($encoded, 'sk-test');
+                && ! str_contains($encoded, 'CONFIDENTIAL')
+                && ! str_contains($encoded, 'sk-test');
         })->once();
     }
 
@@ -98,6 +100,6 @@ class AnthropicStructuredClientTest extends TestCase
         $this->assertInstanceOf(NullLlmClient::class, $client);
         $this->assertFalse($client->isAvailable());
         $this->expectException(LlmException::class);
-        $client->generateJson(new \App\Services\Llm\LlmRequest('test', 'system', 'user', ['type' => 'object']));
+        $client->generateJson(new LlmRequest('test', 'system', 'user', ['type' => 'object']));
     }
 }

@@ -2,6 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\LlmJobStatus;
+use App\Models\Source;
+use App\Services\SignalExtractionService;
+use App\Services\TenantContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -17,7 +21,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Determine the current asset version.
      */
-    public function version(Request $request): string|null
+    public function version(Request $request): ?string
     {
         return parent::version($request);
     }
@@ -33,25 +37,61 @@ class HandleInertiaRequests extends Middleware
 
         $data = [
             ...parent::share($request),
+            'locale' => app()->getLocale(),
+            'supported_locales' => [
+                'id' => ['code' => 'id', 'name' => 'Bahasa Indonesia', 'short' => 'ID'],
+                'en' => ['code' => 'en', 'name' => 'English', 'short' => 'EN'],
+            ],
             'auth' => [
                 'user' => $user,
             ],
-            'canRegister' => (bool) config('auth.allow_registration', true),
+            'canRegister' => (bool) config('auth.allow_registration', false),
         ];
 
         if ($user) {
+            $activeExtractions = Source::whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+                ->where('created_at', '>=', now()->subHours(12))
+                ->where(function ($q) use ($user) {
+                    $q->where('created_by', $user->id);
+                    if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
+                        $q->orWhereNull('created_by');
+                    }
+                })
+                ->latest()
+                ->get()
+                ->map(fn ($source) => app(SignalExtractionService::class)->progress($source))
+                ->values();
+
             $data = [
                 ...$data,
+                'active_extractions' => $activeExtractions,
                 'auth' => [
-                    'user' => $user,
+                    'user' => [
+                        'id' => $user->id,
+                        'uuid' => $user->uuid,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'email_verified_at' => $user->email_verified_at,
+                    ],
+                    'tenant' => function () {
+                        $tenant = app(TenantContext::class)->getTenant();
+
+                        return $tenant ? [
+                            'id' => $tenant->id,
+                            'uuid' => $tenant->uuid,
+                            'name' => $tenant->name,
+                            'slug' => $tenant->slug,
+                            'plan' => $tenant->plan,
+                        ] : null;
+                    },
                     'role' => $user->roles->first()?->name ?? null,
                     'permissions' => method_exists($user, 'getAllPermissions')
                         ? $user->getAllPermissions()->pluck('name')->toArray()
                         : ($user->permissions ? $user->permissions->pluck('name')->toArray() : []),
-                ]
+                ],
             ];
         }
-        
+
         return $data;
     }
 }

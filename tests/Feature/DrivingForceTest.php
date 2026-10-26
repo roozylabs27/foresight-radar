@@ -4,9 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\DrivingForceRating;
 use App\Models\Environment;
+use App\Models\Signal;
+use App\Models\Source;
+use App\Models\TimeHorizon;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -16,6 +21,7 @@ class DrivingForceTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Dimension $dimension;
 
     private function makePermission(string $name): Permission
@@ -126,8 +132,8 @@ class DrivingForceTest extends TestCase
         ]);
 
         $raw = 'Full text content from biotechnology journal about novel generative AI models.';
-        $source = \App\Models\Source::create([
-            'uuid' => (string) \Ramsey\Uuid\Uuid::uuid4(),
+        $source = Source::create([
+            'uuid' => (string) Uuid::uuid4(),
             'title' => 'Nature Biotechnology',
             'url' => 'https://nature.com/articles/ai-drugs',
             'raw_content' => $raw,
@@ -135,7 +141,7 @@ class DrivingForceTest extends TestCase
             'created_by' => $this->admin->id,
         ]);
 
-        \App\Models\Signal::create([
+        Signal::create([
             'uuid' => fake()->uuid(),
             'source_id' => $source->id,
             'dimension_id' => $this->dimension->id,
@@ -163,7 +169,7 @@ class DrivingForceTest extends TestCase
 
     public function test_soft_deleting_driving_force_cascades_to_rating(): void
     {
-        $timeHorizon = \App\Models\TimeHorizon::create([
+        $timeHorizon = TimeHorizon::create([
             'uuid' => fake()->uuid(),
             'name' => 'Medium Term',
             'code' => 'MT',
@@ -179,7 +185,7 @@ class DrivingForceTest extends TestCase
             'status' => 'PENDING',
         ]);
 
-        $rating = \App\Models\DrivingForceRating::create([
+        $rating = DrivingForceRating::create([
             'uuid' => fake()->uuid(),
             'driving_force_id' => $drivingForce->id,
             'time_horizon_id' => $timeHorizon->id,
@@ -197,20 +203,20 @@ class DrivingForceTest extends TestCase
 
         $this->assertSoftDeleted('driving_forces', ['id' => $drivingForce->id]);
         $this->assertSoftDeleted('driving_force_ratings', ['id' => $rating->id]);
-        $this->assertNull(\App\Models\DrivingForceRating::find($rating->id));
-        $this->assertNotNull(\App\Models\DrivingForceRating::withTrashed()->find($rating->id));
+        $this->assertNull(DrivingForceRating::find($rating->id));
+        $this->assertNotNull(DrivingForceRating::withTrashed()->find($rating->id));
 
         // Restore driving force
         $drivingForce->restore();
 
         $this->assertNotSoftDeleted('driving_forces', ['id' => $drivingForce->id]);
         $this->assertNotSoftDeleted('driving_force_ratings', ['id' => $rating->id]);
-        $this->assertNotNull(\App\Models\DrivingForceRating::find($rating->id));
+        $this->assertNotNull(DrivingForceRating::find($rating->id));
     }
 
     public function test_driving_force_fetch_data_returns_pipeline_stepper_metadata(): void
     {
-        $timeHorizon = \App\Models\TimeHorizon::create([
+        $timeHorizon = TimeHorizon::create([
             'uuid' => fake()->uuid(),
             'name' => 'Near Term',
             'code' => 'NT',
@@ -238,7 +244,7 @@ class DrivingForceTest extends TestCase
             'status' => 'PENDING',
         ]);
 
-        \App\Models\DrivingForceRating::create([
+        DrivingForceRating::create([
             'uuid' => fake()->uuid(),
             'driving_force_id' => $df2->id,
             'time_horizon_id' => $timeHorizon->id,

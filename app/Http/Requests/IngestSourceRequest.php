@@ -15,7 +15,7 @@ class IngestSourceRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'min:30', 'max:' . $this->maxChars()],
+            'content' => ['required', 'string', 'min:30', 'max:'.$this->maxChars()],
             'url' => ['nullable', 'url', 'max:2048'],
             'publisher' => ['nullable', 'string', 'max:255'],
             'published_at' => ['nullable', 'date'],
@@ -25,7 +25,7 @@ class IngestSourceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'content.max' => 'Dokumen terlalu panjang (maks. ' . number_format($this->maxChars(), 0, ',', '.') . ' karakter). Pecah menjadi beberapa bagian dan ingest satu per satu.',
+            'content.max' => 'Dokumen terlalu panjang (maks. '.number_format($this->maxChars(), 0, ',', '.').' karakter). Pecah menjadi beberapa bagian dan ingest satu per satu.',
         ];
     }
 

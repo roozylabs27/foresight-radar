@@ -37,7 +37,7 @@ export function ThemeProvider({ children, defaultTheme = "light" }) {
         setThemeState(next);
     };
 
-    return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
+    return <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>;
 }
 
 export function useTheme() {

@@ -2,16 +2,13 @@ import { Link } from "@inertiajs/react";
 
 import AuthCarousel from "@/Components/auth/AuthCarousel";
 import BrandMark from "@/Components/BrandMark";
+import LanguageSwitcher from "@/Components/LanguageSwitcher";
 import ThemeToggle from "@/Components/ThemeToggle";
+import { I18nProvider } from "@/context/I18nContext";
 
 const COPYRIGHT = "© 2026 Foresight Radar. Hak cipta dilindungi.";
 
-/**
- * Login / register screen: brand panel with rotating highlights beside the form.
- * Below lg the panel shrinks to a brand bar so the form stays above the fold.
- * In dark the night panel is almost the page colour, so a border marks the split.
- */
-export default function AuthSplitLayout({ slides, children }) {
+function AuthSplitContent({ slides, children }) {
     return (
         <div className="grid min-h-svh grid-rows-[auto_1fr] bg-background font-sans text-foreground lg:grid-cols-2 lg:grid-rows-none">
             <aside
@@ -39,12 +36,23 @@ export default function AuthSplitLayout({ slides, children }) {
             </aside>
 
             <main className="relative flex items-center justify-center px-6 py-12 sm:px-10">
-                <ThemeToggle className="absolute top-3 right-3" />
+                <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    <LanguageSwitcher />
+                    <ThemeToggle />
+                </div>
                 <div className="w-full max-w-[400px]">
                     {children}
                     <p className="mt-10 mb-0 text-center text-[13px] text-subtle-foreground lg:hidden">{COPYRIGHT}</p>
                 </div>
             </main>
         </div>
+    );
+}
+
+export default function AuthSplitLayout(props) {
+    return (
+        <I18nProvider>
+            <AuthSplitContent {...props} />
+        </I18nProvider>
     );
 }

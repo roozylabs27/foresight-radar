@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app/
+        - routes/
+
+    # Level 5 static analysis
+    level: 5
+
+    reportUnmatchedIgnoredErrors: false

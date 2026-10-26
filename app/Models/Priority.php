@@ -12,6 +12,6 @@ class Priority extends Model
     protected $fillable = [
         'uuid',
         'name',
-        'color'
+        'color',
     ];
 }

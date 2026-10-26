@@ -2,24 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Models\Dimension;
 use App\Services\ForesightReportingService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class ForesightRadarController extends Controller
 {
+    use HandlesApiErrors;
+
     public function index()
     {
         $dimensions = Dimension::all()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
-                'label' => $dimension->name
+                'label' => $dimension->name,
             ];
         });
-        $title = "Foresight Radar";
+        $title = 'Foresight Radar';
 
         return Inertia::render('Report/ForesightRadar', compact('dimensions', 'title'));
     }
@@ -31,10 +32,11 @@ class ForesightRadarController extends Controller
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error('Foresight radar fetch error: ' . $th->getMessage(), ['exception' => $th]);
-            return response()->json([
-                'message' => 'An unexpected server error occurred while retrieving data.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorJsonResponse(
+                $th,
+                'fetching foresight radar data',
+                'An unexpected server error occurred while retrieving data.'
+            );
         }
     }
 }

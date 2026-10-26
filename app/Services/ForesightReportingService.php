@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Resources\ForesightRadarResource;
 use App\Http\Resources\PrioritizingResource;
 use App\Models\Dimension;
+use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,10 +18,10 @@ class ForesightReportingService
     public function resolveDateRange(?array $dateRange = null): array
     {
         $date = $dateRange ?? request('date');
-        if (!empty($date) && is_array($date) && count($date) >= 2 && !empty($date[0]) && !empty($date[1])) {
+        if (! empty($date) && is_array($date) && count($date) >= 2 && ! empty($date[0]) && ! empty($date[1])) {
             return [
-                $date[0] . ' 00:00:00',
-                $date[1] . ' 23:59:59',
+                $date[0].' 00:00:00',
+                $date[1].' 23:59:59',
             ];
         }
 
@@ -42,7 +43,7 @@ class ForesightReportingService
             ->has('driving_force')
             ->whereHas('driving_force', function ($q) use ($dimension) {
                 $q->where('status', 'APPROVED');
-                if (!empty($dimension)) {
+                if (! empty($dimension)) {
                     $q->where('dimension_id', $dimension);
                 }
             })
@@ -63,8 +64,8 @@ class ForesightReportingService
                         ->with([
                             'dimension',
                             'pic_user',
-                            'source_signal.source',
-                            'supporting_signals.source',
+                            'source_signal.source:id,uuid,title,url',
+                            'supporting_signals.source:id,uuid,title,url',
                         ]);
                 },
                 'time_horizon',
@@ -100,8 +101,8 @@ class ForesightReportingService
                     $q->with([
                         'dimension',
                         'pic_user',
-                        'source_signal.source',
-                        'supporting_signals.source',
+                        'source_signal.source:id,uuid,title,url',
+                        'supporting_signals.source:id,uuid,title,url',
                     ]);
                 },
                 'time_horizon',
@@ -138,9 +139,7 @@ class ForesightReportingService
 
         return $this->baseApprovedRatingQuery($dateRange, $dimension)
             ->with([
-                'driving_force' => function ($q) {
-                    $q->orderBy('dimension_id', 'ASC');
-                },
+                'driving_force.dimension',
                 'action_reasons' => function ($q) {
                     $q->whereIn('id', function ($query) {
                         $query->selectRaw('MAX(id)')
@@ -153,9 +152,15 @@ class ForesightReportingService
                     $q->select('id', 'code');
                 },
             ])
-            ->when($timeHorizon, fn($q) => $q->where('time_horizon_id', $timeHorizon))
-            ->when($priority, fn($q) => $q->where('priority_id', $priority))
-            ->when($statusAction, fn($q) => $q->where('status_action_id', $statusAction))
+            ->when($timeHorizon, fn ($q) => $q->where('time_horizon_id', $timeHorizon))
+            ->when($priority, fn ($q) => $q->where('priority_id', $priority))
+            ->when($statusAction, fn ($q) => $q->where('status_action_id', $statusAction))
+            ->orderBy(
+                DrivingForce::select('dimension_id')
+                    ->whereColumn('driving_forces.id', 'driving_force_ratings.driving_force_id')
+                    ->limit(1),
+                'ASC'
+            )
             ->orderBy('created_at', 'ASC');
     }
 }

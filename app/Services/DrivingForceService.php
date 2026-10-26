@@ -23,10 +23,10 @@ class DrivingForceService
      */
     private function resolveDateRange(array $params): array
     {
-        if (!empty($params['date']) && is_array($params['date']) && count($params['date']) === 2) {
+        if (! empty($params['date']) && is_array($params['date']) && count($params['date']) === 2) {
             return [
-                $params['date'][0] . ' 00:00:00',
-                $params['date'][1] . ' 23:59:59',
+                $params['date'][0].' 00:00:00',
+                $params['date'][1].' 23:59:59',
             ];
         }
 
@@ -41,15 +41,15 @@ class DrivingForceService
      */
     private function resolvePageSize(array $params): int
     {
+        $size = 10;
+
         if (isset($params['pagination']['pageSize'])) {
-            return (int) $params['pagination']['pageSize'];
+            $size = (int) $params['pagination']['pageSize'];
+        } elseif (isset($params['pageSize'])) {
+            $size = (int) $params['pageSize'];
         }
 
-        if (isset($params['pageSize'])) {
-            return (int) $params['pageSize'];
-        }
-
-        return 10;
+        return min(100, max(1, $size > 0 ? $size : 10));
     }
 
     /**
@@ -85,14 +85,14 @@ class DrivingForceService
             'created_by_user',
             'updated_by_user',
             'pic_user',
-            'source_signal.source',
-            'supporting_signals.source',
+            'source_signal.source:id,uuid,title,url',
+            'supporting_signals.source:id,uuid,title,url',
             'rating',
         ])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -129,8 +129,8 @@ class DrivingForceService
         $timeHorizons = DrivingForce::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -162,8 +162,8 @@ class DrivingForceService
         $ratings = DrivingForce::with(['dimension', 'rating'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -194,13 +194,21 @@ class DrivingForceService
         $search = $params['search'] ?? null;
         $dimension = $params['dimension'] ?? null;
 
-        $statusActions = DrivingForce::with(['dimension', 'rating.action_reasons' => function ($q) {
-            $q->select('driving_force_rating_id', 'date', 'reason', 'status_action_id')->orderBy('date', 'ASC');
-        }])
+        $statusActions = DrivingForce::with([
+            'dimension',
+            'rating.time_horizon',
+            'rating.priority',
+            'rating.status_action',
+            'rating.action_reasons' => function ($q) {
+                $q->select('driving_force_rating_id', 'date', 'reason', 'status_action_id')
+                    ->with('status_action')
+                    ->orderBy('date', 'ASC');
+            },
+        ])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -255,11 +263,18 @@ class DrivingForceService
         $search = $params['search'] ?? null;
         $dimension = $params['dimension'] ?? null;
 
-        $approvalItems = DrivingForce::with(['rating.action_reasons'])
+        $approvalItems = DrivingForce::with([
+            'dimension',
+            'pic_user',
+            'rating.time_horizon',
+            'rating.priority',
+            'rating.status_action',
+            'rating.action_reasons',
+        ])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {
@@ -290,11 +305,18 @@ class DrivingForceService
         $search = $params['search'] ?? null;
         $dimension = $params['dimension'] ?? null;
 
-        $closedItems = DrivingForce::with(['rating.action_reasons'])
+        $closedItems = DrivingForce::with([
+            'dimension',
+            'pic_user',
+            'rating.time_horizon',
+            'rating.priority',
+            'rating.status_action',
+            'rating.action_reasons',
+        ])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('keyword', 'LIKE', $search . '%')
-                        ->orWhere('description', 'LIKE', $search . '%');
+                    $sub->where('keyword', 'LIKE', $search.'%')
+                        ->orWhere('description', 'LIKE', $search.'%');
                 });
             })
             ->when($dimension, function ($q) use ($dimension) {

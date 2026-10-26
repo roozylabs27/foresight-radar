@@ -2,29 +2,23 @@
 
 namespace App\Models;
 
-use App\Http\Resources\ApprovalItemsCollection;
-use App\Http\Resources\ClosedItemsCollection;
-use App\Http\Resources\ClosedItemsResource;
-use App\Http\Resources\DrivingForceCollection;
-use App\Http\Resources\DrivingForceResource;
-use App\Http\Resources\RatingUrgencyCollection;
-use App\Http\Resources\StatusActionCollection;
-use App\Http\Resources\TimeHorizonCollection;
+use App\Enums\DrivingForceStatus;
+use App\Traits\BelongsToTenant;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DrivingForce extends Model
 {
-    use HasFactory, SoftDeletes;
+    use BelongsToTenant, HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'dimension_id',
         'pic',
@@ -35,7 +29,7 @@ class DrivingForce extends Model
         'status',
         'remark',
         'approved_at',
-        'closed_at'
+        'closed_at',
     ];
 
     protected static function booted()
@@ -60,17 +54,17 @@ class DrivingForce extends Model
 
     public function created_by_user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by')->withTrashed();
     }
 
     public function pic_user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'pic');
+        return $this->belongsTo(User::class, 'pic')->withTrashed();
     }
 
     public function updated_by_user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->belongsTo(User::class, 'updated_by')->withTrashed();
     }
 
     public function rating(): HasOne
@@ -111,16 +105,18 @@ class DrivingForce extends Model
         );
     }
 
-    public function getStatusEnum(): \App\Enums\DrivingForceStatus
+    public function getStatusEnum(): DrivingForceStatus
     {
         $statusStr = $this->status ?? 'PENDING';
-        return \App\Enums\DrivingForceStatus::tryFrom($statusStr) ?? \App\Enums\DrivingForceStatus::PENDING;
+
+        return DrivingForceStatus::tryFrom($statusStr) ?? DrivingForceStatus::PENDING;
     }
 
-    public function transitionTo(\App\Enums\DrivingForceStatus|string $targetStatus): self
+    public function transitionTo(DrivingForceStatus|string $targetStatus): self
     {
         $targetEnum = $this->getStatusEnum()->validateTransitionTo($targetStatus);
         $this->status = $targetEnum->value;
+
         return $this;
     }
 

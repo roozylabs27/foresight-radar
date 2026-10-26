@@ -4,8 +4,11 @@ namespace App\Jobs;
 
 use App\Enums\LlmJobStatus;
 use App\Models\Scenario;
+use App\Models\Tenant;
 use App\Services\ScenarioNarrativeService;
+use App\Services\TenantContext;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -20,7 +23,7 @@ use Throwable;
  * citations, quadrants edited meanwhile, evidence removed) is stored as the
  * generation error for the analyst to read, and nothing is saved.
  */
-class GenerateScenarioNarrative implements ShouldQueue
+class GenerateScenarioNarrative implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -30,6 +33,11 @@ class GenerateScenarioNarrative implements ShouldQueue
 
     public bool $failOnTimeout = true;
 
+    public function uniqueId(): string
+    {
+        return (string) $this->scenario->id;
+    }
+
     public function __construct(public Scenario $scenario, public bool $overwriteEdited, public ?int $userId)
     {
         $this->timeout = (int) config('queue.llm_job_timeout', 300);
@@ -37,6 +45,13 @@ class GenerateScenarioNarrative implements ShouldQueue
 
     public function handle(ScenarioNarrativeService $narratives): void
     {
+        if ($this->scenario->tenant_id) {
+            $tenant = Tenant::find($this->scenario->tenant_id);
+            if ($tenant) {
+                app(TenantContext::class)->setTenant($tenant);
+            }
+        }
+
         if ($this->scenario->generation_status !== LlmJobStatus::QUEUED) {
             return;
         }

@@ -2,22 +2,21 @@
 
 namespace App\Models;
 
-use App\Http\Resources\ClosedItemsResource;
-use App\Http\Resources\ForesightRadarResource;
-use App\Http\Resources\OverallStatusCollection;
-use App\Http\Resources\OverallStatusResource;
-use App\Http\Resources\PrioritizingResource;
+use App\Services\ForesightReportingService;
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Ramsey\Uuid\Uuid;
 
 class DrivingForceRating extends Model
 {
-    use HasFactory, SoftDeletes;
+    use BelongsToTenant, HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'driving_force_id',
         'time_horizon_id',
@@ -31,7 +30,7 @@ class DrivingForceRating extends Model
     {
         static::creating(function ($model) {
             if (empty($model->uuid)) {
-                $model->uuid = (string) \Ramsey\Uuid\Uuid::uuid1();
+                $model->uuid = (string) Uuid::uuid1();
             }
         });
     }
@@ -93,21 +92,21 @@ class DrivingForceRating extends Model
 
     protected static function resolveDateRange(): array
     {
-        return app(\App\Services\ForesightReportingService::class)->resolveDateRange();
+        return app(ForesightReportingService::class)->resolveDateRange();
     }
 
     public static function prioritizing()
     {
-        return app(\App\Services\ForesightReportingService::class)->getPrioritizingDataset();
+        return app(ForesightReportingService::class)->getPrioritizingDataset();
     }
 
     public static function registered_list()
     {
-        return app(\App\Services\ForesightReportingService::class)->getRegisteredListQuery();
+        return app(ForesightReportingService::class)->getRegisteredListQuery();
     }
 
     public static function foresight_radar()
     {
-        return app(\App\Services\ForesightReportingService::class)->getRadarDataset();
+        return app(ForesightReportingService::class)->getRadarDataset();
     }
 }

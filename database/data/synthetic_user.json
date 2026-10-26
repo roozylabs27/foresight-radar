@@ -1,0 +1,75 @@
+[
+    {
+        "name": "Budi Santoso",
+        "department": "Corporate Planning",
+        "email": "budi.santoso@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Rini Indrawati",
+        "department": "Market Intelligence",
+        "email": "rini.indrawati@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Bambang Wijaya",
+        "department": "Government Relations",
+        "email": "bambang.wijaya@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Siti Nurhaliza",
+        "department": "ESG & Sustainability",
+        "email": "siti.nurhaliza@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Dewi Lestari",
+        "department": "R&D Powertrain",
+        "email": "dewi.lestari@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Aditya Pratama",
+        "department": "Product Strategy",
+        "email": "aditya.pratama@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Hendro Gunawan",
+        "department": "Supply Chain Risk",
+        "email": "hendro.gunawan@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Maya Anggraini",
+        "department": "Customer Insights",
+        "email": "maya.anggraini@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Fajar Hidayat",
+        "department": "Regulatory Affairs",
+        "email": "fajar.hidayat@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Nadia Safitri",
+        "department": "Mobility Ecosystem",
+        "email": "nadia.safitri@foresight.internal",
+        "role": "admin"
+    },
+    {
+        "name": "Arya Kusuma",
+        "department": "Executive Strategic Board",
+        "email": "arya.kusuma@foresight.internal",
+        "role": "bod"
+    },
+    {
+        "name": "Tri Wahyuni",
+        "department": "Executive Risk Committee",
+        "email": "tri.wahyuni@foresight.internal",
+        "role": "bod"
+    }
+]
+

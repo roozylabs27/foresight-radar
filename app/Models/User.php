@@ -8,17 +8,32 @@ use App\Http\Resources\UserCollection;
 use App\Support\TableSort;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property int $id
+ * @property int|null $tenant_id
+ * @property string $uuid
+ * @property string $name
+ * @property string $email
+ * @property-read Collection<int, UserLlmSetting> $llmSettings
+ *
+ * @method \Illuminate\Database\Eloquent\Relations\HasMany llmSettings()
+ */
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +41,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'name',
         'email',
@@ -36,7 +52,7 @@ class User extends Authenticatable
     {
         static::creating(function ($user) {
             if (empty($user->uuid)) {
-                $user->uuid = (string) \Illuminate\Support\Str::uuid();
+                $user->uuid = (string) Str::uuid();
             }
         });
     }
@@ -70,16 +86,20 @@ class User extends Authenticatable
 
     public static function filter()
     {
-        $pagination = request('pagination.pageSize', 10);
+        $rawPagination = (int) request('pagination.pageSize', request('pageSize', 10));
+        $pagination = min(100, max(1, $rawPagination > 0 ? $rawPagination : 10));
         $search = request('search');
         $date_range = request('date');
-        $has_date = is_array($date_range) && count($date_range) === 2 && !empty($date_range[0]) && !empty($date_range[1]);
+        $has_date = is_array($date_range) && count($date_range) === 2 && ! empty($date_range[0]) && ! empty($date_range[1]);
 
-        if (in_array('developer', auth()->user()->roles->pluck('name')->toArray())) {
+        $currentUser = Auth::user();
+        $userRoles = $currentUser?->roles->pluck('name')->toArray() ?? [];
+
+        if (in_array('developer', $userRoles)) {
             $users = self::query()->with('roles', function ($q) {
                 $q->select('id', 'display_name')->orderBy('id');
             });
-        } else if (in_array('super-admin', auth()->user()->roles->pluck('name')->toArray())) {
+        } elseif (in_array('super-admin', $userRoles)) {
             $users = self::query()->with('roles', function ($q) {
                 $q->select('id', 'display_name');
             })->whereHas('roles', function ($q) {
@@ -95,13 +115,13 @@ class User extends Authenticatable
 
         $users = $users->when($search, function ($q) use ($search) {
             $q->where(function ($sub) use ($search) {
-                $sub->where('name', 'LIKE',  $search . '%')
-                    ->orWhere('email', 'LIKE', $search . '%');
+                $sub->where('name', 'LIKE', $search.'%')
+                    ->orWhere('email', 'LIKE', $search.'%');
             });
         })
             ->when($has_date, function ($q) use ($date_range) {
-                $q->where('created_at', '>=', $date_range[0] . ' 00:00:00')
-                    ->where('created_at', '<=', $date_range[1] . ' 23:59:59');
+                $q->where('created_at', '>=', $date_range[0].' 00:00:00')
+                    ->where('created_at', '<=', $date_range[1].' 23:59:59');
             })
             ->tap(fn ($q) => TableSort::apply(
                 $q,
@@ -128,5 +148,15 @@ class User extends Authenticatable
     public function getRouteKeyName()
     {
         return 'uuid';
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function llmSettings(): HasMany
+    {
+        return $this->hasMany(UserLlmSetting::class);
     }
 }

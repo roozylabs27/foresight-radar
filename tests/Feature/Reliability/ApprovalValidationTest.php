@@ -4,11 +4,16 @@ namespace Tests\Feature\Reliability;
 
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\DrivingForceRating;
 use App\Models\Environment;
+use App\Models\Priority;
+use App\Models\StatusAction;
+use App\Models\TimeHorizon;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ApprovalValidationTest extends TestCase
@@ -136,8 +141,9 @@ class ApprovalValidationTest extends TestCase
 
         $env = Environment::create(['name' => 'General', 'uuid' => Uuid::uuid1()]);
         $dim = Dimension::create(['name' => 'Technology', 'symbol' => 'T', 'environment_id' => $env->id, 'uuid' => Uuid::uuid1()]);
-        $sa = \App\Models\StatusAction::create(['name' => 'Act', 'symbol' => 'A', 'uuid' => Uuid::uuid1()]);
-        $th = \App\Models\TimeHorizon::create(['name' => 'Mid Term', 'code' => 'MT', 'uuid' => Uuid::uuid1()]);
+        $sa = StatusAction::create(['name' => 'Act', 'symbol' => 'A', 'uuid' => Uuid::uuid1()]);
+        $th = TimeHorizon::create(['name' => 'Mid Term', 'code' => 'MT', 'uuid' => Uuid::uuid1()]);
+        $priority = Priority::create(['name' => 'High', 'color' => '#ff0000', 'uuid' => Uuid::uuid1()]);
 
         $df = DrivingForce::create([
             'uuid' => Uuid::uuid1(),
@@ -149,14 +155,14 @@ class ApprovalValidationTest extends TestCase
             'status' => 'PENDING',
         ]);
 
-        \App\Models\DrivingForceRating::create([
+        DrivingForceRating::create([
             'uuid' => Uuid::uuid1(),
             'driving_force_id' => $df->id,
             'time_horizon_id' => $th->id,
             'status_action_id' => $sa->id,
             'impact_analysis' => 8,
             'uncertainty_analysis' => 7,
-            'priority_id' => 1,
+            'priority_id' => $priority->id,
         ]);
 
         $response = $this->actingAs($user)->postJson("/approval-items/{$df->uuid}", [
@@ -183,7 +189,7 @@ class ApprovalValidationTest extends TestCase
             $this->makePermission($permName);
         }
 
-        $bodRole = \Spatie\Permission\Models\Role::firstOrCreate([
+        $bodRole = Role::firstOrCreate([
             'name' => 'bod',
             'guard_name' => 'web',
         ], [
@@ -197,8 +203,9 @@ class ApprovalValidationTest extends TestCase
 
         $env = Environment::create(['name' => 'General', 'uuid' => Uuid::uuid1()]);
         $dim = Dimension::create(['name' => 'Technology', 'symbol' => 'T', 'environment_id' => $env->id, 'uuid' => Uuid::uuid1()]);
-        $sa = \App\Models\StatusAction::create(['name' => 'Act', 'symbol' => 'A', 'uuid' => Uuid::uuid1()]);
-        $th = \App\Models\TimeHorizon::create(['name' => 'Mid Term', 'code' => 'MT', 'uuid' => Uuid::uuid1()]);
+        $sa = StatusAction::create(['name' => 'Act', 'symbol' => 'A', 'uuid' => Uuid::uuid1()]);
+        $th = TimeHorizon::create(['name' => 'Mid Term', 'code' => 'MT', 'uuid' => Uuid::uuid1()]);
+        $priority = Priority::create(['name' => 'High', 'color' => '#ff0000', 'uuid' => Uuid::uuid1()]);
 
         $df = DrivingForce::create([
             'uuid' => Uuid::uuid1(),
@@ -210,14 +217,14 @@ class ApprovalValidationTest extends TestCase
             'status' => 'PENDING',
         ]);
 
-        \App\Models\DrivingForceRating::create([
+        DrivingForceRating::create([
             'uuid' => Uuid::uuid1(),
             'driving_force_id' => $df->id,
             'time_horizon_id' => $th->id,
             'status_action_id' => $sa->id,
             'impact_analysis' => 8,
             'uncertainty_analysis' => 7,
-            'priority_id' => 1,
+            'priority_id' => $priority->id,
         ]);
 
         $response = $this->actingAs($bodUser)->postJson("/approval-items/{$df->uuid}", [

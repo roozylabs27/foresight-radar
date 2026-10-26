@@ -2,9 +2,9 @@ name: CI & Security Quality Gate
 
 on:
   push:
-    branches: [main, master, dev, develop]
+    branches: [main, master, dev, develop, development, 'feat/**']
   pull_request:
-    branches: [main, master, dev, develop]
+    branches: [main, master, dev, develop, development, 'feat/**']
 
 jobs:
   backend:
@@ -31,14 +31,16 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: pdo_mysql, pdo_sqlite, mbstring, bcmath, gd, zip
           coverage: none
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Composer Security Audit
+      # Security Policy: composer audit reports upstream advisories in the Laravel 11 ecosystem.
+      # Runs in advisory reporting mode pending major framework version upgrades.
+      - name: Composer Security Audit (Advisory)
         run: composer audit
         continue-on-error: true
 
@@ -47,6 +49,12 @@ jobs:
 
       - name: Generate key
         run: php artisan key:generate
+
+      - name: Code style check (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Static analysis (Larastan)
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G
 
       - name: Run test suite
         env:
@@ -74,9 +82,70 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: NPM Security Audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
+      # Security Policy: Blocks CI if any CRITICAL severity vulnerability is detected.
+      # Known SheetJS/esbuild high/moderate advisories remain tracked until replacement packages are adopted.
+      - name: NPM Security Audit (Block on Critical)
+        run: npm audit --audit-level=critical
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
 
       - name: Build production assets
         run: npm run build
+
+  e2e:
+    name: Headless E2E Smoke & Critical Journeys
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testing
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, redis
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Prepare Laravel application
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate:fresh --seed
+          php artisan serve --port=8080 &
+
+      - name: Run E2E Smoke Test
+        run: npx e2e run tests/e2e/smoke.e2e.ts

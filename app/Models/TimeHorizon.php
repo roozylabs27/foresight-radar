@@ -12,6 +12,6 @@ class TimeHorizon extends Model
     protected $fillable = [
         'uuid',
         'name',
-        'code'
+        'code',
     ];
 }

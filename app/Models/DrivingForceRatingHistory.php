@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,10 +12,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class DrivingForceRatingHistory extends Model
 {
+    use BelongsToTenant;
+
     public const UPDATED_AT = null;
+
     public const CREATED_AT = 'changed_at';
 
     protected $fillable = [
+        'tenant_id',
         'driving_force_rating_id',
         'driving_force_id',
         'event',

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,7 +22,7 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        if (!config('auth.allow_registration', true)) {
+        if (! config('auth.allow_registration', false)) {
             abort(403, 'Public account registration is restricted. Please contact your system administrator.');
         }
 
@@ -31,11 +32,11 @@ class RegisteredUserController extends Controller
     /**
      * Handle an incoming registration request.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
-        if (!config('auth.allow_registration', true)) {
+        if (! config('auth.allow_registration', false)) {
             abort(403, 'Public account registration is restricted. Please contact your system administrator.');
         }
 

@@ -7,23 +7,28 @@ use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\StatusAction;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
-use Faker\Factory as Dummy;
 
 class DrivingForceSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
-    protected $driving_forces, $driving_force_ratings, $dummy;
+    protected $driving_forces;
+
+    protected $driving_force_ratings;
+
+    protected array $synthetic_reasons = [];
 
     public function __construct()
     {
-        $this->dummy = Dummy::create('id_ID');
-        $this->driving_forces = json_decode(file_get_contents(__DIR__ . '../../data/driving_force.json', true));
-        $this->driving_force_ratings = json_decode(file_get_contents(__DIR__ . '../../data/driving_force_rating.json', true));
+        $this->driving_forces = json_decode(file_get_contents(database_path('data/driving_force.json')));
+        $this->driving_force_ratings = json_decode(file_get_contents(database_path('data/driving_force_rating.json')));
+        $reasonsFile = database_path('data/action_reason.json');
+        if (file_exists($reasonsFile)) {
+            $this->synthetic_reasons = json_decode(file_get_contents($reasonsFile), true) ?: [];
+        }
     }
 
     public function run(): void
@@ -43,12 +48,11 @@ class DrivingForceSeeder extends Seeder
         }
     }
 
-    public function initializeDefaultDrivingForce($driving_force)
+    public function initializeDefaultDrivingForce($driving_force): void
     {
         DrivingForce::firstOrCreate([
-            'keyword' => $driving_force->keyword
-        ],
-        [
+            'keyword' => $driving_force->keyword,
+        ], [
             'uuid' => Uuid::uuid1(),
             'dimension_id' => $driving_force->dimension_id,
             'description' => $driving_force->description,
@@ -56,17 +60,16 @@ class DrivingForceSeeder extends Seeder
             'created_by' => User::all()->random()->id,
             'updated_by' => User::all()->random()->id,
             'pic' => User::all()->random()->id,
-            'approved_at' => now()->subDays(rand(0, 30))
+            'approved_at' => now()->subDays(rand(10, 45)),
         ]);
     }
 
-    public function initializeDefaultDrivingForceRating($rating)
+    public function initializeDefaultDrivingForceRating($rating): void
     {
-        $rating = DrivingForceRating::firstOrCreate([
+        $createdRating = DrivingForceRating::firstOrCreate([
             'driving_force_id' => $rating->driving_force_id,
             'status_action_id' => $rating->status_action_id,
-        ],
-        [
+        ], [
             'uuid' => Uuid::uuid1(),
             'time_horizon_id' => $rating->time_horizon_id,
             'priority_id' => $rating->priority_id,
@@ -74,18 +77,61 @@ class DrivingForceSeeder extends Seeder
             'uncertainty_analysis' => $rating->uncertainty_analysis,
         ]);
 
-        for($i=mt_rand(1,3); $i >= 1; $i--) {
-            ActionReason::create([
-                'uuid' => Uuid::uuid1(),
-                'driving_force_rating_id' => $rating->id,
-                'status_action_id' => StatusAction::all()->random()->id,
-                'date' => now()->subDays($i)->subHours(rand(0,24))->subMinutes(rand(0,60))->subSeconds(rand(0,60)),
-                'reason' => $this->dummy->paragraph(rand(1,3))
-            ]);
+        $df = DrivingForce::find($rating->driving_force_id);
+        $statusActions = StatusAction::all()->keyBy('name');
+        $monitoringStatus = $statusActions->get('Monitoring') ?? StatusAction::first();
+        $decidedStatus = $statusActions->get('Decided Plan') ?? StatusAction::orderBy('id', 'desc')->first();
+
+        $isFinalDecided = ((int) $rating->status_action_id === (int) $decidedStatus->id);
+
+        // Reset previous seeded reasons if re-running seeder so no stale Lorem Ipsum remains
+        ActionReason::where('driving_force_rating_id', $createdRating->id)->delete();
+
+        // 1) Historical surveillance milestone (25-45 days ago): initial Monitoring
+        $firstDate = now()->subDays(rand(25, 45))->subHours(rand(1, 12))->subMinutes(rand(1, 50));
+        ActionReason::create([
+            'uuid' => Uuid::uuid1(),
+            'driving_force_rating_id' => $createdRating->id,
+            'status_action_id' => $monitoringStatus->id,
+            'date' => $firstDate,
+            'reason' => $this->getSyntheticReason($df?->keyword, 'Monitoring', 1),
+        ]);
+
+        // 2) Current assessment milestone (2-8 days ago): Monitoring or Decided Plan based on target rating
+        $secondStatus = $isFinalDecided ? $decidedStatus : $monitoringStatus;
+        $secondDate = now()->subDays(rand(2, 8))->subHours(rand(1, 12))->subMinutes(rand(1, 50));
+        ActionReason::create([
+            'uuid' => Uuid::uuid1(),
+            'driving_force_rating_id' => $createdRating->id,
+            'status_action_id' => $secondStatus->id,
+            'date' => $secondDate,
+            'reason' => $this->getSyntheticReason($df?->keyword, $secondStatus->name, 2),
+        ]);
+
+        $createdRating->status_action_id = $secondStatus->id;
+        $createdRating->save();
+    }
+
+    /**
+     * Resolves an authentic, non-Lorem synthetic rationale based on keyword, status, and chronological step.
+     */
+    public function getSyntheticReason(?string $keyword, string $statusActionName, int $step = 1): string
+    {
+        $statusKey = str_contains(strtolower($statusActionName), 'decided') ? 'Decided Plan' : 'Monitoring';
+
+        if ($keyword && isset($this->synthetic_reasons[$keyword][$statusKey])) {
+            $pool = $this->synthetic_reasons[$keyword][$statusKey];
+            $index = ($step - 1) % count($pool);
+
+            return $pool[$index];
         }
 
-        $action_reason = ActionReason::where('driving_force_rating_id', $rating->id)->latest('id')->first();
-        $rating->status_action_id = $action_reason->status_action_id;
-        $rating->save();
+        // Professional synthetic fallback for custom driving forces (strictly no Lorem Ipsum).
+        $label = $keyword ?: 'faktor pendorong strategis';
+        if ($statusKey === 'Decided Plan') {
+            return "Komite manajemen menyetujui rencana aksi mitigasi dan penyesuaian alokasi sumber daya operasional terkait tren terkini pada {$label}.";
+        }
+
+        return "Pemantauan berkala dan analisis risiko berkelanjutan terhadap perkembangan indikator {$label} serta implikasinya pada daya saing perusahaan.";
     }
 }

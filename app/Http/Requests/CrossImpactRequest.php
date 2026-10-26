@@ -17,7 +17,7 @@ class CrossImpactRequest extends FormRequest
         return [
             'source' => ['required', 'uuid', 'exists:driving_forces,uuid'],
             'target' => ['required', 'uuid', 'different:source', 'exists:driving_forces,uuid'],
-            'score' => ['required', 'integer', 'between:' . CrossImpact::MIN_SCORE . ',' . CrossImpact::MAX_SCORE],
+            'score' => ['required', 'integer', 'between:'.CrossImpact::MIN_SCORE.','.CrossImpact::MAX_SCORE],
             'note' => ['nullable', 'string', 'max:1000'],
         ];
     }

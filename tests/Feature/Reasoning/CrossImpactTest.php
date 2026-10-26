@@ -17,7 +17,9 @@ class CrossImpactTest extends TestCase
     use RefreshDatabase;
 
     private User $manager;
+
     private User $viewer;
+
     private Dimension $dimension;
 
     protected function setUp(): void

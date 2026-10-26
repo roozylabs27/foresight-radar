@@ -30,7 +30,7 @@ class RatingHistoryAnalyticsService
      *
      * @param  array{0: string, 1: string}  $range  first and last day (Y-m-d)
      */
-    public function scoreTrend(array $range, mixed $dimension = null): array
+    public function scoreTrend(array $range, mixed $dimension = null, ?Collection $dimensions = null): array
     {
         $start = Carbon::parse($range[0])->startOfMonth();
         $end = Carbon::parse($range[1])->endOfDay();
@@ -63,7 +63,8 @@ class RatingHistoryAnalyticsService
             }
         }
 
-        $dimensions = Dimension::orderBy('id')->pluck('name')
+        $dimensionNames = ($dimensions ?? Dimension::orderBy('id')->get(['id', 'name']))->pluck('name');
+        $dimensionSeries = $dimensionNames
             ->filter(fn ($name) => isset($byDimension[$name]))
             ->map(fn ($name) => $this->series($name, $months, $byDimension[$name]))
             ->values()
@@ -81,7 +82,7 @@ class RatingHistoryAnalyticsService
             'months_with_data' => $monthsWithData,
             'enough' => $monthsWithData >= self::MIN_TREND_MONTHS && $updates > 0,
             'overall' => $this->series('Semua dimensi', $months, collect($overall)->keyBy('period')->all()),
-            'dimensions' => $dimensions,
+            'dimensions' => $dimensionSeries,
         ];
     }
 
@@ -179,7 +180,7 @@ class RatingHistoryAnalyticsService
         return DrivingForceRating::query()
             ->whereHas('driving_force', function ($q) use ($dimension) {
                 $q->where('status', 'APPROVED');
-                if (!empty($dimension)) {
+                if (! empty($dimension)) {
                     $q->where('dimension_id', $dimension);
                 }
             })

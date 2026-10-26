@@ -21,6 +21,13 @@ final class LlmRequest
         public readonly array $schema,
         public readonly int $maxTokens = 16000,
         public readonly ?string $effort = null,
-    ) {
+    ) {}
+
+    /**
+     * Get the user prompt content.
+     */
+    public function user(): string
+    {
+        return $this->user;
     }
 }

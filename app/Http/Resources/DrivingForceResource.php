@@ -14,7 +14,7 @@ class DrivingForceResource extends JsonResource
     {
         $rating = $this->relationLoaded('rating') ? $this->rating : null;
 
-        if (!$rating || is_null($rating->time_horizon_id)) {
+        if (! $rating || is_null($rating->time_horizon_id)) {
             return [
                 'step' => 2,
                 'total_steps' => 5,

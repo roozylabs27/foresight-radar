@@ -27,9 +27,7 @@ class AnthropicStructuredClient implements StructuredLlmClient
 
     private ?Client $client = null;
 
-    public function __construct(private readonly array $config)
-    {
-    }
+    public function __construct(private readonly array $config) {}
 
     public function isAvailable(): bool
     {
@@ -51,9 +49,14 @@ class AnthropicStructuredClient implements StructuredLlmClient
         return (string) ($this->config['model'] ?? 'claude-opus-5-5');
     }
 
+    public function generateStructured(LlmRequest $request): LlmResponse
+    {
+        return $this->generateJson($request);
+    }
+
     public function generateJson(LlmRequest $request): LlmResponse
     {
-        if (!$this->isAvailable()) {
+        if (! $this->isAvailable()) {
             throw new LlmException('unavailable');
         }
 
@@ -119,7 +122,7 @@ class AnthropicStructuredClient implements StructuredLlmClient
         ]);
 
         if ($stopReason === 'refusal') {
-            throw new LlmException('refusal', 'Declined: ' . ($message->stopDetails->category ?? 'unspecified'));
+            throw new LlmException('refusal', 'Declined: '.($message->stopDetails->category ?? 'unspecified'));
         }
         if ($stopReason === 'max_tokens') {
             throw new LlmException('max_tokens');
@@ -134,7 +137,7 @@ class AnthropicStructuredClient implements StructuredLlmClient
         }
 
         $data = $text === null ? null : json_decode($text, true);
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             throw new LlmException('invalid_json');
         }
 
@@ -162,7 +165,7 @@ class AnthropicStructuredClient implements StructuredLlmClient
             requestOptions: [
                 'maxRetries' => (int) ($this->config['max_retries'] ?? 1),
                 'transporter' => new GuzzleClient([
-                    'timeout' => (float) ($this->config['timeout'] ?? 120),
+                    'timeout' => (float) ($this->config['timeout'] ?? 240),
                     'connect_timeout' => 10,
                 ]),
             ],

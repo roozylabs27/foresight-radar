@@ -40,7 +40,7 @@ return [
         'narrative_effort' => env('ANTHROPIC_NARRATIVE_EFFORT', 'medium'),
         // Seconds per attempt. With one retry a call takes at most ~240 s,
         // under the queued job's limit (queue.llm_job_timeout).
-        'timeout' => (float) env('ANTHROPIC_TIMEOUT', 120),
+        'timeout' => (float) env('ANTHROPIC_TIMEOUT', 240),
         'max_retries' => (int) env('ANTHROPIC_MAX_RETRIES', 1),
         // Server-side fallback when the model declines on safety grounds:
         // "default" lets the API pick the fallback model; empty disables it.
@@ -68,7 +68,7 @@ return [
         // Sent as `reasoning_effort` when set ("low", "medium", "high"); empty sends nothing.
         // Reasoning models such as Gemini 3 can otherwise think past the timeout.
         'reasoning_effort' => env('OPENAI_COMPATIBLE_REASONING_EFFORT'),
-        'timeout' => (int) env('OPENAI_COMPATIBLE_TIMEOUT', 120),
+        'timeout' => (int) env('OPENAI_COMPATIBLE_TIMEOUT', 240),
         'max_retries' => (int) env('OPENAI_COMPATIBLE_MAX_RETRIES', 1),
         'retry_delay_ms' => (int) env('OPENAI_COMPATIBLE_RETRY_DELAY_MS', 1000),
         'referer' => env('OPENAI_COMPATIBLE_REFERER', env('APP_URL')),

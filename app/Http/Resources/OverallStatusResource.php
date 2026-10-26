@@ -23,43 +23,43 @@ class OverallStatusResource extends JsonResource
         $monitoring = null;
         $decided_plan = null;
 
-        if($this->time_horizon_id == 1) {
+        if ($this->time_horizon_id == 1) {
             $short_term = '✔';
         }
 
-        if($this->time_horizon_id == 2) {
+        if ($this->time_horizon_id == 2) {
             $mid_term = '✔';
         }
 
-        if($this->time_horizon_id == 3) {
+        if ($this->time_horizon_id == 3) {
             $long_term = '✔';
         }
 
-        if($this->priority_id == 3) {
+        if ($this->priority_id == 3) {
             $low = '✔';
         }
 
-        if($this->priority_id == 2) {
+        if ($this->priority_id == 2) {
             $medium = '✔';
         }
 
-        if($this->priority_id == 1) {
+        if ($this->priority_id == 1) {
             $high = '✔';
         }
 
-        if($this->status_action_id == 1) {
-            $monitoring = $this->status_action->code;
+        if ($this->status_action_id == 1) {
+            $monitoring = $this->status_action?->code;
         }
 
-        if($this->status_action_id == 2) {
-            $decided_plan = $this->status_action->code;
+        if ($this->status_action_id == 2) {
+            $decided_plan = $this->status_action?->code;
         }
 
         return [
             'id' => $this->uuid,
-            'dimension' => $this->driving_force->dimension->name,
-            'keyword' => $this->driving_force->keyword,
-            'description' => $this->driving_force->description,
+            'dimension' => $this->driving_force?->dimension?->name,
+            'keyword' => $this->driving_force?->keyword,
+            'description' => $this->driving_force?->description,
             'short_term' => $short_term,
             'mid_term' => $mid_term,
             'long_term' => $long_term,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
@@ -19,7 +20,7 @@ class UserRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -29,7 +30,7 @@ class UserRequest extends FormRequest
             function ($attribute, $value, $fail) {
                 $role = Role::find($value);
                 if ($role && in_array($role->name, ['super-admin', 'developer'])) {
-                    if (!auth()->user() || !auth()->user()->hasAnyRole(['super-admin', 'developer'])) {
+                    if (! auth()->user() || ! auth()->user()->hasAnyRole(['super-admin', 'developer'])) {
                         $fail('You are not authorized to assign this privileged role.');
                     }
                 }

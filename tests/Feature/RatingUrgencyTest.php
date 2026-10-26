@@ -19,6 +19,7 @@ class RatingUrgencyTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private DrivingForceRating $rating;
 
     private function makePermission(string $name): Permission

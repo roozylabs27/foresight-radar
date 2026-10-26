@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\LlmJobStatus;
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\ScenarioQuadrantRequest;
 use App\Http\Requests\ScenarioRequest;
 use App\Models\Scenario;
@@ -12,24 +13,26 @@ use App\Services\ScenarioNarrativeService;
 use App\Services\ScenarioService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 class ScenarioController extends Controller
 {
+    use HandlesApiErrors;
+
     public function __construct(
         protected ScenarioService $scenarios,
         protected ScenarioNarrativeService $narratives,
         protected StructuredLlmClient $llm,
-    ) {
-    }
+    ) {}
 
     public function index(): InertiaResponse
     {
         return Inertia::render('Report/Scenarios', [
             'title' => 'Scenarios',
-            'canManage' => auth()->user()->can('manage-scenario'),
+            'canManage' => Gate::allows('manage-scenario'),
             'llm' => [
                 'available' => $this->llm->isAvailable(),
                 'provider' => $this->llm->isAvailable() ? $this->llm->provider() : null,
@@ -41,23 +44,27 @@ class ScenarioController extends Controller
 
     public function fetch(): JsonResponse
     {
-        $scenarios = Scenario::with(['axis_a:id,uuid,keyword', 'axis_b:id,uuid,keyword'])
-            ->withCount('quadrants')
-            ->orderByDesc('updated_at')
-            ->get()
-            ->map(fn ($scenario) => [
-                'id' => $scenario->uuid,
-                'name' => $scenario->name,
-                'status' => $scenario->status,
-                'provider' => $scenario->provider,
-                'generation_status' => $scenario->generation_status?->value,
-                'axis_a' => $scenario->axis_a?->keyword,
-                'axis_b' => $scenario->axis_b?->keyword,
-                'quadrants_count' => $scenario->quadrants_count,
-                'updated_at' => $scenario->updated_at,
-            ]);
+        try {
+            $scenarios = Scenario::with(['axis_a:id,uuid,keyword,deleted_at', 'axis_b:id,uuid,keyword,deleted_at'])
+                ->withCount('quadrants')
+                ->orderByDesc('updated_at')
+                ->get()
+                ->map(fn ($scenario) => [
+                    'id' => $scenario->uuid,
+                    'name' => $scenario->name,
+                    'status' => $scenario->status,
+                    'provider' => $scenario->provider,
+                    'generation_status' => $scenario->generation_status?->value,
+                    'axis_a' => $scenario->axis_a ? ($scenario->axis_a->trashed() ? $scenario->axis_a->keyword.' (Dihapus)' : $scenario->axis_a->keyword) : '(Faktor dihapus)',
+                    'axis_b' => $scenario->axis_b ? ($scenario->axis_b->trashed() ? $scenario->axis_b->keyword.' (Dihapus)' : $scenario->axis_b->keyword) : '(Faktor dihapus)',
+                    'quadrants_count' => $scenario->quadrants_count,
+                    'updated_at' => $scenario->updated_at,
+                ]);
 
-        return response()->json($scenarios, Response::HTTP_OK);
+            return response()->json($scenarios, Response::HTTP_OK);
+        } catch (\Throwable $th) {
+            return $this->errorJsonResponse($th, 'fetching scenarios');
+        }
     }
 
     public function suggestAxes(): JsonResponse
@@ -89,6 +96,8 @@ class ScenarioController extends Controller
 
     public function update(ScenarioRequest $request, Scenario $scenario): JsonResponse
     {
+        $this->authorize('update', $scenario);
+
         $validated = $request->validated();
         [$axisA, $axisB] = $this->scenarios->resolveAxes($validated['axis_a'], $validated['axis_b']);
 
@@ -102,6 +111,8 @@ class ScenarioController extends Controller
 
     public function destroy(Scenario $scenario): JsonResponse
     {
+        $this->authorize('delete', $scenario);
+
         $scenario->delete();
 
         return response()->json(['message' => 'Skenario dihapus.'], Response::HTTP_OK);
@@ -109,6 +120,8 @@ class ScenarioController extends Controller
 
     public function updateQuadrant(ScenarioQuadrantRequest $request, Scenario $scenario, ScenarioQuadrant $quadrant): JsonResponse
     {
+        $this->authorize('update', $scenario);
+
         abort_unless($quadrant->scenario_id === $scenario->id, Response::HTTP_NOT_FOUND);
 
         $quadrant->update($request->validated() + [
@@ -126,6 +139,8 @@ class ScenarioController extends Controller
      */
     public function generate(Request $request, Scenario $scenario): JsonResponse
     {
+        $this->authorize('update', $scenario);
+
         $scenario = $this->narratives->queue($scenario, $request->boolean('overwrite_edited'), auth()->id());
 
         return response()->json([
@@ -148,7 +163,7 @@ class ScenarioController extends Controller
         $message = null;
         if ($status === LlmJobStatus::COMPLETED) {
             $message = $scenario->provider !== ScenarioNarrativeService::PROVIDER_TEMPLATE
-                ? 'Narasi empat kuadran dibuat oleh ' . $this->llm->label() . '. Tinjau dan sunting sebelum dipakai.'
+                ? 'Narasi empat kuadran dibuat oleh '.$this->llm->label().'. Tinjau dan sunting sebelum dipakai.'
                 : 'Kerangka empat kuadran dibuat tanpa AI. Lengkapi narasinya bersama tim.';
         }
 
@@ -182,11 +197,12 @@ class ScenarioController extends Controller
     {
         $scenario->load(['axis_a.dimension', 'axis_b.dimension', 'quadrants']);
         $evidence = $this->scenarios->storedEvidence($scenario);
-        $refById = collect($scenario->input_signal_ids ?? [])->values()->mapWithKeys(fn ($id, $index) => [$id => 'S' . ($index + 1)]);
+        $refById = collect($scenario->input_signal_ids ?? [])->values()->mapWithKeys(fn ($id, $index) => [$id => 'S'.($index + 1)]);
         $axis = fn ($force, $low, $high) => [
             'id' => $force?->uuid,
-            'keyword' => $force?->keyword,
+            'keyword' => $force?->keyword ?? '(Faktor dihapus)',
             'dimension' => $force?->dimension?->name,
+            'is_deleted' => $force === null || $force->trashed(),
             'low' => $low,
             'high' => $high,
         ];

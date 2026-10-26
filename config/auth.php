@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 return [
 
     /*
@@ -62,7 +64,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model' => User::class,
         ],
 
         // 'users' => [
@@ -122,6 +124,6 @@ return [
     |
     */
 
-    'allow_registration' => env('AUTH_ALLOW_REGISTRATION', true),
+    'allow_registration' => env('AUTH_ALLOW_REGISTRATION', false),
 
 ];

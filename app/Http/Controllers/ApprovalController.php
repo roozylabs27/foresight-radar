@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Services\DrivingForceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use App\Services\DrivingForceService;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -16,22 +16,20 @@ class ApprovalController extends Controller
 {
     use HandlesApiErrors;
 
-    public function __construct(protected DrivingForceService $drivingForceService)
-    {
-    }
+    public function __construct(protected DrivingForceService $drivingForceService) {}
 
     public function index()
     {
         $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
-                'label' => $dimension->name
+                'label' => $dimension->name,
             ];
         });
 
-        $title = "Approval Items";
+        $title = 'Approval Items';
 
-        return Inertia::render("Approval/Table", compact('dimensions', 'title'));
+        return Inertia::render('Approval/Table', compact('dimensions', 'title'));
     }
 
     public function fetch_data()
@@ -42,6 +40,7 @@ class ApprovalController extends Controller
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'fetching approval items');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -55,21 +54,21 @@ class ApprovalController extends Controller
         ]);
 
         if ($validated['status'] === 'APPROVED') {
-            if (!$driving_force->relationLoaded('rating')) {
+            if (! $driving_force->relationLoaded('rating')) {
                 $driving_force->load('rating');
             }
-            if (!$driving_force->rating || is_null($driving_force->rating->status_action_id)) {
+            if (! $driving_force->rating || is_null($driving_force->rating->status_action_id)) {
                 return response()->json([
                     'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
                     'errors' => 'Cannot approve a driving force without an assigned Status of Action.',
-                    'message' => 'Cannot approve a driving force without an assigned Status of Action.'
+                    'message' => 'Cannot approve a driving force without an assigned Status of Action.',
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         }
 
         try {
             $driving_force->transitionTo($validated['status']);
-        } catch (\App\Exceptions\InvalidStateTransitionException $e) {
+        } catch (InvalidStateTransitionException $e) {
             return response()->json([
                 'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
                 'errors' => $e->getMessage(),
@@ -95,7 +94,7 @@ class ApprovalController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully ' . $request->text . ' for ' . $driving_force->keyword . ' !'
+                'message' => 'Successfully '.$request->text.' for '.$driving_force->keyword.' !',
             ];
         } catch (\Throwable $th) {
             DB::rollBack();

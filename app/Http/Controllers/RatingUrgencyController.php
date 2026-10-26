@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Models\Dimension;
-use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
+use App\Services\DrivingForceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Ramsey\Uuid\Uuid;
-use App\Http\Controllers\Concerns\HandlesApiErrors;
-use App\Services\DrivingForceService;
 use Symfony\Component\HttpFoundation\Response;
 
 class RatingUrgencyController extends Controller
 {
     use HandlesApiErrors;
 
-    public function __construct(protected DrivingForceService $drivingForceService)
-    {
-    }
+    public function __construct(protected DrivingForceService $drivingForceService) {}
 
     public function index()
     {
@@ -28,11 +24,11 @@ class RatingUrgencyController extends Controller
         $dimensions = Dimension::all()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
-                'label' => $dimension->name
+                'label' => $dimension->name,
             ];
         });
 
-        return Inertia::render("RatingUrgency/Table", compact('dimensions', 'title'));
+        return Inertia::render('RatingUrgency/Table', compact('dimensions', 'title'));
     }
 
     public function fetch_data()
@@ -43,12 +39,21 @@ class RatingUrgencyController extends Controller
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'fetching rating urgency data');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
     public function create(Request $request, DrivingForceRating $driving_force_rating)
     {
+        if ($driving_force_rating->driving_force?->status === 'CLOSED') {
+            return response()->json([
+                'statusCode' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                'message' => 'Cannot modify rating of a closed driving force.',
+                'errors' => 'Cannot modify rating of a closed driving force.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $validated = $request->validate([
             'type' => ['required', 'string', 'in:impact,uncertainty'],
             'value' => ['required', 'integer', 'between:1,10'],
@@ -68,7 +73,7 @@ class RatingUrgencyController extends Controller
 
             $response = [
                 'statusCode' => Response::HTTP_OK,
-                'message' => 'Successfully set rating for ' . $driving_force_rating->driving_force->keyword . ' ' . ($validated['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !')
+                'message' => 'Successfully set rating for '.$driving_force_rating->driving_force->keyword.' '.($validated['type'] == 'uncertainty' ? 'uncertainty !' : 'impact !'),
             ];
         } catch (\Throwable $th) {
             Log::error('Rating urgency update failed', [

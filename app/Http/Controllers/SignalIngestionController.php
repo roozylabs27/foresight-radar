@@ -12,13 +12,14 @@ use App\Models\DrivingForceRating;
 use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TimeHorizon;
+use App\Models\User;
 use App\Services\SignalExtractionService;
 use App\Support\EvidenceVerifier;
 use App\Support\TableSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -29,9 +30,7 @@ class SignalIngestionController extends Controller
 {
     use HandlesApiErrors;
 
-    public function __construct(protected SignalExtractionService $extractionService)
-    {
-    }
+    public function __construct(protected SignalExtractionService $extractionService) {}
 
     /**
      * Render the Signal Ingestion and Candidate Review workspace.
@@ -55,22 +54,36 @@ class SignalIngestionController extends Controller
             ->get()
             ->map(fn ($df) => [
                 'value' => $df->id,
-                'label' => $df->keyword . ' (' . ($df->dimension->name ?? 'General') . ') [' . $df->status . ']',
+                'label' => $df->keyword.' ('.($df->dimension->name ?? 'General').') ['.$df->status.']',
             ]);
+
+        /** @var User|null $user */
+        $user = Auth::user();
 
         return Inertia::render('Signals/Index', [
             'title' => 'Signal Ingestion & Review',
             'dimensions' => $dimensions,
             'timeHorizons' => $timeHorizons,
             'existingDrivingForces' => $drivingForces,
-            'extractionMode' => $this->extractionService->mode(),
-            'extractionModel' => $this->extractionService->modelName(),
-            'extractionLabel' => $this->extractionService->modeLabel(),
+            'extractionMode' => $this->extractionService->mode($user),
+            'extractionModel' => $this->extractionService->modelName($user),
+            'extractionLabel' => $this->extractionService->modeLabel($user),
+            'activeLlm' => [
+                'mode' => $this->extractionService->mode($user),
+                'model' => $this->extractionService->modelName($user),
+                'label' => $this->extractionService->modeLabel($user),
+                'isCustom' => (bool) $user?->llmSettings()->where('is_active', true)->exists(),
+            ],
             'maxContentChars' => (int) config('services.signal_extraction.max_chars', 60000),
             // The analyst's extractions still in the queue, so the page resumes polling them.
-            'pendingExtractions' => Source::where('created_by', auth()->id())
-                ->whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+            'pendingExtractions' => Source::whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
                 ->where('created_at', '>=', now()->subDay())
+                ->where(function ($q) use ($user) {
+                    $q->where('created_by', $user?->id ?? Auth::id());
+                    if ($user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
+                        $q->orWhereNull('created_by');
+                    }
+                })
                 ->latest()
                 ->get()
                 ->map(fn ($source) => $this->extractionService->progress($source))
@@ -88,14 +101,17 @@ class SignalIngestionController extends Controller
             $dimension = $request->query('dimension');
             $search = $request->query('search');
 
-            $signals = Signal::with(['source', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
+            $rawPageSize = (int) $request->query('pageSize', $request->input('pagination.pageSize', 10));
+            $pageSize = min(100, max(1, $rawPageSize > 0 ? $rawPageSize : 10));
+
+            $signals = Signal::with(['source:id,uuid,title,url,publisher,published_at,content_hash', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
                 ->when($status && $status !== 'ALL', fn ($q) => $q->where('review_status', $status))
                 ->when($dimension, fn ($q) => $q->where('dimension_id', $dimension))
                 ->when($search, function ($q) use ($search) {
                     $q->where(function ($sub) use ($search) {
-                        $sub->where('title', 'LIKE', '%' . $search . '%')
-                            ->orWhere('summary', 'LIKE', '%' . $search . '%')
-                            ->orWhere('evidence_quote', 'LIKE', '%' . $search . '%');
+                        $sub->where('title', 'LIKE', '%'.$search.'%')
+                            ->orWhere('summary', 'LIKE', '%'.$search.'%')
+                            ->orWhere('evidence_quote', 'LIKE', '%'.$search.'%');
                     });
                 })
                 ->tap(fn ($q) => TableSort::apply(
@@ -109,11 +125,12 @@ class SignalIngestionController extends Controller
                     ],
                     fn ($q) => $q->orderBy('created_at', 'desc')
                 ))
-                ->paginate($request->query('pageSize', 10));
+                ->paginate($pageSize);
 
             return response()->json($signals, Response::HTTP_OK);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'fetching signals');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -125,7 +142,7 @@ class SignalIngestionController extends Controller
     public function ingest(IngestSourceRequest $request): JsonResponse
     {
         try {
-            $source = $this->extractionService->ingest($request->validated(), auth()->id());
+            $source = $this->extractionService->ingest($request->validated(), (int) Auth::id());
 
             return response()->json([
                 'message' => 'Sumber disimpan. Sinyal sedang diekstrak di latar belakang.',
@@ -133,6 +150,7 @@ class SignalIngestionController extends Controller
             ], Response::HTTP_ACCEPTED);
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'ingesting source content');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -142,7 +160,43 @@ class SignalIngestionController extends Controller
      */
     public function extraction(Source $source): JsonResponse
     {
+        $user = Auth::user();
+        $isOwnerOrAdmin = $user && (
+            $source->created_by === $user->id
+            || $user->hasAnyRole(['developer', 'super-admin', 'admin'])
+        );
+
+        if (! $isOwnerOrAdmin) {
+            abort(Response::HTTP_FORBIDDEN, 'Anda tidak memiliki akses ke status ekstraksi sumber ini.');
+        }
+
         return response()->json($this->extractionService->progress($source), Response::HTTP_OK);
+    }
+
+    /**
+     * Active extractions currently queued or processing for the authenticated user.
+     */
+    public function activeExtractions(): JsonResponse
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json([], Response::HTTP_OK);
+        }
+
+        $sources = Source::whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
+            ->where('created_at', '>=', now()->subHours(12))
+            ->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id);
+                if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
+                    $q->orWhereNull('created_by');
+                }
+            })
+            ->latest()
+            ->get()
+            ->map(fn ($source) => $this->extractionService->progress($source))
+            ->values();
+
+        return response()->json($sources, Response::HTTP_OK);
     }
 
     /**
@@ -154,30 +208,43 @@ class SignalIngestionController extends Controller
             $validated = $request->validated();
             $action = $validated['action'];
 
-            if ($signal->review_status !== 'PENDING') {
-                return response()->json([
-                    'errors' => 'Sinyal ini sudah direview (' . $signal->review_status . ') dan tidak bisa diubah lagi.',
-                ], Response::HTTP_CONFLICT);
-            }
-
             return DB::transaction(function () use ($validated, $action, $signal) {
+                $signal = Signal::whereKey($signal->id)->lockForUpdate()->firstOrFail();
+
+                if ($signal->review_status !== 'PENDING') {
+                    return response()->json([
+                        'errors' => 'Sinyal ini sudah direview ('.$signal->review_status.') dan tidak bisa diubah lagi.',
+                    ], Response::HTTP_CONFLICT);
+                }
                 // Apply any edited fields
-                if (!empty($validated['title'])) { $signal->title = $validated['title']; }
-                if (!empty($validated['summary'])) { $signal->summary = $validated['summary']; }
-                if (!empty($validated['evidence_quote']) && $validated['evidence_quote'] !== $signal->evidence_quote) {
+                if (! empty($validated['title'])) {
+                    $signal->title = $validated['title'];
+                }
+                if (! empty($validated['summary'])) {
+                    $signal->summary = $validated['summary'];
+                }
+                if (! empty($validated['evidence_quote']) && $validated['evidence_quote'] !== $signal->evidence_quote) {
                     // An edited quote must still be found verbatim in the source.
                     $signal->evidence_quote = $validated['evidence_quote'];
                     $signal->quote_verified = EvidenceVerifier::verify($validated['evidence_quote'], $signal->source?->raw_content);
                 }
-                if (!empty($validated['dimension_id'])) { $signal->dimension_id = $validated['dimension_id']; }
-                if (!empty($validated['suggested_time_horizon_id'])) { $signal->suggested_time_horizon_id = $validated['suggested_time_horizon_id']; }
-                if (isset($validated['preliminary_impact'])) { $signal->preliminary_impact = $validated['preliminary_impact']; }
-                if (isset($validated['preliminary_uncertainty'])) { $signal->preliminary_uncertainty = $validated['preliminary_uncertainty']; }
+                if (! empty($validated['dimension_id'])) {
+                    $signal->dimension_id = $validated['dimension_id'];
+                }
+                if (! empty($validated['suggested_time_horizon_id'])) {
+                    $signal->suggested_time_horizon_id = $validated['suggested_time_horizon_id'];
+                }
+                if (isset($validated['preliminary_impact'])) {
+                    $signal->preliminary_impact = $validated['preliminary_impact'];
+                }
+                if (isset($validated['preliminary_uncertainty'])) {
+                    $signal->preliminary_uncertainty = $validated['preliminary_uncertainty'];
+                }
 
                 if ($action === 'reject') {
                     $signal->review_status = 'REJECTED';
                     $signal->rejection_reason = $validated['rejection_reason'] ?? 'Rejected by analyst';
-                    $signal->reviewed_by = auth()->id();
+                    $signal->reviewed_by = Auth::id();
                     $signal->reviewed_at = now();
                     $signal->save();
 
@@ -197,12 +264,12 @@ class SignalIngestionController extends Controller
                 if ($action === 'accept_link') {
                     $dfId = $validated['driving_force_id'];
                     $signal->review_status = 'ACCEPTED';
-                    $signal->reviewed_by = auth()->id();
+                    $signal->reviewed_by = Auth::id();
                     $signal->reviewed_at = now();
                     $signal->save();
 
                     $signal->driving_forces()->syncWithoutDetaching([
-                        $dfId => ['notes' => 'Linked during analyst review from source #' . $signal->source_id],
+                        $dfId => ['notes' => 'Linked during analyst review from source #'.$signal->source_id],
                     ]);
 
                     return response()->json([
@@ -212,15 +279,16 @@ class SignalIngestionController extends Controller
                 }
 
                 if ($action === 'accept_create') {
-                    // Normalize keyword to first 4 words to respect WordCountRule
-                    $words = explode(' ', trim($signal->title));
+                    // Normalize keyword to first 4 words to respect WordCountRule and strip trailing dots/punctuation
+                    $cleanTitle = trim(preg_replace('/[\.\,\;\:\s]+$/', '', (string) $signal->title));
+                    $words = preg_split('/\s+/', $cleanTitle) ?: [];
                     $keyword = implode(' ', array_slice($words, 0, 4));
 
                     $drivingForce = DrivingForce::create([
                         'uuid' => (string) Uuid::uuid4(),
                         'dimension_id' => $signal->dimension_id ?? Dimension::first()->id,
-                        'created_by' => auth()->id(),
-                        'pic' => auth()->id(),
+                        'created_by' => Auth::id(),
+                        'pic' => Auth::id(),
                         'keyword' => $keyword,
                         'description' => $signal->summary,
                         'status' => 'PENDING',
@@ -242,7 +310,7 @@ class SignalIngestionController extends Controller
 
                     $signal->review_status = 'ACCEPTED';
                     $signal->created_driving_force_id = $drivingForce->id;
-                    $signal->reviewed_by = auth()->id();
+                    $signal->reviewed_by = Auth::id();
                     $signal->reviewed_at = now();
                     $signal->save();
 
@@ -259,6 +327,7 @@ class SignalIngestionController extends Controller
 
                 // If just updating metadata
                 $signal->save();
+
                 return response()->json([
                     'message' => 'Signal metadata updated successfully.',
                     'signal' => $signal->fresh(),
@@ -268,8 +337,8 @@ class SignalIngestionController extends Controller
             throw $e;
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'reviewing signal');
+
             return response()->json(['errors' => $error['message']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
 }

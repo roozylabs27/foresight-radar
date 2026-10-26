@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { GitCompareArrowsIcon, Grid3x3Icon, RefreshCwIcon, ScatterChartIcon } from "lucide-react";
+import { GitCompareArrowsIcon, Grid3x3Icon, RefreshCwIcon, ScatterChartIcon, Share2Icon } from "lucide-react";
 import {
     CartesianGrid,
     ReferenceLine,
@@ -15,6 +15,7 @@ import {
 } from "recharts";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import CrossImpactNetworkGraph from "@/Components/CrossImpactNetworkGraph";
 import DimensionChip from "@/Components/DimensionChip";
 import Panel from "@/Components/Panel";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -497,6 +498,7 @@ export default function CrossImpact({ auth, title, canManage = false }) {
     const [matrix, setMatrix] = useState(null);
     const [editing, setEditing] = useState(null);
     const [selectedLoop, setSelectedLoop] = useState(null);
+    const [viewMode, setViewMode] = useState("matrix"); // 'matrix' | 'network'
 
     useEffect(() => {
         axios
@@ -542,23 +544,56 @@ export default function CrossImpact({ auth, title, canManage = false }) {
                 ) : (
                     <>
                         <Panel
-                            icon={<Grid3x3Icon className="text-primary" />}
-                            title="Matriks Cross-Impact"
+                            icon={viewMode === "network" ? <Share2Icon className="text-primary" /> : <Grid3x3Icon className="text-primary" />}
+                            title="Matriks & Jejaring Cross-Impact"
                             badge={
-                                <span className={cn(statusBadge(), "bg-accent text-primary tabular-nums")}>
-                                    {matrix.scored_pairs} dari {matrix.possible_pairs} pasangan dinilai
-                                </span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <ToggleGroup
+                                        type="single"
+                                        variant="outline"
+                                        size="sm"
+                                        value={viewMode}
+                                        onValueChange={(val) => val && setViewMode(val)}
+                                        aria-label="Mode tampilan"
+                                        className="bg-card"
+                                    >
+                                        <ToggleGroupItem value="matrix" className="gap-1.5 px-2.5 text-xs">
+                                            <Grid3x3Icon className="size-3.5" />
+                                            Matriks
+                                        </ToggleGroupItem>
+                                        <ToggleGroupItem value="network" className="gap-1.5 px-2.5 text-xs">
+                                            <Share2Icon className="size-3.5" />
+                                            Network Graph
+                                        </ToggleGroupItem>
+                                    </ToggleGroup>
+                                    <span className="h-4 w-px bg-border hidden sm:block" />
+                                    <span className={cn(statusBadge(), "bg-accent text-primary tabular-nums hidden sm:inline-flex")}>
+                                        {matrix.scored_pairs} dari {matrix.possible_pairs} pasangan dinilai
+                                    </span>
+                                </div>
                             }
                             description={
-                                canManage
-                                    ? "Baris memengaruhi kolom. Klik sel untuk menilai pengaruh dari −3 (sangat menekan) sampai +3 (sangat memperkuat). Hanya driving force berstatus APPROVED."
-                                    : "Baris memengaruhi kolom, dari −3 (sangat menekan) sampai +3 (sangat memperkuat). Hanya driving force berstatus APPROVED."
+                                viewMode === "network"
+                                    ? "Visualisasi alur pengaruh sebab-akibat antar driving force. Panah hijau memperkuat (+), panah merah menekan (−). Klik driving force untuk mengunci sorotan koneksinya."
+                                    : canManage
+                                        ? "Baris memengaruhi kolom. Klik sel untuk menilai pengaruh dari −3 (sangat menekan) sampai +3 (sangat memperkuat). Hanya driving force berstatus APPROVED."
+                                        : "Baris memengaruhi kolom, dari −3 (sangat menekan) sampai +3 (sangat memperkuat). Hanya driving force berstatus APPROVED."
                             }
                         >
                             {matrix.forces.length < 2 ? (
                                 <p className="m-0 py-8 text-center text-sm text-muted-foreground">
                                     Matriks butuh minimal dua driving force berstatus APPROVED.
                                 </p>
+                            ) : viewMode === "network" ? (
+                                <CrossImpactNetworkGraph
+                                    forces={matrix.forces}
+                                    scores={scores}
+                                    summary={matrix.summary}
+                                    highlight={highlight}
+                                    canManage={canManage}
+                                    onEdit={(source, target, cell) => setEditing({ source, target, cell })}
+                                    selectedLoop={selectedLoop}
+                                />
                             ) : (
                                 <>
                                     <Legend />

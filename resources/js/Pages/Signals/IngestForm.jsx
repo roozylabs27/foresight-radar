@@ -1,15 +1,41 @@
 import { useId, useMemo } from "react";
+import { Link } from "@inertiajs/react";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
-import { InfoIcon, LoaderCircleIcon, ZapIcon } from "lucide-react";
+import { InfoIcon, LoaderCircleIcon, SlidersHorizontalIcon, ZapIcon } from "lucide-react";
 
 import FormField, { fieldControlProps } from "@/Components/FormField";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Textarea } from "@/Components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip";
 import { useDialogForm } from "@/hooks/use-dialog-form";
 import { cn } from "@/lib/utils";
+
+function LabelWithTooltip({ label, tooltip }) {
+    return (
+        <span className="inline-flex items-center gap-1.5 font-medium">
+            <span>{label}</span>
+            {tooltip && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span
+                            role="button"
+                            aria-label={`Informasi ${label}`}
+                            className="inline-flex cursor-help text-muted-foreground/70 transition-colors hover:text-foreground"
+                        >
+                            <InfoIcon className="size-3.5" />
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs font-normal text-left">
+                        {tooltip}
+                    </TooltipContent>
+                </Tooltip>
+            )}
+        </span>
+    );
+}
 
 const FIELDS = ["title", "publisher", "url", "published_at", "content"];
 const EMPTY = Object.fromEntries(FIELDS.map((name) => [name, ""]));
@@ -52,16 +78,25 @@ function ProvenanceNote({ mode, model, label }) {
     return (
         <div className="flex gap-3 rounded-lg border border-solid border-primary/30 bg-accent p-4" role="note">
             <InfoIcon aria-hidden="true" className="mt-0.5 shrink-0 text-primary" />
-            <div className="flex flex-col gap-1">
-                <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-                    Evidence Provenance Guarantee
-                    <span className={cn(statusBadge(), ai ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                        {ai ? `${label} · ${model}` : "Aturan"}
-                    </span>
-                </p>
+            <div className="flex flex-col gap-1 w-full">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+                        Evidence Provenance Guarantee
+                        <span className={cn(statusBadge(), ai ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                            {ai ? `${label} · ${model}` : "Aturan"}
+                        </span>
+                    </p>
+                    <Link
+                        href={route("settings.llm.index")}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    >
+                        <SlidersHorizontalIcon aria-hidden="true" className="size-3" />
+                        <span>Ubah Mesin AI</span>
+                    </Link>
+                </div>
                 <p className="m-0 text-[13px] text-muted-foreground">
                     {ai
-                        ? `Teks dokumen dikirim ke ${label} untuk diusulkan sebagai sinyal. Setiap kutipan bukti dicocokkan verbatim ke teks yang Anda tempel; kutipan yang tidak ditemukan dibuang. Semua sinyal masuk sebagai PENDING dan tetap Anda putuskan.`
+                        ? `Teks dokumen dikirim ke ${label} (${model}) untuk diusulkan sebagai sinyal. Setiap kutipan bukti dicocokkan verbatim ke teks yang Anda tempel; kutipan yang tidak ditemukan dibuang. Semua sinyal masuk sebagai PENDING dan tetap Anda putuskan.`
                         : "Sinyal diusulkan dengan aturan kata kunci, tanpa AI, dan teks tidak keluar dari server."}{" "}
                     Setiap sinyal menyimpan kutipan verbatim dan sidik jari SHA-256 dari teks sumber untuk audit. URL hanya
                     disimpan sebagai metadata; isinya tidak diambil.
@@ -132,29 +167,69 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
             <form noValidate onSubmit={submit}>
                 <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
                     <div className="grid gap-5 sm:grid-cols-[2fr_1fr]">
-                        {field("title", "Document / Article Title", Input, {
-                            required: true,
-                            placeholder: "e.g. EU Cleantech Regulatory Directive 2026/42",
-                        })}
-                        {field("publisher", "Publisher / Source Organization", Input, {
-                            placeholder: "e.g. European Commission, Reuters",
-                        })}
+                        {field(
+                            "title",
+                            <LabelWithTooltip
+                                label="Document / Article Title"
+                                tooltip="Nama dokumen, judul artikel, atau regulasi yang dianalisis sebagai rujukan utama."
+                            />,
+                            Input,
+                            {
+                                required: true,
+                                placeholder: "e.g. EU Cleantech Regulatory Directive 2026/42",
+                            }
+                        )}
+                        {field(
+                            "publisher",
+                            <LabelWithTooltip
+                                label="Publisher / Source Organization"
+                                tooltip="Nama lembaga atau organisasi penerbit (misal: Bank Indonesia, Reuters, McKinsey) untuk mengukur otoritas sumber."
+                            />,
+                            Input,
+                            {
+                                placeholder: "e.g. European Commission, Reuters",
+                            }
+                        )}
                     </div>
                     <div className="grid gap-5 sm:grid-cols-[2fr_1fr]">
-                        {field("url", "Source URL (Optional)", Input, {
-                            type: "url",
-                            inputMode: "url",
-                            placeholder: "https://ec.europa.eu/commission/presscorner/detail/en/ip_26_...",
-                        })}
-                        {field("published_at", "Publication Date", Input, { type: "date" })}
+                        {field(
+                            "url",
+                            <LabelWithTooltip
+                                label="Source URL (Optional)"
+                                tooltip="Tautan artikel asli untuk rujukan cepat analis (hanya disimpan sebagai metadata rujukan; isi teks diambil dari kolom Raw Content di bawah)."
+                            />,
+                            Input,
+                            {
+                                type: "url",
+                                inputMode: "url",
+                                placeholder: "https://ec.europa.eu/commission/presscorner/detail/en/ip_26_...",
+                            }
+                        )}
+                        {field(
+                            "published_at",
+                            <LabelWithTooltip
+                                label="Publication Date"
+                                tooltip="Tanggal dokumen diterbitkan. Digunakan AI untuk mengukur cakrawala waktu (Time Horizon)."
+                            />,
+                            Input,
+                            { type: "date" }
+                        )}
                     </div>
-                    {field("content", "Raw Content / Document Text", Textarea, {
-                        required: true,
-                        rows: 8,
-                        placeholder:
-                            "Paste the excerpt, report paragraphs, or article transcript here. The extraction pipeline will parse verifiable evidence sentences, suggest taxonomies, and generate candidate signals.",
-                        className: "min-h-40",
-                    })}
+                    {field(
+                        "content",
+                        <LabelWithTooltip
+                            label="Raw Content / Document Text"
+                            tooltip="Teks atau paragraf isi dokumen yang ditempel analis. AI akan memindai teks ini, mengekstrak sinyal, mencocokkan kutipan verbatim, dan menghitung sidik jari SHA-256 untuk integritas audit."
+                        />,
+                        Textarea,
+                        {
+                            required: true,
+                            rows: 8,
+                            placeholder:
+                                "Paste the excerpt, report paragraphs, or article transcript here. The extraction pipeline will parse verifiable evidence sentences, suggest taxonomies, and generate candidate signals.",
+                            className: "min-h-40",
+                        }
+                    )}
                     <p
                         id={counterId}
                         className={cn("m-0 -mt-3 text-xs tabular-nums", length > maxChars ? "text-destructive" : "text-muted-foreground")}

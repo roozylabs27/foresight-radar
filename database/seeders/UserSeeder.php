@@ -3,32 +3,38 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Faker\Factory as Dummy;
 
 class UserSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
-    protected $users, $roles, $permissions, $dummy;
+    protected $users;
+
+    protected $roles;
+
+    protected $permissions;
+
+    protected $synthetic_users;
 
     public function __construct()
     {
-        $this->users = json_decode(file_get_contents(__DIR__ . '../../data/user.json', true));
-        $this->roles = json_decode(file_get_contents(__DIR__ . '../../data/role.json', true));
-        $this->permissions = json_decode(file_get_contents(__DIR__ . '../../data/permission.json', true));
-        $this->dummy = Dummy::create('id_ID');
+        $this->users = json_decode(file_get_contents(database_path('data/user.json')));
+        $this->roles = json_decode(file_get_contents(database_path('data/role.json')));
+        $this->permissions = json_decode(file_get_contents(database_path('data/permission.json')));
+        $syntheticFile = database_path('data/synthetic_user.json');
+        $this->synthetic_users = file_exists($syntheticFile)
+            ? json_decode(file_get_contents($syntheticFile), true)
+            : [];
     }
 
     public function run(): void
     {
-        // initial permission
+        // 1. Initial permissions
         $this->command->info('initial permissions');
         $this->command->getOutput()->progressStart(count($this->permissions));
         foreach ($this->permissions as $permission) {
@@ -36,7 +42,7 @@ class UserSeeder extends Seeder
             $this->command->getOutput()->progressAdvance();
         }
 
-        // initial role
+        // 2. Initial roles
         $this->command->info('initial roles');
         $this->command->getOutput()->progressStart(count($this->roles));
         foreach ($this->roles as $role) {
@@ -44,7 +50,7 @@ class UserSeeder extends Seeder
             $this->command->getOutput()->progressAdvance();
         }
 
-        // initial user default
+        // 3. Initial core system users (Developer, Super Admin, Test BOD)
         $this->command->info('initial user');
         $this->command->getOutput()->progressStart(count($this->users));
         foreach ($this->users as $user) {
@@ -52,27 +58,18 @@ class UserSeeder extends Seeder
             $this->command->getOutput()->progressAdvance();
         }
 
-        // initial user default
-        $this->command->info('initial user');
-        $this->command->getOutput()->progressStart(count($this->users));
-        foreach ($this->users as $user) {
-            $this->initializeUser($user);
-            $this->command->getOutput()->progressAdvance();
-        }
-
-        if (config('app.env') == 'local') {
-            // initial user dummy admin
-            $this->command->info('initial user dummy admin');
-            $this->command->getOutput()->progressStart(20);
-            for ($i = 0; $i < 20; $i++) {
-                $this->initializeUserDummy($user);
+        // 4. Initial synthetic foresight analyst & executive team (loaded from synthetic_user.json)
+        if ((config('app.env') === 'local' || app()->environment('local', 'testing')) && ! empty($this->synthetic_users)) {
+            $this->command->info('initial synthetic foresight analysts & executives');
+            $this->command->getOutput()->progressStart(count($this->synthetic_users));
+            foreach ($this->synthetic_users as $profile) {
+                $this->initializeSyntheticUser($profile);
                 $this->command->getOutput()->progressAdvance();
             }
         }
     }
 
-
-    protected function initializePermission($permission)
+    protected function initializePermission($permission): void
     {
         Permission::firstOrCreate([
             'name' => $permission->name,
@@ -84,64 +81,57 @@ class UserSeeder extends Seeder
         ]);
     }
 
-    protected function initializeRole($role)
+    protected function initializeRole($role): void
     {
-        $new_role = Role::firstOrCreate([
+        $newRole = Role::firstOrCreate([
             'name' => $role->name,
         ], [
             'uuid' => Uuid::uuid1(),
             'display_name' => $role->display_name,
-            'guard_name' => 'web'
+            'guard_name' => 'web',
         ]);
 
-        $new_role->syncPermissions($role->permissions);
+        $newRole->syncPermissions($role->permissions);
     }
 
-    protected function initializeUser($user)
+    protected function initializeUser($user): void
     {
-        $new_user = User::firstOrCreate([
-            "name" => $user->name,
+        $newUser = User::firstOrCreate([
+            'name' => $user->name,
         ], [
-            "uuid" => Uuid::uuid1(),
-            "email" => $user->email,
-            "email_verified_at" => null,
-            "password" => bcrypt($user->password),
-            "remember_token" => null,
+            'uuid' => Uuid::uuid1(),
+            'email' => $user->email,
+            'email_verified_at' => now(),
+            'password' => bcrypt($user->password),
+            'remember_token' => null,
         ]);
 
-
-        $new_user->syncRoles($user->role);
-
-        $role = Role::where('name', $new_user->roles->pluck('name')[0])->first();
-
-        $new_user->syncPermissions($role->permissions);
+        $newUser->syncRoles($user->role);
+        $role = Role::where('name', $newUser->roles->pluck('name')[0])->first();
+        if ($role) {
+            $newUser->syncPermissions($role->permissions);
+        }
     }
 
-    protected function initializeUserDummy()
+    protected function initializeSyntheticUser(array $profile): void
     {
-        $name = $this->dummy->firstName() . ' ' . $this->dummy->lastName();
+        $email = $profile['email'] ?? (str()->slug($profile['name'], '.').'@foresight.internal');
 
-        $new_user = User::firstOrCreate([
-            "name" => $name,
+        $newUser = User::firstOrCreate([
+            'email' => $email,
         ], [
-            "uuid" => Uuid::uuid1(),
-            "email" => $this->generateEmailFromName($name),
-            "email_verified_at" => null,
-            "password" => bcrypt('password'),
-            "remember_token" => null,
-            "created_at" => now()->subDays(rand(1, 7))
+            'uuid' => Uuid::uuid1(),
+            'name' => $profile['name'],
+            'email_verified_at' => now(),
+            'password' => bcrypt('password'),
+            'remember_token' => null,
+            'created_at' => now()->subDays(rand(10, 60)),
         ]);
 
-        $get_random_role = Role::whereNotIn('name', ['developer', 'qa', 'super-admin'])->first();
-
-        $new_user->syncRoles($get_random_role->name);
-
-        $new_user->syncPermissions($get_random_role->permissions);
-    }
-
-    private function generateEmailFromName($name)
-    {
-        $name = str()->slug($name, '.'); // Converts the name to a slug format, e.g., John Doe -> john.doe
-        return $name . $this->dummy->randomNumber(rand(1, 2)) . '@example.com'; // You can replace 'example.com' with any domain you prefer
+        $role = Role::where('name', $profile['role'])->first();
+        if ($role) {
+            $newUser->syncRoles($role->name);
+            $newUser->syncPermissions($role->permissions);
+        }
     }
 }

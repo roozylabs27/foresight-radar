@@ -21,9 +21,13 @@ class ItemReasonTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Dimension $dimension;
+
     private StatusAction $statusAction;
+
     private TimeHorizon $timeHorizon;
+
     private Priority $priority;
 
     protected function setUp(): void
@@ -76,7 +80,7 @@ class ItemReasonTest extends TestCase
 
     private function addReason(DrivingForceRating $rating, string $reason, $date, ?int $id = null): void
     {
-        $actionReason = new ActionReason();
+        $actionReason = new ActionReason;
         if ($id !== null) {
             $actionReason->id = $id;
         }

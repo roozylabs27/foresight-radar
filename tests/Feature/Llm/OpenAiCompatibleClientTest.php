@@ -65,7 +65,7 @@ class OpenAiCompatibleClientTest extends TestCase
 
     public function test_sends_a_strict_json_schema_request_and_decodes_the_answer(): void
     {
-        Http::fake([self::BASE . '/chat/completions' => Http::response($this->completion('{"ok": true}'))]);
+        Http::fake([self::BASE.'/chat/completions' => Http::response($this->completion('{"ok": true}'))]);
 
         $response = (new OpenAiCompatibleClient($this->config()))->generateJson($this->request());
 
@@ -76,7 +76,8 @@ class OpenAiCompatibleClientTest extends TestCase
 
         Http::assertSent(function (Request $request) {
             $body = $request->data();
-            return $request->url() === self::BASE . '/chat/completions'
+
+            return $request->url() === self::BASE.'/chat/completions'
                 && $request->hasHeader('Authorization', 'Bearer sk-or-test-not-real')
                 && $request->hasHeader('X-Title', 'Foresight Radar') === false
                 && $body['model'] === 'vendor/model-x'
@@ -89,13 +90,13 @@ class OpenAiCompatibleClientTest extends TestCase
                 && $body['response_format']['json_schema']['strict'] === true
                 && $body['response_format']['json_schema']['name'] === 'signal_extraction'
                 && $body['response_format']['json_schema']['schema']['required'] === ['ok']
-                && !array_key_exists('reasoning_effort', $body);
+                && ! array_key_exists('reasoning_effort', $body);
         });
     }
 
     public function test_reasoning_effort_is_sent_only_when_configured(): void
     {
-        Http::fake([self::BASE . '/chat/completions' => Http::response($this->completion('{"ok": true}'))]);
+        Http::fake([self::BASE.'/chat/completions' => Http::response($this->completion('{"ok": true}'))]);
 
         (new OpenAiCompatibleClient($this->config(['reasoning_effort' => 'low'])))->generateJson($this->request());
 
@@ -104,7 +105,7 @@ class OpenAiCompatibleClientTest extends TestCase
 
     public function test_json_object_mode_puts_the_schema_in_the_user_message(): void
     {
-        Http::fake([self::BASE . '/chat/completions' => Http::response($this->completion("```json\n{\"ok\": false}\n```"))]);
+        Http::fake([self::BASE.'/chat/completions' => Http::response($this->completion("```json\n{\"ok\": false}\n```"))]);
 
         $response = (new OpenAiCompatibleClient($this->config(['structured_output' => 'json_object'])))->generateJson($this->request());
 
@@ -112,6 +113,7 @@ class OpenAiCompatibleClientTest extends TestCase
         $this->assertSame(['ok' => false], $response->data);
         Http::assertSent(function (Request $request) {
             $body = $request->data();
+
             return $body['response_format'] === ['type' => 'json_object']
                 && str_starts_with($body['messages'][1]['content'], 'USER DOCUMENT')
                 && str_contains($body['messages'][1]['content'], '"required":["ok"]')
@@ -145,7 +147,7 @@ class OpenAiCompatibleClientTest extends TestCase
         $cases = [429 => 'rate_limited', 503 => 'overloaded', 500 => 'api_error', 400 => 'api_error', 401 => 'api_error'];
 
         // Retryable statuses (429, 5xx) are sent twice with max_retries = 1; others once.
-        $sequence = Http::fakeSequence(self::BASE . '/chat/completions');
+        $sequence = Http::fakeSequence(self::BASE.'/chat/completions');
         foreach ([429, 429, 503, 503, 500, 500, 400, 401] as $status) {
             $sequence->push(['error' => ['message' => 'nope']], $status);
         }
@@ -163,7 +165,7 @@ class OpenAiCompatibleClientTest extends TestCase
 
     public function test_rate_limit_is_retried_once_then_succeeds(): void
     {
-        Http::fakeSequence(self::BASE . '/chat/completions')
+        Http::fakeSequence(self::BASE.'/chat/completions')
             ->push(['error' => ['message' => 'slow down']], 429)
             ->push($this->completion('{"ok": true}'));
 
@@ -176,18 +178,19 @@ class OpenAiCompatibleClientTest extends TestCase
     public function test_logs_usage_but_never_prompt_document_or_key(): void
     {
         Log::spy();
-        Http::fake([self::BASE . '/chat/completions' => Http::response($this->completion('{"ok": true}'))]);
+        Http::fake([self::BASE.'/chat/completions' => Http::response($this->completion('{"ok": true}'))]);
 
         (new OpenAiCompatibleClient($this->config()))->generateJson($this->request());
 
         Log::shouldHaveReceived('info')->withArgs(function ($message, $context) {
             $encoded = json_encode($context);
+
             return $message === 'llm.call'
                 && $context['provider'] === 'openrouter'
                 && $context['usage']['input_tokens'] === 900
-                && !str_contains($encoded, 'USER DOCUMENT')
-                && !str_contains($encoded, 'SYSTEM PROMPT')
-                && !str_contains($encoded, 'sk-or-test');
+                && ! str_contains($encoded, 'USER DOCUMENT')
+                && ! str_contains($encoded, 'SYSTEM PROMPT')
+                && ! str_contains($encoded, 'sk-or-test');
         })->once();
     }
 
@@ -230,7 +233,7 @@ class OpenAiCompatibleClientTest extends TestCase
         TimeHorizon::create(['uuid' => (string) Uuid::uuid4(), 'name' => 'Mid Term', 'code' => 'MT']);
 
         $document = 'The Ministry of Industry enacted a regulation requiring 40 percent local content for electric vehicles sold after 2027.';
-        Http::fake([self::BASE . '/chat/completions' => Http::response($this->completion(json_encode(['signals' => [[
+        Http::fake([self::BASE.'/chat/completions' => Http::response($this->completion(json_encode(['signals' => [[
             'title' => 'Local Content Mandate',
             'summary' => 'EVs need 40 percent local content after 2027.',
             'significance' => 'Sourcing must change.',

@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": "Foresight Radar",
+  "version": "1.1.0",
+  "last_updated": "2026-10-23",
+  "status_vocabulary": [
+    "not_started",
+    "in_progress",
+    "blocked",
+    "passing"
+  ],
+  "features": [
+    {
+      "id": "FEAT-001",
+      "name": "Authentication & RBAC Gatekeeper",
+      "description": "User registration, password authentication, session lifecycle, authorization policies, and Spatie permission resolution across all routes.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Unauthenticated requests redirect to login",
+        "Role and permission middleware restricts protected routes",
+        "Session fixation and secure cookie policies enforced"
+      ],
+      "verification_evidence": "Tests/Feature/Auth/* and Tests/Feature/Security/RoleEscalationTest pass (16 assertions)"
+    },
+    {
+      "id": "FEAT-002",
+      "name": "User Administration & Role Assignment",
+      "description": "Administrative management of user accounts, credential updates, and Spatie role assignment (Admin, BOD, Management, Team).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Admin can list, search, and update users",
+        "Non-admins cannot escalate privileges or assign Super Admin role",
+        "User policies protect unauthorized account tampering"
+      ],
+      "verification_evidence": "Tests/Feature/UserManagementFilterTest and Tests/Feature/Security/RoleEscalationTest pass"
+    },
+    {
+      "id": "FEAT-003",
+      "name": "Driving Force Register & Lifecycle Initiator",
+      "description": "Cataloging of strategic driving forces with dimension taxonomy and automatic initialization of 1-to-1 rating profile in PENDING state.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Analysts can register and edit driving forces",
+        "Creating a driving force auto-initializes DrivingForceRating in PENDING status",
+        "Soft-deleted driving forces are safely archived without cascade breakage"
+      ],
+      "verification_evidence": "Tests/Feature/TableSortTest and Tests/Feature/Workflow/ForesightLifecycleTest pass"
+    },
+    {
+      "id": "FEAT-004",
+      "name": "Time Horizon Assessment (Stage 2)",
+      "description": "Assignment of temporal impact window (Short Term, Medium Term, Long Term, Ultra Long) to active driving forces.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Authorized users can assign time horizon to pending driving forces",
+        "Audit history is recorded upon horizon modification",
+        "Concentric ring groupings on Radar reflect assigned time horizon"
+      ],
+      "verification_evidence": "Tests/Feature/Workflow/ForesightLifecycleTest passes"
+    },
+    {
+      "id": "FEAT-005",
+      "name": "Rating of Urgency & Impact/Uncertainty Evaluation (Stage 3)",
+      "description": "Quantitative scoring of Impact (1-10) and Uncertainty (1-10) with automatic strategic priority classification (High, Medium, Low).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Impact and uncertainty scores accept integer values between 1 and 10",
+        "PriorityLevel enum automatically calculates High/Medium/Low based on threshold rules (score >= 6)",
+        "Rating observer synchronizes priority and updates rating history"
+      ],
+      "verification_evidence": "Tests/Unit/PriorityCalculationTest and Tests/Feature/TableSortTest pass"
+    },
+    {
+      "id": "FEAT-006",
+      "name": "Status & Action Assignment (Stage 4)",
+      "description": "Governed transition of driving forces into actionable states with explicit action reasons and audit logging.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Transition requires completed rating assessment",
+        "Invalid state transitions throw InvalidStateTransitionException",
+        "Action reasons are logged in driving_force_rating_histories"
+      ],
+      "verification_evidence": "Tests/Unit/DrivingForceStatusTest and Tests/Feature/Workflow/ForesightLifecycleTest pass"
+    },
+    {
+      "id": "FEAT-007",
+      "name": "Strategic Approval & Governance (Stage 5)",
+      "description": "Board and Management review workflow to officially approve evaluated driving forces into the foresight baseline.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only authorized roles (BOD / Management) can approve items",
+        "Approved items transition to APPROVED status and lock baseline fields",
+        "Approval metadata records user ID and timestamp"
+      ],
+      "verification_evidence": "Tests/Feature/Workflow/ForesightLifecycleTest passes"
+    },
+    {
+      "id": "FEAT-008",
+      "name": "Closed Items & Historical Archival (Stage 6)",
+      "description": "Archival of resolved or decommissioned driving forces with reopening governance protocols.",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Closed items are excluded from active operational radar views",
+        "Historical audit logs remain preserved and queryable",
+        "Reopening transitions item back to PENDING for re-evaluation"
+      ],
+      "verification_evidence": "Tests/Unit/DrivingForceStatusTest and Tests/Feature/Workflow/ForesightLifecycleTest pass"
+    },
+    {
+      "id": "FEAT-009",
+      "name": "Foresight Radar Visualization",
+      "description": "Interactive concentric radar visualization rendering driving forces grouped by time horizon rings and STEEP taxonomy sectors.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Renders approved driving forces across 4 time horizon rings",
+        "Categorizes items by dimension sectors",
+        "Endpoint is rate-limited and protected by RBAC"
+      ],
+      "verification_evidence": "Tests/Feature/Security/RateLimitingTest and Tests/Feature/Security/VisualizationAuthorizationTest pass"
+    },
+    {
+      "id": "FEAT-010",
+      "name": "Prioritizing Matrix Visualization",
+      "description": "2x2 Impact vs Uncertainty scatter plot separating High, Medium, and Low strategic imperatives.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Positions driving forces on cartesian coordinates (1-10)",
+        "Highlights high-impact, high-uncertainty critical uncertainties",
+        "Allows filtering by dimension and environment"
+      ],
+      "verification_evidence": "Tests/Feature/Security/VisualizationAuthorizationTest passes"
+    },
+    {
+      "id": "FEAT-011",
+      "name": "Registered List & Tabular Data Export",
+      "description": "Paginated master data table with multi-column sorting, filtering, and Excel export capability.",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Supports multi-column sorting across relations (dimension, status, priority)",
+        "Sanitizes search queries and avoids SQL wildcard leakage",
+        "Exports structured data to XLSX"
+      ],
+      "verification_evidence": "Tests/Feature/TableSortTest and Tests/Feature/Security/FilterOperatorPrecedenceTest pass"
+    },
+    {
+      "id": "FEAT-012",
+      "name": "Strategic Executive Dashboard & What-If Simulation",
+      "description": "Executive summary KPIs, distribution charts, and interactive Monte Carlo / what-if horizon simulations with cross-impact ripple propagation.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Displays real-time counts of pending, approved, and closed forces",
+        "Executes what-if simulation permutations without mutating primary database records",
+        "Propagates cross-impact influence (+-3) across connected forces when enabled, clamping effective scores to [1, 10]",
+        "UI renders interactive propagation toggle and ripple trace breakdown panel",
+        "Handles missing or unrated parameters gracefully"
+      ],
+      "verification_evidence": "Tests/Feature/Reasoning/ScenarioSimulationTest and Tests/Feature/Reasoning/ScenarioSimulationPropagationTest pass (20 assertions)"
+    },
+    {
+      "id": "FEAT-013",
+      "name": "Cross-Impact Analysis & Causal Loop Detection",
+      "description": "Cross-impact matrix scoring (-3 to +3) and algorithmic cycle detection identifying reinforcing and balancing system dynamics loops.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Detects 2-node and multi-node feedback loops",
+        "Differentiates reinforcing loops (even negative edges) from balancing loops (odd negative edges)",
+        "Ignores zero-score impact edges"
+      ],
+      "verification_evidence": "Tests/Unit/CausalLoopServiceTest passes (detects reinforcing and balancing loops)"
+    },
+    {
+      "id": "FEAT-014",
+      "name": "Foundation Taxonomy & System Dimensions",
+      "description": "System taxonomy dictionaries including STEEP dimensions, environments, and strategic priority definitions.",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Database migrations seed system dimensions (Social, Technological, Economic, Environmental, Political)",
+        "Foreign key constraints enforce referential integrity"
+      ],
+      "verification_evidence": "Database migrations and seeders execute cleanly"
+    },
+    {
+      "id": "FEAT-015",
+      "name": "Signal Ingestion, AI Extraction & Verbatim Verification",
+      "description": "Unstructured document ingestion, background LLM extraction, verbatim evidence quote verification, and candidate signal review workspace.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Ingests text sources and dispatches background ExtractSignals job with stale queue recovery",
+        "EvidenceVerifier validates verbatim quote against original source text",
+        "Analyst can accept signal and convert to new or existing driving force",
+        "Offline LLM benchmark harness verifies extraction quality without paid API dependencies"
+      ],
+      "verification_evidence": "Tests/Feature/SignalIngestionTest and Tests/Feature/Llm/SignalExtractionBenchmarkTest pass (20 assertions)"
+    },
+    {
+      "id": "FEAT-016",
+      "name": "Scenario Matrix & AI Narrative Studio",
+      "description": "2x2 Scenario planning matrix with axis selection, soft-delete reference retention, pessimistic queue locking, and 4-quadrant narrative synthesis.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Soft-deleted axis forces retain historical snapshot without throwing UI exceptions",
+        "Scenario ownership policy permits deletion only by creator or admin",
+        "ScenarioNarrativeService wraps queueing in pessimistic lockForUpdate transaction to prevent duplicate concurrent jobs",
+        "Hallucinated citations are rejected and trigger deterministic template fallback",
+        "Offline benchmark test evaluates 4-quadrant completeness and signal citation veracity"
+      ],
+      "verification_evidence": "Tests/Feature/ScenarioHarnessTest and Tests/Feature/Llm/ScenarioNarrativeBenchmarkTest pass (25 assertions)"
+    },
+    {
+      "id": "FEAT-017",
+      "name": "Unified Verification Contract & Quality Gates",
+      "description": "Automated verification harness including Pint style formatting, Larastan Level 5 static analysis, PHPUnit test suite, Vite build, and NPM audit.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "docker exec laravel_app composer verify runs Pint, Larastan, and PHPUnit",
+        "init.sh and verify.sh provide standardized entry points for human and AI agents",
+        "GitHub Actions CI runs backend tests, frontend build, and headless E2E smoke tests",
+        "Zero Pint style issues, zero Larastan Level 5 errors, zero test failures"
+      ],
+      "verification_evidence": "composer verify passes (241 files, 137 stan files, 259 tests, 2503 assertions); verify.sh passes"
+    },
+    {
+      "id": "FEAT-018",
+      "name": "Synthetic Foresight Generator & Theory Reconciliation Harness",
+      "description": "Deterministic PRNG synthetic data generation, K-Means clustering, Silhouette evaluation, PCA 2D/3D projection, and domain theory reconciliation verifier.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "SyntheticForesightGenerator produces reproducible multi-dimensional forces and cross-impact edges via seedable PRNG",
+        "KMeansClusterer, SilhouetteEvaluator, and PcaTransformer perform pure mathematical clustering and dimensional reduction",
+        "TheoryReconciliationService validates causal loop polarity, Vester boundaries, and scenario axis orthogonality",
+        "Artisan command harness:eval-clustering executes deterministic benchmark quality gate"
+      ],
+      "verification_evidence": "Tests/Unit/Harness/* and Tests/Feature/Harness/* pass (1335 assertions); artisan harness:eval-clustering passes"
+    },
+    {
+      "id": "FEAT-019",
+      "name": "User LLM Settings & Multi-Provider Gateway",
+      "description": "Per-user configuration and credential encryption for LLM providers (Google Gemini, Anthropic Claude, OpenAI ChatGPT, OpenRouter / Custom), enforcing single active provider with live connection testing and masked display.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Users can configure API keys and model selections per provider (Claude, ChatGPT, Gemini, OpenRouter/Custom)",
+        "API keys are encrypted at rest with AES-256 and masked in UI and Inertia props",
+        "Exactly one provider can be active per user, atomically enforced via DB transaction",
+        "Live connection test validates credentials before activation",
+        "SignalExtractionService and ScenarioNarrativeService dynamically resolve active user client with offline fallback"
+      ],
+      "verification_evidence": "Tests/Feature/Settings/UserLlmSettingsTest passes (7 tests, 48 assertions); ScenarioNarrativeBenchmarkTest & SignalExtractionBenchmarkTest pass"
+    }
+  ]
+}
+

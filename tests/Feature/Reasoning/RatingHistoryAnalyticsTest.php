@@ -24,10 +24,15 @@ class RatingHistoryAnalyticsTest extends TestCase
     private const RANGE = ['2025-11-01', '2026-10-31'];
 
     private User $analyst;
+
     private Dimension $economy;
+
     private Dimension $ecology;
+
     private StatusAction $monitoring;
+
     private StatusAction $decided;
+
     private TimeHorizon $shortTerm;
 
     protected function setUp(): void

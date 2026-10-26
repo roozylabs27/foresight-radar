@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Head } from "@inertiajs/react";
 import axios from "axios";
 import qs from "qs";
@@ -10,13 +10,15 @@ import AnalysisFilterBar, { filterParam, useAnalysisFilters } from "@/Components
 import EdaCharts from "@/Components/EdaCharts";
 import ExecutiveOverview from "@/Components/ExecutiveOverview";
 import HistoryCharts from "@/Components/HistoryCharts";
-import OverallStatus from "@/Components/OverallStatus";
-import PrioritizingChart from "@/Components/PrioritizingChart";
-import Radar from "@/Components/Radar";
 import ScenarioSimulation from "@/Components/ScenarioSimulation";
 import { statusBadge } from "@/Components/StatusBadge";
+import { Skeleton } from "@/Components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
 import { cn } from "@/lib/utils";
+
+const OverallStatus = lazy(() => import("@/Components/OverallStatus"));
+const PrioritizingChart = lazy(() => import("@/Components/PrioritizingChart"));
+const Radar = lazy(() => import("@/Components/Radar"));
 
 const TABS = [
     { value: "overview", label: "Overview" },
@@ -112,13 +114,19 @@ export default function Dashboard({ auth, dimensions = [] }) {
                         <ScenarioSimulation loading={reasoning.loading} reasoningData={reasoning.data} params={filters.params} />
                     </TabsContent>
                     <TabsContent value="prioritizing">
-                        <PrioritizingChart date={date} selectData={selectData} dimensions={dimensions} />
+                        <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-xl" />}>
+                            <PrioritizingChart date={date} selectData={selectData} dimensions={dimensions} />
+                        </Suspense>
                     </TabsContent>
                     <TabsContent value="radar">
-                        <Radar date={date} selectData={selectData} />
+                        <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-xl" />}>
+                            <Radar date={date} selectData={selectData} />
+                        </Suspense>
                     </TabsContent>
                     <TabsContent value="registered">
-                        <OverallStatus date={date} selectedData={selectData} permissions={auth?.permissions ?? []} />
+                        <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-xl" />}>
+                            <OverallStatus date={date} selectedData={selectData} permissions={auth?.permissions ?? []} />
+                        </Suspense>
                     </TabsContent>
                 </Tabs>
             </main>

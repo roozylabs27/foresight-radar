@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Resources\OverallStatusCollection;
 use App\Http\Resources\OverallStatusResource;
 use App\Models\Dimension;
@@ -9,40 +10,40 @@ use App\Models\Priority;
 use App\Models\StatusAction;
 use App\Models\TimeHorizon;
 use App\Services\ForesightReportingService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class RegisteredListController extends Controller
 {
+    use HandlesApiErrors;
+
     public function index()
     {
         $dimensions = Dimension::all()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
-                'label' => $dimension->name
+                'label' => $dimension->name,
             ];
         });
         $time_horizons = TimeHorizon::all()->map(function ($time_horizon) {
             return [
                 'value' => $time_horizon->id,
-                'label' => $time_horizon->name
+                'label' => $time_horizon->name,
             ];
         });
         $priorities = Priority::all()->map(function ($priority) {
             return [
                 'value' => $priority->id,
-                'label' => $priority->name
+                'label' => $priority->name,
             ];
         });
         $status_actions = StatusAction::all()->map(function ($status_action) {
             return [
                 'value' => $status_action->id,
-                'label' => $status_action->name
+                'label' => $status_action->name,
             ];
         });
-        $title = "Registered List";
+        $title = 'Registered List';
 
         return Inertia::render('Report/RegisteredList', compact('dimensions', 'title', 'priorities', 'status_actions', 'time_horizons'));
     }
@@ -50,16 +51,18 @@ class RegisteredListController extends Controller
     public function registered_list(ForesightReportingService $reportingService)
     {
         try {
-            $pagination = request('pagination.pageSize');
+            $rawPagination = (int) request('pagination.pageSize', request('pageSize', 10));
+            $pagination = min(100, max(1, $rawPagination > 0 ? $rawPagination : 10));
             $registered_list = $reportingService->getRegisteredListQuery()->paginate($pagination);
             $result = new OverallStatusCollection($registered_list);
 
             return response()->json($result, Response::HTTP_OK);
         } catch (\Throwable $th) {
-            Log::error('Registered list fetch error: ' . $th->getMessage(), ['exception' => $th]);
-            return response()->json([
-                'message' => 'An unexpected server error occurred while retrieving data.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorJsonResponse(
+                $th,
+                'fetching registered list data',
+                'An unexpected server error occurred while retrieving data.'
+            );
         }
     }
 
@@ -71,8 +74,8 @@ class RegisteredListController extends Controller
             return response()->stream(function () use ($query) {
                 echo '[';
                 $first = true;
-                foreach ($query->lazy(100) as $item) {
-                    if (!$first) {
+                foreach ($query->get() as $item) {
+                    if (! $first) {
                         echo ',';
                     }
                     $first = false;
@@ -85,10 +88,11 @@ class RegisteredListController extends Controller
                 'Cache-Control' => 'no-cache, must-revalidate',
             ]);
         } catch (\Throwable $th) {
-            Log::error('Export data error: ' . $th->getMessage(), ['exception' => $th]);
-            return response()->json([
-                'message' => 'An unexpected server error occurred while retrieving data.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->errorJsonResponse(
+                $th,
+                'exporting registered list data',
+                'An unexpected server error occurred while retrieving data.'
+            );
         }
     }
 }

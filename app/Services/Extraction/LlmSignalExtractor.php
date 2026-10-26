@@ -20,11 +20,10 @@ class LlmSignalExtractor
 {
     /** Approved driving forces offered to the model as F1..Fn. */
     public const MAX_FORCES = 80;
+
     public const MAX_CONFIDENCE = 0.95;
 
-    public function __construct(protected StructuredLlmClient $llm)
-    {
-    }
+    public function __construct(protected StructuredLlmClient $llm) {}
 
     /**
      * @return array{candidates: array<int, array>, meta: array<string, mixed>}
@@ -44,9 +43,9 @@ class LlmSignalExtractor
         $refs = [];
         $labels = [];
         foreach ($forces->values() as $position => $force) {
-            $ref = 'F' . ($position + 1);
+            $ref = 'F'.($position + 1);
             $refs[$ref] = $force->id;
-            $labels[$ref] = $force->keyword . ' (' . ($force->dimension?->name ?? 'Tanpa dimensi') . ')';
+            $labels[$ref] = $force->keyword.' ('.($force->dimension?->name ?? 'Tanpa dimensi').')';
         }
 
         $request = SignalExtractionPrompt::request(
@@ -72,12 +71,14 @@ class LlmSignalExtractor
 
         foreach ($returned as $item) {
             $quote = is_array($item) ? EvidenceVerifier::normalize((string) ($item['evidence_quote'] ?? '')) : '';
-            if (!EvidenceVerifier::verify($quote, $content)) {
+            if (! EvidenceVerifier::verify($quote, $content)) {
                 $discarded++;
+
                 continue;
             }
             if (isset($seen[$quote])) {
                 $duplicates++;
+
                 continue;
             }
             $seen[$quote] = true;

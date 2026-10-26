@@ -27,7 +27,7 @@ return new class extends Migration
         });
 
         Schema::table('dimensions', function (Blueprint $table) {
-            $table->foreign('environment_id')->references("id")->on('environments')->onDelete("cascade");
+            $table->foreign('environment_id')->references('id')->on('environments')->onDelete('cascade');
         });
     }
 

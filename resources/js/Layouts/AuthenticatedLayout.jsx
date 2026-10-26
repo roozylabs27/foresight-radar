@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import {
+    Building2Icon,
     ChartColumnIcon,
     ChevronDownIcon,
     CircleCheckIcon,
@@ -14,16 +15,24 @@ import {
     ListIcon,
     LogOutIcon,
     MenuIcon,
+    NetworkIcon,
     PanelLeftCloseIcon,
     PanelLeftOpenIcon,
     RadarIcon,
+    SettingsIcon,
+    SlidersIcon,
     UserIcon,
     WifiIcon,
     ZapIcon,
 } from "lucide-react";
 
 import BrandMark from "@/Components/BrandMark";
+import Breadcrumb from "@/Components/Breadcrumb";
+import LanguageSwitcher from "@/Components/LanguageSwitcher";
+import NotificationBell from "@/Components/NotificationBell";
+import FloatingIngestionProgress from "@/Components/Ingestion/FloatingIngestionProgress";
 import { ThemeMenuItem } from "@/Components/ThemeToggle";
+import { I18nProvider, useTranslation } from "@/context/I18nContext";
 import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
 import { Button } from "@/Components/ui/button";
 import {
@@ -42,20 +51,21 @@ import { cn } from "@/lib/utils";
 const COLLAPSED_KEY = "foresight-sidebar-collapsed";
 
 const NAV_ITEMS = [
-    { label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: LayoutGridIcon, permission: "view-dashboard" },
-    { label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiIcon, permission: "view-signal" },
-    { label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ZapIcon, permission: "view-driving-force" },
-    { label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockIcon, permission: "view-time-horizon" },
-    { label: "Rating of Urgency", route: "rating-urgency.", match: "/rating-urgency", icon: GaugeIcon, permission: "view-rating-urgency" },
-    { label: "Status of Action", route: "status-action.", match: "/status-action", icon: CircleCheckIcon, permission: "view-status-action" },
-    { label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileCheckIcon, permission: "view-approval-items" },
-    { label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxIcon, permission: "view-closed-items" },
-    { label: "User Management", route: "user-management.user.", match: "/user-management", icon: UserIcon, permission: "view-user" },
-    { label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },
-    { label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
-    { label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
-    { label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
-    { label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
+    { key: "dashboard", label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: LayoutGridIcon, permission: "view-dashboard" },
+    { key: "signals", label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiIcon, permission: "view-signal" },
+    { key: "driving_force", label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ZapIcon, permission: "view-driving-force" },
+    { key: "time_horizon", label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockIcon, permission: "view-time-horizon" },
+    { key: "rating_urgency", label: "Rating of Urgency", route: "rating-urgency.", match: "/rating-urgency", icon: GaugeIcon, permission: "view-rating-urgency" },
+    { key: "status_action", label: "Status of Action", route: "status-action.", match: "/status-action", icon: CircleCheckIcon, permission: "view-status-action" },
+    { key: "approval_items", label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileCheckIcon, permission: "view-approval-items" },
+    { key: "closed_items", label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxIcon, permission: "view-closed-items" },
+    { key: "prioritizing", label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },
+    { key: "registered_list", label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
+    { key: "foresight_radar", label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
+    { key: "cross_impact", label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
+    { key: "knowledge_graph", label: "Knowledge Graph", route: "visualization.knowledge-graph.", match: "/visualization/knowledge-graph", icon: NetworkIcon, permission: "view-foresight-radar" },
+    { key: "scenarios", label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
+    { key: "settings", label: "Settings", route: "settings.index", match: "/settings", icon: SettingsIcon },
 ];
 
 function readCollapsed() {
@@ -77,6 +87,31 @@ function writeCollapsed(value) {
 function isActive(url, match) {
     const path = url.split("?")[0];
     return path === match || path.startsWith(`${match}/`);
+}
+
+function resolveBreadcrumbs(customBreadcrumbs, url, navItems) {
+    if (customBreadcrumbs === false) {
+        return null;
+    }
+    if (Array.isArray(customBreadcrumbs) && customBreadcrumbs.length > 0) {
+        return customBreadcrumbs;
+    }
+
+    const path = url.split("?")[0];
+    if (path === "/dashboard" || path === "/" || path === "") {
+        return null;
+    }
+
+    if (path === "/profile" || path.startsWith("/profile/")) {
+        return [{ label: "Profil Pengguna" }];
+    }
+
+    const matched = navItems.find((item) => isActive(url, item.match));
+    if (matched) {
+        return [{ label: matched.label }];
+    }
+
+    return null;
 }
 
 function Brand({ collapsed = false }) {
@@ -141,7 +176,8 @@ function NavList({ items, url, collapsed = false, onNavigate }) {
     );
 }
 
-function UserMenu({ user }) {
+function UserMenu({ user, tenant }) {
+    const { t } = useTranslation();
     const name = user?.name || "Pengguna";
     const initial = name.charAt(0).toUpperCase();
 
@@ -166,12 +202,24 @@ function UserMenu({ user }) {
                             {user.email}
                         </span>
                     )}
+                    {tenant?.name && (
+                        <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-primary">
+                            <Building2Icon aria-hidden="true" className="size-3.5 shrink-0" />
+                            <span className="truncate">{tenant.name}</span>
+                        </span>
+                    )}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                     <Link href={route("profile.edit")}>
                         <UserIcon aria-hidden="true" />
-                        <span>Profil Pengguna</span>
+                        <span>{t("profile.title", "Profil Pengguna")}</span>
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link href={route("settings.index")}>
+                        <SettingsIcon aria-hidden="true" />
+                        <span>{t("nav.settings", "Settings")}</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -180,7 +228,7 @@ function UserMenu({ user }) {
                 <DropdownMenuItem variant="destructive" asChild>
                     <Link href={route("logout")} method="post" as="button" type="button" className="w-full">
                         <LogOutIcon aria-hidden="true" />
-                        <span>Keluar (Logout)</span>
+                        <span>{t("auth.logout", "Keluar (Logout)")}</span>
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuContent>
@@ -188,10 +236,12 @@ function UserMenu({ user }) {
     );
 }
 
-export default function Authenticated({ auth, user: propUser, header, children }) {
+function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, children }) {
     const page = usePage();
+    const { t } = useTranslation();
     const effectiveAuth = auth || page.props.auth || {};
     const user = effectiveAuth.user || propUser;
+    const tenant = effectiveAuth.tenant;
     const permissions = effectiveAuth.permissions || [];
     const role = effectiveAuth.role;
 
@@ -201,7 +251,12 @@ export default function Authenticated({ auth, user: propUser, header, children }
             role === "developer" ||
             role === "super-admin" ||
             permissions.includes(item.permission)
-    );
+    ).map((item) => ({
+        ...item,
+        label: t(`nav.${item.key}`, item.label),
+    }));
+
+    const resolvedBreadcrumbs = resolveBreadcrumbs(breadcrumbs, page.url, items);
 
     const isDesktop = useMediaQuery("(min-width: 1024px)");
     const [collapsed, setCollapsed] = useState(readCollapsed);
@@ -289,10 +344,28 @@ export default function Authenticated({ auth, user: propUser, header, children }
                                 </div>
                             )}
                         </div>
-                        <UserMenu user={user} />
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                            {tenant?.name && (
+                                <div className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground sm:flex">
+                                    <Building2Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+                                    <span className="max-w-36 truncate">{tenant.name}</span>
+                                </div>
+                            )}
+                            <NotificationBell />
+                            <LanguageSwitcher />
+                            <UserMenu user={user} tenant={tenant} />
+                        </div>
                     </header>
 
+                    {resolvedBreadcrumbs && resolvedBreadcrumbs.length > 0 && (
+                        <div className="border-b border-border/50 bg-muted/20 px-4 py-2 sm:px-6">
+                            <Breadcrumb items={resolvedBreadcrumbs} />
+                        </div>
+                    )}
+
                     {children}
+
+                    <FloatingIngestionProgress />
 
                     <footer className="mt-auto px-6 py-2.5 text-center text-xs text-subtle-foreground">
                         Foresight Radar © {new Date().getFullYear()} Strategic Horizon Scanning. All Rights Reserved.
@@ -300,5 +373,13 @@ export default function Authenticated({ auth, user: propUser, header, children }
                 </div>
             </div>
         </TooltipProvider>
+    );
+}
+
+export default function Authenticated(props) {
+    return (
+        <I18nProvider>
+            <AuthenticatedInner {...props} />
+        </I18nProvider>
     );
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CrossImpact;
 use App\Models\DrivingForce;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -25,9 +26,7 @@ class CrossImpactService
         'unscored' => 'Belum dinilai',
     ];
 
-    public function __construct(protected CausalLoopService $loops)
-    {
-    }
+    public function __construct(protected CausalLoopService $loops) {}
 
     public function matrix(): array
     {
@@ -94,17 +93,20 @@ class CrossImpactService
         ];
         $note = trim((string) $note) === '' ? null : trim($note);
 
-        if ($score === 0 && $note === null) {
-            CrossImpact::where($keys)->delete();
-            return null;
-        }
+        return DB::transaction(function () use ($keys, $score, $note, $userId) {
+            if ($score === 0 && $note === null) {
+                CrossImpact::where($keys)->delete();
 
-        $impact = CrossImpact::firstOrNew($keys);
-        $impact->fill(['score' => $score, 'note' => $note, 'updated_by' => $userId]);
-        $impact->created_by ??= $userId;
-        $impact->save();
+                return null;
+            }
 
-        return $impact;
+            $impact = CrossImpact::firstOrNew($keys);
+            $impact->fill(['score' => $score, 'note' => $note, 'updated_by' => $userId]);
+            $impact->created_by ??= $userId;
+            $impact->save();
+
+            return $impact;
+        });
     }
 
     /**

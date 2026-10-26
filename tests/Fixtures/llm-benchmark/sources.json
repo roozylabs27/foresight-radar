@@ -1,0 +1,49 @@
+[
+  {
+    "id": "BM-01",
+    "title": "Global Semiconductor Export Controls and Subsidies",
+    "content": "The International Trade Commission ratified a multilateral treaty establishing 25 percent tariffs on advanced lithography equipment shipped after Q3 2026. Domestic chip fabrication consortiums announced an emergency 10 billion dollar fund to accelerate domestic 2nm chip packaging, while industry analysts project supply shortages extending well through 2029.",
+    "expected_signals": [
+      {
+        "title": "25% Tariffs on Lithography Equipment",
+        "exact_quote": "The International Trade Commission ratified a multilateral treaty establishing 25 percent tariffs on advanced lithography equipment shipped after Q3 2026.",
+        "dimension": "Regulation",
+        "time_horizon": "MT"
+      },
+      {
+        "title": "10B Emergency Domestic Chip Fund",
+        "exact_quote": "Domestic chip fabrication consortiums announced an emergency 10 billion dollar fund to accelerate domestic 2nm chip packaging, while industry analysts project supply shortages extending well through 2029.",
+        "dimension": "Technology",
+        "time_horizon": "LT"
+      }
+    ],
+    "negative_quotes": [
+      "The Trade Commission approved 25% import taxes on lithography gear starting 2026.",
+      "Consortiums announced a twenty billion dollar investment in domestic silicon plants."
+    ]
+  },
+  {
+    "id": "BM-02",
+    "title": "Grid Stability Mandates and Battery Storage Deployment",
+    "content": "The National Energy Regulator issued a mandatory directive requiring commercial utility operators to maintain at least 4 hours of battery energy storage capacity for every megawatt of variable renewable generation by 2028. Grid operators warned that localized supply chain bottlenecks for lithium iron phosphate cells could delay implementation across rural transmission corridors.",
+    "expected_signals": [
+      {
+        "title": "Mandatory 4-Hour Storage Directive",
+        "exact_quote": "The National Energy Regulator issued a mandatory directive requiring commercial utility operators to maintain at least 4 hours of battery energy storage capacity for every megawatt of variable renewable generation by 2028.",
+        "dimension": "Regulation",
+        "time_horizon": "MT"
+      },
+      {
+        "title": "LFP Battery Supply Bottlenecks",
+        "exact_quote": "Grid operators warned that localized supply chain bottlenecks for lithium iron phosphate cells could delay implementation across rural transmission corridors.",
+        "dimension": "Economy",
+        "time_horizon": "ST"
+      }
+    ],
+    "negative_quotes": [
+      "Regulators require utility operators to install batteries by 2028.",
+      "Grid operators reported widespread failure of urban power distribution lines."
+    ]
+  }
+]
+

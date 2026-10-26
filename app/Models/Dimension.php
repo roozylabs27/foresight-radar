@@ -14,7 +14,7 @@ class Dimension extends Model
     protected $fillable = [
         'uuid',
         'environment_id',
-        'name'
+        'name',
     ];
 
     public function environment(): BelongsTo
@@ -22,7 +22,7 @@ class Dimension extends Model
         return $this->belongsTo(Environment::class);
     }
 
-    public function driving_forces() : HasMany
+    public function driving_forces(): HasMany
     {
         return $this->hasMany(DrivingForce::class);
     }
