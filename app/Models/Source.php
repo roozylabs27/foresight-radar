@@ -3,17 +3,35 @@
 namespace App\Models;
 
 use App\Enums\LlmJobStatus;
+use App\Traits\BelongsToTenant;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Ramsey\Uuid\Uuid;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property int $tenant_id
+ * @property string $title
+ * @property string|null $url
+ * @property string|null $publisher
+ * @property Carbon|null $published_at
+ * @property string $raw_content
+ * @property string $content_hash
+ * @property int|null $created_by
+ * @property array|null $extraction_meta
+ * @property LlmJobStatus $extraction_status
+ * @property string|null $extraction_error
+ */
 class Source extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'title',
         'url',
@@ -35,9 +53,12 @@ class Source extends Model
 
     protected static function booted()
     {
-        static::creating(function ($source) {
+        static::creating(function (Source $source) {
             if (empty($source->uuid)) {
                 $source->uuid = (string) Uuid::uuid4();
+            }
+            if (empty($source->content_hash) && ! empty($source->raw_content)) {
+                $source->content_hash = hash('sha256', $source->raw_content);
             }
         });
     }

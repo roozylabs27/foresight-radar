@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,11 +44,12 @@ use Ramsey\Uuid\Uuid;
  */
 class UserLlmSetting extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'user_llm_settings';
 
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'user_id',
         'provider',

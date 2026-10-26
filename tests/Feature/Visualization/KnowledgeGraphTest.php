@@ -159,4 +159,3 @@ class KnowledgeGraphTest extends TestCase
         $this->assertEquals(1, $data['stats']['sources_count']);
     }
 }
-

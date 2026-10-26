@@ -10,10 +10,12 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Models\Role;
@@ -21,6 +23,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
+ * @property int|null $tenant_id
  * @property string $uuid
  * @property string $name
  * @property string $email
@@ -38,6 +41,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'tenant_id',
         'uuid',
         'name',
         'email',
@@ -88,11 +92,14 @@ class User extends Authenticatable
         $date_range = request('date');
         $has_date = is_array($date_range) && count($date_range) === 2 && ! empty($date_range[0]) && ! empty($date_range[1]);
 
-        if (in_array('developer', auth()->user()->roles->pluck('name')->toArray())) {
+        $currentUser = Auth::user();
+        $userRoles = $currentUser?->roles->pluck('name')->toArray() ?? [];
+
+        if (in_array('developer', $userRoles)) {
             $users = self::query()->with('roles', function ($q) {
                 $q->select('id', 'display_name')->orderBy('id');
             });
-        } elseif (in_array('super-admin', auth()->user()->roles->pluck('name')->toArray())) {
+        } elseif (in_array('super-admin', $userRoles)) {
             $users = self::query()->with('roles', function ($q) {
                 $q->select('id', 'display_name');
             })->whereHas('roles', function ($q) {
@@ -141,6 +148,11 @@ class User extends Authenticatable
     public function getRouteKeyName()
     {
         return 'uuid';
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 
     public function llmSettings(): HasMany

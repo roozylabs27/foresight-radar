@@ -3,17 +3,125 @@
 ## Current Verified State
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
-- **Current branch:** `development`
-- **Last reviewed commit:** `29b4b9a`
+- **Current branch:** `feat/multi-tenant-isolation`
+- **Last reviewed commit:** `2aa1be2`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification:** PASS (Pint: 260 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 5/5 CrossImpactTest clean, 14/14 SignalIngestionTest clean, Vite: clean, 0 Sparkles icons platform-wide, Multi-language ID/EN active)
-- **Current objective:** Interactive Causal Loop Network Graph view in Cross-Impact workspace.
+- **Baseline verification:** PASS (Pint: 275 files clean, Larastan: Level 5 clean 0 errors, PHPUnit: 8/8 UserLlmSettingsTest clean, 6/6 TenantIsolationTest clean, TableSortTest clean, PhaseOne/Two/Three clean, Vite: clean, 0 Sparkles icons platform-wide, Zero auth() helper policy active)
+- **Current objective:** Strict Single-Tenant Membership & Defensive Scoping Engine on isolated branch.
 - **Current blocker:** None
-- **Highest-priority next task:** Ready for user review.
+- **Highest-priority next task:** User review on `feat/multi-tenant-isolation` branch prior to merge into `development`.
 
 ---
 
 ## Completed
+
+- [x] **Standard DataTable in Member Management & Unified Settings Sidebar in Profile (2026-10-25)**
+  - **User Request:** "component tablenya samakan dengan page lain yang di http://127.0.0.1:8080/settings/members dan page http://127.0.0.1:8080/profile ikuti sample yg lain seperti /settings/llm /settings/organizations belum ada sidebarnya"
+  - **Implementation Details:**
+    1. **Standardized Member DataTable ([`Members.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx)):**
+       - Replaced raw HTML table with platform standard `<DataTable>` from [`resources/js/Components/DataTable.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Components/DataTable.jsx).
+       - Integrated standard [`SearchInput`](file:///c:/laragon/www/foresight-radar/resources/js/Components/SearchInput.jsx) with Enter/clear debounce matching `DrivingForce` and `Signals` pages.
+       - Wired TanStack table pagination state (`pageIndex`, `pageSize`, `rowCount`) directly with Inertia server-side navigation and page size selection (`[10, 20, 50]`).
+       - Converted pending invitations list to standard `<DataTable>` with unified typography and actions.
+    2. **Unified Settings Sidebar in Profile ([`Profile/Edit.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Profile/Edit.jsx)):**
+       - Migrated `/profile` from standalone `AuthenticatedLayout` to [`SettingsLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Layouts/SettingsLayout.jsx) with `activeTab="profile"`.
+       - Structured layout with executive Profile Overview banner (user initials avatar, name, email, role badge, organization badge) followed by modular cards: Profile Information, Password Security, and Account Danger Zone.
+       - Seamless navigation between `Mesin AI`, `Organisasi & Workspace`, `Anggota & Undangan Tim`, and `Profil & Akun`.
+    3. **Automated Quality Verification:**
+       - PHPUnit: 9/9 tests in `TenantManagementTest.php` passing cleanly.
+       - PHPUnit: 5/5 tests in `ProfileTest.php` passing cleanly.
+       - Frontend Build: `npm run build` compiled without errors.
+       - Chrome DevTools MCP: verified live DOM on `/settings/members` (standard DataTable, rows=10, pagination controls) and `/profile` (`hasSettingsSidebar: true`, active sidebar item). 0 console errors.
+
+- [x] **Member Table Pagination & Removal of Redundant Global User Management (2026-10-25)**
+  - **User Request:** "berarti tidak perlu ada user management lagi, dan buat pagination untuk data http://127.0.0.1:8080/settings/members"
+  - **Implementation Details:**
+    1. **Removal of Redundant Global User Management from Navigation:**
+       - Removed `{ key: "user_management" }` from [`resources/js/Layouts/AuthenticatedLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Layouts/AuthenticatedLayout.jsx), completely removing the legacy global user management menu from the application sidebar.
+       - Centralized team and user governance within tenant-scoped [`/settings/members`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx).
+    2. **Robust Backend Pagination & Search Filtering:**
+       - Updated [`TenantMemberController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/Settings/TenantMemberController.php) to support `search`, `per_page` (10, 20, 50), and page navigation using Laravel's `LengthAwarePaginator->through()`.
+       - Filter members dynamically by name or email within the active tenant workspace.
+    3. **Executive Frontend Pagination & Filter Toolbar:**
+       - Added live keyword search input with clear button in [`resources/js/Pages/Settings/Members.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx).
+       - Added per-page select dropdown (`10 / hal`, `20 / hal`, `50 / hal`).
+       - Built accessible pagination footer bar with "Menampilkan X-Y dari Z anggota", previous/next controls, and page indicator.
+    4. **Automated Quality Verification:**
+       - PHPUnit: 9/9 tests passing in [`tests/Feature/Settings/TenantManagementTest.php`](file:///c:/laragon/www/foresight-radar/tests/Feature/Settings/TenantManagementTest.php) (including `test_user_can_filter_members_by_search_keyword`).
+       - Pint: PASS (0 code style errors).
+       - Larastan Level 5: `[OK] No errors`.
+       - Chrome DevTools MCP: verified live navigation across pages (`?page=2`), search keyword filtering (`?search=Fajar`), and confirmation that "User Management" is absent from sidebar navigation. 0 console errors.
+
+- [x] **Organization Workspace Settings & Team Member Invitation Management (2026-10-25)**
+  - **User Request:** "untung setting tenant dimana belum ada ya? dan member2 nya serta buat invitation member"
+  - **Implementation Details:**
+    1. **Database Foundation (`tenant_invitations` table):**
+       - Created [`database/migrations/2026_10_25_000004_create_tenant_invitations_table.php`](file:///c:/laragon/www/foresight-radar/database/migrations/2026_10_25_000004_create_tenant_invitations_table.php) with columns `tenant_id`, `email`, `name`, `role`, `token`, `invited_by`, `expires_at`, `accepted_at`.
+       - Created [`app/Models/TenantInvitation.php`](file:///c:/laragon/www/foresight-radar/app/Models/TenantInvitation.php) with `BelongsToTenant` trait and expiration verification methods.
+       - Added `invitations()` relation to [`app/Models/Tenant.php`](file:///c:/laragon/www/foresight-radar/app/Models/Tenant.php).
+    2. **Backend Controllers & 1-User-1-Tenant Policy:**
+       - Created [`OrganizationController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/Settings/OrganizationController.php): displays organization profile and resource metrics (`members`, `sources`, `signals`, `driving_forces`, `scenarios`), and allows organization admins to update workspace profile.
+       - Created [`TenantMemberController.php`](file:///c:/laragon/www/foresight-radar/app/Http/Controllers/Settings/TenantMemberController.php):
+         - `index`: lists tenant members with roles and pending invitations.
+         - `invite`: enforces `max_users` capacity and strict 1-User-1-Tenant policy (rejects email registered in another tenant), generating invitation token and temporary credentials.
+         - `updateRole`: updates member role (`admin`, `bod`).
+         - `removeMember`: removes member from tenant (with anti-self-removal check).
+         - `cancelInvite`: cancels pending invitation.
+    3. **Frontend UI Architecture (React 19 / Inertia 2.0 / Radix UI / Tailwind CSS v4):**
+       - Updated [`SettingsLayout.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Layouts/SettingsLayout.jsx) with unified sidebar navigation items (`Mesin AI & Reasoning`, `Organisasi & Workspace`, `Anggota & Undangan Tim`, `Profil & Akun`).
+       - Created [`Organization.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Organization.jsx): executive metrics cards, plan details, and organization profile form.
+       - Created [`Members.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/Members.jsx): team member table, Radix `Dialog` invitation modal, role dropdown actions, and pending invitation list.
+    4. **Standards & Compliance:**
+       - Zero `auth()` helper (strictly `Auth::...`).
+       - Zero `SparklesIcon` / Anti-AI Slop (strictly semantic icons: `Building2Icon`, `UsersIcon`, `UserPlusIcon`, `ShieldCheckIcon`).
+       - Zero `curl` verification (strictly Chrome DevTools MCP with DOM evaluation and screenshots).
+    5. **Automated Quality Verification:**
+       - PHPUnit: 8/8 tests passing in [`tests/Feature/Settings/TenantManagementTest.php`](file:///c:/laragon/www/foresight-radar/tests/Feature/Settings/TenantManagementTest.php).
+       - Pint: 0 code style errors (`vendor/bin/pint --test`).
+       - Larastan Level 5: `[OK] No errors` (`vendor/bin/phpstan analyse --memory-limit=2G`).
+       - Chrome DevTools MCP: live DOM inspection and visual screenshot verification on `/settings/organization` and `/settings/members` with 0 console errors.
+
+- [x] **Active AI Provider Prioritization on Settings Page (2026-10-25)**
+  - **User Request:** "untuk provider yg aktif urutan pertama http://127.0.0.1:8080/settings/llm"
+  - **Implementation Details:**
+    1. **Backend Service Sorting ([`UserLlmSettingService.php`](file:///c:/laragon/www/foresight-radar/app/Services/Llm/UserLlmSettingService.php#L125-L135)):**
+       - Implemented `usort()` on `$catalog` in `getProvidersCatalog()` to place the provider with `'is_active' => true` at index `0`.
+    2. **Frontend Defense-in-Depth ([`LlmSettings.jsx`](file:///c:/laragon/www/foresight-radar/resources/js/Pages/Settings/LlmSettings.jsx#L7-L13)):**
+       - Sorted `providers` array in React component so that active provider card is rendered as the first card in the grid.
+    3. **Automated Verification:**
+       - Added `test_active_provider_is_sorted_first_in_providers_catalog` in [`UserLlmSettingsTest.php`](file:///c:/laragon/www/foresight-radar/tests/Feature/Settings/UserLlmSettingsTest.php).
+       - Full 8/8 tests in `UserLlmSettingsTest.php` passing.
+       - Production frontend asset build `npm run build` passing.
+       - Commit: `2aa1be2` on `feat/multi-tenant-isolation`.
+
+- [x] **Strict Multi-Tenant Architecture & Defensive Scoping Engine (2026-10-25)**
+  - **User Request:** "design 1 user belongs to 1 tenant only", "pertimbangkan juga masalah security dan isolation each tenant", "proceed tapi buat branch baru dulu untuk pengerjaan ini jangan di development, kalau sudah selesai dan saya review baru merge ke development".
+  - **Feature Overview & Implementation Details:**
+    1. **Dedicated Branching:** Created branch `feat/multi-tenant-isolation` branched off clean `development`.
+    2. **Database Foundation & Safe Backfill:**
+       - Created `tenants` table (`uuid`, `name`, `slug`, `domain`, `status`, `plan`, `max_users`, `storage_quota_mb`, `llm_monthly_token_quota`, `settings`).
+       - Added direct `users.tenant_id` foreign key (NULL only for platform superusers/developers).
+       - Added `tenant_id` column and composite indexes to all domain tables: `sources`, `signals`, `driving_forces`, `driving_force_ratings`, `driving_force_rating_histories`, `cross_impacts`, `scenarios`, `scenario_quadrants`, `user_llm_settings`.
+       - Created `tenant_llm_settings` table for corporate encrypted API keys, model parameters, and token quota tracking.
+       - Backfilled existing database records into `Default Organization` (`id = 1`) with zero downtime.
+    3. **Defensive Eloquent Scoping & Anti-Tampering Engine:**
+       - Created `App\Services\TenantContext` singleton managing active tenant identity with lazy resolution.
+       - Created `App\Scopes\TenantScope` global scope automatically applying `WHERE tenant_id = ?`. If an authenticated request lacks tenant context, defensive starvation (`WHERE 0 = 1`) is triggered to prevent cross-tenant data leakage.
+       - Created `App\Traits\BelongsToTenant` trait with anti-tampering guards: automatically stamps `tenant_id` on model creation, and rejects attempts to create records with mismatching tenant IDs by throwing `TenantSecurityException`.
+    4. **Middleware & Inertia Integration:**
+       - Created `App\Http\Middleware\EnforceTenantContext` registered in `bootstrap/app.php` inside the `web` pipeline.
+       - Validates active tenant status (suspends blocked accounts with 403 Forbidden).
+       - Lazy-shared active tenant information via Inertia closure in `HandleInertiaRequests.php` (`auth.tenant`), ensuring zero query overhead on JSON API data endpoints.
+    5. **Background Queue Job Context Preservation:**
+       - Updated `ExtractSignals` and `GenerateScenarioNarrative` background jobs to restore and bind `TenantContext` upon execution in queue worker processes.
+    6. **Frontend Executive Branding:**
+       - Updated `AuthenticatedLayout.jsx` and `UserMenu` to display organization badge with `Building2Icon` next to user profile.
+    7. **Automated Security Quality Verification:**
+       - Created `tests/Feature/TenantIsolationTest.php` with 6 exhaustive negative isolation and authorization tests.
+       - Laravel Pint: 275 files PASS (0 style issues).
+       - Larastan Level 5: `[OK] No errors`.
+       - Vite Build: `npm run build` completed cleanly in 1m 26s.
+       - Commit: `91aed3c` on branch `feat/multi-tenant-isolation`.
 
 - [x] **Signal Knowledge Graph Topology in Visualization Workspace (2026-10-25)**
   - **User Request:** Opsi 2 (Signal Knowledge Graph) — Memetakan kluster ratusan sinyal dari dokumen terhadap Driving Force di menu Visualization.
