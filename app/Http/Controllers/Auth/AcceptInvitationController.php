@@ -67,6 +67,7 @@ class AcceptInvitationController extends Controller
         $status ??= match ($state) {
             TenantInvitationService::VALID => Response::HTTP_OK,
             'signed_in' => Response::HTTP_FORBIDDEN,
+            TenantInvitationService::ACCOUNT_EXISTS => Response::HTTP_CONFLICT,
             default => Response::HTTP_GONE,
         };
 

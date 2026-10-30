@@ -145,7 +145,7 @@ class TenantManagementTest extends TestCase
         Notification::assertSentOnDemand(TenantInvitationNotification::class);
     }
 
-    public function test_inviting_member_belonging_to_another_tenant_is_rejected(): void
+    public function test_inviting_member_of_another_tenant_never_moves_the_account(): void
     {
         $otherTenant = Tenant::create([
             'id' => 99,
@@ -165,7 +165,9 @@ class TenantManagementTest extends TestCase
             'role' => 'bod',
         ]);
 
-        $response->assertSessionHasErrors('email');
+        // INVITE-008: uniform response; the account stays in its own tenant.
+        $response->assertSessionHasNoErrors();
+        $this->assertSame($otherTenant->id, (int) $otherUser->fresh()->tenant_id);
     }
 
     public function test_admin_can_update_member_role(): void

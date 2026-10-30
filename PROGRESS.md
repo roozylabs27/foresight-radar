@@ -7,9 +7,9 @@
 - **Last reviewed commit:** `3d25019`
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
 - **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
-- **Current objective:** Tenant isolation & invitation production-readiness audit. **Verdict: NOT READY** (`docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`).
-- **Current blocker:** None for the tenant audit. All P0, P1 and the production-blocking P2 findings (TENANT-002, TENANT-005, INVITE-006, UX-001) are fixed and verified by automated tests (uncommitted, 2026-10-30). Open items are Low / Informational: TENANT-006..010, INVITE-008.
-- **Highest-priority next task:** Review and commit the uncommitted TENANT-005 / INVITE-006 changes, then scenario planning roadmap R0.3 (taxonomy).
+- **Current objective:** Tenant isolation & invitation audit remediation complete (2026-10-30); next: scenario planning roadmap. The audit's original verdict (NOT READY, 2026-10-26) is superseded by the remediation table in `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`.
+- **Current blocker:** None. Every numbered tenant/invitation finding is fixed and covered by tests (TENANT-001..010, INVITE-001..009, UX-001), all uncommitted. Not done: Playwright smoke for the members page (UX-001 checklist), audit log for membership changes (P3), MySQL row-lock behaviour (tests run on SQLite).
+- **Highest-priority next task:** User review and commit of the tenant remediation; then, in the order the user picks, AI guardrails R1.14 / R2.10 (queued by the side session) and scenario roadmap R0.3 (taxonomy). Client questions on the PPT are in `docs/product/SCENARIO_PLANNING_CLIENT_QUESTIONS.md`.
 - **Scenario planning blueprint (2026-10-30):** Methodology alignment audit against `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` complete (docs only). Overall alignment partial: steps 2, 3, 4, 6 usable; 1, 5, 8 missing; 7, 9 minimal. First product slice after tenant work: roadmap R0.3 (taxonomy), then R0.1 → R0.2 → R0.4 → R0.5 (`docs/product/SCENARIO_PLANNING_DEVELOPMENT_ROADMAP.md`).
 
 ---
@@ -423,11 +423,27 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-10-30 (uncommitted) | TENANT-006..010 + INVITE-008 + G24 Remediation | **PASS** | Pint 300 files PASS; Larastan L5 `[OK] No errors` (run directly: the earlier `composer verify` hit Composer's 1200s process timeout during Larastan while `npm run build` ran in parallel); PHPUnit 364 passed (3,075 assertions, 398.74s); `npm run build` PASS (1m 29s); migration `2026_10_30_000001_create_tenant_llm_usages_table` applied to the dev DB; browser check of Settings → Organization AI panel PASS |
 | 2026-10-30 (`25888b8`, docs only) | Scenario Planning Methodology Audit | **NOT RUN** | No application code changed, so `init.sh` / `composer verify` / `npm run build` were not executed. Docs cross-checked: matrix row priorities match roadmap mapping (94 rows); status counts recomputed by script |
 
 ---
 
 ## Session Log
+
+### 2026-10-30 — Session 22 (Remaining tenant findings + G24)
+
+- **Decisions (user, 2026-10-30):** TENANT-007 operators pick a workspace; TENANT-008 tenant key + token quota; TENANT-010 invitation-only; INVITE-008 resolve conflicts at acceptance.
+- **TENANT-006:** removed the `APP_ENV=testing` fallback in `EnforceTenantContext`. Guard: `TenantIsolationTest::test_user_without_tenant_or_platform_role_is_denied`. `UserFactory` still defaults to tenant 1 (a real tenant from the backfill migration).
+- **TENANT-009:** foreign member / invitation → 404 like an unknown uuid. Guard: `TenantMemberAuthorizationTest::test_foreign_member_is_indistinguishable_from_unknown_uuid`.
+- **TENANT-010:** self-registration removed (routes, controller, page, config flag, `canRegister`, Welcome links). Guard: rewritten `RegistrationTest`.
+- **INVITE-008:** uniform invite response for any email except own members; accept page shows `account_exists` (409) to the mailbox owner; `tenant-invites` limiter (10/min per inviter, 50/hour per tenant). Guards in `TenantMemberAuthorizationTest`, `TenantInvitationLifecycleTest`, `TenantManagementTest`.
+- **TENANT-007:** `OperatorWorkspaceController` + header `OperatorWorkspaceSwitcher`; `TenantContext::workspaceRequired` makes `TenantScope` empty and `BelongsToTenant` refuse creates (403 via `TenantSecurityException::render` and `HandlesApiErrors`). Guard: `OperatorWorkspaceTest` (7).
+- **TENANT-008 / G24 (also requested by the side session):** `tenant_llm_usages` table, `TenantLlmQuota`, `QuotaLimitedLlmClient` around every client (platform default included); resolver order user key (unless tenant disallows BYOK) → tenant key → platform; Organization page AI panel (key write-only, usage meter, storage quota labelled display-only). `ScenarioNarrativeService::assertGeneratable()` now checks the client it generates with; the new test fails on the old code (verified by temporarily restoring it). Guards: `TenantLlmQuotaTest` (9), job-level tests in `ScenarioTest` (2) and `LlmSignalExtractionTest` (1); container tests updated to assert `inner()`.
+- **Also:** `docs/product/SCENARIO_PLANNING_CLIENT_QUESTIONS.md` (36 questions on the PPT for the client); roadmap R3.2 marked done; side-session guardrail tasks added as R1.14 and R2.10.
+- **Verification executed:** see Verification History row 2026-10-30 "TENANT-006..010 + INVITE-008 + G24". PHP-FPM reloaded and `laravel_queue` restarted after the changes.
+- **Not covered:** no tenant-less operator account exists in the dev DB, so the workspace picker was verified by feature tests only, not in the browser. The browser console showed 401s from the extraction poller on the login page before sign-in (pre-existing).
+- **Git:** TENANT-005 / INVITE-006 were committed by the user as `ceaf715`. This session's changes are uncommitted; the two deleted registration files are staged as deletions (`git rm`).
+- **Next recommended action:** user review and commit; then R1.14 / R2.10 or R0.3 as the user chooses.
 
 ### 2026-10-30 — Session 21 (TENANT-005 + INVITE-006 Remediation)
 

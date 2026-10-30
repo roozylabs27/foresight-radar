@@ -10,7 +10,14 @@ class TenantContext
 
     private ?int $tenantId = null;
 
+    /**
+     * Set for test fixtures and internal tooling only; no web request turns it on.
+     * Platform operators pick a workspace instead (TENANT-007).
+     */
     private bool $superuserBypass = false;
+
+    /** A platform operator is signed in but has not picked a workspace: show nothing, write nothing. */
+    private bool $workspaceRequired = false;
 
     public function setTenant(?Tenant $tenant): void
     {
@@ -54,6 +61,16 @@ class TenantContext
         return $this->superuserBypass;
     }
 
+    public function setWorkspaceRequired(bool $required): void
+    {
+        $this->workspaceRequired = $required;
+    }
+
+    public function isWorkspaceRequired(): bool
+    {
+        return $this->workspaceRequired && $this->getTenantId() === null;
+    }
+
     /**
      * Run $callback as $tenant, then put back whatever context was active before,
      * so a job run inline (sync queue) does not change the dispatching request's tenant.
@@ -65,15 +82,16 @@ class TenantContext
      */
     public function runAs(Tenant $tenant, callable $callback): mixed
     {
-        [$previousTenant, $previousTenantId, $previousBypass] = [$this->tenant, $this->tenantId, $this->superuserBypass];
+        [$previousTenant, $previousTenantId, $previousBypass, $previousRequired] = [$this->tenant, $this->tenantId, $this->superuserBypass, $this->workspaceRequired];
 
         $this->setTenant($tenant);
         $this->superuserBypass = false;
+        $this->workspaceRequired = false;
 
         try {
             return $callback();
         } finally {
-            [$this->tenant, $this->tenantId, $this->superuserBypass] = [$previousTenant, $previousTenantId, $previousBypass];
+            [$this->tenant, $this->tenantId, $this->superuserBypass, $this->workspaceRequired] = [$previousTenant, $previousTenantId, $previousBypass, $previousRequired];
         }
     }
 
@@ -82,5 +100,6 @@ class TenantContext
         $this->tenant = null;
         $this->tenantId = null;
         $this->superuserBypass = false;
+        $this->workspaceRequired = false;
     }
 }

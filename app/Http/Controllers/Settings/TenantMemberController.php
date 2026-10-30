@@ -127,14 +127,14 @@ class TenantMemberController extends Controller
 
         $email = strtolower(trim($validated['email']));
 
-        // An invite only ever creates a new account. Existing accounts, including platform users,
-        // accounts without a tenant, and soft-deleted ones, are never attached or changed here.
-        $existingUser = User::withTrashed()->where('email', $email)->first();
-        if ($existingUser && ! $existingUser->trashed() && (int) $existingUser->tenant_id === (int) $tenant->id) {
+        // Only this tenant's own members get a distinct answer. Any other existing account
+        // (another tenant, no tenant, soft-deleted) gets the same response as a new email, so the
+        // invite form cannot be used to probe who is registered on the platform (INVITE-008).
+        // Such an invitation can never be accepted: the accept page tells the mailbox owner the
+        // address already has an account, and no existing account is ever attached or changed.
+        $isMember = User::where('email', $email)->where('tenant_id', $tenant->id)->exists();
+        if ($isMember) {
             return back()->withErrors(['email' => 'Pengguna dengan surel ini sudah menjadi anggota organisasi ini.']);
-        }
-        if ($existingUser) {
-            return back()->withErrors(['email' => 'Surel ini sudah terdaftar sebagai akun lain sehingga tidak dapat diundang. Kebijakan keamanan 1-User-1-Tenant membatasi akun hanya untuk satu organisasi.']);
         }
 
         // Capacity, token, and the queued email live in the service. Persisting the invitation
@@ -150,8 +150,9 @@ class TenantMemberController extends Controller
     public function updateRole(Request $request, User $user): RedirectResponse
     {
         $tenant = $this->tenantContext->getTenant();
+        // A member of another tenant gets the same 404 as an unknown uuid (TENANT-009).
         if (! $tenant || (int) $user->tenant_id !== (int) $tenant->id) {
-            abort(403, 'Akses ditolak.');
+            abort(404);
         }
 
         $validated = $request->validate([
@@ -183,8 +184,9 @@ class TenantMemberController extends Controller
     public function removeMember(User $user): RedirectResponse
     {
         $tenant = $this->tenantContext->getTenant();
+        // A member of another tenant gets the same 404 as an unknown uuid (TENANT-009).
         if (! $tenant || (int) $user->tenant_id !== (int) $tenant->id) {
-            abort(403, 'Akses ditolak.');
+            abort(404);
         }
 
         if ($user->id === Auth::id()) {
@@ -236,7 +238,7 @@ class TenantMemberController extends Controller
     {
         $tenant = $this->tenantContext->getTenant();
         if (! $tenant || (int) $invitation->tenant_id !== (int) $tenant->id) {
-            abort(403, 'Akses ditolak.');
+            abort(404);
         }
 
         $invitation->delete();

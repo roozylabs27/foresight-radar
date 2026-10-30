@@ -64,6 +64,16 @@ class LlmSignalExtractor
 
         $returned = $response->data['signals'] ?? [];
         $returned = is_array($returned) ? $returned : [];
+
+        // Only an explicit false counts: a provider that drops the field must not lose real signals.
+        // Signals sent alongside an "irrelevant" verdict are dropped, whatever the model returned.
+        $irrelevant = ($response->data['is_relevant'] ?? true) === false;
+        $relevanceReason = trim((string) ($response->data['relevance_reason'] ?? '')) ?: null;
+        $discardedIrrelevant = $irrelevant ? count($returned) : 0;
+        if ($irrelevant) {
+            $returned = [];
+        }
+
         $candidates = [];
         $seen = [];
         $discarded = 0;
@@ -111,7 +121,10 @@ class LlmSignalExtractor
                 'stop_reason' => $response->stopReason,
                 'usage' => $response->usage,
                 'duration_ms' => $response->durationMs,
-                'returned' => count($returned),
+                'returned' => count($returned) + $discardedIrrelevant,
+                'irrelevant' => $irrelevant,
+                'relevance_reason' => $relevanceReason,
+                'discarded_irrelevant' => $discardedIrrelevant,
                 'discarded_unverified' => $discarded,
                 'discarded_duplicate' => $duplicates,
                 'discarded_over_limit' => $capped,

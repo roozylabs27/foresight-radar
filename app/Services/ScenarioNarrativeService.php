@@ -52,7 +52,7 @@ class ScenarioNarrativeService
                 throw new ConflictHttpException('Narasi skenario ini sedang dibuat. Tunggu sampai selesai.');
             }
 
-            $this->assertGeneratable($locked, $overwriteEdited);
+            $this->assertGeneratable($locked, $overwriteEdited, $this->clientFor($userId));
 
             $locked->update([
                 'generation_status' => LlmJobStatus::QUEUED,
@@ -75,10 +75,8 @@ class ScenarioNarrativeService
      */
     public function generate(Scenario $scenario, bool $overwriteEdited, ?int $userId): array
     {
-        $evidence = $this->assertGeneratable($scenario, $overwriteEdited);
-
-        $userLlm = $userId ? app(LlmClientResolver::class)->resolveForUserId($userId, false) : null;
-        $llm = $userLlm ?? $this->llm;
+        $llm = $this->clientFor($userId);
+        $evidence = $this->assertGeneratable($scenario, $overwriteEdited, $llm);
 
         $notice = null;
         $quadrants = null;
@@ -137,12 +135,23 @@ class ScenarioNarrativeService
     }
 
     /**
-     * The scenario's evidence, once it is clear the generation may go ahead.
+     * The client this user's generation runs on: their own key, the organization's key, or
+     * the platform default, in LlmClientResolver's order.
+     */
+    protected function clientFor(?int $userId): StructuredLlmClient
+    {
+        return ($userId ? app(LlmClientResolver::class)->resolveForUserId($userId, false) : null) ?? $this->llm;
+    }
+
+    /**
+     * The scenario's evidence, once it is clear the generation may go ahead. The evidence rules
+     * apply when $llm (the client the generation will actually use) can answer; otherwise the
+     * template runs and needs none.
      *
      * @throws ConflictHttpException when edited quadrants would be overwritten
      * @throws ValidationException when an axis has no evidence for the LLM
      */
-    protected function assertGeneratable(Scenario $scenario, bool $overwriteEdited): array
+    protected function assertGeneratable(Scenario $scenario, bool $overwriteEdited, StructuredLlmClient $llm): array
     {
         $scenario->loadMissing(['axis_a.dimension', 'axis_b.dimension', 'quadrants']);
 
@@ -152,7 +161,7 @@ class ScenarioNarrativeService
         }
 
         $evidence = $this->scenarios->evidenceFor($scenario);
-        if (! $this->llm->isAvailable()) {
+        if (! $llm->isAvailable()) {
             return $evidence;
         }
 

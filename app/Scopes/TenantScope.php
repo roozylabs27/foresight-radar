@@ -21,8 +21,9 @@ class TenantScope implements Scope
 
         if ($tenantId !== null) {
             $builder->where($model->qualifyColumn('tenant_id'), $tenantId);
-        } elseif (! app()->runningInConsole()) {
-            // Defensive starvation: In web/API request without tenant context, return 0 rows
+        } elseif ($context->isWorkspaceRequired() || ! app()->runningInConsole()) {
+            // Defensive starvation: a web/API request without tenant context, or a platform
+            // operator who has not picked a workspace (TENANT-007), sees 0 rows.
             $builder->whereRaw('0 = 1');
         }
     }

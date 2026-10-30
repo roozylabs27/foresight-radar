@@ -189,14 +189,36 @@ class TenantMemberAuthorizationTest extends TestCase
         $this->assertNull($peer->fresh()->tenant_id);
     }
 
+    /** TENANT-009: another tenant's member looks exactly like an unknown uuid. */
+    public function test_foreign_member_is_indistinguishable_from_unknown_uuid(): void
+    {
+        $other = Tenant::create(['name' => 'Cyberdyne', 'slug' => 'cyberdyne', 'status' => 'active']);
+        $foreign = User::factory()->create(['tenant_id' => $other->id]);
+        $foreign->assignRole('admin');
+
+        $this->actingAs($this->admin)
+            ->patch(route('settings.members.role', ['user' => $foreign]), ['role' => 'bod'])
+            ->assertNotFound();
+        $this->actingAs($this->admin)
+            ->delete(route('settings.members.destroy', ['user' => $foreign]))
+            ->assertNotFound();
+        $this->actingAs($this->admin)
+            ->patch(route('settings.members.role', ['user' => (string) Uuid::uuid4()]), ['role' => 'bod'])
+            ->assertNotFound();
+
+        $this->assertTrue($foreign->fresh()->hasRole('admin'));
+        $this->assertSame($other->id, (int) $foreign->fresh()->tenant_id);
+    }
+
     public function test_invite_does_not_absorb_platform_superuser(): void
     {
         $platform = User::factory()->create(['tenant_id' => null, 'email' => 'root@platform.test']);
         $platform->assignRole('super-admin');
 
+        // INVITE-008: same response as a new email; the account itself is never touched.
         $this->actingAs($this->admin)
             ->post(route('settings.members.invite'), ['email' => 'root@platform.test', 'name' => 'Root', 'role' => 'bod'])
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasNoErrors();
 
         $platform->refresh();
         $this->assertNull($platform->tenant_id);
@@ -210,21 +232,59 @@ class TenantMemberAuthorizationTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post(route('settings.members.invite'), ['email' => 'former@member.test', 'name' => 'Former', 'role' => 'admin'])
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasNoErrors();
 
         $this->assertNull($orphan->fresh()->tenant_id);
         $this->assertFalse($orphan->fresh()->hasRole('admin'));
     }
 
-    public function test_invite_for_soft_deleted_account_is_rejected_without_invitation(): void
+    public function test_invite_for_soft_deleted_account_leaves_the_account_untouched(): void
     {
         $ghost = User::factory()->create(['tenant_id' => $this->tenant->id, 'email' => 'ghost@acme.test']);
         $ghost->delete();
 
         $this->actingAs($this->admin)
             ->post(route('settings.members.invite'), ['email' => 'ghost@acme.test', 'name' => 'Ghost', 'role' => 'bod'])
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('tenant_invitations', ['email' => 'ghost@acme.test']);
+        $this->assertTrue($ghost->fresh()->trashed());
+        $this->assertSame(1, User::withTrashed()->where('email', 'ghost@acme.test')->count());
+    }
+
+    /** INVITE-008: an email registered elsewhere gets the same answer as a brand-new one. */
+    public function test_invite_response_does_not_reveal_registered_emails(): void
+    {
+        $other = Tenant::create(['name' => 'Cyberdyne', 'slug' => 'cyberdyne', 'status' => 'active']);
+        User::factory()->create(['tenant_id' => $other->id, 'email' => 'taken@cyberdyne.test']);
+
+        $taken = $this->actingAs($this->admin)
+            ->post(route('settings.members.invite'), ['email' => 'taken@cyberdyne.test', 'role' => 'bod']);
+        $taken->assertSessionHasNoErrors();
+        $takenMessage = str_replace('taken@cyberdyne.test', '{email}', (string) session('success'));
+
+        $fresh = $this->actingAs($this->admin)
+            ->post(route('settings.members.invite'), ['email' => 'nobody@new.test', 'role' => 'bod']);
+        $fresh->assertSessionHasNoErrors();
+        $freshMessage = str_replace('nobody@new.test', '{email}', (string) session('success'));
+
+        $this->assertSame($fresh->getStatusCode(), $taken->getStatusCode());
+        $this->assertNotSame('', $freshMessage);
+        $this->assertSame($freshMessage, $takenMessage);
+        $this->assertSame($other->id, (int) User::where('email', 'taken@cyberdyne.test')->value('tenant_id'));
+    }
+
+    /** INVITE-008: invites are rate limited per inviter. */
+    public function test_invites_are_throttled_per_inviter(): void
+    {
+        foreach (range(1, 10) as $i) {
+            $this->actingAs($this->admin)
+                ->post(route('settings.members.invite'), ['email' => "bulk{$i}@acme.test", 'role' => 'bod'])
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->actingAs($this->admin)
+            ->post(route('settings.members.invite'), ['email' => 'bulk11@acme.test', 'role' => 'bod'])
+            ->assertStatus(429);
+        $this->assertDatabaseMissing('tenant_invitations', ['email' => 'bulk11@acme.test']);
     }
 }

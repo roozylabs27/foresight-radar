@@ -130,13 +130,12 @@ class TenantInvitationReadinessAuditTest extends TestCase
         $this->assertDatabaseMissing('signal_driving_force', ['signal_id' => $signalA->id, 'driving_force_id' => $forceB->id]);
     }
 
-    /** Positive control: removing a member revokes access outside the testing fallback. */
-    public function test_removed_member_is_denied_outside_testing_environment(): void
+    /** Positive control: removing a member revokes access (TENANT-006: no testing fallback). */
+    public function test_removed_member_is_denied(): void
     {
         $this->actingAs($this->adminA)->delete("/settings/members/{$this->bodA->uuid}");
         $this->assertNull($this->bodA->fresh()->tenant_id);
 
-        app()['env'] = 'production';
         app(TenantContext::class)->reset();
 
         $this->actingAs($this->bodA->fresh())->get('/signals')->assertForbidden();
@@ -147,7 +146,7 @@ class TenantInvitationReadinessAuditTest extends TestCase
     {
         $this->actingAs($this->adminA)
             ->patch("/settings/members/{$this->adminB->uuid}/role", ['role' => 'bod'])
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertTrue($this->adminB->fresh()->hasRole('admin'));
     }

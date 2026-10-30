@@ -42,6 +42,10 @@ const BLOCKED = {
         title: "Workspace tidak tersedia",
         body: "Workspace organisasi untuk undangan ini sedang ditangguhkan atau tidak tersedia. Hubungi admin organisasi Anda.",
     },
+    account_exists: {
+        title: "Surel ini sudah memiliki akun",
+        body: "Alamat surel undangan ini sudah terdaftar sebagai akun, sehingga undangan tidak dapat membuat akun baru. Satu akun hanya dapat menjadi anggota satu organisasi. Hubungi admin organisasi yang mengundang Anda.",
+    },
     signed_in: {
         title: "Anda sedang masuk dengan akun lain",
         body: "Keluar terlebih dahulu, lalu buka kembali tautan undangan dari email Anda.",

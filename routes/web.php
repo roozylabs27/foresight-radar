@@ -13,6 +13,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RatingUrgencyController;
 use App\Http\Controllers\RegisteredListController;
 use App\Http\Controllers\ScenarioController;
+use App\Http\Controllers\Settings\OperatorWorkspaceController;
 use App\Http\Controllers\Settings\OrganizationController;
 use App\Http\Controllers\Settings\TenantMemberController;
 use App\Http\Controllers\Settings\UserLlmSettingController;
@@ -163,6 +164,11 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         // });
     });
 
+    // Platform operators pick the workspace they act in (TENANT-007); the controller checks the role.
+    Route::post('/operator/workspace', [OperatorWorkspaceController::class, 'update'])
+        ->name('operator.workspace')
+        ->middleware('throttle:30,1');
+
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', function () {
             return redirect()->route('settings.llm.index');
@@ -190,12 +196,13 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::prefix('organization')->name('organization.')->controller(OrganizationController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::patch('/', 'update')->name('update')->can('manage-organization');
+            Route::patch('/ai', 'updateAi')->name('ai.update')->can('manage-organization');
         });
 
         // Tenant Members & Team Invitations
         Route::prefix('members')->name('members.')->controller(TenantMemberController::class)->group(function () {
             Route::get('/', 'index')->name('index');
-            Route::post('/invite', 'invite')->name('invite')->can('manage-members');
+            Route::post('/invite', 'invite')->name('invite')->can('manage-members')->middleware('throttle:tenant-invites');
             Route::patch('/{user}/role', 'updateRole')->name('role')->can('manage-members');
             Route::delete('/{user}', 'removeMember')->name('destroy')->can('manage-members');
             Route::delete('/invitations/{invitation}', 'cancelInvite')->name('invitations.cancel')->can('manage-members');

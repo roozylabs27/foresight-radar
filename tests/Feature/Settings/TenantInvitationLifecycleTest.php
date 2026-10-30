@@ -228,10 +228,28 @@ class TenantInvitationLifecycleTest extends TestCase
         User::factory()->create(['tenant_id' => null, 'email' => 'race@acme.test']);
 
         $this->post($url, ['name' => 'Race', 'password' => 'Str0ng-pass!', 'password_confirmation' => 'Str0ng-pass!'])
-            ->assertSessionHasErrors('email');
+            ->assertStatus(409)
+            ->assertInertia(fn ($page) => $page->where('state', 'account_exists')->where('invitation', null));
 
         $this->assertNull($this->invitationFor('race@acme.test')->accepted_at);
         $this->assertSame(1, User::where('email', 'race@acme.test')->count());
+    }
+
+    /** INVITE-008: the conflict is shown only to whoever opens the emailed link. */
+    public function test_invitation_for_existing_account_shows_conflict_on_accept_page(): void
+    {
+        User::factory()->create(['tenant_id' => null, 'email' => 'existing@elsewhere.test']);
+        $url = $this->invite('existing@elsewhere.test');
+
+        $this->get($url)
+            ->assertStatus(409)
+            ->assertInertia(fn ($page) => $page->where('state', 'account_exists')->where('invitation', null));
+        $this->post($url, ['name' => 'X', 'password' => 'Str0ng-pass!', 'password_confirmation' => 'Str0ng-pass!'])
+            ->assertStatus(409);
+
+        $this->assertNull($this->invitationFor('existing@elsewhere.test')->accepted_at);
+        $this->assertSame(1, User::where('email', 'existing@elsewhere.test')->count());
+        $this->assertNull(User::where('email', 'existing@elsewhere.test')->value('tenant_id'));
     }
 
     private function invite(string $email, string $role = 'bod'): string

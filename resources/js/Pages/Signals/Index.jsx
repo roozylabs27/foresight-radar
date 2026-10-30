@@ -501,7 +501,8 @@ export default function SignalIndex({
             return;
         }
         const action = { label: "Lihat sinyal", onClick: showReview };
-        if (progress.extraction?.fallback) {
+        // Fallback to keyword rules, or a document the AI judged irrelevant: show why.
+        if (progress.extraction?.fallback || progress.extraction?.irrelevant) {
             toast.warning(progress.message, { description: progress.extraction.notice, action, duration });
         } else {
             toast.success(progress.message, { action, duration });

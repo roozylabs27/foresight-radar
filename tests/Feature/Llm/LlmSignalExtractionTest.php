@@ -9,12 +9,15 @@ use App\Models\DrivingForce;
 use App\Models\Environment;
 use App\Models\Signal;
 use App\Models\Source;
+use App\Models\TenantLlmSetting;
 use App\Models\TimeHorizon;
 use App\Models\User;
+use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Mockery;
 use Ramsey\Uuid\Uuid;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
@@ -134,7 +137,7 @@ class LlmSignalExtractionTest extends TestCase
         $this->assertSame($this->approved->id, $mandate->suggested_driving_force_id);
         $this->assertSame('claude', $mandate->extraction_provider);
         $this->assertSame('claude-fake', $mandate->extraction_model);
-        $this->assertSame('extract-v1', $mandate->prompt_version);
+        $this->assertSame('extract-v2', $mandate->prompt_version);
         $this->assertTrue($mandate->quote_verified);
         $this->assertSame('PENDING', $mandate->review_status);
 
@@ -312,5 +315,85 @@ class LlmSignalExtractionTest extends TestCase
 
         $this->assertSame([], $this->llm->calls);
         $this->assertSame('heuristic', Signal::first()->extraction_provider);
+    }
+
+    /** TENANT-008: the queued extraction runs as its tenant and uses that tenant's key. */
+    public function test_queued_extraction_uses_the_organization_key(): void
+    {
+        $organization = $this->organizationLlm($this->analyst);
+        $organization->respond(['signals' => [$this->candidate()]]);
+
+        $this->ingest()->assertStatus(202);
+
+        $this->assertCount(1, $organization->calls);
+        $this->assertSame([], $this->llm->calls);
+        $this->assertSame(1, Signal::count());
+    }
+
+    /** R1.14: a document outside the operating environment yields no signals and says why. */
+    public function test_irrelevant_document_saves_no_signals_and_explains_why(): void
+    {
+        $this->llm->respond(['is_relevant' => false, 'relevance_reason' => 'Dokumen ini adalah resep masakan.', 'signals' => []]);
+
+        $response = $this->ingest()->assertStatus(202);
+
+        $response->assertJsonPath('source.extraction.irrelevant', true)
+            ->assertJsonPath('source.extraction.signals', 0);
+        $this->assertStringContainsString('resep masakan', (string) $response->json('source.extraction.notice'));
+        $this->assertStringContainsString('tidak relevan', (string) $response->json('source.message'));
+        $this->assertSame(0, Signal::count());
+        $this->assertSame(LlmJobStatus::COMPLETED, Source::first()->extraction_status);
+    }
+
+    /** R1.14: signals that come with an "irrelevant" verdict are dropped on the server. */
+    public function test_signals_returned_with_an_irrelevant_verdict_are_dropped(): void
+    {
+        $this->llm->respond(['is_relevant' => false, 'relevance_reason' => 'Bukan dokumen bisnis.', 'signals' => [$this->candidate()]]);
+
+        $this->ingest()->assertStatus(202)->assertJsonPath('source.extraction.irrelevant', true);
+
+        $this->assertSame(0, Signal::count());
+        $this->assertSame(1, Source::first()->extraction_meta['discarded_irrelevant']);
+    }
+
+    /** R1.14: a relevant document is extracted exactly as before. */
+    public function test_relevant_document_is_extracted_as_before(): void
+    {
+        $this->llm->respond(['is_relevant' => true, 'relevance_reason' => 'Regulasi kendaraan listrik.', 'signals' => [$this->candidate()]]);
+
+        $this->ingest()->assertStatus(202)->assertJsonPath('source.extraction.irrelevant', false);
+
+        $this->assertSame(1, Signal::count());
+        $this->assertSame('extract-v2', Signal::first()->prompt_version);
+    }
+
+    /** R1.14: the model is asked for the verdict before any signal. */
+    public function test_prompt_asks_for_a_relevance_verdict(): void
+    {
+        $this->llm->respond(['is_relevant' => true, 'relevance_reason' => 'Relevan.', 'signals' => []]);
+
+        $this->ingest();
+
+        $request = $this->llm->lastRequest();
+        $this->assertSame(['is_relevant', 'relevance_reason', 'signals'], $request->schema['required']);
+        $this->assertSame('boolean', $request->schema['properties']['is_relevant']['type']);
+        $this->assertStringContainsString('is_relevant', $request->system);
+    }
+
+    /**
+     * Give the user's tenant an AI key of its own, answered by a fake, so no real provider is called.
+     */
+    private function organizationLlm(User $user): FakeLlmClient
+    {
+        TenantLlmSetting::create([
+            'tenant_id' => $user->tenant_id, 'provider' => 'openai', 'model' => 'org-model',
+            'api_key' => 'sk-org-test', 'is_enabled' => true, 'allow_user_byok' => false,
+        ]);
+        $organization = new FakeLlmClient;
+        $resolver = Mockery::mock(LlmClientResolver::class)->makePartial();
+        $resolver->shouldReceive('createClientFromTenantSetting')->andReturn($organization);
+        $this->app->instance(LlmClientResolver::class, $resolver);
+
+        return $organization;
     }
 }

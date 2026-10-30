@@ -28,6 +28,14 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Invites send email on the tenant's behalf: cap them per inviter and per tenant (INVITE-008).
+        RateLimiter::for('tenant-invites', function (Request $request) {
+            return [
+                Limit::perMinute(10)->by('invite-user:'.$request->user()?->id),
+                Limit::perHour(50)->by('invite-tenant:'.($request->user()?->tenant_id ?? 'none')),
+            ];
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

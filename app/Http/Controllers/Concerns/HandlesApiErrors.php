@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Exceptions\TenantSecurityException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,15 @@ trait HandlesApiErrors
      */
     protected function handleError(\Throwable $th, string $context = 'operation', ?string $userMessage = null): array
     {
+        // A refused tenant context is a 403, not a server error (e.g. an operator without a workspace).
+        if ($th instanceof TenantSecurityException) {
+            $message = $th->getMessage() === TenantSecurityException::WORKSPACE_REQUIRED
+                ? TenantSecurityException::WORKSPACE_REQUIRED
+                : 'Akses ditolak.';
+
+            return ['statusCode' => Response::HTTP_FORBIDDEN, 'message' => $message, 'errors' => $message];
+        }
+
         Log::error("Failed {$context}", [
             'error' => $th->getMessage(),
             'file' => $th->getFile(),

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\Llm\AnthropicStructuredClient;
 use App\Services\Llm\NullLlmClient;
 use App\Services\Llm\OpenAiCompatibleClient;
+use App\Services\Llm\QuotaLimitedLlmClient;
 use App\Services\Llm\StructuredLlmClient;
 use App\Services\TenantContext;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -30,7 +31,8 @@ class AppServiceProvider extends ServiceProvider
                 default => new AnthropicStructuredClient(config('services.anthropic', [])),
             };
 
-            return $client->isAvailable() ? $client : new NullLlmClient;
+            // Calls on the platform key count against the calling tenant's monthly quota (TENANT-008).
+            return QuotaLimitedLlmClient::wrap($client->isAvailable() ? $client : new NullLlmClient);
         });
     }
 

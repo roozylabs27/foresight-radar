@@ -97,7 +97,8 @@ class AnthropicStructuredClientTest extends TestCase
 
         $client = $this->app->make(StructuredLlmClient::class);
 
-        $this->assertInstanceOf(NullLlmClient::class, $client);
+        // The container wraps the provider client in the tenant quota layer (TENANT-008).
+        $this->assertInstanceOf(NullLlmClient::class, $client->inner());
         $this->assertFalse($client->isAvailable());
         $this->expectException(LlmException::class);
         $client->generateJson(new LlmRequest('test', 'system', 'user', ['type' => 'object']));

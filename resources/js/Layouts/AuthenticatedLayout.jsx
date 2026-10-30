@@ -30,6 +30,7 @@ import BrandMark from "@/Components/BrandMark";
 import Breadcrumb from "@/Components/Breadcrumb";
 import LanguageSwitcher from "@/Components/LanguageSwitcher";
 import NotificationBell from "@/Components/NotificationBell";
+import OperatorWorkspaceSwitcher from "@/Components/OperatorWorkspaceSwitcher";
 import FloatingIngestionProgress from "@/Components/Ingestion/FloatingIngestionProgress";
 import { ThemeMenuItem } from "@/Components/ThemeToggle";
 import { I18nProvider, useTranslation } from "@/context/I18nContext";
@@ -242,6 +243,7 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
     const effectiveAuth = auth || page.props.auth || {};
     const user = effectiveAuth.user || propUser;
     const tenant = effectiveAuth.tenant;
+    const operator = page.props.auth?.operator;
     const permissions = effectiveAuth.permissions || [];
     const role = effectiveAuth.role;
 
@@ -345,7 +347,9 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
                             )}
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                            {tenant?.name && (
+                            {operator ? (
+                                <OperatorWorkspaceSwitcher operator={operator} />
+                            ) : tenant?.name && (
                                 <div className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground sm:flex">
                                     <Building2Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
                                     <span className="max-w-36 truncate">{tenant.name}</span>

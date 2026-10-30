@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\LlmJobStatus;
 use App\Models\Source;
+use App\Models\Tenant;
 use App\Services\SignalExtractionService;
 use App\Services\TenantContext;
 use Illuminate\Http\Request;
@@ -45,7 +46,6 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
-            'canRegister' => (bool) config('auth.allow_registration', false),
             // back()->with('success'|'error') messages; AuthenticatedLayout shows them as toasts.
             'flash' => [
                 'success' => $request->session()->get('success'),
@@ -89,6 +89,13 @@ class HandleInertiaRequests extends Middleware
                             'plan' => $tenant->plan,
                         ] : null;
                     },
+                    // Platform operators only: the workspaces they can pick (TENANT-007).
+                    'operator' => $user->tenant_id === null && $user->hasAnyRole(EnforceTenantContext::PLATFORM_ROLES)
+                        ? fn () => [
+                            'workspaces' => Tenant::orderBy('name')->get(['uuid', 'name', 'status'])->toArray(),
+                            'current' => app(TenantContext::class)->getTenant()?->uuid,
+                        ]
+                        : null,
                     'role' => $user->roles->first()?->name ?? null,
                     'permissions' => method_exists($user, 'getAllPermissions')
                         ? $user->getAllPermissions()->pluck('name')->toArray()

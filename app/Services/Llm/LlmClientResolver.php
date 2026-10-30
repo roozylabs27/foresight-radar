@@ -2,17 +2,24 @@
 
 namespace App\Services\Llm;
 
+use App\Models\TenantLlmSetting;
 use App\Models\User;
 use App\Models\UserLlmSetting;
+use App\Services\TenantContext;
 
 class LlmClientResolver
 {
     /**
-     * Resolve the active StructuredLlmClient for a given user, or fallback to the system client.
+     * The client for a user, in this order (TENANT-008): the user's own active key, unless their
+     * organization has an AI configuration that does not allow personal keys; then the
+     * organization's key; then the platform default. Every client counts against the tenant's
+     * monthly token quota (QuotaLimitedLlmClient).
      */
     public function resolveForUser(?User $user = null, bool $fallbackToDefault = true): ?StructuredLlmClient
     {
-        if ($user) {
+        $tenantSetting = $this->tenantSetting($user);
+
+        if ($user && ($tenantSetting === null || $tenantSetting->allow_user_byok)) {
             $activeSetting = $user->llmSettings()
                 ->where('is_active', true)
                 ->first();
@@ -20,13 +27,46 @@ class LlmClientResolver
             if ($activeSetting && ! empty($activeSetting->api_key)) {
                 $client = $this->createClientFromSetting($activeSetting);
                 if ($client->isAvailable()) {
-                    return $client;
+                    return QuotaLimitedLlmClient::wrap($client);
                 }
             }
         }
 
-        // Fallback to the application default client if requested
+        if ($tenantSetting && $tenantSetting->is_enabled && ! empty($tenantSetting->api_key)) {
+            $client = $this->createClientFromTenantSetting($tenantSetting);
+            if ($client->isAvailable()) {
+                return QuotaLimitedLlmClient::wrap($client);
+            }
+        }
+
+        // The platform default is registered already wrapped (AppServiceProvider).
         return $fallbackToDefault ? app(StructuredLlmClient::class) : null;
+    }
+
+    /**
+     * Create a concrete StructuredLlmClient from the organization's AI configuration.
+     */
+    public function createClientFromTenantSetting(TenantLlmSetting $setting): StructuredLlmClient
+    {
+        return $this->createClient([
+            'provider' => $setting->provider,
+            'label' => null,
+            'api_key' => $setting->api_key,
+            'model' => (string) $setting->model,
+            'base_url' => $setting->base_url,
+            'settings' => [],
+        ]);
+    }
+
+    /**
+     * The AI configuration of the tenant in context (a queued job runs as its tenant),
+     * otherwise of the user's own tenant.
+     */
+    private function tenantSetting(?User $user): ?TenantLlmSetting
+    {
+        $tenantId = app(TenantContext::class)->getTenantId() ?? $user?->tenant_id;
+
+        return $tenantId ? TenantLlmSetting::where('tenant_id', $tenantId)->first() : null;
     }
 
     /**

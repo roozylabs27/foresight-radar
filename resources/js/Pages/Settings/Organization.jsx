@@ -8,11 +8,12 @@ import {
 
 import SettingsLayout from "@/Layouts/SettingsLayout";
 import FormField from "@/Components/FormField";
+import OrganizationAiPanel from "@/Components/Settings/OrganizationAiPanel";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Badge } from "@/Components/ui/badge";
 
-export default function Organization({ auth, organization, stats, title = "Pengaturan Organisasi & Workspace" }) {
+export default function Organization({ auth, organization, stats, ai, title = "Pengaturan Organisasi & Workspace" }) {
     // Mirrors the server-side manage-organization gate; the server stays the authority.
     const canManage = Boolean(auth?.permissions?.includes("manage-organization"));
     const { data, setData, patch, processing, errors, recentlySuccessful } = useForm({
@@ -174,6 +175,8 @@ export default function Organization({ auth, organization, stats, title = "Penga
                         )}
                     </form>
                 </div>
+
+                {ai && <OrganizationAiPanel ai={ai} canManage={canManage} />}
             </div>
         </SettingsLayout>
     );

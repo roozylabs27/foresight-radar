@@ -34,6 +34,9 @@ class TenantInvitationService
 
     public const UNAVAILABLE = 'unavailable';
 
+    /** The email already belongs to an account, so the invitation cannot create one. */
+    public const ACCOUNT_EXISTS = 'account_exists';
+
     public const EXPIRY_DAYS = 7;
 
     /**
@@ -114,6 +117,10 @@ class TenantInvitationService
         if (! $invitation->tenant || ! $invitation->tenant->isActive()) {
             return [self::UNAVAILABLE, $invitation];
         }
+        // Only someone holding the emailed token reaches this check, so it reveals nothing to the inviter.
+        if (User::withTrashed()->where('email', $invitation->email)->exists()) {
+            return [self::ACCOUNT_EXISTS, $invitation];
+        }
 
         return [self::VALID, $invitation];
     }
@@ -128,12 +135,6 @@ class TenantInvitationService
             [$state, $invitation] = $this->resolve($invitationId, $rawToken, lock: true);
             if ($state !== self::VALID) {
                 return $state;
-            }
-
-            if (User::withTrashed()->where('email', $invitation->email)->exists()) {
-                throw ValidationException::withMessages([
-                    'email' => 'Surel ini sudah terdaftar sebagai akun lain. Hubungi admin organisasi Anda.',
-                ]);
             }
 
             // Holding the emailed token proves control of the mailbox, so the address counts as verified.

@@ -136,17 +136,16 @@ class PhaseZeroRemediationTest extends TestCase
         $this->assertSame($editor->id, $force->updated_by);
     }
 
-    public function test_sec_004_public_registration_is_disabled_by_default(): void
+    public function test_sec_004_public_registration_is_not_available(): void
     {
-        $this->assertFalse((bool) config('auth.allow_registration'));
-
-        $this->get('/register')->assertStatus(403);
+        // Self-registration was removed entirely (TENANT-010); accounts come from invitations.
+        $this->get('/register')->assertNotFound();
         $this->post('/register', [
             'name' => 'Anonymous User',
             'email' => 'anon@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
-        ])->assertStatus(403);
+        ])->assertNotFound();
     }
 
     public function test_rel_002_user_management_handles_roleless_users_without_500_crash(): void

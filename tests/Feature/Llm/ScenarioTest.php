@@ -11,14 +11,19 @@ use App\Models\Environment;
 use App\Models\Scenario;
 use App\Models\Signal;
 use App\Models\Source;
+use App\Models\TenantLlmSetting;
+use App\Models\TenantLlmUsage;
 use App\Models\TimeHorizon;
 use App\Models\User;
+use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Mockery;
 use Ramsey\Uuid\Uuid;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
+use Tests\Support\FakeLlmClient;
 use Tests\TestCase;
 
 class ScenarioTest extends TestCase
@@ -390,5 +395,53 @@ class ScenarioTest extends TestCase
             ->assertJsonPath('generation.error', 'Narasi tidak dibuat karena kesalahan server. Kuadran yang ada tidak diubah; coba buat ulang.');
         // Failed, not pending: the analyst can start again.
         $this->generate($scenario)->assertStatus(202)->assertJsonPath('scenario.generation.status', 'queued');
+    }
+
+    /** G24: the evidence rules follow the client the generation runs on, not the platform default. */
+    public function test_evidence_rules_follow_the_client_the_generation_uses(): void
+    {
+        $this->fakeLlm(false);
+        $organization = $this->organizationLlm($this->manager);
+        $scenario = $this->scenario();
+        $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+
+        $this->generate($scenario)->assertStatus(422)->assertJsonValidationErrors('evidence');
+
+        $this->assertSame([], $organization->calls);
+    }
+
+    /** TENANT-008: the queued job runs as its tenant and uses that tenant's key and quota. */
+    public function test_queued_generation_uses_the_organization_key_and_counts_usage(): void
+    {
+        $platform = $this->fakeLlm();
+        $organization = $this->organizationLlm($this->manager);
+        $scenario = $this->scenario();
+        $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+        $organization->respond($this->narrative(array_fill_keys(Scenario::POSITIONS, ['S1', 'S2'])));
+
+        $this->generate($scenario)->assertStatus(202);
+
+        $this->assertCount(1, $organization->calls);
+        $this->assertSame([], $platform->calls);
+        $this->assertSame('completed', $scenario->fresh()->generation_status->value);
+        $this->assertSame(1, TenantLlmUsage::where('tenant_id', $this->manager->tenant_id)->value('requests'));
+    }
+
+    /**
+     * Give the user's tenant an AI key of its own, answered by a fake, so no real provider is called.
+     */
+    private function organizationLlm(User $user): FakeLlmClient
+    {
+        TenantLlmSetting::create([
+            'tenant_id' => $user->tenant_id, 'provider' => 'openai', 'model' => 'org-model',
+            'api_key' => 'sk-org-test', 'is_enabled' => true, 'allow_user_byok' => false,
+        ]);
+        $organization = new FakeLlmClient;
+        $resolver = Mockery::mock(LlmClientResolver::class)->makePartial();
+        $resolver->shouldReceive('createClientFromTenantSetting')->andReturn($organization);
+        $this->app->instance(LlmClientResolver::class, $resolver);
+
+        return $organization;
     }
 }

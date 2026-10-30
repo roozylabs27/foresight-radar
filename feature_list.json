@@ -278,7 +278,7 @@
         "No User query or exists rule returns or accepts another tenant's records",
         "Suspended or deleted tenants are denied on every request type, including JSON and queued jobs"
       ],
-      "verification_evidence": "2026-10-26: all P0/P1 findings, UX-001, E2E-001..004 and P2 TENANT-002 fixed; end-to-end browser check passed. composer verify 332 passed. tests/Audit 2 failed / 4 passed. 2026-10-30: TENANT-005 (TenantRule::exists) and INVITE-006 (last-admin guard) fixed; composer verify 342 passed; tests/Audit 6/6 passed. Open: Low/Informational TENANT-006..010, INVITE-008."
+      "verification_evidence": "2026-10-26: all P0/P1 findings, UX-001, E2E-001..004 and P2 TENANT-002 fixed; end-to-end browser check passed. composer verify 332 passed. tests/Audit 2 failed / 4 passed. 2026-10-30: TENANT-005 (TenantRule::exists) and INVITE-006 (last-admin guard) fixed; composer verify 342 passed; tests/Audit 6/6 passed. 2026-10-30 (session 22): TENANT-006..010 and INVITE-008 fixed (operator workspace picker, tenant LLM key + monthly token quota, invitation-only accounts, uniform invites + throttle, 404 for foreign members, no testing fallback); PHPUnit 364 passed, Larastan clean, Pint clean, npm build OK."
     }
   ]
 }
