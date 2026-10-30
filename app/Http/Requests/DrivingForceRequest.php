@@ -3,11 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Rules\WordCountRule;
-use App\Services\TenantContext;
+use App\Support\TenantRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Exists;
 
 class DrivingForceRequest extends FormRequest
 {
@@ -31,25 +29,15 @@ class DrivingForceRequest extends FormRequest
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(20)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', $this->picExistsRule()],
+                'pic_id' => ['required', TenantRule::exists('users')],
             ];
         } else {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(30)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', $this->picExistsRule()],
+                'pic_id' => ['required', TenantRule::exists('users')],
             ];
         }
-    }
-
-    /**
-     * A PIC must belong to the caller's tenant; users carry no tenant scope of their own.
-     */
-    private function picExistsRule(): Exists
-    {
-        $tenantId = app(TenantContext::class)->getTenantId();
-
-        return Rule::exists('users', 'id')->when($tenantId !== null, fn (Exists $rule) => $rule->where('tenant_id', $tenantId));
     }
 }

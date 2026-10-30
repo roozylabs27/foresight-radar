@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\TenantRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SimulationRequest extends FormRequest
@@ -18,7 +19,7 @@ class SimulationRequest extends FormRequest
             'dimension' => ['nullable'],
             'propagate' => ['nullable', 'boolean'],
             'overrides' => ['required', 'array', 'max:50'],
-            'overrides.*.force' => ['required', 'string', 'exists:driving_forces,uuid'],
+            'overrides.*.force' => ['required', 'string', TenantRule::exists('driving_forces', 'uuid')],
             'overrides.*.status_action' => ['nullable', 'string', 'in:monitoring,decided_plan'],
             'overrides.*.impact' => ['nullable', 'integer', 'min:1', 'max:10'],
             'overrides.*.uncertainty' => ['nullable', 'integer', 'min:1', 'max:10'],

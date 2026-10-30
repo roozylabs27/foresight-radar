@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -20,6 +21,8 @@ use Spatie\Permission\Models\Role;
 class TenantMemberController extends Controller
 {
     use HandlesApiErrors;
+
+    private const LAST_ADMIN_MESSAGE = 'Organisasi harus memiliki minimal satu admin. Jadikan anggota lain admin terlebih dahulu.';
 
     public function __construct(
         protected TenantContext $tenantContext,
@@ -155,9 +158,21 @@ class TenantMemberController extends Controller
             'role' => ['required', 'string', 'in:admin,bod'],
         ]);
 
-        // Direct grants would otherwise outlive the role, as in UserController::update.
-        $user->syncRoles([$validated['role']]);
-        $user->syncPermissions([]);
+        $changed = DB::transaction(function () use ($tenant, $user, $validated) {
+            if ($validated['role'] !== 'admin' && $this->isLastAdmin($tenant, $user)) {
+                return false;
+            }
+
+            // Direct grants would otherwise outlive the role, as in UserController::update.
+            $user->syncRoles([$validated['role']]);
+            $user->syncPermissions([]);
+
+            return true;
+        });
+
+        if (! $changed) {
+            return back()->with('error', self::LAST_ADMIN_MESSAGE);
+        }
 
         return back()->with('success', 'Peran anggota berhasil diperbarui.');
     }
@@ -176,11 +191,42 @@ class TenantMemberController extends Controller
             return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri dari organisasi.');
         }
 
-        $user->update(['tenant_id' => null]);
-        $user->roles()->detach();
-        $user->syncPermissions([]);
+        $removed = DB::transaction(function () use ($tenant, $user) {
+            if ($this->isLastAdmin($tenant, $user)) {
+                return false;
+            }
+
+            $user->update(['tenant_id' => null]);
+            $user->roles()->detach();
+            $user->syncPermissions([]);
+
+            return true;
+        });
+
+        if (! $removed) {
+            return back()->with('error', self::LAST_ADMIN_MESSAGE);
+        }
 
         return back()->with('success', 'Anggota berhasil dikeluarkan dari organisasi.');
+    }
+
+    /**
+     * Whether the user is the tenant's only admin. Locks the tenant row so two
+     * admins demoting each other at once cannot both pass the check. Call
+     * inside a transaction.
+     */
+    private function isLastAdmin(Tenant $tenant, User $user): bool
+    {
+        Tenant::whereKey($tenant->id)->lockForUpdate()->first();
+
+        if (! $user->hasRole('admin')) {
+            return false;
+        }
+
+        return ! User::role('admin')
+            ->where('tenant_id', $tenant->id)
+            ->whereKeyNot($user->id)
+            ->exists();
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\TenantRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +24,7 @@ class ReviewSignalRequest extends FormRequest
             'suggested_time_horizon_id' => ['nullable', 'exists:time_horizons,id'],
             'preliminary_impact' => ['nullable', 'integer', 'between:1,10'],
             'preliminary_uncertainty' => ['nullable', 'integer', 'between:1,10'],
-            'driving_force_id' => ['required_if:action,accept_link', 'nullable', 'exists:driving_forces,id'],
+            'driving_force_id' => ['required_if:action,accept_link', 'nullable', TenantRule::exists('driving_forces')],
             'rejection_reason' => ['required_if:action,reject', 'nullable', 'string', 'max:1000'],
         ];
     }

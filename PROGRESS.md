@@ -8,8 +8,9 @@
 - **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
 - **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
 - **Current objective:** Tenant isolation & invitation production-readiness audit. **Verdict: NOT READY** (`docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`).
-- **Current blocker:** All P0 and P1 audit findings fixed and verified by automated tests (uncommitted). Before production: fix P2 TENANT-005 (unscoped `exists:` rules) and INVITE-006 (last admin).
-- **Highest-priority next task:** Remaining P2: TENANT-005 (tenant-aware `exists:` rules; signal review can link another tenant's driving force), then INVITE-006 (keep at least one admin).
+- **Current blocker:** None for the tenant audit. All P0, P1 and the production-blocking P2 findings (TENANT-002, TENANT-005, INVITE-006, UX-001) are fixed and verified by automated tests (uncommitted, 2026-10-30). Open items are Low / Informational: TENANT-006..010, INVITE-008.
+- **Highest-priority next task:** Review and commit the uncommitted TENANT-005 / INVITE-006 changes, then scenario planning roadmap R0.3 (taxonomy).
+- **Scenario planning blueprint (2026-10-30):** Methodology alignment audit against `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` complete (docs only). Overall alignment partial: steps 2, 3, 4, 6 usable; 1, 5, 8 missing; 7, 9 minimal. First product slice after tenant work: roadmap R0.3 (taxonomy), then R0.1 → R0.2 → R0.4 → R0.5 (`docs/product/SCENARIO_PLANNING_DEVELOPMENT_ROADMAP.md`).
 
 ---
 
@@ -392,7 +393,7 @@
 
 ## Blocked
 
-- **FEAT-020 Multi-Tenant Isolation, Team Membership & Invitations**: blocked for production by P2 TENANT-002, TENANT-005, INVITE-006, UX-001 (end-to-end browser/mail check passed 2026-10-26). See `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md` §10.
+*No blocked features. FEAT-020 unblocked 2026-10-30 (TENANT-005 and INVITE-006 fixed); remaining audit items are Low / Informational, see `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md` §10.*
 
 ---
 
@@ -421,10 +422,34 @@
 | 2026-10-26 (uncommitted) | INVITE-003/004/005/007/009 Remediation | **PASS** | `composer verify`: Pint 289 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 321 passed (2,851 assertions, 196.26s); `npm run build` PASS (1m 4s); `tests/Audit` 4 failed / 4 passed (remaining P2 findings) |
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
+| 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-10-30 (`25888b8`, docs only) | Scenario Planning Methodology Audit | **NOT RUN** | No application code changed, so `init.sh` / `composer verify` / `npm run build` were not executed. Docs cross-checked: matrix row priorities match roadmap mapping (94 rows); status counts recomputed by script |
 
 ---
 
 ## Session Log
+
+### 2026-10-30 — Session 21 (TENANT-005 + INVITE-006 Remediation)
+
+- **TENANT-005:** completed the in-progress work. `App\Support\TenantRule::exists()` scopes `exists:` rules to the context tenant; used in `ReviewSignalRequest`, `CrossImpactRequest`, `ScenarioRequest`, `SimulationRequest`, `DrivingForceRequest`. Grep confirmed the remaining plain `exists:` rules target global lookups only. Guard: `tests/Feature/Security/TenantAwareExistsRulesTest.php` (5 tests; a foreign id gets the same 422 as an unknown one).
+- **INVITE-006 RED:** added 5 tests to `TenantMemberAuthorizationTest`; `test_last_admin_cannot_demote_self` and `test_last_admin_cannot_be_removed` failed, three positive controls (peer demotion, self-demotion with another admin, peer removal) passed.
+- **INVITE-006 GREEN:** `TenantMemberController::isLastAdmin()` runs inside a transaction with the tenant row locked; `updateRole` (to a non-admin role) and `removeMember` return a flash `error` and change nothing when the target is the tenant's only admin. Decision: admins may still demote or remove peers while another admin remains.
+- **Verification executed:** related suites 45 passed; `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6, no failing reproductions left); `docker exec laravel_app composer verify` exit 0, PHPUnit 342 passed (2,952 assertions). PHP-FPM reloaded (`kill -USR2 1`).
+- **Not covered:** no browser run of the last-admin toast (backend-only change; the flash/toast path was browser-verified in UX-001). Row locks are not exercised by the SQLite test database.
+- **Docs:** `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md` remediation table, finding headers and checklist updated. `feature_list.json` FEAT-020 → `passing`.
+- **Next recommended action:** review and commit these TENANT-005 / INVITE-006 changes (earlier remediation is already in `307493d`), then scenario roadmap R0.3.
+
+### 2026-10-30 — Session 20 (Scenario Planning Methodology & Feature Alignment Audit)
+
+- **Goal:** Audit Foresight Radar against the nine-step method in `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` and produce a product blueprint. No code, no migrations.
+- **Method:** Read all 26 slides (text extracted from the PPTX XML; `python-pptx` not installed). Traced routes → controllers → services → prompts → jobs → models → migrations → seed data → React pages → tests.
+- **Deliverables:** `docs/product/SCENARIO_PLANNING_METHODOLOGY.md`, `docs/audit/SCENARIO_PLANNING_FEATURE_AUDIT.md`, `docs/audit/SCENARIO_PLANNING_FEATURE_MATRIX.md`, `docs/product/SCENARIO_PLANNING_TARGET_WORKFLOW.md`, `docs/product/SCENARIO_PLANNING_FEATURE_SPECIFICATION.md`, `docs/audit/SCENARIO_PLANNING_DATA_MODEL_GAP.md`, `docs/product/SCENARIO_PLANNING_DEVELOPMENT_ROADMAP.md`.
+- **Key findings:** no scenario planning exercise entity (focal issue is optional text per scenario); forces and scores are tenant-wide and lists default to the current month; taxonomy has 8 of 11 deck categories; axes are single forces, so the deck's "Government Regulation" (Politic + Legislative) cannot be modelled and the two-uncertainty decision is not recorded; quadrants exist only after narrative generation and FINAL is not reachable in the UI; steps 5 and 8 absent; 7 and 9 are a text field and a string list. Narrative generation (citations, verified evidence, async job, provenance) is the best-aligned part. Existing LLM gateway is sufficient.
+- **Needs Verification:** `TenantLlmSetting` appears unused by `LlmClientResolver`; `ScenarioNarrativeService::assertGeneratable` checks the default client rather than the user's resolved client (G24). No browser session was run.
+- **Side observations:** `ScenarioController` uses `auth()->id()` (AGENTS.md §10); `docs/product/DOMAIN_GAPS.md`, `FORESIGHT_DOMAIN_MODEL.md`, `SIGNAL_TO_INSIGHT_SPEC.md` are outdated.
+- **Verification executed:** none of the code gates (docs-only change). Consistency check of matrix vs roadmap priorities by script.
+- **`feature_list.json`:** unchanged (no feature status changed).
+- **Next recommended action:** finish TENANT-005 / INVITE-006; then roadmap R0.3 and the R0.1 → R0.5 vertical slice.
 
 ### 2026-10-26 — Session 19 (TENANT-002 Remediation: queued job tenant context)
 

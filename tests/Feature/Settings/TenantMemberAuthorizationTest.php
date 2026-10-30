@@ -14,8 +14,9 @@ use Tests\TestCase;
 
 /**
  * Regression guard for INVITE-001 (member and organization management needs
- * admin permissions) and INVITE-002 (invite never takes over an existing
- * account). See docs/audit/TENANT_INVITATION_READINESS_AUDIT.md.
+ * admin permissions), INVITE-002 (invite never takes over an existing
+ * account) and INVITE-006 (a tenant always keeps at least one admin).
+ * See docs/audit/TENANT_INVITATION_READINESS_AUDIT.md.
  */
 class TenantMemberAuthorizationTest extends TestCase
 {
@@ -123,6 +124,69 @@ class TenantMemberAuthorizationTest extends TestCase
             ->assertRedirect();
 
         $this->assertFalse($other->fresh()->can('manage-members'));
+    }
+
+    public function test_last_admin_cannot_demote_self(): void
+    {
+        $this->actingAs($this->admin)
+            ->patch(route('settings.members.role', ['user' => $this->admin]), ['role' => 'bod'])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertTrue($this->admin->fresh()->hasRole('admin'));
+    }
+
+    public function test_admin_can_demote_peer_while_another_admin_remains(): void
+    {
+        $peer = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $peer->assignRole('admin');
+
+        $this->actingAs($this->admin)
+            ->patch(route('settings.members.role', ['user' => $peer]), ['role' => 'bod'])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->assertTrue($peer->fresh()->hasRole('bod'));
+        $this->assertFalse($peer->fresh()->hasRole('admin'));
+    }
+
+    public function test_admin_can_demote_self_while_another_admin_remains(): void
+    {
+        $peer = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $peer->assignRole('admin');
+
+        $this->actingAs($this->admin)
+            ->patch(route('settings.members.role', ['user' => $this->admin]), ['role' => 'bod'])
+            ->assertSessionMissing('error');
+
+        $this->assertTrue($this->admin->fresh()->hasRole('bod'));
+    }
+
+    public function test_last_admin_cannot_be_removed(): void
+    {
+        Role::findByName('super-admin')->givePermissionTo('manage-members');
+        $operator = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $operator->assignRole('super-admin');
+
+        $this->actingAs($operator)
+            ->delete(route('settings.members.destroy', ['user' => $this->admin]))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertSame($this->tenant->id, (int) $this->admin->fresh()->tenant_id);
+        $this->assertTrue($this->admin->fresh()->hasRole('admin'));
+    }
+
+    public function test_admin_can_remove_peer_admin_while_another_admin_remains(): void
+    {
+        $peer = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $peer->assignRole('admin');
+
+        $this->actingAs($this->admin)
+            ->delete(route('settings.members.destroy', ['user' => $peer]))
+            ->assertSessionMissing('error');
+
+        $this->assertNull($peer->fresh()->tenant_id);
     }
 
     public function test_invite_does_not_absorb_platform_superuser(): void
