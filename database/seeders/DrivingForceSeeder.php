@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ActionReason;
+use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\StatusAction;
@@ -54,7 +55,7 @@ class DrivingForceSeeder extends Seeder
             'keyword' => $driving_force->keyword,
         ], [
             'uuid' => Uuid::uuid1(),
-            'dimension_id' => $driving_force->dimension_id,
+            'dimension_id' => Dimension::where('code', $driving_force->dimension)->value('id'),
             'description' => $driving_force->description,
             'status' => 'APPROVED',
             'created_by' => User::all()->random()->id,

@@ -23,7 +23,7 @@ class StatusActionController extends Controller
     public function index()
     {
         $title = 'Status Action';
-        $dimensions = Dimension::all()->map(function ($dimension) {
+        $dimensions = Dimension::ordered()->get()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name,

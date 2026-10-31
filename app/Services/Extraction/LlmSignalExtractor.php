@@ -32,7 +32,7 @@ class LlmSignalExtractor
      */
     public function extract(string $title, string $content): array
     {
-        $dimensions = Dimension::orderBy('id')->get(['id', 'name']);
+        $dimensions = Dimension::ordered()->get(['id', 'name']);
         $horizons = TimeHorizon::orderBy('id')->get(['id', 'name']);
         $forces = DrivingForce::where('status', 'APPROVED')
             ->with('dimension:id,name')

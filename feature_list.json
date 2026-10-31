@@ -279,6 +279,66 @@
         "Suspended or deleted tenants are denied on every request type, including JSON and queued jobs"
       ],
       "verification_evidence": "2026-10-26: all P0/P1 findings, UX-001, E2E-001..004 and P2 TENANT-002 fixed; end-to-end browser check passed. composer verify 332 passed. tests/Audit 2 failed / 4 passed. 2026-10-30: TENANT-005 (TenantRule::exists) and INVITE-006 (last-admin guard) fixed; composer verify 342 passed; tests/Audit 6/6 passed. 2026-10-30 (session 22): TENANT-006..010 and INVITE-008 fixed (operator workspace picker, tenant LLM key + monthly token quota, invitation-only accounts, uniform invites + throttle, 404 for foreign members, no testing fallback); PHPUnit 364 passed, Larastan clean, Pint clean, npm build OK."
+    },
+    {
+      "id": "FEAT-021",
+      "name": "Scenario Planning Exercise & Key Focal Issue",
+      "description": "Scenario planning project (exercise) as the container for the nine-step method: key focal issue, purpose, target year, optional scope and context, gate G1 confirmation, and the nine-step workspace (roadmap R0.1, R1.13).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A manager creates a project with focal question, purpose and target year; it is visible only in their tenant",
+        "Steps 2-9 stay locked until the focal issue is confirmed",
+        "Confirming records who and when; changing question, purpose or target year afterwards requires confirming again",
+        "An owner from another tenant is rejected; only creator, owner or admin roles may change a project"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning/ProjectTest.php 9 passed; full PHPUnit 395 passed + 1 date-dependent test in TenantLlmQuotaTest fixed (subMonthNoOverflow) and re-run 9/9; Larastan clean; Pint clean; npm build OK; browser: create with client validation, confirm opens steps 2-9."
+    },
+    {
+      "id": "FEAT-022",
+      "name": "Exercise Driving Force List & Gate G2",
+      "description": "Step 2 of a scenario planning exercise: driving forces picked from the tenant library with per-exercise inclusion, influence note and predetermined flag, category coverage, and gate G2 (force list agreed) before steps 3-9 (roadmap R0.2).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Forces from any month can be added; another tenant's or deleted forces cannot",
+        "The same force can be included in one exercise and excluded in another, each with its own note",
+        "Forces can only be added after the focal issue is confirmed",
+        "Agreeing the list needs at least one included force and opens steps 3-9",
+        "Changing inclusion, removing an included force, or withdrawing the focal issue confirmation withdraws the agreement"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning 19 passed (ProjectDrivingForceTest 10); Larastan clean; Pint clean; npm build OK; browser: library search and add, edit note, agree list, steps 3-9 open."
+    },
+    {
+      "id": "FEAT-023",
+      "name": "Exercise Scores, Uncertainty x Impact Matrix & Gate G3",
+      "description": "Step 3 (first half) of a scenario planning exercise: consensus impact and uncertainty (1-10) with rationale per included force, copied from the organization rating for review, the numbered uncertainty x impact matrix, and gate G3 (scores agreed) before steps 4-9 (roadmap R1.1).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only included forces of an exercise with an agreed list (G2) can be scored, 1-10 with optional rationale",
+        "Adding a force copies its organization rating marked for review; scoring in an exercise never changes the organization rating",
+        "The matrix plots only included forces, numbered in method order",
+        "Agreeing scores needs every included force scored and opens steps 4-9",
+        "Changing a score, withdrawing G2 or withdrawing G1 withdraws the score agreement"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning 29 passed (ProjectAssessmentTest 10); Larastan clean; Pint clean; npm build OK; browser: matrix classes and score dialog on the sample exercise."
+    },
+    {
+      "id": "FEAT-024",
+      "name": "Critical Uncertainties & Gate G4",
+      "description": "Step 3 (second half) of a scenario planning exercise: named critical uncertainties grouping one or more exercise forces, with two poles and a selection reason; exactly two approved as axis A and B (gate G4), with an acknowledgement when the axes strongly influence each other (roadmap R0.4).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Proposals need agreed scores (G3) and use included, non-predetermined forces of the exercise only",
+        "An uncertainty may group several forces; poles must differ; a reason is required",
+        "Exactly two are approved, on different axes; a third approval is refused",
+        "Axes with |cross-impact| >= 2 between their forces need an explicit acknowledgement",
+        "Approved uncertainties are locked until the approval is withdrawn; withdrawing G1, G2 or G3 withdraws the approvals",
+        "Two approvals complete step 3 and open steps 4-9"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning 40 passed (CriticalUncertaintyTest 11); full PHPUnit 427 passed; Larastan clean; Pint clean; npm build OK; browser: propose with grouped forces, validation errors kept in the dialog, approve A, approve B with acknowledgement."
     }
   ]
 }

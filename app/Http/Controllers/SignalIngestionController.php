@@ -37,7 +37,7 @@ class SignalIngestionController extends Controller
      */
     public function index(): InertiaResponse
     {
-        $dimensions = Dimension::select('id', 'name')->get()->map(fn ($d) => [
+        $dimensions = Dimension::ordered()->get(['id', 'name'])->map(fn ($d) => [
             'value' => $d->id,
             'label' => $d->name,
         ]);

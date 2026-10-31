@@ -85,7 +85,7 @@ class TenantLlmQuotaTest extends TestCase
     {
         $other = Tenant::create(['name' => 'Cyberdyne', 'slug' => 'cyberdyne', 'status' => 'active']);
         TenantLlmUsage::create(['tenant_id' => $other->id, 'period' => now()->format('Y-m'), 'input_tokens' => 99999]);
-        TenantLlmUsage::create(['tenant_id' => $this->tenant->id, 'period' => now()->subMonth()->format('Y-m'), 'input_tokens' => 99999]);
+        TenantLlmUsage::create(['tenant_id' => $this->tenant->id, 'period' => now()->subMonthNoOverflow()->format('Y-m'), 'input_tokens' => 99999]);
 
         $this->assertSame(0, app(TenantLlmQuota::class)->used($this->tenant));
         $this->assertFalse(app(TenantLlmQuota::class)->isExceeded($this->tenant));

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ClosedItemsController;
+use App\Http\Controllers\CriticalUncertaintyController;
 use App\Http\Controllers\CrossImpactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DrivingForceController;
@@ -10,9 +11,12 @@ use App\Http\Controllers\KnowledgeGraphController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PrioritizingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectAssessmentController;
+use App\Http\Controllers\ProjectDrivingForceController;
 use App\Http\Controllers\RatingUrgencyController;
 use App\Http\Controllers\RegisteredListController;
 use App\Http\Controllers\ScenarioController;
+use App\Http\Controllers\ScenarioPlanningProjectController;
 use App\Http\Controllers\Settings\OperatorWorkspaceController;
 use App\Http\Controllers\Settings\OrganizationController;
 use App\Http\Controllers\Settings\TenantMemberController;
@@ -85,6 +89,39 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         ->name('visualization.cross-impact.update')
         ->can('manage-cross-impact')
         ->middleware('throttle:240,1');
+
+    // Scenario planning exercises (roadmap R0.1); same permissions as scenarios.
+    Route::prefix('scenario-planning')->controller(ScenarioPlanningProjectController::class)->name('scenario-planning.')->group(function () {
+        Route::get('/', 'index')->name('index')->can('view-scenario');
+        Route::post('/', 'store')->name('store')->can('manage-scenario');
+        Route::get('/{project}', 'show')->name('show')->can('view-scenario');
+        Route::put('/{project}', 'update')->name('update')->can('manage-scenario');
+        Route::post('/{project}/confirm', 'confirm')->name('confirm')->can('manage-scenario');
+        Route::delete('/{project}', 'destroy')->name('destroy')->can('manage-scenario');
+    });
+    // Step 2: the exercise's driving force list (roadmap R0.2); a link must belong to its project.
+    Route::prefix('scenario-planning/{project}/driving-forces')->controller(ProjectDrivingForceController::class)->name('scenario-planning.forces.')->scopeBindings()->group(function () {
+        Route::get('/', 'index')->name('index')->can('view-scenario');
+        Route::post('/', 'store')->name('store')->can('manage-scenario');
+        Route::post('/confirm', 'confirm')->name('confirm')->can('manage-scenario');
+        Route::put('/{projectForce}', 'update')->name('update')->can('manage-scenario');
+        Route::delete('/{projectForce}', 'destroy')->name('destroy')->can('manage-scenario');
+    });
+    // Step 3, second half: critical uncertainties and gate G4 (roadmap R0.4).
+    Route::prefix('scenario-planning/{project}/uncertainties')->controller(CriticalUncertaintyController::class)->name('scenario-planning.uncertainties.')->scopeBindings()->group(function () {
+        Route::get('/', 'index')->name('index')->can('view-scenario');
+        Route::post('/', 'store')->name('store')->can('manage-scenario');
+        Route::put('/{uncertainty}', 'update')->name('update')->can('manage-scenario');
+        Route::delete('/{uncertainty}', 'destroy')->name('destroy')->can('manage-scenario');
+        Route::post('/{uncertainty}/approve', 'approve')->name('approve')->can('manage-scenario');
+        Route::post('/{uncertainty}/withdraw', 'withdraw')->name('withdraw')->can('manage-scenario');
+    });
+    // Step 3: exercise scores and gate G3 (roadmap R1.1).
+    Route::prefix('scenario-planning/{project}/assessment')->controller(ProjectAssessmentController::class)->name('scenario-planning.assessment.')->scopeBindings()->group(function () {
+        Route::get('/', 'index')->name('index')->can('view-scenario');
+        Route::post('/confirm', 'confirm')->name('confirm')->can('manage-scenario');
+        Route::put('/{projectForce}', 'update')->name('update')->can('manage-scenario');
+    });
 
     Route::prefix('scenarios')->controller(ScenarioController::class)->name('scenarios.')->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');

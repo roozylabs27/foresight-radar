@@ -316,7 +316,7 @@ export default function ExecutiveOverview({ loading = false, reasoningData = nul
                     icon={<RocketIcon className="text-primary" />}
                     title="Growth Index"
                     badge={<span className={cn(statusBadge(), "bg-accent text-primary")}>Peluang Pasar</span>}
-                    description="Peluang yang sudah ditangkap (Decided Plan) dibanding yang belum, pada dimensi Customer, Technology, & Economy."
+                    description="Peluang yang sudah ditangkap (Decided Plan) dibanding yang belum, pada dimensi Consumer, Technology, & Economic."
                     value={growth_index}
                     label="Skor Growth"
                     color="var(--primary)"

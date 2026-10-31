@@ -343,14 +343,17 @@ class SignalExtractionService
         $textLower = strtolower($text);
 
         $dimensionKeywords = [
+            'Political' => ['government', 'minister', 'election', 'geopolit', 'sanction', 'political', 'national agenda', 'energy security'],
+            'Economic' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance', 'exchange rate'],
+            'Social' => ['society', 'social', 'demographic', 'generation', 'gen z', 'millennial', 'lifestyle', 'culture', 'urban'],
             'Technology' => ['tech', 'ai', 'algorithm', 'software', 'digital', 'cyber', 'quantum', 'cloud', 'compute', 'data'],
-            'Economy' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance'],
-            'Regulation' => ['law', 'policy', 'compliance', 'regulat', 'directive', 'act', 'legal', 'government', 'standard'],
             'Ecology' => ['climate', 'carbon', 'emission', 'green', 'environment', 'sustainable', 'waste', 'energy', 'biodiversity'],
-            'Customer' => ['consumer', 'demand', 'preference', 'behavior', 'demographic', 'user', 'habit', 'adoption'],
-            'Competitor' => ['rival', 'compet', 'patent', 'startup', 'disrupt', 'acquisition', 'market share'],
-            'Supplier' => ['supply chain', 'logistics', 'vendor', 'raw material', 'shipping', 'manufacturing', 'shortage'],
-            'Substitute' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog'],
+            'Legislative' => ['law', 'regulat', 'directive', 'act', 'legal', 'compliance', 'standard', 'decree', 'tkdn'],
+            'Consumer' => ['consumer', 'customer', 'demand', 'preference', 'behavior', 'user', 'habit', 'adoption', 'purchasing power'],
+            'Supply Chain' => ['supply chain', 'logistics', 'vendor', 'supplier', 'raw material', 'shipping', 'manufacturing', 'shortage'],
+            'Competitor' => ['rival', 'compet', 'patent', 'acquisition', 'market share', 'price war'],
+            'New Entrant' => ['new entrant', 'newcomer', 'market entry', 'new player', 'entering the market', 'enters the market', 'startup'],
+            'Substitute' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog', 'car sharing', 'ride-hailing'],
         ];
 
         $highestCount = 0;

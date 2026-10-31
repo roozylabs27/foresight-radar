@@ -17,6 +17,7 @@ import { useIngestion } from "@/context/IngestionContext";
 import { cn } from "@/lib/utils";
 
 import { isPending } from "@/lib/llm";
+import HintTooltip from "@/Components/HintTooltip";
 
 export default function FloatingIngestionProgress() {
     const {
@@ -122,9 +123,9 @@ export default function FloatingIngestionProgress() {
                                         ) : (
                                             <ClockIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                                         )}
-                                        <span className="font-medium text-foreground truncate" title={item.title}>
-                                            {item.title}
-                                        </span>
+                                        <HintTooltip content={item.title}>
+                                            <span className="font-medium text-foreground truncate">{item.title}</span>
+                                        </HintTooltip>
                                     </div>
                                     <button
                                         type="button"

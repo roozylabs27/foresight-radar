@@ -2,6 +2,7 @@ import DimensionChip from "@/Components/DimensionChip";
 import PriorityBadge from "@/Components/PriorityBadge";
 import StatusBadge, { statusBadge } from "@/Components/StatusBadge";
 import { cn } from "@/lib/utils";
+import HintTooltip from "@/Components/HintTooltip";
 
 /** Status badge with the date it reached that status (`approved_at`, `closed_at`) underneath. */
 export function StatusWithDate({ status, date }) {
@@ -95,9 +96,9 @@ export function reviewColumns({ status }) {
             // Reasons run long; keep rows compact and leave the full text in the tooltip.
             cell: ({ getValue }) =>
                 getValue() ? (
-                    <span title={getValue()} className="line-clamp-3">
-                        {getValue()}
-                    </span>
+                    <HintTooltip content={getValue()}>
+                        <span className="line-clamp-3">{getValue()}</span>
+                    </HintTooltip>
                 ) : (
                     "-"
                 ),

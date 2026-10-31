@@ -9,7 +9,7 @@
 - **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
 - **Current objective:** Tenant isolation & invitation audit remediation complete (2026-10-30); next: scenario planning roadmap. The audit's original verdict (NOT READY, 2026-10-26) is superseded by the remediation table in `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`.
 - **Current blocker:** None. Every numbered tenant/invitation finding is fixed and covered by tests (TENANT-001..010, INVITE-001..009, UX-001), all uncommitted. Not done: Playwright smoke for the members page (UX-001 checklist), audit log for membership changes (P3), MySQL row-lock behaviour (tests run on SQLite).
-- **Highest-priority next task:** User review and commit of the tenant remediation; then, in the order the user picks, AI guardrails R1.14 / R2.10 (queued by the side session) and scenario roadmap R0.3 (taxonomy). Client questions on the PPT are in `docs/product/SCENARIO_PLANNING_CLIENT_QUESTIONS.md`.
+- **Highest-priority next task:** User review and commit of AI guardrails (R1.14, R2.10), taxonomy (R0.3), scenario planning R0.1/R1.13/R0.2/R1.1/R0.4, the tooltip sweep and the frontend state fixes — tenant work is committed (`ceaf715`, `5cc2f77`). Next roadmap item: R0.5 (scenario framework on the two approved uncertainties: quadrants created on save, summaries, framework approval). R0.4 uses the default answers to Pak Jaka's questions 3–5.
 - **Scenario planning blueprint (2026-10-30):** Methodology alignment audit against `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` complete (docs only). Overall alignment partial: steps 2, 3, 4, 6 usable; 1, 5, 8 missing; 7, 9 minimal. First product slice after tenant work: roadmap R0.3 (taxonomy), then R0.1 → R0.2 → R0.4 → R0.5 (`docs/product/SCENARIO_PLANNING_DEVELOPMENT_ROADMAP.md`).
 
 ---
@@ -423,12 +423,81 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-10-31 (uncommitted) | Scenario roadmap R0.4 critical uncertainties + G4; tooltip sweep; frontend state fixes | **PASS** | Pint 330 files PASS; Larastan L5 `[OK] No errors`; PHPUnit 427 passed (3,569 assertions, 474.30s) — run before the last frontend-only fixes; `npm run build` PASS (2m 51s) after them; migration `2026_10_31_000004` applied to the dev DB; browser: tooltips on matrix and Cross-Impact, propose/validate/approve flow with acknowledgement |
+| 2026-10-31 (uncommitted) | Scenario roadmap R1.1 exercise scores + matrix + G3 | **PASS** | Pint 324 files PASS; Larastan L5 `[OK] No errors`; PHPUnit 416 passed (3,463 assertions, 363.64s); `npm run build` PASS (1m 39s); migration `2026_10_31_000003` applied to the dev DB (backfilled 3 library scores); browser: matrix classes and score dialog |
+| 2026-10-31 (uncommitted) | Scenario roadmap R0.2 exercise driving forces + G2 | **PASS** | Pint 318 files PASS; Larastan L5 `[OK] No errors`; PHPUnit 406 passed (3,385 assertions, 449.83s); `npm run build` PASS (1m 30s); migration `2026_10_31_000002` applied to the dev DB; browser: library search and add (3 forces), edit influence note, agree list, steps 3–9 open |
+| 2026-10-31 (uncommitted) | Scenario roadmap R0.1 + R1.13 project & focal issue | **PASS** | Pint 312 files (1 style issue auto-fixed); Larastan L5 `[OK] No errors`; PHPUnit 395 passed / 1 failed (3,281 assertions, 526.90s) — the failure was a date bug in `TenantLlmQuotaTest` (`subMonth()` overflows on 31 Oct), fixed with `subMonthNoOverflow()` and that file re-run 9/9; `npm run build` PASS (59.53s; 8 pre-existing sourcemap warnings from `ui/` files); migration `2026_10_31_000001` applied to the dev DB; browser: create dialog validation, project created, confirm opened steps 2–9 |
+| 2026-10-30 (uncommitted) | Scenario roadmap R0.3 taxonomy | **PASS** | Pint 305 files PASS (after auto-fixing two style issues); Larastan L5 `[OK] No errors`; PHPUnit 387 passed (3,196 assertions, 706.89s); `npm run build` PASS (3m 23s); migration `2026_10_30_000002_align_dimension_taxonomy` applied to the dev DB; browser: radar shows 11 sectors, Driving Force list shows 11 categories in order |
+| 2026-10-30 (uncommitted) | AI guardrails R1.14 + R2.10 | **PASS** | Pint 302 files PASS; Larastan L5 `[OK] No errors`; PHPUnit 381 passed (3,176 assertions, 341.96s); `npm run build` PASS (1m 18s); `llm:compliance` live mode not run (opt-in, spends tokens) |
 | 2026-10-30 (uncommitted) | TENANT-006..010 + INVITE-008 + G24 Remediation | **PASS** | Pint 300 files PASS; Larastan L5 `[OK] No errors` (run directly: the earlier `composer verify` hit Composer's 1200s process timeout during Larastan while `npm run build` ran in parallel); PHPUnit 364 passed (3,075 assertions, 398.74s); `npm run build` PASS (1m 29s); migration `2026_10_30_000001_create_tenant_llm_usages_table` applied to the dev DB; browser check of Settings → Organization AI panel PASS |
 | 2026-10-30 (`25888b8`, docs only) | Scenario Planning Methodology Audit | **NOT RUN** | No application code changed, so `init.sh` / `composer verify` / `npm run build` were not executed. Docs cross-checked: matrix row priorities match roadmap mapping (94 rows); status counts recomputed by script |
 
 ---
 
 ## Session Log
+
+### 2026-10-31 — Session 28 (Tooltip sweep, R0.4 critical uncertainties, two frontend state bugs)
+
+- **Tooltip sweep (user request):** new `Components/HintTooltip.jsx` (shadcn tooltip with its own provider). Replaced every native browser tooltip: matrix points (now focusable `g`, svg uses `aria-label` instead of `<title>`), Cross-Impact network edges, Cross-Impact legend, column numbers and cells, Status of Action marks, review "Reason" cells, ingestion progress title, notification title; removed a redundant `title` on the loop badge. Remaining `title=` props are component titles; Recharts adds an empty `<title>`.
+- **R0.4 RED → GREEN:** `tests/Feature/ScenarioPlanning/CriticalUncertaintyTest.php` (11) failed first. Migration `2026_10_31_000004_create_critical_uncertainties_table`; `CriticalUncertainty` model; project relations `criticalUncertainties()` / `uncertainties()` (scoped binding), `uncertaintiesApproved()`, `withdrawUncertaintyApprovals()`; `CriticalUncertaintyService` (G3 required; members must be included, non-predetermined exercise forces; exactly two approved on A/B under a row lock; |cross-impact| ≥ 2 needs acknowledgement; approved locked until withdrawn; pair suggestions); `CriticalUncertaintyRequest`; `CriticalUncertaintyController`; G4 cascade from G1/G2/G3 withdrawal; step 3 done and steps 4–9 open at G4 (`ProjectAssessmentTest` assertion updated accordingly).
+- **Frontend:** `Pages/ScenarioPlanning/Uncertainties.jsx`, `UncertaintyCard`, `UncertaintyFormDialog`, `ApproveUncertaintyDialog`, `PairSuggestions`, `hooks/use-critical-uncertainties.js`; link from the scores page.
+- **Pre-existing bugs found in the browser check and fixed:** (1) `app.jsx` created a new page wrapper component on every Inertia visit, so React remounted the page and `preserveState: true` never worked (dialogs closed and lost input on validation errors app-wide); wrappers are now cached per page. (2) `lib/inertia-submit.js` `inertiaVisit` replaced the caller's `onFinish`, so busy/saving flags never reset; it now calls it. Follow-on: four dialogs reset their state whenever their prop object changed identity; they now reset only when another record is opened (`?.id`).
+- **Risk:** with state now preserved on `preserveState` visits, other pages keep their local state after such visits as Inertia intends; only the scenario planning pages and the Members invite dialog were exercised in the browser.
+- **Defaults used:** client questions 3–5 (consensus score, coordinator approves with reason, grouping allowed, predetermined not an axis); noted in `SCENARIO_PLANNING_CLIENT_QUESTIONS.md`.
+- **Dev data:** sample exercise now has G3, "Government Regulation" (TKDN, axis A) and "Technology Development" (LFP + Solid Battery, axis B, approved with acknowledgement of cross-impact 3).
+- **Docs:** roadmap R0.4 and R1.4 done; matrix 2.11, 3.7, 3.8, 3.9, 3.12 complete, counts updated; audit G09 and G06; `feature_list.json` FEAT-024.
+- **Next recommended action:** user review and commit; then R0.5.
+
+### 2026-10-31 — Session 27 (Scenario roadmap R1.1: exercise scores, matrix, gate G3)
+
+- **RED → GREEN:** `tests/Feature/ScenarioPlanning/ProjectAssessmentTest.php` (10 tests) failed first.
+- **Backend:** migration `2026_10_31_000003_create_force_assessments_table` (+ `scenario_planning_projects.scores_confirmed_by/at`, backfill of organization ratings for existing exercise forces as `origin = library`); `ForceAssessment` model; `ProjectDrivingForce::consensus()`; `ProjectAssessmentService` (score needs G2 and an included force; changing a number after G3 withdraws it, a rationale edit does not; G3 needs every included force scored; list numbered in method order); `ForceAssessmentRequest`; `ProjectAssessmentController`; routes under `/scenario-planning/{project}/assessment`. `ProjectDrivingForceService` copies the organization rating on add; G2 withdrawal also withdraws G3; G1 withdrawal clears G2 and G3. `ScenarioPlanningProjectService`: `HIGH_SCORE = 6`, step 3 scoped, steps 4–9 open after G3.
+- **Frontend:** `Pages/ScenarioPlanning/Assessment.jsx`; `UncertaintyImpactMatrix` (SVG, numbered points, candidate and predetermined zones), `ScoreList`, `ScoreDialog` (rubric hints from the extraction prompt); `hooks/use-project-assessment.js`; domain `classifyScore`, `SCORE_CLASSES`, `matrixPoints`.
+- **Decisions:** gate G3 added (target workflow 3 → 3b); organization ratings are only copied, never written from an exercise; threshold fixed at 6 (per-exercise setting not built).
+- **Deferred:** spec step 3 AC 5 (score change flags an approved framework) needs critical uncertainties → R0.4 / R1.10.
+- **Docs:** roadmap R1.1 done; matrix 3.4 and 3.5 complete, counts updated; audit G08 fixed, G02 updated; `feature_list.json` FEAT-023.
+- **Next recommended action:** user review and commit; send questions to Pak Jaka; then R0.4.
+
+### 2026-10-31 — Session 26 (Scenario roadmap R0.2: exercise driving force list + gate G2)
+
+- **RED → GREEN:** `tests/Feature/ScenarioPlanning/ProjectDrivingForceTest.php` (10 tests) failed first.
+- **Backend:** migration `2026_10_31_000002_create_project_driving_forces_table` (link table + `scenario_planning_projects.forces_confirmed_by/at`); `ProjectDrivingForce` model; `ProjectDrivingForceService` (add needs G1; G2 needs G1 + one included force; changing inclusion or removing an included force withdraws G2; list in method order; library from any month; coverage per category); `ProjectDrivingForceRequest` (own tenant, not soft-deleted); `ProjectDrivingForceController`; nested routes with `scopeBindings()`. `ScenarioPlanningProjectService`: withdrawing G1 also withdraws G2; step 2 status from the list and G2; steps 3–9 open after G2; step links computed on the server (`href`, `scoped`).
+- **Frontend:** `Pages/ScenarioPlanning/DrivingForces.jsx`; `AddForcesDialog`, `EditForceDialog`, `ProjectForceList`, `CoverageChips`; `hooks/use-project-forces.js`; domain helpers `INCLUSION_STATUSES`, `groupCoverage`, `filterLibrary`; step list and workspace text updated for G2.
+- **Decisions:** gate G2 added now (target workflow 2 → 3); new forces are still created in the Driving Force module (linked from the page); inclusion ignores Status of Action (part of R1.4).
+- **Dev data:** sample exercise now has TKDN Regulation, LFP Battery and Solid Battery included, an influence note on TKDN, and an agreed list.
+- **Docs:** roadmap R0.2 done, R1.4 partial; matrix rows 2.5, 2.10 complete, 2.11 and 5.4 partial, counts updated; audit G02; `feature_list.json` FEAT-022.
+- **Next recommended action:** user review and commit; then R1.1 (schema) and R0.4.
+
+### 2026-10-31 — Session 25 (Scenario roadmap R0.1 + R1.13: project and key focal issue)
+
+- **RED → GREEN:** `tests/Feature/ScenarioPlanning/ProjectTest.php` (9 tests) failed first.
+- **Backend:** migration `2026_10_31_000001_create_scenario_planning_projects_table`; `ScenarioPlanningProject` (tenant-scoped, soft deletes, uuid key); `ScenarioPlanningProjectPolicy` (creator, owner, admin roles); `ScenarioPlanningProjectRequest` (target year from next year; owner must be in the tenant via `TenantRule`); `ScenarioPlanningProjectService` (create, update that withdraws G1 when question/purpose/target year change, confirm, nine-step status with links to today's modules); `ScenarioPlanningProjectController`; routes `/scenario-planning` gated by `view-scenario` / `manage-scenario`.
+- **Frontend:** `Pages/ScenarioPlanning/Index.jsx` and `Show.jsx` (< 150 lines each), `Components/ScenarioPlanning/ProjectForm.jsx` and `StepList.jsx`, `domain/scenarioPlanning.js`, `hooks/use-project-dialog.js`; sidebar item "Scenario Planning".
+- **Deviations from the roadmap wording:** no fake "legacy" project per tenant; `scenarios.project_id` deferred to R0.5.
+- **Also fixed:** date-dependent failure in `TenantLlmQuotaTest` found by today's run (31 October).
+- **Dev data:** created and confirmed the deck's example project "Elektrifikasi Kendaraan 2030" through the UI as the browser check (left in place as sample data).
+- **Docs:** roadmap R0.1 and R1.13 done; matrix step 1 rows complete (1.7 AI refinement still missing) and counts updated; audit G01 fixed; `feature_list.json` FEAT-021 added (passing).
+- **Next recommended action:** user review and commit; then R0.2.
+
+### 2026-10-30 — Session 24 (Scenario roadmap R0.3: eleven-category taxonomy)
+
+- **RED → GREEN:** `tests/Feature/Taxonomy/DimensionTaxonomyTest.php` (6 tests) failed first.
+- **Change:** `App\Support\DimensionTaxonomy` holds the 11 categories (code, name, environment, order, legacy names) and `align()`; migration `2026_10_30_000002_align_dimension_taxonomy` adds `dimensions.code` (unique) and `sort_order`, then aligns existing rows only (fresh installs are seeded); `DefaultSystemSeeder` calls `align()` (`database/data/dimension.json` removed); `database/data/driving_force.json` seeds by category code ("New comers" now New Entrant); `Dimension::ordered()` used by every dimension list, the extraction prompt and reports; keyword rules for the no-AI path cover all 11; radar has 11 sectors (360/11 degrees, narrower fans); knowledge-graph colours and two chart descriptions updated. The synthetic clustering harness keeps its own fixed names (benchmark data, not the user taxonomy).
+- **Interim decision:** "Regulation" is renamed to "Legislative" with its forces, pending client question 5; noted in `SCENARIO_PLANNING_CLIENT_QUESTIONS.md`.
+- **Dev DB:** before `1 Economy, 2 Ecology, 3 Regulation, 4 Technology, 5 Substitute, 6 Supplier, 7 Customer, 8 Competitor`; after: same ids renamed, plus 9 Political, 10 Social, 11 New Entrant. The migration's `down()` drops the new columns only and does not rename back.
+- **Docs:** roadmap R0.3 done; matrix row 2.3 Complete and summary counts updated; audit G03 fixed.
+- **Verification executed:** see Verification History row "Scenario roadmap R0.3 taxonomy".
+- **Next recommended action:** user review and commit; then R0.1.
+
+### 2026-10-30 — Session 23 (AI guardrails: R1.14 relevance filter, R2.10 compliance suite)
+
+- **Order (user):** AI guardrails first, then scenario roadmap R0.3. Both tasks were queued by the side session "Foresight Radar feature alignment audit".
+- **R1.14 RED → GREEN:** 4 new tests in `LlmSignalExtractionTest` failed first. `SignalExtractionPrompt` → `extract-v2` (top-level `is_relevant`, `relevance_reason`); `LlmSignalExtractor` treats only an explicit `false` as irrelevant and drops any returned signals (`discarded_irrelevant`); `SignalExtractionService` stores a notice with the reason and `progress()` reports `extraction.irrelevant`; Signals page and global notification show a warning. Decision: keyword (no-AI) path unchanged.
+- **R2.10:** `tests/Fixtures/llm-compliance/fixtures.json` (relevant, irrelevant, injection-in-document, injection-in-evidence); `PromptComplianceTest` (11 guardrail cases: injected instructions stay in data tags and cannot skip review, fabricated quote, clamped/unknown values, extra fields ignored, irrelevant-with-signals, malformed list, enumerated refs, `[S99]` stripped, uncited quadrant rejects all, missing quadrant → template, extra quadrant fields ignored) + 2 tests for the command; `php artisan llm:compliance` live report gated by `LLM_COMPLIANCE_LIVE` (`config/services.php`), read-only, compares a candidate model via `--provider/--model/--base-url/--api-key-env`. All guardrail cases passed on first run (they pin existing behaviour); residual risk documented: a verbatim quote of injected text can only be caught in review, and it stays PENDING.
+- **Docs:** `docs/product/LLM_INTEGRATION.md` (extract-v2, new grounding rules, "Uji kepatuhan prompt" section); roadmap R1.14 / R2.10 marked done.
+- **Verification executed:** see Verification History row "AI guardrails R1.14 + R2.10".
+- **Not covered:** live mode was not run against a real provider (spends tokens; needs the user's go-ahead and key).
+- **Next recommended action:** scenario roadmap R0.3 (taxonomy).
 
 ### 2026-10-30 — Session 22 (Remaining tenant findings + G24)
 

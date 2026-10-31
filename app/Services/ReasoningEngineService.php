@@ -56,7 +56,7 @@ class ReasoningEngineService
     public function getExecutiveOverview(?array $dateRange = null, mixed $dimension = null): array
     {
         $ratings = $this->loadRatings($dateRange, $dimension);
-        $dimensions = Dimension::orderBy('id')->get(['id', 'name']);
+        $dimensions = Dimension::ordered()->get(['id', 'name']);
 
         $resilience = $this->explainResilienceIndex($ratings);
         $growth = $this->explainGrowthIndex($ratings);

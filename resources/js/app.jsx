@@ -12,9 +12,16 @@ import { registerFlashToasts } from '@/lib/flash-toast';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+// One wrapper per page, built once. Inertia resolves the page again on every visit; a new
+// wrapper function each time would be a new component type, so React would remount the page
+// and `preserveState: true` (dialogs kept open on a validation error) could never work.
+const wrappedPages = new Map();
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: async (name) => {
+        if (wrappedPages.has(name)) return wrappedPages.get(name);
+
         const pages = import.meta.glob(['./Pages/**/*.jsx', './Pages/**/*.tsx'], { eager: false });
         const path = `./Pages/${name}.tsx` in pages ? `./Pages/${name}.tsx` : `./Pages/${name}.jsx`;
         const page = await resolvePageComponent(path, pages);
@@ -27,7 +34,9 @@ createInertiaApp({
             </I18nProvider>
         );
         Object.assign(WrappedPage, PageComponent);
-        return { ...page, default: WrappedPage };
+        const resolved = { ...page, default: WrappedPage };
+        wrappedPages.set(name, resolved);
+        return resolved;
     },
     setup({ el, App, props }) {
         const root = createRoot(el);

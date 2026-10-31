@@ -6,16 +6,22 @@
 
 export const RADAR_MAX_RADIUS = 9;
 
-/** The eight dimensions and the polar angle their sector is centred on. */
+/**
+ * The eleven categories of the scenario planning method and the polar angle their sector is
+ * centred on, 360/11 degrees apart: macro (six) on the left half, mezzo (five) on the right.
+ */
 export const DIMENSION_CONFIGS = [
-    { name: "Economy", angle: 90 },
-    { name: "Competitor", angle: 45 },
-    { name: "Customer", angle: 0 },
-    { name: "Supplier", angle: 315 },
-    { name: "Substitute", angle: 270 },
-    { name: "Technology", angle: 225 },
-    { name: "Regulation", angle: 180 },
-    { name: "Ecology", angle: 135 },
+    { name: "Political", angle: 98.2 },
+    { name: "Economic", angle: 130.9 },
+    { name: "Social", angle: 163.6 },
+    { name: "Technology", angle: 196.4 },
+    { name: "Ecology", angle: 229.1 },
+    { name: "Legislative", angle: 261.8 },
+    { name: "Substitute", angle: 294.5 },
+    { name: "New Entrant", angle: 327.3 },
+    { name: "Competitor", angle: 0 },
+    { name: "Supply Chain", angle: 32.7 },
+    { name: "Consumer", angle: 65.5 },
 ];
 
 /** Concentric bands, inner to outer, in radius units. */
@@ -98,18 +104,19 @@ export function computeAntiCollisionPoints(items) {
         let angleOffsets = [0];
         let radiusOffsets = [0];
 
+        // Sectors are about 32.7 degrees wide, so a fan stays within +/-13 degrees of the centre.
         if (count === 2) {
-            angleOffsets = [-10, 10];
+            angleOffsets = [-8, 8];
             radiusOffsets = [-0.25, 0.25];
         } else if (count === 3) {
-            angleOffsets = [-14, 0, 14];
+            angleOffsets = [-11, 0, 11];
             radiusOffsets = [0.35, -0.35, 0.35];
         } else if (count === 4) {
-            angleOffsets = [-16, -6, 6, 16];
+            angleOffsets = [-12, -4, 4, 12];
             radiusOffsets = [-0.35, 0.35, -0.35, 0.35];
         } else if (count > 4) {
-            // Even fan across up to 34 degrees
-            const span = 34;
+            // Even fan across up to 26 degrees
+            const span = 26;
             const step = span / (count - 1);
             angleOffsets = groupItems.map((_, i) => -span / 2 + i * step);
             radiusOffsets = groupItems.map((_, i) => (i % 2 === 0 ? -0.35 : 0.35));

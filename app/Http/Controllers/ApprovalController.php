@@ -20,7 +20,7 @@ class ApprovalController extends Controller
 
     public function index()
     {
-        $dimensions = Dimension::select('id', 'name')->get()->map(function ($dimension) {
+        $dimensions = Dimension::ordered()->get(['id', 'name'])->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name,

@@ -21,6 +21,7 @@ import {
     RadarIcon,
     SettingsIcon,
     SlidersIcon,
+    TargetIcon,
     UserIcon,
     WifiIcon,
     ZapIcon,
@@ -53,6 +54,7 @@ const COLLAPSED_KEY = "foresight-sidebar-collapsed";
 
 const NAV_ITEMS = [
     { key: "dashboard", label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: LayoutGridIcon, permission: "view-dashboard" },
+    { key: "scenario_planning", label: "Scenario Planning", route: "scenario-planning.index", match: "/scenario-planning", icon: TargetIcon, permission: "view-scenario" },
     { key: "signals", label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiIcon, permission: "view-signal" },
     { key: "driving_force", label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ZapIcon, permission: "view-driving-force" },
     { key: "time_horizon", label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockIcon, permission: "view-time-horizon" },

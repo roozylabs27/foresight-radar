@@ -83,4 +83,10 @@ return [
         'max_candidates' => (int) env('SIGNAL_EXTRACTION_MAX_CANDIDATES', 8),
     ],
 
+    // `php artisan llm:compliance` calls a real provider and spends tokens, so it runs only
+    // when this is explicitly true. Never set it in CI.
+    'llm_compliance' => [
+        'live' => (bool) env('LLM_COMPLIANCE_LIVE', false),
+    ],
+
 ];

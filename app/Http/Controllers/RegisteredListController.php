@@ -19,7 +19,7 @@ class RegisteredListController extends Controller
 
     public function index()
     {
-        $dimensions = Dimension::all()->map(function ($dimension) {
+        $dimensions = Dimension::ordered()->get()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name,

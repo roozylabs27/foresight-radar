@@ -18,6 +18,7 @@ import {
 } from "@/Components/ui/popover";
 import { useIngestion } from "@/context/IngestionContext";
 import { cn } from "@/lib/utils";
+import HintTooltip from "@/Components/HintTooltip";
 
 function formatRelativeTime(timestamp) {
     if (!timestamp) return "";
@@ -144,9 +145,9 @@ export default function NotificationBell({ className }) {
                                             </span>
                                         </div>
 
-                                        <p className="text-xs text-foreground/90 font-medium truncate mt-0.5" title={notif.title}>
-                                            {notif.title}
-                                        </p>
+                                        <HintTooltip content={notif.title}>
+                                            <p className="text-xs text-foreground/90 font-medium truncate mt-0.5">{notif.title}</p>
+                                        </HintTooltip>
 
                                         <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
                                             {isSuccess
