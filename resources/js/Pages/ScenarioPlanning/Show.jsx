@@ -6,6 +6,7 @@ import DetailList, { DetailItem } from "@/Components/DetailList";
 import FormDialog from "@/Components/FormDialog";
 import Panel from "@/Components/Panel";
 import ProjectForm from "@/Components/ScenarioPlanning/ProjectForm";
+import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
 import StepList from "@/Components/ScenarioPlanning/StepList";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
@@ -97,6 +98,15 @@ export default function Show({ auth, title, project, steps, canManage, owners })
                     title="Sembilan langkah"
                     description={!project.confirmed_at ? "Konfirmasi focal issue untuk membuka langkah 2." : !project.forces_confirmed_at ? "Sepakati daftar driving force untuk membuka langkah 3–9." : "Focal issue dan daftar driving force sudah disepakati."}
                 >
+                    <StaleBanner project={project} canManage={canManage} />
+                    {project.unreviewed_narratives > 0 && (
+                        <p role="status" className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">
+                            {project.unreviewed_narratives} narasi AI belum ditinjau.{" "}
+                            <Link href={route("scenarios.index")} className="font-medium underline">
+                                Tinjau di halaman Scenarios
+                            </Link>
+                        </p>
+                    )}
                     <StepList steps={steps} />
                 </Panel>
             </main>

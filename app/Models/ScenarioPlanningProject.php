@@ -6,6 +6,7 @@ use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
@@ -148,8 +149,44 @@ class ScenarioPlanningProject extends Model
      * Withdraw gate G4: approved uncertainties go back to proposed. Called whenever an upstream
      * gate (G1, G2, G3) is withdrawn, because the approval rested on it.
      */
+    /** Step 9 early warning indicators (roadmap R1.9); also the scoped binding of `{indicator}`. */
+    public function indicators(): HasMany
+    {
+        return $this->hasMany(EarlyWarningIndicator::class, 'project_id');
+    }
+
+    /** Step 8 strategic responses (roadmap R1.8). */
+    public function strategicResponses(): HasMany
+    {
+        return $this->hasMany(StrategicResponse::class, 'project_id');
+    }
+
+    /** Alias for scoped route binding of `{response}`. */
+    public function responses(): HasMany
+    {
+        return $this->strategicResponses();
+    }
+
+    /** The exercise's 2x2 framework (step 4), once saved. */
+    public function framework(): HasOne
+    {
+        return $this->hasOne(Scenario::class, 'project_id');
+    }
+
+    public function frameworkApproved(): bool
+    {
+        return $this->framework()->where('framework_status', 'approved')->exists();
+    }
+
+    /** Gate G5 falls back to draft; called whenever an axis it rests on is withdrawn. */
+    public function withdrawFrameworkApproval(): void
+    {
+        $this->framework()->where('framework_status', 'approved')->update(['framework_status' => 'draft', 'approved_by' => null, 'approved_at' => null]);
+    }
+
     public function withdrawUncertaintyApprovals(): void
     {
+        $this->withdrawFrameworkApproval();
         $this->criticalUncertainties()->where('status', 'approved')->update([
             'status' => 'proposed', 'axis' => null, 'approved_by' => null, 'approved_at' => null,
         ]);

@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ScenarioPlanningProjectRequest;
 use App\Models\ScenarioPlanningProject;
-use App\Models\User;
 use App\Services\ScenarioPlanningProjectService;
-use App\Services\TenantContext;
+use App\Services\StalenessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -34,7 +33,7 @@ class ScenarioPlanningProjectController extends Controller
             'title' => 'Scenario Planning',
             'projects' => $projects,
             'canManage' => Gate::allows('manage-scenario'),
-            'owners' => $this->owners($request->user()),
+            'owners' => $this->projects->owners($request->user()),
         ]);
     }
 
@@ -45,7 +44,7 @@ class ScenarioPlanningProjectController extends Controller
             'project' => $this->projects->present($project),
             'steps' => $this->projects->steps($project),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
-            'owners' => $this->owners($request->user()),
+            'owners' => $this->projects->owners($request->user()),
         ]);
     }
 
@@ -76,6 +75,16 @@ class ScenarioPlanningProjectController extends Controller
         return back()->with('success', 'Focal issue dikonfirmasi. Langkah 2–9 sekarang terbuka.');
     }
 
+    /** "Keep" flagged work after an upstream change (roadmap R1.10). */
+    public function acknowledgeStale(Request $request, ScenarioPlanningProject $project, StalenessService $staleness): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $staleness->acknowledge($project, $request->user());
+
+        return back()->with('success', 'Ditandai sudah ditinjau. Pekerjaan dipertahankan apa adanya.');
+    }
+
     public function destroy(ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('delete', $project);
@@ -83,21 +92,5 @@ class ScenarioPlanningProjectController extends Controller
         $project->delete();
 
         return to_route('scenario-planning.index')->with('success', 'Latihan dihapus.');
-    }
-
-    /**
-     * Members of the tenant in context (an operator's picked workspace included) who can own an exercise.
-     *
-     * @return array<int, array{value: string, label: string}>
-     */
-    private function owners(User $user): array
-    {
-        $tenantId = app(TenantContext::class)->getTenantId() ?? $user->tenant_id;
-
-        return User::where('tenant_id', $tenantId)
-            ->orderBy('name')
-            ->get(['uuid', 'name'])
-            ->map(fn ($member) => ['value' => $member->uuid, 'label' => $member->name])
-            ->all();
     }
 }

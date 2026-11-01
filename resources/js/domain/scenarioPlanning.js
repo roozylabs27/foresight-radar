@@ -109,3 +109,57 @@ export function targetYearBounds(today = new Date()) {
 export function yearsAhead(targetYear, today = new Date()) {
     return Math.max(0, Number(targetYear) - today.getFullYear());
 }
+
+/** Kinds of a step 5 condition (App\Models\ScenarioCondition::KINDS). */
+export const CONDITION_KINDS = {
+    pole_expression: { label: "Kutub sumbu", hint: "Bagaimana kutub sumbu terlihat di masa depan ini." },
+    force_behaviour: { label: "Perilaku driving force", hint: "Bagaimana driving force lain (bukan sumbu) berperilaku." },
+    assumption: { label: "Asumsi", hint: "Asumsi lain yang berlaku di masa depan ini." },
+};
+
+/** Step 7 item types and impact levels (App\Models\ScenarioImplication). */
+export const IMPLICATION_TYPES = {
+    opportunity: { label: "Peluang", tone: "approved" },
+    challenge: { label: "Tantangan", tone: "rejected" },
+};
+
+export const IMPACT_LEVELS = {
+    high: "Dampak tinggi",
+    medium: "Dampak sedang",
+    low: "Dampak rendah",
+};
+
+/** Step 8 response vocabulary (App\Models\StrategicResponse, App\Services\StrategicResponseService). */
+export const RESPONSE_STATUSES = {
+    proposed: { label: "Usulan", tone: "pending" },
+    approved: { label: "Disetujui", tone: "approved" },
+    rejected: { label: "Ditolak", tone: "closed" },
+};
+
+export const RESPONSE_FITS = {
+    applies: { label: "Cocok", short: "✓", tone: "approved" },
+    partial: { label: "Sebagian", short: "≈", tone: "pending" },
+    not_applicable: { label: "Tidak cocok", short: "–", tone: "neutral" },
+};
+
+export const ROBUSTNESS = {
+    robust: { label: "Robust", hint: "Cocok di 3 kuadran atau lebih." },
+    conditional: { label: "Kondisional", hint: "Cocok di 0 atau 2 kuadran." },
+    scenario_specific: { label: "Spesifik skenario", hint: "Cocok di satu kuadran saja." },
+};
+
+/** Step 9 indicator vocabulary (App\Models\EarlyWarningIndicator). */
+export const INDICATOR_DIRECTIONS = {
+    rising: { label: "Naik", short: "↑" },
+    falling: { label: "Turun", short: "↓" },
+    stable: { label: "Stabil", short: "→" },
+    qualitative: { label: "Kualitatif", short: "◇" },
+};
+
+export const INDICATOR_FREQUENCIES = { monthly: "Bulanan", quarterly: "Kuartalan", ad_hoc: "Sesuai kebutuhan" };
+
+export const INDICATOR_SOURCES = {
+    manual: "Dipantau manual",
+    signal_feed: "Dari feed sinyal",
+    external: "Sumber eksternal",
+};

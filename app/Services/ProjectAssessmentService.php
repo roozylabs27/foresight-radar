@@ -43,8 +43,13 @@ class ProjectAssessmentService
         ]);
         $assessment->project_driving_force_id = $link->id;
 
-        $withdraws = $project->scoresConfirmed() && $assessment->exists && $assessment->isDirty(['impact', 'uncertainty']);
+        $changed = $assessment->exists && $assessment->isDirty(['impact', 'uncertainty']);
+        $withdraws = $project->scoresConfirmed() && $changed;
         $assessment->save();
+
+        if ($changed) {
+            app(StalenessService::class)->markIfAxisForce($project, $link->id, 'Skor driving force '.($link->drivingForce?->keyword ?? '').' berubah');
+        }
 
         if ($withdraws) {
             $project->update(['scores_confirmed_by' => null, 'scores_confirmed_at' => null]);

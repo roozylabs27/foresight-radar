@@ -246,7 +246,7 @@ class ScenarioTest extends TestCase
 
         $stored = $scenario->fresh();
         $this->assertSame([$s1->id, $s2->id], $stored->input_signal_ids);
-        $this->assertSame('scenario-v1', $stored->prompt_version);
+        $this->assertSame('scenario-v2', $stored->prompt_version);
         $this->assertSame([$s1->id], $stored->quadrants()->where('position', 'HL')->first()->cited_signal_ids);
 
         // The model got the evidence as S-references only, inside the evidence block.

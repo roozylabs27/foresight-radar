@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CriticalUncertainty;
 use App\Models\CrossImpact;
 use App\Models\ProjectDrivingForce;
+use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -22,6 +23,8 @@ class CriticalUncertaintyService
 {
     /** Axes this strongly linked in the cross-impact matrix (|score|) need an acknowledgement. */
     public const MAX_AXIS_INFLUENCE = ScenarioService::MAX_AXIS_INFLUENCE;
+
+    public function __construct(protected ScenarioFrameworkService $frameworks) {}
 
     public function create(ScenarioPlanningProject $project, array $validated, User $user): CriticalUncertainty
     {
@@ -55,6 +58,10 @@ class CriticalUncertaintyService
     public function delete(CriticalUncertainty $uncertainty): void
     {
         $this->requireProposed($uncertainty);
+        $usedByFramework = Scenario::where('axis_a_uncertainty_id', $uncertainty->id)->orWhere('axis_b_uncertainty_id', $uncertainty->id)->exists();
+        if ($usedByFramework) {
+            throw ValidationException::withMessages(['name' => 'Critical uncertainty ini masih menjadi sumbu kerangka skenario. Setujui penggantinya dulu, lalu hapus.']);
+        }
         $uncertainty->delete();
     }
 
@@ -93,11 +100,13 @@ class CriticalUncertaintyService
             }
 
             $uncertainty->update(['status' => 'approved', 'axis' => $axis, 'approved_by' => $user->id, 'approved_at' => now(), 'updated_by' => $user->id]);
+            $this->frameworks->syncAxes($project);
         });
     }
 
     public function withdraw(CriticalUncertainty $uncertainty, User $user): void
     {
+        $uncertainty->project->withdrawFrameworkApproval();
         $uncertainty->update(['status' => 'proposed', 'axis' => null, 'approved_by' => null, 'approved_at' => null, 'updated_by' => $user->id]);
     }
 

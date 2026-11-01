@@ -8,8 +8,8 @@ use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\ProjectDrivingForce;
 use App\Models\Scenario;
-use App\Models\ScenarioQuadrant;
 use App\Models\ScenarioPlanningProject;
+use App\Models\ScenarioQuadrant;
 use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Support\DimensionTaxonomy;
@@ -326,6 +326,20 @@ class ScenarioFrameworkTest extends TestCase
         $this->actingAs($this->manager)->getJson("/scenarios/{$this->framework()->uuid}")
             ->assertJsonPath('axis_a.keyword', 'Government Regulation')
             ->assertJsonPath('project.name', $this->project->name);
+    }
+
+    public function test_ordinary_requests_do_not_use_up_the_generation_limit(): void
+    {
+        $this->approveAxes();
+        $this->createFramework();
+        $this->approveFramework();
+
+        // The route group allows 120 requests a minute and generation 10; each needs its own counter.
+        for ($i = 0; $i < 12; $i++) {
+            $this->actingAs($this->manager)->getJson('/scenarios/fetch')->assertOk();
+        }
+
+        $this->actingAs($this->manager)->postJson("/scenarios/{$this->framework()->uuid}/generate")->assertStatus(202);
     }
 
     public function test_hard_deleting_a_force_used_by_an_approved_framework_is_refused(): void

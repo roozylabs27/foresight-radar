@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
-import { ArrowLeftIcon, PlusIcon, SplitIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, SplitIcon } from "lucide-react";
 
 import Panel from "@/Components/Panel";
 import ApproveUncertaintyDialog from "@/Components/ScenarioPlanning/ApproveUncertaintyDialog";
@@ -63,10 +63,18 @@ export default function Uncertainties({ auth, title, project, uncertainties, can
                             ))}
                         </div>
                     )}
-                    <Link href={route("scenario-planning.assessment.index", project.id)} className="mt-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-                        <ArrowLeftIcon aria-hidden="true" className="size-4" />
-                        Skor dan matriks
-                    </Link>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                        <Link href={route("scenario-planning.assessment.index", project.id)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                            <ArrowLeftIcon aria-hidden="true" className="size-4" />
+                            Skor dan matriks
+                        </Link>
+                        {approved.length === 2 && (
+                            <Link href={route("scenario-planning.framework.index", project.id)} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                                Lanjut: kerangka skenario
+                                <ArrowRightIcon aria-hidden="true" className="size-4" />
+                            </Link>
+                        )}
+                    </div>
                 </Panel>
 
                 <div className="flex flex-col gap-4">

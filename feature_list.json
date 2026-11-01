@@ -339,6 +339,115 @@
         "Two approvals complete step 3 and open steps 4-9"
       ],
       "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning 40 passed (CriticalUncertaintyTest 11); full PHPUnit 427 passed; Larastan clean; Pint clean; npm build OK; browser: propose with grouped forces, validation errors kept in the dialog, approve A, approve B with acknowledgement."
+    },
+    {
+      "id": "FEAT-025",
+      "name": "Scenario Framework & Gate G5",
+      "description": "Step 4 of a scenario planning exercise: a 2x2 framework on the two approved critical uncertainties, four quadrants created on save with names and one-line summaries, approval (gate G5) that locks poles and names (roadmap R0.5).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A framework needs two approved critical uncertainties; one framework per exercise",
+        "Saving creates four quadrants named \"{pole A} · {pole B}\" without narrative",
+        "Poles are editable while draft; quadrants still carrying the default name follow; quadrant names are unique",
+        "Approval records approver and time, locks poles and names, completes step 4 and opens steps 5-9; reopen returns to draft",
+        "Withdrawing an axis withdraws the approval; approving a replacement moves a draft framework onto it",
+        "Narrative generation waits for approval, fills the existing quadrants and keeps approved names",
+        "Hard-deleting a force used by an approved framework is refused"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioFrameworkTest 12 passed; tests/Feature/ScenarioPlanning all passed; Larastan clean; Pint clean; npm build OK; browser: create, validation in dialog, rename + summary, approve, steps 1-4 done, framework shown on /scenarios without console errors."
+    },
+    {
+      "id": "FEAT-026",
+      "name": "Scenario Conditions & Predetermined Elements",
+      "description": "Step 5 of a scenario planning exercise: an ordered list of conditions per quadrant of the approved framework (pole expression, non-axis force behaviour, assumption), with the predetermined forces shown on every quadrant (roadmap R1.5).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Conditions can be added, edited, reordered and deleted per quadrant once the framework is approved (G5)",
+        "A pole expression names its axis; a force behaviour links an included force outside both axes; text is at most 500 characters",
+        "Each quadrant shows the exercise predetermined elements read-only",
+        "A condition text present in all four quadrants is flagged as a possible predetermined element",
+        "Step 5 is done when every quadrant has at least two accepted conditions"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioConditionTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: validation kept in dialog, assumption and pole conditions added, reorder, completion count."
+    },
+    {
+      "id": "FEAT-027",
+      "name": "Narrative Prompt v2 & Review States",
+      "description": "Step 6 of a scenario planning exercise: narratives from prompt scenario-v2 (conditions, predetermined elements, target year and path from today, condition-force evidence) and a review state per quadrant with approval as gate G6 (roadmap R1.6).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "With conditions present, the prompt payload contains them, the predetermined elements and the target year",
+        "Signals of forces named by conditions are offered as evidence",
+        "Generated quadrants start as drafts; review and approval record who and when",
+        "Reviewed or approved quadrants are not regenerated without confirmation; editing an approved narrative returns it to draft",
+        "An unedited template skeleton cannot be approved",
+        "Approving all four quadrants completes step 6; unreviewed AI narratives are counted on the exercise overview",
+        "All existing tests in tests/Feature/Llm/ScenarioTest.php and ScenarioHarnessTest.php still pass"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioNarrativeReviewTest 6 passed; Llm/ScenarioTest 16 and ScenarioHarnessTest 8 passed; Larastan clean; Pint clean; npm build OK; browser: review badge, mark reviewed, reset to draft, step list."
+    },
+    {
+      "id": "FEAT-028",
+      "name": "Challenges & Opportunities per Scenario",
+      "description": "Step 7 of a scenario planning exercise: opportunity and challenge items per quadrant with impact level, priority and links to exercise forces and conditions; old narrative implications text imported as proposals (roadmap R1.7).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Users add opportunities and challenges per quadrant manually and link them to forces and conditions of the same quadrant",
+        "The deck example (FAVOUR: 1 opportunity, 2 challenges) can be entered exactly",
+        "Existing narrative implications text is still visible and is imported once as an untyped proposal",
+        "Titles present in all four quadrants are flagged as generic",
+        "Step 7 is done when every quadrant has at least one opportunity and one challenge"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioImplicationTest 6 passed (plus a conditions-page regression test); Larastan clean; Pint clean; npm build OK; browser: validation in dialog, item with linked condition."
+    },
+    {
+      "id": "FEAT-029",
+      "name": "Strategic Responses, Scenario Fit & Robustness",
+      "description": "Step 8 of a scenario planning exercise: strategic responses entered once with rationale, initiatives, priority, owner and links to step 7 items, rated per quadrant; robustness derived from the fit; approval as gate G7 (roadmap R1.8).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "\"Secure USP for each xEV model\" can be recorded once and marked as applying to two quadrants",
+        "The robustness view lists responses by the number of quadrants they apply to",
+        "A proposed response is visibly \"Usulan\" and only approved responses count as decisions",
+        "Approval needs a rationale and a fit for all four quadrants; any edit returns a response to proposed",
+        "Step 8 is done once a response is approved"
+      ],
+      "verification_evidence": "2026-11-01: StrategicResponseTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: create with partial fit, approval refused with both reasons."
+    },
+    {
+      "id": "FEAT-030",
+      "name": "Early Warning Indicator Register",
+      "description": "Step 9 of a scenario planning exercise: indicators with what to monitor, metric, baseline, frequency, owner, source type and threshold, and the expected direction in each quadrant; narrative indicator strings imported as proposals (roadmap R1.9).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "\"xEV adoption growth\" can be one indicator rising in two quadrants and falling in the other two",
+        "Each indicator shows whether it is monitored manually, from the signal feed or externally",
+        "An indicator with the same direction in every quadrant is flagged as not discriminating",
+        "Narrative indicator strings are imported once as proposals and still listed",
+        "Step 9 is done when an accepted active indicator has a direction in all four quadrants"
+      ],
+      "verification_evidence": "2026-11-01: EarlyWarningIndicatorTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: indicator with four directions saved."
+    },
+    {
+      "id": "FEAT-031",
+      "name": "Staleness Flags for Upstream Changes",
+      "description": "Upstream changes in a scenario planning exercise flag the framework and its quadrants as stale with a reason; the team keeps the work (acknowledged who/when) or rewrites it (roadmap R1.10, target workflow section 6).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A score change of an axis force, a focal issue change, a replaced axis and pole changes after narratives flag the framework or its quadrants",
+        "A condition change after a narrative flags only that quadrant",
+        "A rejected or deleted cited signal flags the quadrants that cite it",
+        "Nothing is deleted or regenerated automatically; \"keep\" records who and when and clears the flags",
+        "A regenerated or edited narrative clears its quadrant flag"
+      ],
+      "verification_evidence": "2026-11-01: StalenessTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: banner with reason and affected quadrant, keep clears it."
     }
   ]
 }

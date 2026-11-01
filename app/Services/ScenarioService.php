@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CrossImpact;
 use App\Models\DrivingForce;
 use App\Models\Scenario;
+use App\Models\ScenarioCondition;
 use App\Models\Signal;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -86,17 +87,23 @@ class ScenarioService
     }
 
     /**
-     * Accepted signals linked to either axis force, labelled S1..Sn in a fixed
-     * order (axis A first, newest first). A signal linked to both axes is
-     * listed once.
+     * Accepted signals linked to either axis (its force, or the member forces of its critical
+     * uncertainty), labelled S1..Sn in a fixed
+     * order (axis A first, then B, then condition forces; newest first). A
+     * signal linked to both axes is listed once, as "AB"; condition-force
+     * signals are labelled "C".
      *
      * @return array<int, array{ref: string, axis: string, signal: Signal}>
      */
     public function evidenceFor(Scenario $scenario): array
     {
+        $axisForces = [...$scenario->axisForceIds('A'), ...$scenario->axisForceIds('B')];
+        $conditionForces = array_values(array_diff($this->conditionForceIds($scenario), $axisForces));
         $byAxis = [
-            'A' => $this->acceptedSignals($scenario->axis_a_force_id),
-            'B' => $this->acceptedSignals($scenario->axis_b_force_id),
+            'A' => $this->acceptedSignals($scenario->axisForceIds('A')),
+            'B' => $this->acceptedSignals($scenario->axisForceIds('B')),
+            // Signals of non-axis forces named by step 5 conditions (roadmap R1.6), labelled "C".
+            'C' => $conditionForces === [] ? collect() : $this->acceptedSignals($conditionForces),
         ];
 
         $evidence = [];
@@ -104,7 +111,9 @@ class ScenarioService
         foreach ($byAxis as $axis => $signals) {
             foreach ($signals as $signal) {
                 if (isset($seen[$signal->id])) {
-                    $evidence[$seen[$signal->id]]['axis'] = 'AB';
+                    if ($axis === 'B') {
+                        $evidence[$seen[$signal->id]]['axis'] = 'AB';
+                    }
 
                     continue;
                 }
@@ -114,6 +123,27 @@ class ScenarioService
         }
 
         return $evidence;
+    }
+
+    /**
+     * Driving forces described by accepted force-behaviour conditions of a framework.
+     *
+     * @return array<int, int>
+     */
+    public function conditionForceIds(Scenario $scenario): array
+    {
+        if (! $scenario->isFramework()) {
+            return [];
+        }
+
+        return ScenarioCondition::query()
+            ->join('project_driving_forces', 'project_driving_forces.id', '=', 'scenario_conditions.project_driving_force_id')
+            ->whereIn('scenario_conditions.scenario_quadrant_id', $scenario->quadrants()->select('scenario_quadrants.id'))
+            ->where('scenario_conditions.review_status', 'accepted')
+            ->distinct()
+            ->pluck('project_driving_forces.driving_force_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
@@ -154,11 +184,12 @@ class ScenarioService
         return [$forces[$axisA], $forces[$axisB]];
     }
 
-    protected function acceptedSignals(int $forceId): Collection
+    /** @param  array<int, int>  $forceIds */
+    protected function acceptedSignals(array $forceIds): Collection
     {
         return Signal::with('source:id,title,url,publisher')
             ->where('review_status', 'ACCEPTED')
-            ->whereHas('driving_forces', fn ($q) => $q->where('driving_forces.id', $forceId))
+            ->whereHas('driving_forces', fn ($q) => $q->whereIn('driving_forces.id', $forceIds))
             ->orderByDesc('reviewed_at')
             ->orderByDesc('id')
             ->limit(self::EVIDENCE_PER_AXIS)

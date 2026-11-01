@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ScenarioCondition;
+use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
 
@@ -62,6 +64,7 @@ class ScenarioPlanningProjectService
         $project->save();
         if ($reconfirm) {
             $project->withdrawUncertaintyApprovals();
+            app(StalenessService::class)->markFramework($project, 'Focal issue, tujuan atau tahun target berubah');
         }
 
         return $reconfirm;
@@ -89,12 +92,20 @@ class ScenarioPlanningProjectService
     private const SCOPED_ROUTES = [
         2 => 'scenario-planning.forces.index',
         3 => 'scenario-planning.assessment.index',
+        4 => 'scenario-planning.framework.index',
+        5 => 'scenario-planning.conditions.index',
+        7 => 'scenario-planning.implications.index',
+        8 => 'scenario-planning.responses.index',
+        9 => 'scenario-planning.indicators.index',
     ];
 
     /**
      * Status per step. Gate G1 (focal issue confirmed) opens step 2, G2 (force list agreed) opens
      * step 3, and step 3 is done at G4 (two critical uncertainties approved, after G3 scores agreed),
-     * which opens steps 4–9. `href` is the exercise's own screen when the step has one, otherwise the
+     * which opens step 4. Step 4 is done at G5 (framework approved), which opens steps 5–9; step 5 is
+     * done when every quadrant has ScenarioConditionService::MIN_PER_QUADRANT conditions, step 6 when all
+     * four narratives are approved (G6), step 7 when every quadrant has an opportunity and a challenge, step 8 with
+     * an approved response (G7), step 9 with an accepted indicator rated in all four quadrants. `href` is the exercise's own screen when the step has one, otherwise the
      * existing tenant-wide page (`scoped` false).
      *
      * @return array<int, array{number: int, key: string, title: string, status: string, href: ?string, scoped: bool}>
@@ -104,16 +115,35 @@ class ScenarioPlanningProjectService
         $focal = $project->isConfirmed();
         $forces = $project->forcesConfirmed();
         $axes = $project->uncertaintiesApproved();
+        $framework = $project->framework()->first();
+        $frameworkApproved = $framework?->isFrameworkApproved() ?? false;
+        $conditionsDone = $frameworkApproved && app(ScenarioConditionService::class)->complete($framework);
+        $conditionsStarted = $frameworkApproved && ScenarioCondition::whereIn('scenario_quadrant_id', $framework->quadrants()->select('id'))->exists();
+        $narratives = $frameworkApproved ? $framework->quadrants()->get(['narrative', 'review_status']) : collect();
+        $narrativesDone = $narratives->count() === 4 && $narratives->every(fn ($quadrant) => $quadrant->review_status === 'approved');
+        $narrativesStarted = $narratives->contains(fn ($quadrant) => filled($quadrant->narrative));
+        $implicationsDone = $frameworkApproved && app(ScenarioImplicationService::class)->complete($framework);
+        $implicationsStarted = $frameworkApproved && ScenarioImplication::whereIn('scenario_quadrant_id', $framework->quadrants()->select('id'))->exists();
+        $responsesDone = $frameworkApproved && app(StrategicResponseService::class)->hasApproved($project);
+        $responsesStarted = $frameworkApproved && $project->strategicResponses()->exists();
+        $indicatorsDone = $frameworkApproved && app(EarlyWarningIndicatorService::class)->complete($project);
+        $indicatorsStarted = $frameworkApproved && $project->indicators()->exists();
         $included = $project->projectForces()->where('inclusion_status', 'included');
         $hasForces = (clone $included)->exists();
         $started = (clone $included)->whereHas('consensus')->exists() || $project->criticalUncertainties()->exists();
 
-        return collect(self::STEPS)->map(function (array $step, int $number) use ($project, $focal, $forces, $axes, $hasForces, $started) {
+        return collect(self::STEPS)->map(function (array $step, int $number) use ($project, $focal, $forces, $axes, $hasForces, $started, $framework, $frameworkApproved, $conditionsDone, $conditionsStarted, $narrativesDone, $narrativesStarted, $implicationsDone, $implicationsStarted, $responsesDone, $responsesStarted, $indicatorsDone, $indicatorsStarted) {
             $status = match (true) {
                 $number === 1 => $focal ? 'done' : 'in_progress',
                 $number === 2 => ! $focal ? 'locked' : ($forces ? 'done' : ($hasForces ? 'in_progress' : 'available')),
                 $number === 3 => ! $forces ? 'locked' : ($axes ? 'done' : ($started ? 'in_progress' : 'available')),
-                default => $axes ? 'available' : 'locked',
+                $number === 4 => ! $axes ? 'locked' : ($frameworkApproved ? 'done' : ($framework ? 'in_progress' : 'available')),
+                $number === 5 => ! $frameworkApproved ? 'locked' : ($conditionsDone ? 'done' : ($conditionsStarted ? 'in_progress' : 'available')),
+                $number === 6 => ! $frameworkApproved ? 'locked' : ($narrativesDone ? 'done' : ($narrativesStarted ? 'in_progress' : 'available')),
+                $number === 7 => ! $frameworkApproved ? 'locked' : ($implicationsDone ? 'done' : ($implicationsStarted ? 'in_progress' : 'available')),
+                $number === 8 => ! $frameworkApproved ? 'locked' : ($responsesDone ? 'done' : ($responsesStarted ? 'in_progress' : 'available')),
+                $number === 9 => ! $frameworkApproved ? 'locked' : ($indicatorsDone ? 'done' : ($indicatorsStarted ? 'in_progress' : 'available')),
+                default => 'locked',
             };
             $scoped = isset(self::SCOPED_ROUTES[$number]);
 
@@ -126,6 +156,23 @@ class ScenarioPlanningProjectService
                 'scoped' => $scoped,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Members of the tenant in context (an operator's picked workspace included) who can own an
+     * exercise or a strategic response.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    public function owners(User $user): array
+    {
+        $tenantId = app(TenantContext::class)->getTenantId() ?? $user->tenant_id;
+
+        return User::where('tenant_id', $tenantId)
+            ->orderBy('name')
+            ->get(['uuid', 'name'])
+            ->map(fn ($member) => ['value' => $member->uuid, 'label' => $member->name])
+            ->all();
     }
 
     public function present(ScenarioPlanningProject $project): array
@@ -151,6 +198,9 @@ class ScenarioPlanningProjectService
             'forces_confirmed_by' => $project->forcesConfirmer?->name,
             'scores_confirmed_at' => $project->scores_confirmed_at?->toISOString(),
             'scores_confirmed_by' => $project->scoresConfirmer?->name,
+            'stale' => app(StalenessService::class)->present($project),
+            // AI narratives of the framework nobody has reviewed yet (roadmap R1.6).
+            'unreviewed_narratives' => $project->framework()->first()?->quadrants()->where('is_ai_generated', true)->where('review_status', 'draft')->count() ?? 0,
             'created_by' => $project->creator?->name,
             'updated_at' => $project->updated_at?->toISOString(),
         ];
