@@ -27,3 +27,5 @@ yarn-error.log
 /.e2e
 /.composer
 /C/
+/docker/certbot
+
