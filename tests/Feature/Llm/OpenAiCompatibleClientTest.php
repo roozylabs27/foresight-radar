@@ -207,11 +207,12 @@ class OpenAiCompatibleClientTest extends TestCase
     {
         config(['services.llm.provider' => 'openai_compatible', 'services.openai_compatible' => $this->config()]);
         $this->app->forgetInstance(StructuredLlmClient::class);
-        $this->assertInstanceOf(OpenAiCompatibleClient::class, $this->app->make(StructuredLlmClient::class));
+        // The container wraps the provider client in the tenant quota layer (TENANT-008).
+        $this->assertInstanceOf(OpenAiCompatibleClient::class, $this->app->make(StructuredLlmClient::class)->inner());
 
         config(['services.openai_compatible.model' => '']);
         $this->app->forgetInstance(StructuredLlmClient::class);
-        $this->assertInstanceOf(NullLlmClient::class, $this->app->make(StructuredLlmClient::class));
+        $this->assertInstanceOf(NullLlmClient::class, $this->app->make(StructuredLlmClient::class)->inner());
     }
 
     public function test_ingest_through_an_openai_compatible_provider_records_its_provenance(): void

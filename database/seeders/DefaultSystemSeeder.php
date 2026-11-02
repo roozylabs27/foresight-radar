@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Dimension;
 use App\Models\Environment;
 use App\Models\Priority;
 use App\Models\StatusAction;
 use App\Models\TimeHorizon;
+use App\Support\DimensionTaxonomy;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
 
@@ -17,8 +17,6 @@ class DefaultSystemSeeder extends Seeder
      */
     protected $environments;
 
-    protected $dimensions;
-
     protected $time_horizons;
 
     protected $priorities;
@@ -28,7 +26,6 @@ class DefaultSystemSeeder extends Seeder
     public function __construct()
     {
         $this->environments = json_decode(file_get_contents(database_path('data/environment.json')));
-        $this->dimensions = json_decode(file_get_contents(database_path('data/dimension.json')));
         $this->time_horizons = json_decode(file_get_contents(database_path('data/time_horizon.json')));
         $this->priorities = json_decode(file_get_contents(database_path('data/priority.json')));
         $this->status_actions = json_decode(file_get_contents(database_path('data/status_action.json')));
@@ -43,12 +40,9 @@ class DefaultSystemSeeder extends Seeder
             $this->command->getOutput()->progressAdvance();
         }
 
+        // The eleven categories of the scenario planning method; renames older rows in place.
         $this->command->info('initial dimension');
-        $this->command->getOutput()->progressStart(count($this->dimensions));
-        foreach ($this->dimensions as $dimension) {
-            $this->initializeDefaultDimension($dimension);
-            $this->command->getOutput()->progressAdvance();
-        }
+        DimensionTaxonomy::align();
 
         $this->command->info('initial time horizon');
         $this->command->getOutput()->progressStart(count($this->time_horizons));
@@ -78,16 +72,6 @@ class DefaultSystemSeeder extends Seeder
             'name' => $env->name,
         ], [
             'uuid' => Uuid::uuid1(),
-        ]);
-    }
-
-    protected function initializeDefaultDimension($dimension): void
-    {
-        Dimension::firstOrCreate([
-            'name' => $dimension->name,
-        ], [
-            'uuid' => Uuid::uuid1(),
-            'environment_id' => $dimension->environment_id,
         ]);
     }
 

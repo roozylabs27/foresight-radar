@@ -178,5 +178,15 @@
         "name": "manage-scenario",
         "description": "permission for creating scenarios and generating narratives",
         "category": "scenario"
+    },
+    {
+        "name": "manage-members",
+        "description": "permission for inviting members, changing member roles, removing members, and cancelling invitations",
+        "category": "organization"
+    },
+    {
+        "name": "manage-organization",
+        "description": "permission for updating the organization profile and settings",
+        "category": "organization"
     }
 ]

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -162,7 +162,8 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
         [scenario.evidence]
     );
     const byPosition = Object.fromEntries(scenario.quadrants.map((quadrant) => [quadrant.position, quadrant]));
-    const editedCount = scenario.quadrants.filter((quadrant) => quadrant.edited).length;
+    // Edited or reviewed quadrants hold human work a regeneration would replace.
+    const editedCount = scenario.quadrants.filter((quadrant) => quadrant.edited || ["reviewed", "approved"].includes(quadrant.review_status)).length;
 
     // The narrative is written by a queued job: poll until it completes or fails.
     useEffect(() => {
@@ -218,6 +219,16 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
         }
     };
 
+    const reviewQuadrant = (quadrant) => async (status) => {
+        try {
+            const response = await axios.post(route("scenarios.quadrant.review", [scenario.id, quadrant.id]), { status });
+            toast.success(response.data.message);
+            onChanged(response.data.scenario);
+        } catch (error) {
+            toast.error("Status tinjauan tidak tersimpan.", { description: errorText(error, error.message) });
+        }
+    };
+
     const remove = async () => {
         await axios.delete(route("scenarios.destroy", scenario.id));
         toast.success("Skenario dihapus.");
@@ -238,6 +249,15 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                 }
                 description={scenario.focal_question || "Belum ada pertanyaan fokus."}
             >
+                {scenario.project && (
+                    <p className="m-0 text-xs text-muted-foreground">
+                        Kerangka dari latihan{" "}
+                        <Link href={route("scenario-planning.framework.index", scenario.project.id)} className="font-medium text-primary hover:underline">
+                            {scenario.project.name}
+                        </Link>
+                        {scenario.framework_status === "approved" ? " · disetujui (G5)" : " · draf: setujui kerangka di latihan sebelum membuat narasi"}
+                    </p>
+                )}
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
                     {[
                         ["A", scenario.axis_a],
@@ -245,7 +265,7 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                     ].map(([letter, axis]) => (
                         <span key={letter} className="flex flex-wrap items-center gap-1.5">
                             <b className="text-foreground">Sumbu {letter}:</b> {axis?.keyword ?? "(Faktor tidak tersedia)"}
-                            {axis?.dimension && <DimensionChip name={axis.dimension} />}
+                            {axis?.dimension && (scenario.project ? <span>[{axis.dimension}]</span> : <DimensionChip name={axis.dimension} />)}
                             {axis?.is_deleted && (
                                 <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
                                     Dihapus
@@ -261,13 +281,13 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             onClick={() => (editedCount > 0 ? setConfirmOverwrite(true) : generate(false))}
-                            disabled={generating}
+                            disabled={generating || (scenario.project && scenario.framework_status !== "approved")}
                             aria-busy={generating || undefined}
                         >
                             {generating ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <BotIcon aria-hidden="true" />}
-                            {scenario.quadrants.length > 0 ? "Buat ulang narasi" : "Buat narasi"}
+                            {scenario.quadrants.some((item) => item.narrative) ? "Buat ulang narasi" : "Buat narasi"}
                         </Button>
-                        <ConfirmDialog
+                        {scenario.framework_status !== "approved" && <ConfirmDialog
                             title="Hapus skenario ini?"
                             description="Skenario dan keempat kuadrannya dihapus permanen."
                             confirmText="Hapus"
@@ -277,7 +297,7 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                                 <Trash2Icon aria-hidden="true" />
                                 Hapus
                             </Button>
-                        </ConfirmDialog>
+                        </ConfirmDialog>}
                         <span role="status" className="text-xs text-muted-foreground">
                             {generating
                                 ? llm.available
@@ -314,7 +334,9 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                                     quadrant={byPosition[position]}
                                     evidence={evidence}
                                     canManage={canManage}
+                                    titleLocked={scenario.framework_status === "approved"}
                                     onSave={saveQuadrant(byPosition[position])}
+                                    onReview={reviewQuadrant(byPosition[position])}
                                 />
                             ) : null
                         )}
@@ -347,7 +369,7 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                 open={confirmOverwrite}
                 onOpenChange={setConfirmOverwrite}
                 title="Timpa kuadran yang sudah disunting?"
-                description={`${editedCount} kuadran sudah disunting analis. Membuat ulang narasi akan menimpa suntingan tersebut.`}
+                description={`${editedCount} kuadran sudah disunting atau ditinjau. Membuat ulang narasi akan menimpanya dan mengembalikan statusnya ke draf.`}
                 confirmText="Timpa dan buat ulang"
                 onConfirm={() => generate(true)}
             />

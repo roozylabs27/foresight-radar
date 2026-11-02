@@ -146,6 +146,10 @@ class SignalExtractionService
                     'prompt_version' => $result['meta']['prompt_version'],
                 ], $result['candidates']);
                 $meta = $result['meta'] + ['label' => $llm->label()];
+                if ($meta['irrelevant'] ?? false) {
+                    $notice = 'Dokumen dinilai tidak relevan dengan lingkungan bisnis, sehingga tidak ada sinyal yang disimpan.'
+                        .($meta['relevance_reason'] ? ' Alasan: '.$meta['relevance_reason'] : '');
+                }
             } catch (LlmException $e) {
                 Log::warning('Signal extraction fell back to keyword rules', ['reason' => $e->reason]);
                 $notice = $e->userMessage().' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';
@@ -232,13 +236,19 @@ class SignalExtractionService
         $label = $ai ? ($meta['label'] ?? $meta['provider']) : 'Aturan';
         $discarded = $meta['discarded_unverified'] ?? 0;
 
+        $irrelevant = (bool) ($meta['irrelevant'] ?? false);
+
         $by = $ai ? "oleh {$label} (".($meta['model'] ?? '-').')' : 'dengan aturan kata kunci (tanpa AI)';
-        $message = "Sumber disimpan. {$count} sinyal kandidat diekstrak {$by}.";
-        if ($discarded > 0) {
-            $message .= " {$discarded} usulan dibuang karena kutipannya tidak ditemukan verbatim di dokumen.";
-        }
-        if ($ai && $count === 0) {
-            $message .= ' Tidak ada sinyal dengan bukti terverifikasi di dokumen ini.';
+        if ($irrelevant) {
+            $message = "Sumber disimpan tanpa sinyal: dokumen dinilai tidak relevan dengan lingkungan bisnis {$by}.";
+        } else {
+            $message = "Sumber disimpan. {$count} sinyal kandidat diekstrak {$by}.";
+            if ($discarded > 0) {
+                $message .= " {$discarded} usulan dibuang karena kutipannya tidak ditemukan verbatim di dokumen.";
+            }
+            if ($ai && $count === 0) {
+                $message .= ' Tidak ada sinyal dengan bukti terverifikasi di dokumen ini.';
+            }
         }
 
         return array_merge($progress, [
@@ -248,6 +258,7 @@ class SignalExtractionService
                 'label' => $label,
                 'model' => $ai ? ($meta['model'] ?? null) : null,
                 'fallback' => isset($meta['fallback_reason']),
+                'irrelevant' => $irrelevant,
                 'notice' => $meta['notice'] ?? null,
                 'signals' => $count,
                 'discarded' => $discarded + ($meta['discarded_duplicate'] ?? 0),
@@ -332,14 +343,17 @@ class SignalExtractionService
         $textLower = strtolower($text);
 
         $dimensionKeywords = [
+            'Political' => ['government', 'minister', 'election', 'geopolit', 'sanction', 'political', 'national agenda', 'energy security'],
+            'Economic' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance', 'exchange rate'],
+            'Social' => ['society', 'social', 'demographic', 'generation', 'gen z', 'millennial', 'lifestyle', 'culture', 'urban'],
             'Technology' => ['tech', 'ai', 'algorithm', 'software', 'digital', 'cyber', 'quantum', 'cloud', 'compute', 'data'],
-            'Economy' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance'],
-            'Regulation' => ['law', 'policy', 'compliance', 'regulat', 'directive', 'act', 'legal', 'government', 'standard'],
             'Ecology' => ['climate', 'carbon', 'emission', 'green', 'environment', 'sustainable', 'waste', 'energy', 'biodiversity'],
-            'Customer' => ['consumer', 'demand', 'preference', 'behavior', 'demographic', 'user', 'habit', 'adoption'],
-            'Competitor' => ['rival', 'compet', 'patent', 'startup', 'disrupt', 'acquisition', 'market share'],
-            'Supplier' => ['supply chain', 'logistics', 'vendor', 'raw material', 'shipping', 'manufacturing', 'shortage'],
-            'Substitute' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog'],
+            'Legislative' => ['law', 'regulat', 'directive', 'act', 'legal', 'compliance', 'standard', 'decree', 'tkdn'],
+            'Consumer' => ['consumer', 'customer', 'demand', 'preference', 'behavior', 'user', 'habit', 'adoption', 'purchasing power'],
+            'Supply Chain' => ['supply chain', 'logistics', 'vendor', 'supplier', 'raw material', 'shipping', 'manufacturing', 'shortage'],
+            'Competitor' => ['rival', 'compet', 'patent', 'acquisition', 'market share', 'price war'],
+            'New Entrant' => ['new entrant', 'newcomer', 'market entry', 'new player', 'entering the market', 'enters the market', 'startup'],
+            'Substitute' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog', 'car sharing', 'ride-hailing'],
         ];
 
         $highestCount = 0;

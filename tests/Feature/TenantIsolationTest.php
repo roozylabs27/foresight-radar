@@ -209,6 +209,15 @@ class TenantIsolationTest extends TestCase
         $response->assertStatus(403);
     }
 
+    /** TENANT-006: no testing fallback maps a tenant-less account to tenant 1. */
+    public function test_user_without_tenant_or_platform_role_is_denied(): void
+    {
+        $orphan = User::factory()->create(['tenant_id' => null]);
+
+        $this->actingAs($orphan)->get('/dashboard')->assertStatus(403);
+        $this->actingAs($orphan)->getJson('/signals/fetch')->assertStatus(403);
+    }
+
     public function test_platform_developer_can_access_without_tenant(): void
     {
         Permission::firstOrCreate(['name' => 'view-dashboard', 'guard_name' => 'web'], [

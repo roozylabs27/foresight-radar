@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": "Foresight Radar",
   "version": "1.1.0",
-  "last_updated": "2026-10-23",
+  "last_updated": "2026-10-26",
   "status_vocabulary": [
     "not_started",
     "in_progress",
@@ -264,7 +264,230 @@
         "SignalExtractionService and ScenarioNarrativeService dynamically resolve active user client with offline fallback"
       ],
       "verification_evidence": "Tests/Feature/Settings/UserLlmSettingsTest passes (7 tests, 48 assertions); ScenarioNarrativeBenchmarkTest & SignalExtractionBenchmarkTest pass"
+    },
+    {
+      "id": "FEAT-020",
+      "name": "Multi-Tenant Isolation, Team Membership & Invitations",
+      "description": "Tenant scoping engine (TenantScope, BelongsToTenant, EnforceTenantContext), organization settings, member role management, and team invitation lifecycle.",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only tenant admins can invite, change roles, remove members, or edit the organization",
+        "Tenant endpoints never attach or modify accounts outside the caller's tenant, including platform users",
+        "Invitations stay pending until the intended recipient accepts; tokens are single-use, expiring, and revocable",
+        "No User query or exists rule returns or accepts another tenant's records",
+        "Suspended or deleted tenants are denied on every request type, including JSON and queued jobs"
+      ],
+      "verification_evidence": "2026-10-26: all P0/P1 findings, UX-001, E2E-001..004 and P2 TENANT-002 fixed; end-to-end browser check passed. composer verify 332 passed. tests/Audit 2 failed / 4 passed. 2026-10-30: TENANT-005 (TenantRule::exists) and INVITE-006 (last-admin guard) fixed; composer verify 342 passed; tests/Audit 6/6 passed. 2026-10-30 (session 22): TENANT-006..010 and INVITE-008 fixed (operator workspace picker, tenant LLM key + monthly token quota, invitation-only accounts, uniform invites + throttle, 404 for foreign members, no testing fallback); PHPUnit 364 passed, Larastan clean, Pint clean, npm build OK."
+    },
+    {
+      "id": "FEAT-021",
+      "name": "Scenario Planning Exercise & Key Focal Issue",
+      "description": "Scenario planning project (exercise) as the container for the nine-step method: key focal issue, purpose, target year, optional scope and context, gate G1 confirmation, and the nine-step workspace (roadmap R0.1, R1.13).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A manager creates a project with focal question, purpose and target year; it is visible only in their tenant",
+        "Steps 2-9 stay locked until the focal issue is confirmed",
+        "Confirming records who and when; changing question, purpose or target year afterwards requires confirming again",
+        "An owner from another tenant is rejected; only creator, owner or admin roles may change a project"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning/ProjectTest.php 9 passed; full PHPUnit 395 passed + 1 date-dependent test in TenantLlmQuotaTest fixed (subMonthNoOverflow) and re-run 9/9; Larastan clean; Pint clean; npm build OK; browser: create with client validation, confirm opens steps 2-9."
+    },
+    {
+      "id": "FEAT-022",
+      "name": "Exercise Driving Force List & Gate G2",
+      "description": "Step 2 of a scenario planning exercise: driving forces picked from the tenant library with per-exercise inclusion, influence note and predetermined flag, category coverage, and gate G2 (force list agreed) before steps 3-9 (roadmap R0.2).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Forces from any month can be added; another tenant's or deleted forces cannot",
+        "The same force can be included in one exercise and excluded in another, each with its own note",
+        "Forces can only be added after the focal issue is confirmed",
+        "Agreeing the list needs at least one included force and opens steps 3-9",
+        "Changing inclusion, removing an included force, or withdrawing the focal issue confirmation withdraws the agreement"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning 19 passed (ProjectDrivingForceTest 10); Larastan clean; Pint clean; npm build OK; browser: library search and add, edit note, agree list, steps 3-9 open."
+    },
+    {
+      "id": "FEAT-023",
+      "name": "Exercise Scores, Uncertainty x Impact Matrix & Gate G3",
+      "description": "Step 3 (first half) of a scenario planning exercise: consensus impact and uncertainty (1-10) with rationale per included force, copied from the organization rating for review, the numbered uncertainty x impact matrix, and gate G3 (scores agreed) before steps 4-9 (roadmap R1.1).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only included forces of an exercise with an agreed list (G2) can be scored, 1-10 with optional rationale",
+        "Adding a force copies its organization rating marked for review; scoring in an exercise never changes the organization rating",
+        "The matrix plots only included forces, numbered in method order",
+        "Agreeing scores needs every included force scored and opens steps 4-9",
+        "Changing a score, withdrawing G2 or withdrawing G1 withdraws the score agreement"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning 29 passed (ProjectAssessmentTest 10); Larastan clean; Pint clean; npm build OK; browser: matrix classes and score dialog on the sample exercise."
+    },
+    {
+      "id": "FEAT-024",
+      "name": "Critical Uncertainties & Gate G4",
+      "description": "Step 3 (second half) of a scenario planning exercise: named critical uncertainties grouping one or more exercise forces, with two poles and a selection reason; exactly two approved as axis A and B (gate G4), with an acknowledgement when the axes strongly influence each other (roadmap R0.4).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Proposals need agreed scores (G3) and use included, non-predetermined forces of the exercise only",
+        "An uncertainty may group several forces; poles must differ; a reason is required",
+        "Exactly two are approved, on different axes; a third approval is refused",
+        "Axes with |cross-impact| >= 2 between their forces need an explicit acknowledgement",
+        "Approved uncertainties are locked until the approval is withdrawn; withdrawing G1, G2 or G3 withdraws the approvals",
+        "Two approvals complete step 3 and open steps 4-9"
+      ],
+      "verification_evidence": "2026-10-31: tests/Feature/ScenarioPlanning 40 passed (CriticalUncertaintyTest 11); full PHPUnit 427 passed; Larastan clean; Pint clean; npm build OK; browser: propose with grouped forces, validation errors kept in the dialog, approve A, approve B with acknowledgement."
+    },
+    {
+      "id": "FEAT-025",
+      "name": "Scenario Framework & Gate G5",
+      "description": "Step 4 of a scenario planning exercise: a 2x2 framework on the two approved critical uncertainties, four quadrants created on save with names and one-line summaries, approval (gate G5) that locks poles and names (roadmap R0.5).",
+      "priority": "P0",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A framework needs two approved critical uncertainties; one framework per exercise",
+        "Saving creates four quadrants named \"{pole A} · {pole B}\" without narrative",
+        "Poles are editable while draft; quadrants still carrying the default name follow; quadrant names are unique",
+        "Approval records approver and time, locks poles and names, completes step 4 and opens steps 5-9; reopen returns to draft",
+        "Withdrawing an axis withdraws the approval; approving a replacement moves a draft framework onto it",
+        "Narrative generation waits for approval, fills the existing quadrants and keeps approved names",
+        "Hard-deleting a force used by an approved framework is refused"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioFrameworkTest 12 passed; tests/Feature/ScenarioPlanning all passed; Larastan clean; Pint clean; npm build OK; browser: create, validation in dialog, rename + summary, approve, steps 1-4 done, framework shown on /scenarios without console errors."
+    },
+    {
+      "id": "FEAT-026",
+      "name": "Scenario Conditions & Predetermined Elements",
+      "description": "Step 5 of a scenario planning exercise: an ordered list of conditions per quadrant of the approved framework (pole expression, non-axis force behaviour, assumption), with the predetermined forces shown on every quadrant (roadmap R1.5).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Conditions can be added, edited, reordered and deleted per quadrant once the framework is approved (G5)",
+        "A pole expression names its axis; a force behaviour links an included force outside both axes; text is at most 500 characters",
+        "Each quadrant shows the exercise predetermined elements read-only",
+        "A condition text present in all four quadrants is flagged as a possible predetermined element",
+        "Step 5 is done when every quadrant has at least two accepted conditions"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioConditionTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: validation kept in dialog, assumption and pole conditions added, reorder, completion count."
+    },
+    {
+      "id": "FEAT-027",
+      "name": "Narrative Prompt v2 & Review States",
+      "description": "Step 6 of a scenario planning exercise: narratives from prompt scenario-v2 (conditions, predetermined elements, target year and path from today, condition-force evidence) and a review state per quadrant with approval as gate G6 (roadmap R1.6).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "With conditions present, the prompt payload contains them, the predetermined elements and the target year",
+        "Signals of forces named by conditions are offered as evidence",
+        "Generated quadrants start as drafts; review and approval record who and when",
+        "Reviewed or approved quadrants are not regenerated without confirmation; editing an approved narrative returns it to draft",
+        "An unedited template skeleton cannot be approved",
+        "Approving all four quadrants completes step 6; unreviewed AI narratives are counted on the exercise overview",
+        "All existing tests in tests/Feature/Llm/ScenarioTest.php and ScenarioHarnessTest.php still pass"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioNarrativeReviewTest 6 passed; Llm/ScenarioTest 16 and ScenarioHarnessTest 8 passed; Larastan clean; Pint clean; npm build OK; browser: review badge, mark reviewed, reset to draft, step list."
+    },
+    {
+      "id": "FEAT-028",
+      "name": "Challenges & Opportunities per Scenario",
+      "description": "Step 7 of a scenario planning exercise: opportunity and challenge items per quadrant with impact level, priority and links to exercise forces and conditions; old narrative implications text imported as proposals (roadmap R1.7).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Users add opportunities and challenges per quadrant manually and link them to forces and conditions of the same quadrant",
+        "The deck example (FAVOUR: 1 opportunity, 2 challenges) can be entered exactly",
+        "Existing narrative implications text is still visible and is imported once as an untyped proposal",
+        "Titles present in all four quadrants are flagged as generic",
+        "Step 7 is done when every quadrant has at least one opportunity and one challenge"
+      ],
+      "verification_evidence": "2026-10-31: ScenarioImplicationTest 6 passed (plus a conditions-page regression test); Larastan clean; Pint clean; npm build OK; browser: validation in dialog, item with linked condition."
+    },
+    {
+      "id": "FEAT-029",
+      "name": "Strategic Responses, Scenario Fit & Robustness",
+      "description": "Step 8 of a scenario planning exercise: strategic responses entered once with rationale, initiatives, priority, owner and links to step 7 items, rated per quadrant; robustness derived from the fit; approval as gate G7 (roadmap R1.8).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "\"Secure USP for each xEV model\" can be recorded once and marked as applying to two quadrants",
+        "The robustness view lists responses by the number of quadrants they apply to",
+        "A proposed response is visibly \"Usulan\" and only approved responses count as decisions",
+        "Approval needs a rationale and a fit for all four quadrants; any edit returns a response to proposed",
+        "Step 8 is done once a response is approved"
+      ],
+      "verification_evidence": "2026-11-01: StrategicResponseTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: create with partial fit, approval refused with both reasons."
+    },
+    {
+      "id": "FEAT-030",
+      "name": "Early Warning Indicator Register",
+      "description": "Step 9 of a scenario planning exercise: indicators with what to monitor, metric, baseline, frequency, owner, source type and threshold, and the expected direction in each quadrant; narrative indicator strings imported as proposals (roadmap R1.9).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "\"xEV adoption growth\" can be one indicator rising in two quadrants and falling in the other two",
+        "Each indicator shows whether it is monitored manually, from the signal feed or externally",
+        "An indicator with the same direction in every quadrant is flagged as not discriminating",
+        "Narrative indicator strings are imported once as proposals and still listed",
+        "Step 9 is done when an accepted active indicator has a direction in all four quadrants"
+      ],
+      "verification_evidence": "2026-11-01: EarlyWarningIndicatorTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: indicator with four directions saved."
+    },
+    {
+      "id": "FEAT-031",
+      "name": "Staleness Flags for Upstream Changes",
+      "description": "Upstream changes in a scenario planning exercise flag the framework and its quadrants as stale with a reason; the team keeps the work (acknowledged who/when) or rewrites it (roadmap R1.10, target workflow section 6).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A score change of an axis force, a focal issue change, a replaced axis and pole changes after narratives flag the framework or its quadrants",
+        "A condition change after a narrative flags only that quadrant",
+        "A rejected or deleted cited signal flags the quadrants that cite it",
+        "Nothing is deleted or regenerated automatically; \"keep\" records who and when and clears the flags",
+        "A regenerated or edited narrative clears its quadrant flag"
+      ],
+      "verification_evidence": "2026-11-01: StalenessTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: banner with reason and affected quadrant, keep clears it."
+    },
+    {
+      "id": "FEAT-032",
+      "name": "Exercise Workspace, Stepper & Grouped Navigation",
+      "description": "Scenario planning exercises get a nine-step stepper on every step page, an overview with the next action and the last gate, and a sidebar grouped into Scenario Planning, Library, Analysis and Governance (roadmap R1.11).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Every step page shows the nine steps with their status and the current step; locked steps are not links",
+        "The overview names the next action in plain words with a link, and the last gate passed with approver and date",
+        "The sidebar groups items without removing any route or changing permissions"
+      ],
+      "verification_evidence": "2026-11-02: WorkspaceTest 3 passed; Larastan clean; Pint clean; npm build OK; browser: grouped sidebar, overview card (next step 5, last gate G5), stepper on step 4."
+    },
+    {
+      "id": "FEAT-033",
+      "name": "Signals Aggregate into Forces & Force Merge",
+      "description": "Signals contribute to driving forces instead of becoming them, and duplicate forces can be merged with all their links (roadmap R1.3).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Signal review offers \"link to force\" first; creating a force needs a force-level name distinct from the truncated signal title (or explicit confirmation) and a description",
+        "Other accepted signals can be attached when the force is created",
+        "Merging force X into Y moves signal links, cross-impacts, exercise links, critical uncertainty memberships and legacy scenario axes; X disappears from lists and keeps a tombstone",
+        "A scenario or exercise framework that used X is flagged stale, not deleted"
+      ],
+      "verification_evidence": "2026-11-02: ForceAggregationTest 5 passed; SignalIngestionTest and RatingDataChainTest updated and passing; npm build OK; browser: merge dialog and review form checked without merging dev data."
+    },
+    {
+      "id": "FEAT-034",
+      "name": "Driving Force Description Length",
+      "description": "A driving force description can explain the force in up to 120 words; the keyword stays at four words (roadmap R1.2). The influence on the focal issue is recorded per exercise (R0.2).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A description of 100 words saves on create; 120 words saves on update; 121 words is refused",
+        "The keyword is still limited to four words",
+        "The form shows a live word count and checks both limits before submitting"
+      ],
+      "verification_evidence": "2026-11-02: DrivingForceTest (incl. the new limit test) and WordCountRuleTest 16 passed; Larastan, Pint and build in the same session run."
     }
   ]
 }
-

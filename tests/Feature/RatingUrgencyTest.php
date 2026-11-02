@@ -22,6 +22,12 @@ class RatingUrgencyTest extends TestCase
 
     private DrivingForceRating $rating;
 
+    private Priority $priorityHigh;
+
+    private Priority $priorityMedium;
+
+    private Priority $priorityLow;
+
     private function makePermission(string $name): Permission
     {
         return Permission::create([
@@ -53,9 +59,9 @@ class RatingUrgencyTest extends TestCase
         $this->admin->syncPermissions($role->permissions);
 
         // Priorities
-        Priority::create(['id' => 1, 'uuid' => fake()->uuid(), 'name' => 'High', 'color' => '#ff4d4f']);
-        Priority::create(['id' => 2, 'uuid' => fake()->uuid(), 'name' => 'Medium', 'color' => '#faad14']);
-        Priority::create(['id' => 3, 'uuid' => fake()->uuid(), 'name' => 'Low', 'color' => '#52c41a']);
+        $this->priorityHigh = Priority::create(['uuid' => fake()->uuid(), 'name' => 'High', 'color' => '#ff4d4f']);
+        $this->priorityMedium = Priority::create(['uuid' => fake()->uuid(), 'name' => 'Medium', 'color' => '#faad14']);
+        $this->priorityLow = Priority::create(['uuid' => fake()->uuid(), 'name' => 'Low', 'color' => '#52c41a']);
 
         $timeHorizon = TimeHorizon::create(['id' => 1, 'uuid' => fake()->uuid(), 'name' => 'Short Term', 'code' => 'ST']);
 
@@ -109,7 +115,7 @@ class RatingUrgencyTest extends TestCase
         $response->assertStatus(200);
         $this->rating->refresh();
         // Both >= 6, should be priority 1 (High)
-        $this->assertEquals(1, $this->rating->priority_id);
+        $this->assertEquals($this->priorityHigh->id, $this->rating->priority_id);
     }
 
     public function test_priority_low_when_both_values_below_threshold(): void
@@ -124,7 +130,7 @@ class RatingUrgencyTest extends TestCase
         $response->assertStatus(200);
         $this->rating->refresh();
         // Both < 6, should be priority 3 (Low)
-        $this->assertEquals(3, $this->rating->priority_id);
+        $this->assertEquals($this->priorityLow->id, $this->rating->priority_id);
     }
 
     public function test_rating_value_must_be_between_1_and_10(): void

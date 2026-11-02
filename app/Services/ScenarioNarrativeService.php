@@ -52,7 +52,7 @@ class ScenarioNarrativeService
                 throw new ConflictHttpException('Narasi skenario ini sedang dibuat. Tunggu sampai selesai.');
             }
 
-            $this->assertGeneratable($locked, $overwriteEdited);
+            $this->assertGeneratable($locked, $overwriteEdited, $this->clientFor($userId));
 
             $locked->update([
                 'generation_status' => LlmJobStatus::QUEUED,
@@ -75,10 +75,8 @@ class ScenarioNarrativeService
      */
     public function generate(Scenario $scenario, bool $overwriteEdited, ?int $userId): array
     {
-        $evidence = $this->assertGeneratable($scenario, $overwriteEdited);
-
-        $userLlm = $userId ? app(LlmClientResolver::class)->resolveForUserId($userId, false) : null;
-        $llm = $userLlm ?? $this->llm;
+        $llm = $this->clientFor($userId);
+        $evidence = $this->assertGeneratable($scenario, $overwriteEdited, $llm);
 
         $notice = null;
         $quadrants = null;
@@ -112,13 +110,27 @@ class ScenarioNarrativeService
         $signalIds = collect($evidence)->mapWithKeys(fn ($item) => [$item['ref'] => $item['signal']->id]);
 
         DB::transaction(function () use ($scenario, $quadrants, $evidence, $signalIds, $provider, $model, $notice, $userId) {
-            $scenario->quadrants()->delete();
+            // Rows are filled in place: a framework's quadrants exist before any narrative (R0.5).
+            $existing = $scenario->quadrants()->get()->keyBy('position');
             foreach ($quadrants as $quadrant) {
-                $scenario->quadrants()->create(collect($quadrant)->except('cited_refs')->all() + [
+                $attributes = collect($quadrant)->except('cited_refs')->all() + [
                     'cited_signal_ids' => array_values(array_map(fn ($ref) => $signalIds[$ref], $quadrant['cited_refs'])),
                     'is_ai_generated' => $provider !== self::PROVIDER_TEMPLATE,
                     'provider' => $provider,
-                ]);
+                    'edited_by' => null,
+                    'edited_at' => null,
+                    'review_status' => 'draft',
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'stale_since' => null,
+                    'stale_reason' => null,
+                ];
+                // An approved framework's quadrant names are a team decision (G5); the narrative leaves them.
+                if ($scenario->isFrameworkApproved()) {
+                    unset($attributes['title']);
+                }
+                $row = $existing[$quadrant['position']] ?? null;
+                $row ? $row->update($attributes) : $scenario->quadrants()->create($attributes);
             }
             $scenario->update([
                 'provider' => $provider,
@@ -137,34 +149,56 @@ class ScenarioNarrativeService
     }
 
     /**
-     * The scenario's evidence, once it is clear the generation may go ahead.
+     * The client this user's generation runs on: their own key, the organization's key, or
+     * the platform default, in LlmClientResolver's order.
+     */
+    protected function clientFor(?int $userId): StructuredLlmClient
+    {
+        return ($userId ? app(LlmClientResolver::class)->resolveForUserId($userId, false) : null) ?? $this->llm;
+    }
+
+    /**
+     * The scenario's evidence, once it is clear the generation may go ahead. The evidence rules
+     * apply when $llm (the client the generation will actually use) can answer; otherwise the
+     * template runs and needs none.
      *
      * @throws ConflictHttpException when edited quadrants would be overwritten
      * @throws ValidationException when an axis has no evidence for the LLM
      */
-    protected function assertGeneratable(Scenario $scenario, bool $overwriteEdited): array
+    protected function assertGeneratable(Scenario $scenario, bool $overwriteEdited, StructuredLlmClient $llm): array
     {
-        $scenario->loadMissing(['axis_a.dimension', 'axis_b.dimension', 'quadrants']);
+        $scenario->loadMissing(['axis_a.dimension', 'axis_b.dimension', 'axis_a_uncertainty', 'axis_b_uncertainty', 'quadrants']);
 
+        if ($scenario->isFramework() && ! $scenario->isFrameworkApproved()) {
+            throw ValidationException::withMessages(['framework' => 'Setujui kerangka skenario (G5) di latihan scenario planning dulu sebelum membuat narasi.']);
+        }
+
+        // Edited or reviewed quadrants hold human work that a new narrative would replace.
         $edited = $scenario->quadrants->filter->isEdited()->count();
-        if ($edited > 0 && ! $overwriteEdited) {
-            throw new ConflictHttpException("{$edited} kuadran sudah disunting analis. Konfirmasi untuk menimpanya.");
+        $reviewed = $scenario->quadrants->filter->isReviewed()->count();
+        if (($edited > 0 || $reviewed > 0) && ! $overwriteEdited) {
+            throw new ConflictHttpException(implode(' ', array_filter([
+                $edited > 0 ? "{$edited} kuadran sudah disunting analis." : null,
+                $reviewed > 0 ? "{$reviewed} kuadran sudah ditinjau atau disetujui dan akan kembali menjadi draf." : null,
+                'Konfirmasi untuk menimpanya.',
+            ])));
         }
 
         $evidence = $this->scenarios->evidenceFor($scenario);
-        if (! $this->llm->isAvailable()) {
+        if (! $llm->isAvailable()) {
             return $evidence;
         }
 
-        foreach (['A' => $scenario->axis_a, 'B' => $scenario->axis_b] as $axis => $force) {
-            if (! $force || $force->trashed()) {
+        foreach (['A', 'B'] as $axis) {
+            $force = $scenario->axisForce($axis);
+            if (! $scenario->axisUncertainty($axis) && (! $force || $force->trashed())) {
                 throw ValidationException::withMessages([
                     'evidence' => "Sumbu {$axis} telah dihapus. Pulihkan faktor atau buat skenario baru dengan faktor aktif.",
                 ]);
             }
             if (! collect($evidence)->contains(fn ($item) => str_contains($item['axis'], $axis))) {
                 throw ValidationException::withMessages([
-                    'evidence' => "Sumbu {$axis} ({$force->keyword}) belum punya sinyal ACCEPTED yang tertaut. Tautkan sinyal dulu sebelum membuat narasi AI.",
+                    'evidence' => "Sumbu {$axis} ({$scenario->axisName($axis)}) belum punya sinyal ACCEPTED yang tertaut. Tautkan sinyal dulu sebelum membuat narasi AI.",
                 ]);
             }
         }
@@ -235,8 +269,8 @@ class ScenarioNarrativeService
 
         return array_map(function (string $position) use ($scenario, $cited, $refs) {
             [$poleA, $poleB] = $scenario->poles($position);
-            $axisAKeyword = $scenario->axis_a?->keyword ?? 'Sumbu A';
-            $axisBKeyword = $scenario->axis_b?->keyword ?? 'Sumbu B';
+            $axisAKeyword = $scenario->axisName('A') ?? 'Sumbu A';
+            $axisBKeyword = $scenario->axisName('B') ?? 'Sumbu B';
             $evidenceLine = $cited === []
                 ? 'Belum ada sinyal ACCEPTED yang tertaut ke sumbu ini; tautkan sinyal agar narasi bisa didasarkan pada bukti.'
                 : 'Bukti awal: '.implode('; ', array_map(fn ($item) => "[{$item['ref']}] {$item['signal']->title}", $cited)).'.';

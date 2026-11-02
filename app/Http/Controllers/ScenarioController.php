@@ -11,9 +11,13 @@ use App\Models\ScenarioQuadrant;
 use App\Services\Llm\StructuredLlmClient;
 use App\Services\ScenarioNarrativeService;
 use App\Services\ScenarioService;
+use App\Services\StalenessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,7 +49,7 @@ class ScenarioController extends Controller
     public function fetch(): JsonResponse
     {
         try {
-            $scenarios = Scenario::with(['axis_a:id,uuid,keyword,deleted_at', 'axis_b:id,uuid,keyword,deleted_at'])
+            $scenarios = Scenario::with(['axis_a:id,uuid,keyword,deleted_at', 'axis_b:id,uuid,keyword,deleted_at', 'axis_a_uncertainty:id,name', 'axis_b_uncertainty:id,name', 'project:id,uuid,name'])
                 ->withCount('quadrants')
                 ->orderByDesc('updated_at')
                 ->get()
@@ -55,8 +59,9 @@ class ScenarioController extends Controller
                     'status' => $scenario->status,
                     'provider' => $scenario->provider,
                     'generation_status' => $scenario->generation_status?->value,
-                    'axis_a' => $scenario->axis_a ? ($scenario->axis_a->trashed() ? $scenario->axis_a->keyword.' (Dihapus)' : $scenario->axis_a->keyword) : '(Faktor dihapus)',
-                    'axis_b' => $scenario->axis_b ? ($scenario->axis_b->trashed() ? $scenario->axis_b->keyword.' (Dihapus)' : $scenario->axis_b->keyword) : '(Faktor dihapus)',
+                    'axis_a' => $this->axisLabel($scenario, 'A'),
+                    'axis_b' => $this->axisLabel($scenario, 'B'),
+                    'project' => $scenario->project ? ['id' => $scenario->project->uuid, 'name' => $scenario->project->name] : null,
                     'quadrants_count' => $scenario->quadrants_count,
                     'updated_at' => $scenario->updated_at,
                 ]);
@@ -84,8 +89,8 @@ class ScenarioController extends Controller
 
         $scenario = Scenario::create($this->attributes($validated, $axisA->id, $axisB->id) + [
             'status' => 'DRAFT',
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id(),
+            'created_by' => Auth::id(),
+            'updated_by' => Auth::id(),
         ]);
 
         return response()->json([
@@ -97,13 +102,14 @@ class ScenarioController extends Controller
     public function update(ScenarioRequest $request, Scenario $scenario): JsonResponse
     {
         $this->authorize('update', $scenario);
+        $this->refuseFramework($scenario);
 
         $validated = $request->validated();
         [$axisA, $axisB] = $this->scenarios->resolveAxes($validated['axis_a'], $validated['axis_b']);
 
         $scenario->update($this->attributes($validated, $axisA->id, $axisB->id) + [
             'status' => $validated['status'] ?? $scenario->status,
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::id(),
         ]);
 
         return response()->json(['message' => 'Skenario diperbarui.', 'scenario' => $this->present($scenario)], Response::HTTP_OK);
@@ -112,6 +118,9 @@ class ScenarioController extends Controller
     public function destroy(Scenario $scenario): JsonResponse
     {
         $this->authorize('delete', $scenario);
+        if ($scenario->isFrameworkApproved()) {
+            throw ValidationException::withMessages(['framework' => 'Kerangka yang sudah disetujui tidak bisa dihapus. Buka kembali kerangkanya di latihan scenario planning.']);
+        }
 
         $scenario->delete();
 
@@ -123,14 +132,42 @@ class ScenarioController extends Controller
         $this->authorize('update', $scenario);
 
         abort_unless($quadrant->scenario_id === $scenario->id, Response::HTTP_NOT_FOUND);
+        if ($scenario->isFrameworkApproved() && $request->validated('title') !== $quadrant->title) {
+            throw ValidationException::withMessages(['title' => 'Nama kuadran terkunci oleh persetujuan kerangka (G5). Buka kembali kerangkanya di latihan untuk mengganti nama.']);
+        }
 
         $quadrant->update($request->validated() + [
             'early_indicators' => $request->validated('early_indicators', []),
-            'edited_by' => auth()->id(),
+            'edited_by' => Auth::id(),
             'edited_at' => now(),
-        ]);
+        ] + ($quadrant->review_status === 'approved' ? ['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null] : []));
+        app(StalenessService::class)->clearQuadrant($quadrant);
 
         return response()->json(['message' => 'Kuadran disimpan.', 'scenario' => $this->present($scenario)], Response::HTTP_OK);
+    }
+
+    /**
+     * Review state of one quadrant narrative (roadmap R1.6). `approved` is gate G6; an unedited
+     * template skeleton is no narrative yet and cannot be approved.
+     */
+    public function reviewQuadrant(Request $request, Scenario $scenario, ScenarioQuadrant $quadrant): JsonResponse
+    {
+        $this->authorize('update', $scenario);
+        abort_unless($quadrant->scenario_id === $scenario->id, Response::HTTP_NOT_FOUND);
+
+        $status = $request->validate(['status' => ['required', Rule::in(ScenarioQuadrant::REVIEW_STATUSES)]])['status'];
+        if ($status !== 'draft' && blank($quadrant->narrative)) {
+            throw ValidationException::withMessages(['status' => 'Kuadran ini belum punya narasi.']);
+        }
+        if ($status === 'approved' && $quadrant->provider === ScenarioNarrativeService::PROVIDER_TEMPLATE && ! $quadrant->isEdited()) {
+            throw ValidationException::withMessages(['status' => 'Narasi ini masih kerangka tanpa AI. Lengkapi narasinya dulu sebelum disetujui.']);
+        }
+
+        $quadrant->update($status === 'draft'
+            ? ['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null]
+            : ['review_status' => $status, 'reviewed_by' => Auth::id(), 'reviewed_at' => now()]);
+
+        return response()->json(['message' => $status === 'approved' ? 'Narasi disetujui.' : 'Status tinjauan diperbarui.', 'scenario' => $this->present($scenario)], Response::HTTP_OK);
     }
 
     /**
@@ -141,7 +178,7 @@ class ScenarioController extends Controller
     {
         $this->authorize('update', $scenario);
 
-        $scenario = $this->narratives->queue($scenario, $request->boolean('overwrite_edited'), auth()->id());
+        $scenario = $this->narratives->queue($scenario, $request->boolean('overwrite_edited'), Auth::id());
 
         return response()->json([
             'message' => 'Narasi sedang dibuat di latar belakang.',
@@ -175,6 +212,22 @@ class ScenarioController extends Controller
         ];
     }
 
+    /** Axes and poles of an exercise framework are edited in the exercise (step 4), not here. */
+    protected function refuseFramework(Scenario $scenario): void
+    {
+        if ($scenario->isFramework()) {
+            throw ValidationException::withMessages(['framework' => 'Sumbu dan kutub kerangka ini diatur di latihan scenario planning (langkah 4).']);
+        }
+    }
+
+    protected function axisLabel(Scenario $scenario, string $axis): string
+    {
+        $force = $scenario->axisForce($axis);
+        $name = $scenario->axisName($axis) ?? '(Faktor dihapus)';
+
+        return $force?->trashed() ? $name.' (Dihapus)' : $name;
+    }
+
     protected function attributes(array $validated, int $axisA, int $axisB): array
     {
         return [
@@ -195,14 +248,17 @@ class ScenarioController extends Controller
      */
     protected function present(Scenario $scenario): array
     {
-        $scenario->load(['axis_a.dimension', 'axis_b.dimension', 'quadrants']);
+        $scenario->load(['axis_a.dimension', 'axis_b.dimension', 'axis_a_uncertainty.projectForces.drivingForce', 'axis_b_uncertainty.projectForces.drivingForce', 'quadrants.reviewer:id,name', 'project:id,uuid,name']);
         $evidence = $this->scenarios->storedEvidence($scenario);
         $refById = collect($scenario->input_signal_ids ?? [])->values()->mapWithKeys(fn ($id, $index) => [$id => 'S'.($index + 1)]);
-        $axis = fn ($force, $low, $high) => [
-            'id' => $force?->uuid,
-            'keyword' => $force?->keyword ?? '(Faktor dihapus)',
-            'dimension' => $force?->dimension?->name,
-            'is_deleted' => $force === null || $force->trashed(),
+        // A framework axis is a critical uncertainty: its name, and its member forces in place of a dimension.
+        $axis = fn (string $letter, $low, $high) => [
+            'id' => $scenario->axisUncertainty($letter)?->uuid ?? $scenario->axisForce($letter)?->uuid,
+            'keyword' => $scenario->axisName($letter) ?? '(Faktor dihapus)',
+            'dimension' => $scenario->axisUncertainty($letter)
+                ? $scenario->axisUncertainty($letter)->projectForces->map(fn ($link) => $link->drivingForce?->keyword)->filter()->implode(', ')
+                : $scenario->axisForce($letter)?->dimension?->name,
+            'is_deleted' => ! $scenario->axisUncertainty($letter) && ($scenario->axisForce($letter) === null || $scenario->axisForce($letter)->trashed()),
             'low' => $low,
             'high' => $high,
         ];
@@ -212,8 +268,10 @@ class ScenarioController extends Controller
             'name' => $scenario->name,
             'focal_question' => $scenario->focal_question,
             'status' => $scenario->status,
-            'axis_a' => $axis($scenario->axis_a, $scenario->axis_a_low_label, $scenario->axis_a_high_label),
-            'axis_b' => $axis($scenario->axis_b, $scenario->axis_b_low_label, $scenario->axis_b_high_label),
+            'project' => $scenario->project ? ['id' => $scenario->project->uuid, 'name' => $scenario->project->name] : null,
+            'framework_status' => $scenario->framework_status,
+            'axis_a' => $axis('A', $scenario->axis_a_low_label, $scenario->axis_a_high_label),
+            'axis_b' => $axis('B', $scenario->axis_b_low_label, $scenario->axis_b_high_label),
             'provider' => $scenario->provider,
             'model' => $scenario->model,
             'prompt_version' => $scenario->prompt_version,
@@ -225,12 +283,17 @@ class ScenarioController extends Controller
                 'position' => $quadrant->position,
                 'poles' => $scenario->poles($quadrant->position),
                 'title' => $quadrant->title,
+                'summary' => $quadrant->summary,
                 'narrative' => $quadrant->narrative,
                 'implications' => $quadrant->implications,
                 'early_indicators' => $quadrant->early_indicators ?? [],
                 'cited_refs' => collect($quadrant->cited_signal_ids ?? [])->map(fn ($id) => $refById[$id] ?? null)->filter()->values()->all(),
                 'is_ai_generated' => $quadrant->is_ai_generated,
                 'provider' => $quadrant->provider,
+                'review_status' => $quadrant->review_status,
+                'reviewed_by' => $quadrant->reviewer?->name,
+                'reviewed_at' => $quadrant->reviewed_at,
+                'stale_reason' => $quadrant->stale_since ? $quadrant->stale_reason : null,
                 'edited' => $quadrant->isEdited(),
                 'edited_at' => $quadrant->edited_at,
             ])->values()->all(),

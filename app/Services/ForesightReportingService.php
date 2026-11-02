@@ -83,7 +83,7 @@ class ForesightReportingService
             ->orderBy('created_at', 'ASC')
             ->get();
 
-        $dimensionOrder = Dimension::orderBy('id')->pluck('id')->all();
+        $dimensionOrder = Dimension::ordered()->pluck('id')->all();
 
         return ForesightRadarResource::collection(
             $ratings->map(fn ($rating) => (new ForesightRadarResource($rating))->withDimensionOrder($dimensionOrder))

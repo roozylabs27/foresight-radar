@@ -55,7 +55,7 @@ class ForesightRadarResource extends JsonResource
 
         $item_style = PriorityLevel::fromModel($this->priority)?->radarColor() ?? '#000';
 
-        $dimensionOrder = $this->dimensionOrder ?? Dimension::orderBy('id')->pluck('id')->all();
+        $dimensionOrder = $this->dimensionOrder ?? Dimension::ordered()->pluck('id')->all();
         $values = array_fill(0, count($dimensionOrder), 0);
         $position = array_search($this->driving_force?->dimension_id, $dimensionOrder, true);
         if ($position !== false) {

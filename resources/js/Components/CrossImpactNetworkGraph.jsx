@@ -16,6 +16,7 @@ import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import HintTooltip from "@/Components/HintTooltip";
 
 const WIDTH = 920;
 const HEIGHT = 680;
@@ -399,25 +400,25 @@ export default function CrossImpactNetworkGraph({
                                     />
 
                                     {/* Transparent fat hit area for mouse interaction */}
-                                    <path
-                                        d={edge.path}
-                                        fill="none"
-                                        stroke="transparent"
-                                        strokeWidth="16"
-                                        className="cursor-pointer"
-                                        onMouseEnter={() => setHoveredEdge(edge)}
-                                        onMouseLeave={() => setHoveredEdge(null)}
-                                        onClick={() => {
-                                            if (canManage) {
-                                                const cell = scores.get(edge.key);
-                                                onEdit(edge.source, edge.target, cell);
-                                            }
-                                        }}
+                                    <HintTooltip
+                                        content={`${edge.source.keyword} → ${edge.target.keyword} (${signedScore(edge.score)}: ${SCORE_LABELS[edge.score]})${edge.note ? ` - Catatan: ${edge.note}` : ""}`}
                                     >
-                                        <title>
-                                            {`${edge.source.keyword} → ${edge.target.keyword} (${signedScore(edge.score)}: ${SCORE_LABELS[edge.score]})${edge.note ? ` - Catatan: ${edge.note}` : ""}`}
-                                        </title>
-                                    </path>
+                                        <path
+                                            d={edge.path}
+                                            fill="none"
+                                            stroke="transparent"
+                                            strokeWidth="16"
+                                            className="cursor-pointer"
+                                            onMouseEnter={() => setHoveredEdge(edge)}
+                                            onMouseLeave={() => setHoveredEdge(null)}
+                                            onClick={() => {
+                                                if (canManage) {
+                                                    const cell = scores.get(edge.key);
+                                                    onEdit(edge.source, edge.target, cell);
+                                                }
+                                            }}
+                                        />
+                                    </HintTooltip>
                                 </g>
                             );
                         })}
@@ -516,10 +517,12 @@ export default function CrossImpactNetworkGraph({
                         })}
                     </g>
                 </svg>
+            </div>
 
-                {/* Floating Inspector HUD (Bottom Overlay) */}
+            {/* Inspector below the canvas: an overlay would cover the bottom nodes and steal their hover */}
+            <div className="min-h-[4.5rem]" aria-live="polite">
                 {activeForce && activeSummary ? (
-                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/95 p-3 backdrop-blur-md shadow-lg sm:bottom-4 sm:left-4 sm:right-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 shadow-sm">
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                                 <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
@@ -559,8 +562,8 @@ export default function CrossImpactNetworkGraph({
                         </div>
                     </div>
                 ) : hoveredEdge ? (
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-3 rounded-lg border border-border bg-card/95 px-4 py-2.5 backdrop-blur-md shadow-md sm:bottom-4 sm:left-4 sm:right-4">
-                        <div className="flex items-center gap-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm">
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="font-semibold text-foreground">{hoveredEdge.source.keyword}</span>
                             <ArrowRightIcon className="size-3 text-muted-foreground" />
                             <span className="font-semibold text-foreground">{hoveredEdge.target.keyword}</span>
@@ -586,7 +589,11 @@ export default function CrossImpactNetworkGraph({
                             </span>
                         )}
                     </div>
-                ) : null}
+                ) : (
+                    <p className="m-0 flex min-h-[4.5rem] items-center justify-center rounded-lg border border-dashed border-border px-4 text-xs text-muted-foreground">
+                        Arahkan kursor ke driving force atau garis panah untuk melihat detailnya.
+                    </p>
+                )}
             </div>
 
             {/* Bottom Legend */}

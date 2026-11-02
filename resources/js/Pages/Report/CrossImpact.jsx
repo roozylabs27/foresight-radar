@@ -18,6 +18,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import CrossImpactNetworkGraph from "@/Components/CrossImpactNetworkGraph";
 import DimensionChip from "@/Components/DimensionChip";
 import Panel from "@/Components/Panel";
+import HintTooltip from "@/Components/HintTooltip";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import {
@@ -67,14 +68,15 @@ function Legend() {
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
             <span>Menekan</span>
             {SCORES.map((score) => (
-                <span
-                    key={score}
-                    className="inline-flex size-6 items-center justify-center rounded border border-solid border-border font-semibold text-foreground tabular-nums"
-                    style={{ backgroundColor: cellFill(score) }}
-                    title={SCORE_LABELS[score]}
-                >
-                    {score === 0 ? "·" : signedScore(score)}
-                </span>
+                <HintTooltip key={score} content={SCORE_LABELS[score]}>
+                    <span
+                        className="inline-flex size-6 items-center justify-center rounded border border-solid border-border font-semibold text-foreground tabular-nums"
+                        style={{ backgroundColor: cellFill(score) }}
+                        aria-label={`${signedScore(score)}: ${SCORE_LABELS[score]}`}
+                    >
+                        {score === 0 ? "·" : signedScore(score)}
+                    </span>
+                </HintTooltip>
             ))}
             <span>Memperkuat</span>
         </div>
@@ -148,7 +150,7 @@ function LoopPanel({ loops, forces, selected, onSelect }) {
                                     )}
                                 >
                                     <span className="flex flex-wrap items-center gap-1.5 text-xs text-foreground">
-                                        <span className={cn(statusBadge(), polarity.tone)} title={polarity.title}>
+                                        <span className={cn(statusBadge(), polarity.tone)}>
                                             {polarity.label} · {polarity.title}
                                         </span>
                                         {loopLinks(loop).map((link, position) => (
@@ -210,9 +212,12 @@ function Matrix({ forces, scores, canManage, onEdit, highlight = null }) {
                                 scope="col"
                                 className="sticky top-0 z-10 border-0 border-b border-solid border-border bg-card px-1 py-1.5 text-center font-semibold text-muted-foreground tabular-nums"
                             >
-                                <abbr title={force.keyword} className="no-underline">
-                                    {index + 1}
-                                </abbr>
+                                <HintTooltip content={force.keyword}>
+                                    <span>
+                                        <span aria-hidden="true">{index + 1}</span>
+                                        <span className="sr-only">{force.keyword}</span>
+                                    </span>
+                                </HintTooltip>
                             </th>
                         ))}
                     </tr>
@@ -254,31 +259,31 @@ function Matrix({ forces, scores, canManage, onEdit, highlight = null }) {
 
                                 return (
                                     <td key={target.id} className="border-0 border-b border-solid border-border p-0.5">
-                                        {canManage ? (
-                                            <button
-                                                type="button"
-                                                aria-label={inLoop ? `${label}, bagian dari loop terpilih` : label}
-                                                title={cell?.note || undefined}
-                                                onClick={() => onEdit(source, target, cell)}
-                                                className={cn(
-                                                    className,
-                                                    "cursor-pointer border-0 hover:ring-2 hover:ring-ring/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                                                    !score && "bg-transparent text-muted-foreground"
-                                                )}
-                                                style={{ backgroundColor: cellFill(score) }}
-                                            >
-                                                {content}
-                                            </button>
-                                        ) : (
-                                            <span
-                                                aria-label={inLoop ? `${label}, bagian dari loop terpilih` : label}
-                                                title={cell?.note || undefined}
-                                                className={cn(className, !score && "text-muted-foreground")}
-                                                style={{ backgroundColor: cellFill(score) }}
-                                            >
-                                                {content}
-                                            </span>
-                                        )}
+                                        <HintTooltip content={cell?.note || undefined}>
+                                            {canManage ? (
+                                                <button
+                                                    type="button"
+                                                    aria-label={inLoop ? `${label}, bagian dari loop terpilih` : label}
+                                                    onClick={() => onEdit(source, target, cell)}
+                                                    className={cn(
+                                                        className,
+                                                        "cursor-pointer border-0 hover:ring-2 hover:ring-ring/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                                                        !score && "bg-transparent text-muted-foreground"
+                                                    )}
+                                                    style={{ backgroundColor: cellFill(score) }}
+                                                >
+                                                    {content}
+                                                </button>
+                                            ) : (
+                                                <span
+                                                    aria-label={inLoop ? `${label}, bagian dari loop terpilih` : label}
+                                                    className={cn(className, !score && "text-muted-foreground")}
+                                                    style={{ backgroundColor: cellFill(score) }}
+                                                >
+                                                    {content}
+                                                </span>
+                                            )}
+                                        </HintTooltip>
                                     </td>
                                 );
                             })}

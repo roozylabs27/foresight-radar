@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StalenessService;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -51,6 +52,14 @@ class Signal extends Model
 
     protected static function booted()
     {
+        // Evidence withdrawn: flag the scenario quadrants that cite this signal (roadmap R1.10).
+        static::updated(function ($signal) {
+            if ($signal->wasChanged('review_status') && $signal->getOriginal('review_status') === 'ACCEPTED') {
+                app(StalenessService::class)->signalWithdrawn($signal);
+            }
+        });
+        static::deleted(fn ($signal) => app(StalenessService::class)->signalWithdrawn($signal));
+
         static::creating(function ($signal) {
             if (empty($signal->uuid)) {
                 $signal->uuid = (string) Uuid::uuid4();

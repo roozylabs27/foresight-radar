@@ -8,12 +8,12 @@ use App\Models\Tenant;
 use App\Models\TenantInvitation;
 use App\Models\User;
 use App\Services\TenantContext;
+use App\Services\TenantInvitationService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -22,8 +22,11 @@ class TenantMemberController extends Controller
 {
     use HandlesApiErrors;
 
+    private const LAST_ADMIN_MESSAGE = 'Organisasi harus memiliki minimal satu admin. Jadikan anggota lain admin terlebih dahulu.';
+
     public function __construct(
-        protected TenantContext $tenantContext
+        protected TenantContext $tenantContext,
+        protected TenantInvitationService $invitations,
     ) {}
 
     /**
@@ -124,63 +127,21 @@ class TenantMemberController extends Controller
 
         $email = strtolower(trim($validated['email']));
 
-        // Check if user is already a member of this tenant
-        $existingMember = User::where('email', $email)->where('tenant_id', $tenant->id)->first();
-        if ($existingMember) {
+        // Only this tenant's own members get a distinct answer. Any other existing account
+        // (another tenant, no tenant, soft-deleted) gets the same response as a new email, so the
+        // invite form cannot be used to probe who is registered on the platform (INVITE-008).
+        // Such an invitation can never be accepted: the accept page tells the mailbox owner the
+        // address already has an account, and no existing account is ever attached or changed.
+        $isMember = User::where('email', $email)->where('tenant_id', $tenant->id)->exists();
+        if ($isMember) {
             return back()->withErrors(['email' => 'Pengguna dengan surel ini sudah menjadi anggota organisasi ini.']);
         }
 
-        // Check if user belongs to another tenant (Single-Tenant Membership Policy)
-        $userOtherTenant = User::where('email', $email)->whereNotNull('tenant_id')->where('tenant_id', '!=', $tenant->id)->first();
-        if ($userOtherTenant) {
-            return back()->withErrors(['email' => 'Pengguna dengan surel ini sudah terdaftar di organisasi lain. Kebijakan keamanan 1-User-1-Tenant membatasi akun hanya untuk satu organisasi.']);
-        }
+        // Capacity, token, and the queued email live in the service. Persisting the invitation
+        // is not delivery: the message only says the email was scheduled.
+        $this->invitations->invite($tenant, $email, $validated['name'] ?? null, $validated['role'], $request->user());
 
-        // Check tenant user capacity
-        $currentCount = User::where('tenant_id', $tenant->id)->count();
-        $pendingCount = TenantInvitation::where('tenant_id', $tenant->id)
-            ->whereNull('accepted_at')
-            ->where('expires_at', '>', now())
-            ->count();
-
-        if (($currentCount + $pendingCount) >= $tenant->max_users) {
-            return back()->withErrors(['email' => 'Batas maksimal kuota anggota organisasi ('.$tenant->max_users.') telah tercapai.']);
-        }
-
-        // Check if existing unassigned user exists
-        $unassignedUser = User::where('email', $email)->whereNull('tenant_id')->first();
-        if ($unassignedUser) {
-            $unassignedUser->update(['tenant_id' => $tenant->id]);
-            $unassignedUser->syncRoles([$validated['role']]);
-
-            return back()->with('success', "Pengguna {$unassignedUser->name} berhasil ditambahkan langsung ke organisasi.");
-        }
-
-        // Create Invitation record
-        $invitation = TenantInvitation::updateOrCreate(
-            ['tenant_id' => $tenant->id, 'email' => $email],
-            [
-                'name' => $validated['name'] ?? null,
-                'role' => $validated['role'],
-                'token' => Str::random(40),
-                'invited_by' => Auth::id(),
-                'expires_at' => now()->addDays(7),
-                'accepted_at' => null,
-            ]
-        );
-
-        // Also create the user account with a temporary secure password so they can log in immediately
-        $tempPassword = Str::random(12);
-        $newUser = User::create([
-            'tenant_id' => $tenant->id,
-            'name' => $validated['name'] ?: explode('@', $email)[0],
-            'email' => $email,
-            'password' => Hash::make($tempPassword),
-        ]);
-        $newUser->syncRoles([$validated['role']]);
-        $invitation->update(['accepted_at' => now()]);
-
-        return back()->with('success', "Anggota {$newUser->name} berhasil diundang. Kata sandi sementara: {$tempPassword}");
+        return back()->with('success', "Undangan untuk {$email} telah dibuat. Email undangan dijadwalkan untuk dikirim dan berlaku ".TenantInvitationService::EXPIRY_DAYS.' hari.');
     }
 
     /**
@@ -189,15 +150,30 @@ class TenantMemberController extends Controller
     public function updateRole(Request $request, User $user): RedirectResponse
     {
         $tenant = $this->tenantContext->getTenant();
+        // A member of another tenant gets the same 404 as an unknown uuid (TENANT-009).
         if (! $tenant || (int) $user->tenant_id !== (int) $tenant->id) {
-            abort(403, 'Akses ditolak.');
+            abort(404);
         }
 
         $validated = $request->validate([
             'role' => ['required', 'string', 'in:admin,bod'],
         ]);
 
-        $user->syncRoles([$validated['role']]);
+        $changed = DB::transaction(function () use ($tenant, $user, $validated) {
+            if ($validated['role'] !== 'admin' && $this->isLastAdmin($tenant, $user)) {
+                return false;
+            }
+
+            // Direct grants would otherwise outlive the role, as in UserController::update.
+            $user->syncRoles([$validated['role']]);
+            $user->syncPermissions([]);
+
+            return true;
+        });
+
+        if (! $changed) {
+            return back()->with('error', self::LAST_ADMIN_MESSAGE);
+        }
 
         return back()->with('success', 'Peran anggota berhasil diperbarui.');
     }
@@ -208,18 +184,51 @@ class TenantMemberController extends Controller
     public function removeMember(User $user): RedirectResponse
     {
         $tenant = $this->tenantContext->getTenant();
+        // A member of another tenant gets the same 404 as an unknown uuid (TENANT-009).
         if (! $tenant || (int) $user->tenant_id !== (int) $tenant->id) {
-            abort(403, 'Akses ditolak.');
+            abort(404);
         }
 
         if ($user->id === Auth::id()) {
-            return back()->withErrors(['message' => 'Anda tidak dapat menghapus akun Anda sendiri dari organisasi.']);
+            return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri dari organisasi.');
         }
 
-        $user->update(['tenant_id' => null]);
-        $user->roles()->detach();
+        $removed = DB::transaction(function () use ($tenant, $user) {
+            if ($this->isLastAdmin($tenant, $user)) {
+                return false;
+            }
+
+            $user->update(['tenant_id' => null]);
+            $user->roles()->detach();
+            $user->syncPermissions([]);
+
+            return true;
+        });
+
+        if (! $removed) {
+            return back()->with('error', self::LAST_ADMIN_MESSAGE);
+        }
 
         return back()->with('success', 'Anggota berhasil dikeluarkan dari organisasi.');
+    }
+
+    /**
+     * Whether the user is the tenant's only admin. Locks the tenant row so two
+     * admins demoting each other at once cannot both pass the check. Call
+     * inside a transaction.
+     */
+    private function isLastAdmin(Tenant $tenant, User $user): bool
+    {
+        Tenant::whereKey($tenant->id)->lockForUpdate()->first();
+
+        if (! $user->hasRole('admin')) {
+            return false;
+        }
+
+        return ! User::role('admin')
+            ->where('tenant_id', $tenant->id)
+            ->whereKeyNot($user->id)
+            ->exists();
     }
 
     /**
@@ -229,7 +238,7 @@ class TenantMemberController extends Controller
     {
         $tenant = $this->tenantContext->getTenant();
         if (! $tenant || (int) $invitation->tenant_id !== (int) $tenant->id) {
-            abort(403, 'Akses ditolak.');
+            abort(404);
         }
 
         $invitation->delete();

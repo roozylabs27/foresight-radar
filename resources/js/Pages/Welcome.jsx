@@ -8,7 +8,6 @@ import {
     LogInIcon,
     RadarIcon,
     ShieldCheckIcon,
-    UserPlusIcon,
 } from "lucide-react";
 
 import BrandMark from "@/Components/BrandMark";
@@ -42,7 +41,7 @@ const FEATURES = [
     },
 ];
 
-export default function Welcome({ auth, canRegister = true }) {
+export default function Welcome({ auth }) {
     const user = auth?.user;
 
     return (
@@ -79,14 +78,6 @@ export default function Welcome({ auth, canRegister = true }) {
                                     Masuk
                                 </Link>
                             </Button>
-                            {canRegister && (
-                                <Button asChild>
-                                    <Link href={route("register")}>
-                                        <UserPlusIcon aria-hidden="true" />
-                                        Daftar Akun
-                                    </Link>
-                                </Button>
-                            )}
                         </>
                     )}
                 </nav>
@@ -124,11 +115,6 @@ export default function Welcome({ auth, canRegister = true }) {
                                         <ArrowRightIcon aria-hidden="true" />
                                     </Link>
                                 </Button>
-                                {canRegister && (
-                                    <Button asChild size="lg" variant="outline" className="h-12 px-7 text-[15px]">
-                                        <Link href={route("register")}>Registrasi Akun Baru</Link>
-                                    </Button>
-                                )}
                             </>
                         )}
                     </div>

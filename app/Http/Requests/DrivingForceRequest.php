@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Rules\WordCountRule;
+use App\Support\TenantRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -21,21 +22,24 @@ class DrivingForceRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
+    /** A force description explains the force and its mechanism (roadmap R1.2); the keyword stays at four words. */
+    public const DESCRIPTION_WORDS = 120;
+
     public function rules(): array
     {
         if (request()->isMethod('POST')) {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
-                'description' => ['required', 'string', new WordCountRule(20)],
+                'description' => ['required', 'string', new WordCountRule(self::DESCRIPTION_WORDS)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', 'exists:users,id'],
+                'pic_id' => ['required', TenantRule::exists('users')],
             ];
         } else {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
-                'description' => ['required', 'string', new WordCountRule(30)],
+                'description' => ['required', 'string', new WordCountRule(self::DESCRIPTION_WORDS)],
                 'dimension_id' => ['required', 'exists:dimensions,id'],
-                'pic_id' => ['required', 'exists:users,id'],
+                'pic_id' => ['required', TenantRule::exists('users')],
             ];
         }
     }

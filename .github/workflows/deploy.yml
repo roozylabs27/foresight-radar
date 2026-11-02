@@ -1,0 +1,139 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy to VPS
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build production assets
+        run: npm run build
+
+      - name: Package build artifacts
+        run: |
+          test -d public/build
+          tar -czf build.tar.gz -C public build
+          ls -lh build.tar.gz
+
+      - name: Validate deployment secrets
+        run: |
+          echo "Validating required deployment secrets configuration:"
+          echo " - VPS_HOST: ${{ secrets.VPS_HOST != '' && 'OK' || 'MISSING' }}"
+          echo " - VPS_USERNAME: ${{ secrets.VPS_USERNAME != '' && 'OK' || 'MISSING' }}"
+          echo " - VPS_PROJECT_PATH: ${{ secrets.VPS_PROJECT_PATH != '' && 'OK' || 'MISSING' }}"
+          echo " - VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY != '' && 'OK' || 'EMPTY' }}"
+          echo " - VPS_PASSWORD: ${{ secrets.VPS_PASSWORD != '' && 'OK' || 'EMPTY' }}"
+
+          if [ -z "${{ secrets.VPS_HOST }}" ]; then
+            echo "Error: VPS_HOST secret is not configured."
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_USERNAME }}" ]; then
+            echo "Error: VPS_USERNAME secret is not configured."
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_PROJECT_PATH }}" ]; then
+            echo "Error: VPS_PROJECT_PATH secret is not configured."
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_SSH_KEY }}" ] && [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
+            echo "Error: Neither VPS_SSH_KEY nor VPS_PASSWORD is set. Please add one to Repository Secrets."
+            exit 1
+          fi
+
+      - name: Upload build archive to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "build.tar.gz"
+          target: "${{ secrets.VPS_PROJECT_PATH }}"
+
+      - name: Execute deployment commands via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            TARGET_DIR="${{ secrets.VPS_PROJECT_PATH }}"
+            TARGET_BRANCH="${{ github.ref_name }}"
+
+            if [ -z "$TARGET_DIR" ]; then
+              echo "Error: VPS_PROJECT_PATH secret is not set."
+              exit 1
+            fi
+
+            echo "=========================================================="
+            echo "Starting deployment to $TARGET_DIR on branch $TARGET_BRANCH"
+            echo "=========================================================="
+
+            cd "$TARGET_DIR"
+
+            # 1. Update git repository
+            echo "[1/5] Fetching and pulling latest changes from git..."
+            git fetch origin
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
+              git checkout "$TARGET_BRANCH"
+            fi
+            git pull origin "$TARGET_BRANCH"
+
+            # 2. Extract frontend build artifacts
+            if [ -f "build.tar.gz" ]; then
+              echo "[2/5] Extracting frontend build artifacts..."
+              tar -xzf build.tar.gz -C public/
+              rm -f build.tar.gz
+              chmod -R 755 public/build
+            fi
+
+            # 3. Backend dependencies & database migrations
+            echo "[3/5] Running composer and database migrations inside Docker..."
+            docker exec -u 0 -e COMPOSER_ALLOW_SUPERUSER=1 laravel_app composer install --no-dev --optimize-autoloader --no-interaction
+            docker exec laravel_app php artisan migrate --force
+
+            # 4. Cache & framework optimization
+            echo "[4/5] Optimizing Laravel configuration, routes, and views..."
+            docker exec laravel_app php artisan optimize:clear
+            docker exec laravel_app php artisan optimize
+            docker exec laravel_app php artisan view:cache
+            docker exec -u 0 laravel_app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
+            # 5. Restart background queue worker
+            echo "[5/5] Restarting Laravel queue worker..."
+            docker restart laravel_queue || docker compose restart queue
+
+            echo "=========================================================="
+            echo "Deployment completed successfully."
+            echo "=========================================================="
+

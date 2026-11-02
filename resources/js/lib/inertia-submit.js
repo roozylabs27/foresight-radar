@@ -32,7 +32,11 @@ export function inertiaVisit(method, url, data, options = {}) {
                 errors = bag;
                 options.onError?.(bag);
             },
-            onFinish: () => resolve(errors),
+            // Run the caller's onFinish too (e.g. resetting a "saving" flag), then settle.
+            onFinish: (visit) => {
+                options.onFinish?.(visit);
+                resolve(errors);
+            },
         });
     });
 }

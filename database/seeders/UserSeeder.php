@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Tenant;
 use App\Models\User;
+use App\Services\TenantContext;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
@@ -21,6 +23,8 @@ class UserSeeder extends Seeder
 
     protected $synthetic_users;
 
+    protected ?Tenant $defaultTenant = null;
+
     public function __construct()
     {
         $this->users = json_decode(file_get_contents(database_path('data/user.json')));
@@ -34,6 +38,18 @@ class UserSeeder extends Seeder
 
     public function run(): void
     {
+        $this->defaultTenant = Tenant::firstOrCreate([
+            'slug' => 'default-org',
+        ], [
+            'uuid' => (string) Uuid::uuid4(),
+            'name' => config('app.name', 'Foresight Radar').' Workspace',
+            'status' => 'active',
+            'plan' => 'enterprise',
+            'max_users' => 100,
+        ]);
+
+        app(TenantContext::class)->setTenant($this->defaultTenant);
+
         // 1. Initial permissions
         $this->command->info('initial permissions');
         $this->command->getOutput()->progressStart(count($this->permissions));
@@ -100,11 +116,16 @@ class UserSeeder extends Seeder
             'name' => $user->name,
         ], [
             'uuid' => Uuid::uuid1(),
+            'tenant_id' => $this->defaultTenant?->id,
             'email' => $user->email,
             'email_verified_at' => now(),
             'password' => bcrypt($user->password),
             'remember_token' => null,
         ]);
+
+        if ($this->defaultTenant && ! $newUser->tenant_id) {
+            $newUser->forceFill(['tenant_id' => $this->defaultTenant->id])->save();
+        }
 
         $newUser->syncRoles($user->role);
         $role = Role::where('name', $newUser->roles->pluck('name')[0])->first();
@@ -121,12 +142,17 @@ class UserSeeder extends Seeder
             'email' => $email,
         ], [
             'uuid' => Uuid::uuid1(),
+            'tenant_id' => $this->defaultTenant?->id,
             'name' => $profile['name'],
             'email_verified_at' => now(),
             'password' => bcrypt('password'),
             'remember_token' => null,
             'created_at' => now()->subDays(rand(10, 60)),
         ]);
+
+        if ($this->defaultTenant && ! $newUser->tenant_id) {
+            $newUser->forceFill(['tenant_id' => $this->defaultTenant->id])->save();
+        }
 
         $role = Role::where('name', $profile['role'])->first();
         if ($role) {

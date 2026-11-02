@@ -211,7 +211,7 @@ export function IngestionProvider({ children }) {
                                 ? `Ekstraksi sinyal untuk "${item.title}" telah selesai.`
                                 : `Ekstraksi sinyal "${item.title}" gagal.`),
                             signalsCount: signalsFound,
-                            fallback: progress.extraction?.fallback ?? false,
+                            fallback: (progress.extraction?.fallback || progress.extraction?.irrelevant) ?? false,
                             fallbackNotice: progress.extraction?.notice ?? null,
                             provider: progress.extraction?.label ?? progress.extraction?.provider,
                             model: progress.extraction?.model,
@@ -221,7 +221,13 @@ export function IngestionProvider({ children }) {
                         addNotification(notifRecord);
 
                         // Fire toast alert
-                        if (isSuccess) {
+                        if (isSuccess && progress.extraction?.irrelevant) {
+                            toast.warning("Dokumen Tidak Relevan", {
+                                description: progress.extraction.notice || progress.message,
+                                icon: <AlertCircleIcon className="size-4 text-warning" />,
+                                duration: 8000,
+                            });
+                        } else if (isSuccess) {
                             toast.success("Ekstraksi Sinyal Selesai", {
                                 description: `${item.title}: ${signalsFound} sinyal ditemukan.`,
                                 icon: <CheckCircle2Icon className="size-4 text-emerald-500" />,

@@ -13,7 +13,7 @@ class LlmException extends RuntimeException
 {
     public const REASONS = [
         'unavailable', 'rate_limited', 'overloaded', 'api_error',
-        'timeout', 'refusal', 'max_tokens', 'invalid_json',
+        'timeout', 'refusal', 'max_tokens', 'invalid_json', 'quota_exceeded',
     ];
 
     public function __construct(public readonly string $reason, string $message = '', ?Throwable $previous = null)
@@ -31,6 +31,7 @@ class LlmException extends RuntimeException
             'refusal' => 'Layanan AI menolak memproses dokumen ini.',
             'max_tokens' => 'Jawaban AI terpotong karena terlalu panjang.',
             'invalid_json' => 'Jawaban AI tidak dapat dibaca.',
+            'quota_exceeded' => 'Kuota token AI organisasi untuk bulan ini sudah habis. Hubungi admin organisasi.',
             default => 'Layanan AI sedang bermasalah.',
         };
     }

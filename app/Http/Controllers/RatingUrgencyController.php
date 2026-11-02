@@ -21,7 +21,7 @@ class RatingUrgencyController extends Controller
     public function index()
     {
         $title = 'Rating Urgency';
-        $dimensions = Dimension::all()->map(function ($dimension) {
+        $dimensions = Dimension::ordered()->get()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name,

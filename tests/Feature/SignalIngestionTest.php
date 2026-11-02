@@ -193,6 +193,8 @@ class SignalIngestionTest extends TestCase
             'title' => 'Autonomous Factory Robotics Integration',
             'summary' => 'Humanoid robots enter automotive assembly lines at scale.',
             'dimension_id' => $this->techDimension->id,
+            'force_keyword' => 'Factory Automation',
+            'force_description' => 'Automation of manufacturing with robots.',
         ]);
 
         $response->assertStatus(200);
@@ -389,7 +391,7 @@ class SignalIngestionTest extends TestCase
         $signal = $this->pendingSignal();
         $this->assertNull($signal->fresh()->quote_verified);
 
-        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", ['action' => 'accept_create'])
+        $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", ['action' => 'accept_create', 'force_keyword' => 'Factory Automation', 'force_description' => 'Automation of manufacturing.'])
             ->assertStatus(200);
 
         $this->assertSame('ACCEPTED', $signal->fresh()->review_status);

@@ -22,7 +22,7 @@ class TimeHorizonController extends Controller
     public function index()
     {
         $title = 'Time Horizon';
-        $dimensions = Dimension::all()->map(function ($dimension) {
+        $dimensions = Dimension::ordered()->get()->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name,

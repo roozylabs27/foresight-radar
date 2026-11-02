@@ -13,6 +13,7 @@ import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { cn } from "@/lib/utils";
 import FormStatusAction from "./Form";
+import HintTooltip from "@/Components/HintTooltip";
 
 const FORM_ID = "status-action-form";
 
@@ -26,13 +27,12 @@ function StatusMark({ code, label, tone }) {
     if (!code) return null;
 
     return (
-        <span
-            title={label}
-            className={cn("inline-flex size-8 items-center justify-center rounded-full text-sm font-bold", tone)}
-        >
-            <span aria-hidden="true">{code}</span>
-            <span className="sr-only">{label}</span>
-        </span>
+        <HintTooltip content={label}>
+            <span className={cn("inline-flex size-8 items-center justify-center rounded-full text-sm font-bold", tone)}>
+                <span aria-hidden="true">{code}</span>
+                <span className="sr-only">{label}</span>
+            </span>
+        </HintTooltip>
     );
 }
 

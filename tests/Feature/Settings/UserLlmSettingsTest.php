@@ -5,7 +5,7 @@ namespace Tests\Feature\Settings;
 use App\Models\User;
 use App\Models\UserLlmSetting;
 use App\Services\Llm\LlmClientResolver;
-use App\Services\Llm\OpenAiCompatibleClient;
+use App\Services\Llm\QuotaLimitedLlmClient;
 use App\Services\Llm\StructuredLlmClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -150,8 +150,9 @@ class UserLlmSettingsTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Every resolved client is wrapped so it counts against the tenant quota (TENANT-008).
         $resolvedClient = $resolver->resolveForUser($user);
-        $this->assertInstanceOf(OpenAiCompatibleClient::class, $resolvedClient);
+        $this->assertInstanceOf(QuotaLimitedLlmClient::class, $resolvedClient);
         $this->assertSame('gemini-3.8-flash', $resolvedClient->model());
         $this->assertSame('gemini', $resolvedClient->provider());
     }

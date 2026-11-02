@@ -16,6 +16,12 @@ trait BelongsToTenant
 
         static::creating(function ($model) {
             $context = app(TenantContext::class);
+
+            // A platform operator writes only inside the workspace they picked (TENANT-007).
+            if ($context->isWorkspaceRequired()) {
+                throw new TenantSecurityException(TenantSecurityException::WORKSPACE_REQUIRED);
+            }
+
             $tenant = $context->getTenant();
 
             if (empty($model->tenant_id)) {

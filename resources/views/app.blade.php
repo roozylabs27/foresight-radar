@@ -2,6 +2,10 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
+        @if (request()->routeIs('invitations.*'))
+            {{-- The invitation token is in the URL; nginx's header alone allows same-origin referrers. --}}
+            <meta name="referrer" content="no-referrer">
+        @endif
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         @include('partials.theme-script')

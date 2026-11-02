@@ -21,6 +21,7 @@ import {
     RadarIcon,
     SettingsIcon,
     SlidersIcon,
+    TargetIcon,
     UserIcon,
     WifiIcon,
     ZapIcon,
@@ -30,6 +31,7 @@ import BrandMark from "@/Components/BrandMark";
 import Breadcrumb from "@/Components/Breadcrumb";
 import LanguageSwitcher from "@/Components/LanguageSwitcher";
 import NotificationBell from "@/Components/NotificationBell";
+import OperatorWorkspaceSwitcher from "@/Components/OperatorWorkspaceSwitcher";
 import FloatingIngestionProgress from "@/Components/Ingestion/FloatingIngestionProgress";
 import { ThemeMenuItem } from "@/Components/ThemeToggle";
 import { I18nProvider, useTranslation } from "@/context/I18nContext";
@@ -52,19 +54,20 @@ const COLLAPSED_KEY = "foresight-sidebar-collapsed";
 
 const NAV_ITEMS = [
     { key: "dashboard", label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: LayoutGridIcon, permission: "view-dashboard" },
-    { key: "signals", label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiIcon, permission: "view-signal" },
-    { key: "driving_force", label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ZapIcon, permission: "view-driving-force" },
-    { key: "time_horizon", label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockIcon, permission: "view-time-horizon" },
-    { key: "rating_urgency", label: "Rating of Urgency", route: "rating-urgency.", match: "/rating-urgency", icon: GaugeIcon, permission: "view-rating-urgency" },
-    { key: "status_action", label: "Status of Action", route: "status-action.", match: "/status-action", icon: CircleCheckIcon, permission: "view-status-action" },
-    { key: "approval_items", label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileCheckIcon, permission: "view-approval-items" },
-    { key: "closed_items", label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxIcon, permission: "view-closed-items" },
-    { key: "prioritizing", label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },
-    { key: "registered_list", label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
-    { key: "foresight_radar", label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
-    { key: "cross_impact", label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
-    { key: "knowledge_graph", label: "Knowledge Graph", route: "visualization.knowledge-graph.", match: "/visualization/knowledge-graph", icon: NetworkIcon, permission: "view-foresight-radar" },
-    { key: "scenarios", label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
+    { key: "scenario_planning", group: "scenario_planning", label: "Scenario Planning", route: "scenario-planning.index", match: "/scenario-planning", icon: TargetIcon, permission: "view-scenario" },
+    { key: "scenarios", group: "scenario_planning", label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
+    { key: "signals", group: "library", label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiIcon, permission: "view-signal" },
+    { key: "driving_force", group: "library", label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ZapIcon, permission: "view-driving-force" },
+    { key: "prioritizing", group: "analysis", label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },
+    { key: "registered_list", group: "analysis", label: "Registered List", route: "visualization.registered-list.", match: "/visualization/registered-list", icon: ListIcon, permission: "view-registered-list" },
+    { key: "foresight_radar", group: "analysis", label: "Foresight Radar", route: "visualization.foresight-radar.", match: "/visualization/foresight-radar", icon: RadarIcon, permission: "view-foresight-radar" },
+    { key: "cross_impact", group: "analysis", label: "Cross-Impact", route: "visualization.cross-impact.", match: "/visualization/cross-impact", icon: GitCompareArrowsIcon, permission: "view-cross-impact" },
+    { key: "knowledge_graph", group: "analysis", label: "Knowledge Graph", route: "visualization.knowledge-graph.", match: "/visualization/knowledge-graph", icon: NetworkIcon, permission: "view-foresight-radar" },
+    { key: "time_horizon", group: "governance", label: "Time Horizon", route: "time-horizon.", match: "/time-horizon", icon: ClockIcon, permission: "view-time-horizon" },
+    { key: "rating_urgency", group: "governance", label: "Rating of Urgency", route: "rating-urgency.", match: "/rating-urgency", icon: GaugeIcon, permission: "view-rating-urgency" },
+    { key: "status_action", group: "governance", label: "Status of Action", route: "status-action.", match: "/status-action", icon: CircleCheckIcon, permission: "view-status-action" },
+    { key: "approval_items", group: "governance", label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileCheckIcon, permission: "view-approval-items" },
+    { key: "closed_items", group: "governance", label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxIcon, permission: "view-closed-items" },
     { key: "settings", label: "Settings", route: "settings.index", match: "/settings", icon: SettingsIcon },
 ];
 
@@ -131,10 +134,21 @@ function Brand({ collapsed = false }) {
     );
 }
 
+/** Sidebar sections (roadmap R1.11); items without a group (Dashboard, Settings) stand alone. */
+const NAV_GROUPS = {
+    scenario_planning: "Scenario Planning",
+    library: "Library",
+    analysis: "Analysis",
+    governance: "Governance",
+};
+
 function NavList({ items, url, collapsed = false, onNavigate }) {
+    const { t } = useTranslation();
+
     return (
         <ul className="flex flex-col gap-0.5">
-            {items.map((item) => {
+            {items.map((item, index) => {
+                const startsGroup = item.group && item.group !== items[index - 1]?.group;
                 const active = isActive(url, item.match);
                 const Icon = item.icon;
                 const link = (
@@ -159,6 +173,14 @@ function NavList({ items, url, collapsed = false, onNavigate }) {
 
                 return (
                     <li key={item.match}>
+                        {startsGroup &&
+                            (collapsed ? (
+                                <hr aria-hidden="true" className="my-2 border-sidebar-border" />
+                            ) : (
+                                <p className="m-0 mt-3 mb-1 px-3 text-[11px] font-semibold tracking-wide text-subtle-foreground uppercase">
+                                    {t(`nav.group.${item.group}`, NAV_GROUPS[item.group])}
+                                </p>
+                            ))}
                         {collapsed ? (
                             <Tooltip>
                                 <TooltipTrigger asChild>{link}</TooltipTrigger>
@@ -236,12 +258,13 @@ function UserMenu({ user, tenant }) {
     );
 }
 
-function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, children }) {
+function AuthenticatedInner({ auth, user: propUser, header, subheader, breadcrumbs, children }) {
     const page = usePage();
     const { t } = useTranslation();
     const effectiveAuth = auth || page.props.auth || {};
     const user = effectiveAuth.user || propUser;
     const tenant = effectiveAuth.tenant;
+    const operator = page.props.auth?.operator;
     const permissions = effectiveAuth.permissions || [];
     const role = effectiveAuth.role;
 
@@ -345,7 +368,9 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
                             )}
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                            {tenant?.name && (
+                            {operator ? (
+                                <OperatorWorkspaceSwitcher operator={operator} />
+                            ) : tenant?.name && (
                                 <div className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground sm:flex">
                                     <Building2Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
                                     <span className="max-w-36 truncate">{tenant.name}</span>
@@ -362,6 +387,8 @@ function AuthenticatedInner({ auth, user: propUser, header, breadcrumbs, childre
                             <Breadcrumb items={resolvedBreadcrumbs} />
                         </div>
                     )}
+
+                    {subheader}
 
                     {children}
 

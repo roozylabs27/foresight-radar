@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\TenantRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,8 +20,8 @@ class ScenarioRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'focal_question' => ['nullable', 'string', 'max:2000'],
-            'axis_a' => ['required', 'uuid', 'exists:driving_forces,uuid'],
-            'axis_b' => ['required', 'uuid', 'different:axis_a', 'exists:driving_forces,uuid'],
+            'axis_a' => ['required', 'uuid', TenantRule::exists('driving_forces', 'uuid')],
+            'axis_b' => ['required', 'uuid', 'different:axis_a', TenantRule::exists('driving_forces', 'uuid')],
             'axis_a_low_label' => $label,
             'axis_a_high_label' => $label,
             'axis_b_low_label' => $label,

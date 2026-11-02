@@ -4,8 +4,11 @@ namespace Tests\Feature\Settings;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Notifications\TenantInvitationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Ramsey\Uuid\Uuid;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -31,6 +34,14 @@ class TenantManagementTest extends TestCase
             'uuid' => (string) Uuid::uuid4(),
             'display_name' => 'Board of Directors',
         ]);
+        foreach (['manage-members', 'manage-organization'] as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web'], [
+                'uuid' => (string) Uuid::uuid4(),
+                'category' => 'organization',
+                'description' => $permission,
+            ]);
+        }
+        $adminRole->givePermissionTo(['manage-members', 'manage-organization']);
 
         $this->tenant = Tenant::create([
             'id' => 10,
@@ -110,8 +121,10 @@ class TenantManagementTest extends TestCase
         );
     }
 
-    public function test_admin_can_invite_and_create_new_member(): void
+    public function test_admin_can_invite_new_member_as_pending_invitation(): void
     {
+        Notification::fake();
+
         $response = $this->actingAs($this->adminUser)->post(route('settings.members.invite'), [
             'email' => 'charlie@acme.com',
             'name' => 'Charlie Analyst',
@@ -121,18 +134,18 @@ class TenantManagementTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('success');
 
-        $this->assertDatabaseHas('users', [
-            'email' => 'charlie@acme.com',
-            'name' => 'Charlie Analyst',
+        // The account is created only when the recipient accepts (TenantInvitationLifecycleTest).
+        $this->assertDatabaseMissing('users', ['email' => 'charlie@acme.com']);
+        $this->assertDatabaseHas('tenant_invitations', [
             'tenant_id' => $this->tenant->id,
+            'email' => 'charlie@acme.com',
+            'role' => 'bod',
+            'accepted_at' => null,
         ]);
-
-        $newMember = User::where('email', 'charlie@acme.com')->first();
-        $this->assertNotNull($newMember);
-        $this->assertTrue($newMember->hasRole('bod'));
+        Notification::assertSentOnDemand(TenantInvitationNotification::class);
     }
 
-    public function test_inviting_member_belonging_to_another_tenant_is_rejected(): void
+    public function test_inviting_member_of_another_tenant_never_moves_the_account(): void
     {
         $otherTenant = Tenant::create([
             'id' => 99,
@@ -152,7 +165,9 @@ class TenantManagementTest extends TestCase
             'role' => 'bod',
         ]);
 
-        $response->assertSessionHasErrors('email');
+        // INVITE-008: uniform response; the account stays in its own tenant.
+        $response->assertSessionHasNoErrors();
+        $this->assertSame($otherTenant->id, (int) $otherUser->fresh()->tenant_id);
     }
 
     public function test_admin_can_update_member_role(): void
@@ -188,7 +203,7 @@ class TenantManagementTest extends TestCase
             route('settings.members.destroy', ['user' => $this->adminUser])
         );
 
-        $response->assertSessionHasErrors('message');
+        $response->assertSessionHas('error');
         $this->adminUser->refresh();
         $this->assertEquals($this->tenant->id, $this->adminUser->tenant_id);
     }

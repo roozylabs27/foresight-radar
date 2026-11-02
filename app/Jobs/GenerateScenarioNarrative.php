@@ -3,10 +3,9 @@
 namespace App\Jobs;
 
 use App\Enums\LlmJobStatus;
+use App\Jobs\Middleware\RunInTenantContext;
 use App\Models\Scenario;
-use App\Models\Tenant;
 use App\Services\ScenarioNarrativeService;
-use App\Services\TenantContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,15 +42,16 @@ class GenerateScenarioNarrative implements ShouldBeUnique, ShouldQueue
         $this->timeout = (int) config('queue.llm_job_timeout', 300);
     }
 
+    /**
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [new RunInTenantContext($this->scenario->tenant_id)];
+    }
+
     public function handle(ScenarioNarrativeService $narratives): void
     {
-        if ($this->scenario->tenant_id) {
-            $tenant = Tenant::find($this->scenario->tenant_id);
-            if ($tenant) {
-                app(TenantContext::class)->setTenant($tenant);
-            }
-        }
-
         if ($this->scenario->generation_status !== LlmJobStatus::QUEUED) {
             return;
         }

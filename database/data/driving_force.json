@@ -1,97 +1,97 @@
 [
     {
-        "dimension_id" : 3,
-        "keyword" : "Euro-5 Plan",
-        "description" : "MoEF issued emission limit standard for Euro-5 Regulation"
+        "dimension": "LEGISLATIVE",
+        "keyword": "Euro-5 Plan",
+        "description": "MoEF issued emission limit standard for Euro-5 Regulation"
     },
     {
-        "dimension_id" : 3,
-        "keyword" : "Import Regulation",
-        "description" : "MoTr issued new regulation of import permission for certain commodities."
+        "dimension": "LEGISLATIVE",
+        "keyword": "Import Regulation",
+        "description": "MoTr issued new regulation of import permission for certain commodities."
     },
     {
-        "dimension_id" : 3,
-        "keyword" : "TKDN Regulation",
-        "description" : "MoI issued regulation regarding the requirement of localization toward 2030"
+        "dimension": "LEGISLATIVE",
+        "keyword": "TKDN Regulation",
+        "description": "MoI issued regulation regarding the requirement of localization toward 2030"
     },
     {
-        "dimension_id" : 1,
-        "keyword" : "Interest Rate",
-        "description" : "Central bank will increase the interest rate to anticipate higher inflation."
+        "dimension": "ECONOMIC",
+        "keyword": "Interest Rate",
+        "description": "Central bank will increase the interest rate to anticipate higher inflation."
     },
     {
-        "dimension_id" : 1,
-        "keyword" : "Loan Tanure",
-        "description" : "Loan tenure for car purchasing tend to be longer period (3 -> 5 years)"
+        "dimension": "ECONOMIC",
+        "keyword": "Loan Tanure",
+        "description": "Loan tenure for car purchasing tend to be longer period (3 -> 5 years)"
     },
     {
-        "dimension_id" : 1,
-        "keyword" : "Minimum Wage",
-        "description" : "The adjustment of minimum wage by province tend to increase"
+        "dimension": "ECONOMIC",
+        "keyword": "Minimum Wage",
+        "description": "The adjustment of minimum wage by province tend to increase"
     },
     {
-        "dimension_id" : 4,
-        "keyword" : "LFP Battery",
-        "description" : "Trend of LFP battery adoption increase."
+        "dimension": "TECHNOLOGY",
+        "keyword": "LFP Battery",
+        "description": "Trend of LFP battery adoption increase."
     },
     {
-        "dimension_id" : 4,
-        "keyword" : "Solid Battery",
-        "description" : "Solid battery might be introduced in market by 2030"
+        "dimension": "TECHNOLOGY",
+        "keyword": "Solid Battery",
+        "description": "Solid battery might be introduced in market by 2030"
     },
     {
-        "dimension_id" : 4,
-        "keyword" : "EV Driving Range",
-        "description" : "The driving range per charge of EV get longer allowing for long-distance travel on a single charge."
+        "dimension": "TECHNOLOGY",
+        "keyword": "EV Driving Range",
+        "description": "The driving range per charge of EV get longer allowing for long-distance travel on a single charge."
     },
     {
-        "dimension_id" : 2,
-        "keyword" : "NDC Target",
-        "description" : "NDC target 2030 for CO2 emission reduction is revised to be more stringent."
+        "dimension": "ECOLOGY",
+        "keyword": "NDC Target",
+        "description": "NDC target 2030 for CO2 emission reduction is revised to be more stringent."
     },
     {
-        "dimension_id" : 2,
-        "keyword" : "COP 28",
-        "description" : "Consensus on COP28 to accelerate emission reduction commitments across participating countries."
+        "dimension": "ECOLOGY",
+        "keyword": "COP 28",
+        "description": "Consensus on COP28 to accelerate emission reduction commitments across participating countries."
     },
     {
-        "dimension_id" : 2,
-        "keyword" : "EU CBA",
-        "description" : "EU issued carbon border tax adjustment implemented from 2026."
+        "dimension": "ECOLOGY",
+        "keyword": "EU CBA",
+        "description": "EU issued carbon border tax adjustment implemented from 2026."
     },
     {
-        "dimension_id" : 7,
-        "keyword" : "Mobility Sharing",
-        "description" : "Using car sharing (Gojek, Grab etc) increase significantly."
+        "dimension": "CONSUMER",
+        "keyword": "Mobility Sharing",
+        "description": "Using car sharing (Gojek, Grab etc) increase significantly."
     },
     {
-        "dimension_id" : 7,
-        "keyword" : "Purchasing Power",
-        "description" : "Trend of customer purchasing power index decrease time by time."
+        "dimension": "CONSUMER",
+        "keyword": "Purchasing Power",
+        "description": "Trend of customer purchasing power index decrease time by time."
     },
     {
-        "dimension_id" : 7,
-        "keyword" : "Customer Preference",
-        "description" : "Customer prefer to purchase car that more eco-friendly and hi-technology."
+        "dimension": "CONSUMER",
+        "keyword": "Customer Preference",
+        "description": "Customer prefer to purchase car that more eco-friendly and hi-technology."
     },
     {
-        "dimension_id" : 8,
-        "keyword" : "Introduce xEV",
-        "description" : "Some brand will introduce electrified vehicle agressively in the near future."
+        "dimension": "COMPETITOR",
+        "keyword": "Introduce xEV",
+        "description": "Some brand will introduce electrified vehicle agressively in the near future."
     },
     {
-        "dimension_id" : 8,
-        "keyword" : "A segment low prices",
-        "description" : "Some brand will introduce new product segment A with low prices."
+        "dimension": "COMPETITOR",
+        "keyword": "A segment low prices",
+        "description": "Some brand will introduce new product segment A with low prices."
     },
     {
-        "dimension_id" : 8,
-        "keyword" : "New comers",
-        "description" : "New automotive market entrants and global OEMs are aggressively investing in localized xEV technology."
+        "dimension": "NEW_ENTRANT",
+        "keyword": "New comers",
+        "description": "New automotive market entrants and global OEMs are aggressively investing in localized xEV technology."
     },
     {
-        "dimension_id" : 6,
-        "keyword" : "Invest xEV Technology",
-        "description" : "Tier-1 component suppliers are expanding capital investments for xEV powertrain and battery technologies."
+        "dimension": "SUPPLY_CHAIN",
+        "keyword": "Invest xEV Technology",
+        "description": "Tier-1 component suppliers are expanding capital investments for xEV powertrain and battery technologies."
     }
 ]

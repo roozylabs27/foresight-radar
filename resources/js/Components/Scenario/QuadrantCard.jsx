@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
-import { LoaderCircleIcon, PencilIcon } from "lucide-react";
+import { CircleCheckIcon, EyeIcon, LoaderCircleIcon, PencilIcon, UndoIcon } from "lucide-react";
 
+import HintTooltip from "@/Components/HintTooltip";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -24,11 +25,65 @@ export function ProvenanceBadges({ quadrant }) {
         <span className="flex flex-wrap gap-1">
             {quadrant.is_ai_generated ? (
                 <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>{providerLabel(quadrant.provider)}</span>
-            ) : (
+            ) : quadrant.provider ? (
                 <span className={cn(statusBadge(), "bg-muted text-muted-foreground")}>Kerangka tanpa AI</span>
-            )}
+            ) : null}
             {quadrant.edited && <span className={cn(statusBadge(), "bg-warning-soft text-warning")}>Diedit analis</span>}
+            {quadrant.stale_reason && (
+                <HintTooltip content={quadrant.stale_reason}>
+                    <span tabIndex={0} className={cn(statusBadge(), "bg-warning-soft text-warning")}>
+                        Perlu ditinjau
+                    </span>
+                </HintTooltip>
+            )}
         </span>
+    );
+}
+
+/** Narrative review states (App\Models\ScenarioQuadrant::REVIEW_STATUSES); approved is gate G6. */
+const REVIEW = {
+    draft: { label: "Draf", tone: "neutral" },
+    reviewed: { label: "Ditinjau", tone: "pending" },
+    approved: { label: "Disetujui", tone: "approved" },
+};
+
+/** Review badge and, for managers, the next review actions of a quadrant with a narrative. */
+function ReviewControls({ quadrant, canManage, onReview }) {
+    const [busy, setBusy] = useState(false);
+    const status = quadrant.review_status ?? "draft";
+    const act = (next) => async () => {
+        setBusy(true);
+        await onReview(next);
+        setBusy(false);
+    };
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            <span className={statusBadge({ tone: REVIEW[status].tone })}>{REVIEW[status].label}</span>
+            {quadrant.reviewed_by && status !== "draft" && <span className="text-[11px] text-muted-foreground">oleh {quadrant.reviewed_by}</span>}
+            {canManage && onReview && (
+                <div className="ml-auto flex flex-wrap gap-1.5">
+                    {status === "draft" && (
+                        <Button size="sm" variant="outline" disabled={busy} onClick={act("reviewed")}>
+                            <EyeIcon aria-hidden="true" />
+                            Tandai ditinjau
+                        </Button>
+                    )}
+                    {status !== "approved" && (
+                        <Button size="sm" disabled={busy} onClick={act("approved")}>
+                            <CircleCheckIcon aria-hidden="true" />
+                            Setujui
+                        </Button>
+                    )}
+                    {status !== "draft" && (
+                        <Button size="sm" variant="ghost" disabled={busy} onClick={act("draft")}>
+                            <UndoIcon aria-hidden="true" />
+                            Kembalikan ke draf
+                        </Button>
+                    )}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -99,7 +154,7 @@ function CitedText({ text, evidence }) {
     );
 }
 
-function EditSheet({ quadrant, open, onOpenChange, onSave }) {
+function EditSheet({ quadrant, open, titleLocked, onOpenChange, onSave }) {
     const [values, setValues] = useState(null);
     const [saving, setSaving] = useState(false);
 
@@ -144,7 +199,8 @@ function EditSheet({ quadrant, open, onOpenChange, onSave }) {
                     <form id={`quadrant-${quadrant.id}`} onSubmit={submit} className="flex flex-col gap-4 px-4">
                         <div className="flex flex-col gap-1.5">
                             <Label htmlFor={`${quadrant.id}-title`}>Judul</Label>
-                            <Input id={`${quadrant.id}-title`} value={values.title} onChange={set("title")} required maxLength={255} />
+                            <Input id={`${quadrant.id}-title`} value={values.title} onChange={set("title")} disabled={titleLocked} required maxLength={255} />
+                            {titleLocked && <p className="m-0 text-xs text-muted-foreground">Nama dikunci oleh persetujuan kerangka (G5).</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <Label htmlFor={`${quadrant.id}-narrative`}>Narasi</Label>
@@ -195,9 +251,10 @@ function EditSheet({ quadrant, open, onOpenChange, onSave }) {
 /**
  * One future of the 2x2 matrix: its poles, narrative with citation chips,
  * implications and early indicators. `evidence` maps "S1".. to signals.
- * `onSave(values)` resolves true when the edit was stored.
+ * `onSave(values)` resolves true when the edit was stored; `onReview(status)` changes the review
+ * state. `titleLocked` keeps the name read-only (approved framework, G5).
  */
-export default function QuadrantCard({ quadrant, evidence, canManage = false, onSave, className }) {
+export default function QuadrantCard({ quadrant, evidence, canManage = false, titleLocked = false, onSave, onReview, className }) {
     const [editing, setEditing] = useState(false);
 
     return (
@@ -213,9 +270,14 @@ export default function QuadrantCard({ quadrant, evidence, canManage = false, on
                     <ProvenanceBadges quadrant={quadrant} />
                 </div>
                 <h3 className="m-0 text-[15px] font-bold text-foreground">{quadrant.title}</h3>
+                {quadrant.summary && <p className="m-0 text-xs text-muted-foreground">{quadrant.summary}</p>}
             </header>
 
-            <CitedText text={quadrant.narrative} evidence={evidence} />
+            {quadrant.narrative ? (
+                <CitedText text={quadrant.narrative} evidence={evidence} />
+            ) : (
+                <p className="m-0 text-[13px] text-muted-foreground italic">Narasi belum dibuat.</p>
+            )}
 
             {quadrant.implications && (
                 <div className="flex flex-col gap-1">
@@ -241,9 +303,11 @@ export default function QuadrantCard({ quadrant, evidence, canManage = false, on
                         <PencilIcon aria-hidden="true" />
                         Sunting
                     </Button>
-                    <EditSheet quadrant={quadrant} open={editing} onOpenChange={setEditing} onSave={onSave} />
+                    <EditSheet quadrant={quadrant} open={editing} titleLocked={titleLocked} onOpenChange={setEditing} onSave={onSave} />
                 </>
             )}
+
+            {quadrant.narrative && <ReviewControls quadrant={quadrant} canManage={canManage} onReview={onReview} />}
         </article>
     );
 }
