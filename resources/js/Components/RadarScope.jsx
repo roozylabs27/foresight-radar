@@ -1,4 +1,4 @@
-import { DIMENSION_CONFIGS, HORIZON_BANDS, RADAR_MAX_RADIUS, horizonLabel, polarToXY } from "@/lib/radarLayout";
+import { CORE_RADIUS, DIMENSION_CONFIGS, HORIZON_BANDS, RADAR_MAX_RADIUS, horizonLabel, polarToXY } from "@/lib/radarLayout";
 import { cn } from "@/lib/utils";
 
 const WIDTH = 640;
@@ -22,6 +22,32 @@ export const PRIORITY_FILLS = {
 
 export function priorityFill(priority) {
     return PRIORITY_FILLS[String(priority ?? "").trim().toLowerCase()] ?? "var(--primary)";
+}
+
+/**
+ * Status of Action shapes (status_actions.symbol): Monitoring is a triangle, Decided Plan a circle.
+ * Labels for the legend; anything else falls back to a circle.
+ */
+export const ACTION_SHAPES = {
+    circle: "Decided Plan",
+    triangle: "Monitoring",
+};
+
+/** Equilateral triangle around the origin with circumradius `size`, point up. */
+function trianglePoints(size) {
+    const half = size * Math.sin(Math.PI / 3);
+    return `0,${-size} ${half},${size / 2} ${-half},${size / 2}`;
+}
+
+/**
+ * One marker outline. `size` is the circle radius; the triangle gets a larger circumradius so both
+ * read as the same weight on the radar.
+ */
+export function MarkerShape({ symbol, size, ...props }) {
+    if (symbol === "triangle") {
+        return <polygon points={trianglePoints(size * 1.45)} strokeLinejoin="round" {...props} />;
+    }
+    return <circle r={size} {...props} />;
 }
 
 function point(radius, angle) {
@@ -53,7 +79,7 @@ function DimensionLabel({ name, angle }) {
 
 function Marker({ item, active, onActivate, onSelect }) {
     const { x, y } = point(item.radius, item.angle);
-    const label = `#${item.no} ${item.keyword}, ${item.dimension}, ${horizonLabel(item.horizon)}, prioritas ${item.priority ?? "-"}`;
+    const label = `#${item.no} ${item.keyword}, ${item.dimension}, ${horizonLabel(item.horizon)}, prioritas ${item.priority ?? "-"}${item.status_action_name ? `, ${item.status_action_name}` : ""}`;
 
     const handleKeyDown = (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -76,18 +102,20 @@ function Marker({ item, active, onActivate, onSelect }) {
             onClick={() => onSelect(item)}
             onKeyDown={handleKeyDown}
         >
-            {active && <circle r={21} fill="none" stroke="var(--ring)" strokeWidth={3} />}
-            <circle
-                r={active ? 17 : 15}
+            {active && <MarkerShape symbol={item.symbol} size={21} fill="none" stroke="var(--ring)" strokeWidth={3} />}
+            <MarkerShape
+                symbol={item.symbol}
+                size={active ? 17 : 15}
                 fill={priorityFill(item.priority)}
                 stroke="var(--card)"
                 strokeWidth={2}
                 className="transition-[r] motion-reduce:transition-none"
             />
             <text
+                y={item.symbol === "triangle" ? 4 : 0}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontSize={12}
+                fontSize={item.symbol === "triangle" ? 11 : 12}
                 fontWeight={700}
                 fill="var(--primary-foreground)"
                 pointerEvents="none"
@@ -127,7 +155,7 @@ function MarkerTooltip({ item }) {
                 {item.status_action && (
                     <>
                         <dt>Action</dt>
-                        <dd className="m-0 font-medium text-foreground">{item.status_action}</dd>
+                        <dd className="m-0 font-medium text-foreground">{item.status_action_name ?? item.status_action}</dd>
                     </>
                 )}
             </dl>
@@ -247,6 +275,20 @@ export default function RadarScope({ points, links = [], activeNo, onActivate, o
                             />
                         );
                     })}
+                    {/* The organisation at the centre of the radar: the first ring, labelled. */}
+                    <circle cx={CENTRE_X} cy={CENTRE_Y} r={CORE_RADIUS * SCALE} fill="var(--radar-core)" stroke="var(--border)" strokeWidth={1.5} />
+                    <text
+                        x={CENTRE_X}
+                        y={CENTRE_Y}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={12}
+                        fontWeight={800}
+                        letterSpacing={1}
+                        fill="var(--radar-core-foreground)"
+                    >
+                        FIRM
+                    </text>
                     {DIMENSION_CONFIGS.map((dimension) => (
                         <DimensionLabel key={dimension.name} name={dimension.name} angle={dimension.angle} />
                     ))}

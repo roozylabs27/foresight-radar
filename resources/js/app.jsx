@@ -10,7 +10,7 @@ import { IngestionProvider } from '@/context/IngestionContext';
 import { Toaster } from '@/Components/ui/sonner';
 import { registerFlashToasts } from '@/lib/flash-toast';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Foresight Radar';
 
 // One wrapper per page, built once. Inertia resolves the page again on every visit; a new
 // wrapper function each time would be a new component type, so React would remount the page

@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils";
 
 const ALL = "all";
 
-export function currentMonth() {
-    return [dayjs().startOf("month").format("YYYY-MM-DD"), dayjs().endOf("month").format("YYYY-MM-DD")];
+/** Default period of the analysis pages: the last 12 calendar months, this month included. */
+export function defaultPeriod() {
+    return [dayjs().subtract(11, "month").startOf("month").format("YYYY-MM-DD"), dayjs().endOf("month").format("YYYY-MM-DD")];
 }
 
 /**
@@ -19,7 +20,7 @@ export function currentMonth() {
  * query the `*.fetch-data` endpoints read (`date[]`, `dimension`).
  */
 export function useAnalysisFilters(dimensions = []) {
-    const [period, setPeriod] = useState(currentMonth);
+    const [period, setPeriod] = useState(defaultPeriod);
     const [dimension, setDimension] = useState(ALL);
 
     return {
@@ -29,9 +30,9 @@ export function useAnalysisFilters(dimensions = []) {
         setDimension,
         activeDimension: dimensions.find((item) => String(item.value) === dimension) ?? null,
         params: { date: period, dimension: filterParam(dimension) },
-        isFiltered: dimension !== ALL || period.join() !== currentMonth().join(),
+        isFiltered: dimension !== ALL || period.join() !== defaultPeriod().join(),
         reset: () => {
-            setPeriod(currentMonth());
+            setPeriod(defaultPeriod());
             setDimension(ALL);
         },
     };

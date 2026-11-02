@@ -5,11 +5,11 @@ import qs from "qs";
 import { toast } from "sonner";
 import { GitCompareArrowsIcon, InfoIcon, MaximizeIcon, MinimizeIcon } from "lucide-react";
 
-import { currentMonth } from "@/Components/AnalysisFilters";
+import { defaultPeriod } from "@/Components/AnalysisFilters";
 import DataTable from "@/Components/DataTable";
 import DimensionChip from "@/Components/DimensionChip";
 import { priorityBadge } from "@/Components/PriorityBadge";
-import RadarScope, { LINK_STROKES, PRIORITY_FILLS, priorityFill } from "@/Components/RadarScope";
+import RadarScope, { ACTION_SHAPES, LINK_STROKES, MarkerShape, PRIORITY_FILLS, priorityFill } from "@/Components/RadarScope";
 import RadarSignalSheet from "@/Components/RadarSignalSheet";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
@@ -110,6 +110,16 @@ function Legends() {
                     </li>
                 ))}
             </ul>
+            <ul className="m-0 flex list-none flex-wrap justify-center gap-x-4 gap-y-1 p-0">
+                {Object.entries(ACTION_SHAPES).map(([symbol, label]) => (
+                    <li key={symbol} className="flex items-center gap-1.5">
+                        <svg aria-hidden="true" viewBox="-12 -12 24 24" className="size-3.5">
+                            <MarkerShape symbol={symbol} size={7.5} fill="var(--muted-foreground)" />
+                        </svg>
+                        {label}
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 }
@@ -117,7 +127,7 @@ function Legends() {
 /**
  * Foresight Radar: the signal list beside the 360° radar, a detail Sheet per
  * item and a fullscreen mode. `date` is `{ date: [start, end] }` (defaults to
- * this month) and `selectData` may hold a `dimension` id. `setLoading` mirrors
+ * the last 12 months) and `selectData` may hold a `dimension` id. `setLoading` mirrors
  * the loading state for a parent with its own indicator.
  */
 export default function Radar({ date, selectData, setLoading }) {
@@ -132,7 +142,7 @@ export default function Radar({ date, selectData, setLoading }) {
     const links = useCrossImpactLinks(showLinks, items);
 
     const dimension = selectData?.dimension ?? null;
-    const queryKey = qs.stringify({ date: date?.date ?? currentMonth(), dimension: dimension ?? undefined });
+    const queryKey = qs.stringify({ date: date?.date ?? defaultPeriod(), dimension: dimension ?? undefined });
 
     useEffect(() => {
         const controller = new AbortController();

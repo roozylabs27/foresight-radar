@@ -6,6 +6,12 @@
 
 export const RADAR_MAX_RADIUS = 9;
 
+/** The "FIRM" disc at the centre covers the first ring (radius units). */
+export const CORE_RADIUS = 1;
+
+/** Closest a marker centre may come to the centre, so a marker (triangles included) clears the core. */
+const MIN_MARKER_RADIUS = 2.2;
+
 /**
  * The eleven categories of the scenario planning method and the polar angle their sector is
  * centred on, 360/11 degrees apart: macro (six) on the left half, mezzo (five) on the right.
@@ -126,21 +132,21 @@ export function computeAntiCollisionPoints(items) {
             dispersed.push({
                 ...item,
                 angle: (centerAngle + angleOffsets[idx] + 360) % 360,
-                radius: Math.max(1.8, Math.min(8.6, item.baseRadius + radiusOffsets[idx])),
+                radius: Math.max(MIN_MARKER_RADIUS, Math.min(8.6, item.baseRadius + radiusOffsets[idx])),
                 centerAngle,
             });
         });
     });
 
-    // Relaxation pass so markers in a dimension do not overlap
-    const MIN_DIST = 0.95;
-    for (let iter = 0; iter < 12; iter++) {
+    // Relaxation pass so no two markers overlap, also across neighbouring sectors near the centre.
+    // Markers are pushed sideways within their own sector, then outwards when the sector is full.
+    const MIN_DIST = 1.2;
+    for (let iter = 0; iter < 40; iter++) {
         let hasOverlap = false;
         for (let i = 0; i < dispersed.length; i++) {
             for (let j = i + 1; j < dispersed.length; j++) {
                 const p1 = dispersed[i];
                 const p2 = dispersed[j];
-                if (p1.dimension !== p2.dimension) continue;
 
                 const rad1 = (p1.angle * Math.PI) / 180;
                 const rad2 = (p2.angle * Math.PI) / 180;
@@ -154,12 +160,20 @@ export function computeAntiCollisionPoints(items) {
                     const avgR = Math.max(2, (p1.radius + p2.radius) / 2);
                     const angleShift = (overlap / avgR) * (180 / Math.PI);
 
-                    if (p1.angle <= p2.angle) {
-                        p1.angle = Math.max(p1.centerAngle - 18, p1.angle - angleShift);
-                        p2.angle = Math.min(p2.centerAngle + 18, p2.angle + angleShift);
+                    // Signed shortest difference, so sectors around 0°/360° move the right way.
+                    const delta = ((p2.angle - p1.angle + 540) % 360) - 180;
+                    const before = [p1.angle, p2.angle];
+                    if (delta >= 0) {
+                        p1.angle = clampToSector(p1, p1.angle - angleShift);
+                        p2.angle = clampToSector(p2, p2.angle + angleShift);
                     } else {
-                        p1.angle = Math.min(p1.centerAngle + 18, p1.angle + angleShift);
-                        p2.angle = Math.max(p1.centerAngle - 18, p2.angle - angleShift);
+                        p1.angle = clampToSector(p1, p1.angle + angleShift);
+                        p2.angle = clampToSector(p2, p2.angle - angleShift);
+                    }
+                    // Both already at their sector edge: give the outer one more room outwards.
+                    if (before[0] === p1.angle && before[1] === p2.angle) {
+                        const outer = p1.radius >= p2.radius ? p1 : p2;
+                        outer.radius = Math.min(8.6, outer.radius + overlap * 2);
                     }
                 }
             }
@@ -168,4 +182,10 @@ export function computeAntiCollisionPoints(items) {
     }
 
     return dispersed;
+}
+
+/** Keep a marker within 16° of its sector centre (sectors are about 32.7° wide). */
+function clampToSector(item, angle) {
+    const offset = ((angle - item.centerAngle + 540) % 360) - 180;
+    return (item.centerAngle + Math.max(-16, Math.min(16, offset)) + 360) % 360;
 }
