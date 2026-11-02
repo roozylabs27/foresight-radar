@@ -79,11 +79,12 @@ class ForesightReportingServiceTest extends TestCase
         $this->assertEquals('2026-05-31 23:59:59', $resolved[1]);
     }
 
-    public function test_resolve_date_range_falls_back_to_current_month(): void
+    /** Without a period the analysis covers the last 12 calendar months, so last month's ratings stay visible. */
+    public function test_resolve_date_range_falls_back_to_the_last_twelve_months(): void
     {
         $resolved = $this->service->resolveDateRange(null);
 
-        $this->assertEquals(Carbon::now()->startOfMonth()->format('Y-m-d 00:00:00'), $resolved[0]);
+        $this->assertEquals(Carbon::now()->subMonthsNoOverflow(11)->startOfMonth()->format('Y-m-d 00:00:00'), $resolved[0]);
         $this->assertEquals(Carbon::now()->endOfMonth()->format('Y-m-d 23:59:59'), $resolved[1]);
     }
 
