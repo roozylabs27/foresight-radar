@@ -109,6 +109,10 @@ jobs:
             fi
             git pull origin "$TARGET_BRANCH"
 
+            # 1b. Recreate Docker containers if compose config changed
+            echo "[1b/5] Recreating Docker containers if compose config changed..."
+            docker compose up -d --remove-orphans
+
             # 2. Extract frontend build artifacts
             if [ -f "build.tar.gz" ]; then
               echo "[2/5] Extracting frontend build artifacts..."
