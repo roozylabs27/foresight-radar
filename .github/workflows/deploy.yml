@@ -38,6 +38,32 @@ jobs:
           tar -czf build.tar.gz -C public build
           ls -lh build.tar.gz
 
+      - name: Validate deployment secrets
+        run: |
+          echo "Validating required deployment secrets configuration:"
+          echo " - VPS_HOST: ${{ secrets.VPS_HOST != '' && 'OK' || 'MISSING' }}"
+          echo " - VPS_USERNAME: ${{ secrets.VPS_USERNAME != '' && 'OK' || 'MISSING' }}"
+          echo " - VPS_PROJECT_PATH: ${{ secrets.VPS_PROJECT_PATH != '' && 'OK' || 'MISSING' }}"
+          echo " - VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY != '' && 'OK' || 'EMPTY' }}"
+          echo " - VPS_PASSWORD: ${{ secrets.VPS_PASSWORD != '' && 'OK' || 'EMPTY' }}"
+
+          if [ -z "${{ secrets.VPS_HOST }}" ]; then
+            echo "Error: VPS_HOST secret is not configured."
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_USERNAME }}" ]; then
+            echo "Error: VPS_USERNAME secret is not configured."
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_PROJECT_PATH }}" ]; then
+            echo "Error: VPS_PROJECT_PATH secret is not configured."
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_SSH_KEY }}" ] && [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
+            echo "Error: Neither VPS_SSH_KEY nor VPS_PASSWORD is set. Please add one to Repository Secrets."
+            exit 1
+          fi
+
       - name: Upload build archive to VPS via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
