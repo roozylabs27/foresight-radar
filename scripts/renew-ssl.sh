@@ -12,3 +12,4 @@ docker run --rm \
 
 docker exec laravel_nginx nginx -s reload
 echo "[$(date -u)] SSL check completed and Nginx reloaded."
+

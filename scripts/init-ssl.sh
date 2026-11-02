@@ -53,3 +53,4 @@ echo "Reloading Nginx with new production certificate..."
 docker exec laravel_nginx nginx -s reload
 
 echo "=== SSL setup completed successfully for $PRIMARY_DOMAIN! ==="
+
