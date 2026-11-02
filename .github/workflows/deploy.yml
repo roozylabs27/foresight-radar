@@ -109,8 +109,19 @@ jobs:
             fi
             git pull origin "$TARGET_BRANCH"
 
-            # 1b. Recreate Docker containers if compose config changed
-            echo "[1b/5] Recreating Docker containers if compose config changed..."
+            # 1b. Ensure SSL certificate paths exist so Nginx can start cleanly
+            echo "[1b/5] Preparing SSL challenge and certificate paths..."
+            mkdir -p docker/certbot/conf/live/foresight-radar.id docker/certbot/www
+            if [ ! -f "docker/certbot/conf/live/foresight-radar.id/fullchain.pem" ]; then
+              echo "Generating temporary self-signed certificate to allow initial Nginx boot..."
+              openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+                -keyout "docker/certbot/conf/live/foresight-radar.id/privkey.pem" \
+                -out "docker/certbot/conf/live/foresight-radar.id/fullchain.pem" \
+                -subj "/CN=localhost"
+            fi
+
+            # 1c. Recreate Docker containers if compose config changed
+            echo "[1c/5] Recreating Docker containers if compose config changed..."
             docker compose up -d --remove-orphans
 
             # 2. Extract frontend build artifacts
