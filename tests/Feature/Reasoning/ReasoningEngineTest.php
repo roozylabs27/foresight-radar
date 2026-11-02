@@ -351,8 +351,8 @@ class ReasoningEngineTest extends TestCase
 
         $response = $this->reasoning();
 
-        // The selected period (this month) holds two forces; the trend reaches back further.
-        $this->assertSame(2, $response->json('total_active_forces'));
+        // The default period (last 12 months) holds all three forces; the trend reaches back twelve months.
+        $this->assertSame(3, $response->json('total_active_forces'));
 
         $trend = collect($response->json('eda_trend'));
         $this->assertCount(12, $trend);
