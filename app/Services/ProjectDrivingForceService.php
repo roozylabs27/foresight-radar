@@ -9,6 +9,7 @@ use App\Models\ForceAssessment;
 use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
+use App\Support\Provenance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -127,7 +128,7 @@ class ProjectDrivingForceService
                 'kind' => ForceAssessment::CONSENSUS,
                 'impact' => $rating->impact_analysis,
                 'uncertainty' => $rating->uncertainty_analysis,
-                'origin' => 'library',
+                'origin' => Provenance::LIBRARY,
             ]);
         }
     }
@@ -145,6 +146,7 @@ class ProjectDrivingForceService
             ->map(fn (ProjectDrivingForce $link) => [
                 'id' => $link->uuid,
                 'inclusion_status' => $link->inclusion_status,
+                'origin' => $link->origin,
                 'influence_note' => $link->influence_note,
                 'is_predetermined' => $link->is_predetermined,
                 'force' => $this->forceSummary($link->drivingForce),

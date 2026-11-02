@@ -13,6 +13,7 @@ use App\Services\TenantContext;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
@@ -78,7 +79,7 @@ class DrivingForceController extends Controller
                 'uuid' => Uuid::uuid1(),
                 'dimension_id' => $validated['dimension_id'],
                 'pic' => $validated['pic_id'],
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
                 'keyword' => $validated['keyword'],
                 'description' => $validated['description'],
                 'status' => 'PENDING',
@@ -108,7 +109,7 @@ class DrivingForceController extends Controller
             $validated = $request->validated();
 
             $driving_force->dimension_id = $validated['dimension_id'];
-            $driving_force->updated_by = auth()->id();
+            $driving_force->updated_by = Auth::id();
             $driving_force->pic = $validated['pic_id'];
             $driving_force->keyword = $validated['keyword'];
             $driving_force->description = $validated['description'];

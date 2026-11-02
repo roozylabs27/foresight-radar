@@ -4,11 +4,15 @@ namespace App\Services;
 
 use App\Enums\LlmJobStatus;
 use App\Jobs\GenerateScenarioNarrative;
+use App\Models\AiGenerationRun;
 use App\Models\Scenario;
+use App\Services\Llm\AiGenerationRecorder;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\LlmResponse;
 use App\Services\Llm\Prompts\ScenarioNarrativePrompt;
 use App\Services\Llm\StructuredLlmClient;
+use App\Support\Provenance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -81,17 +85,30 @@ class ScenarioNarrativeService
         $notice = null;
         $quadrants = null;
         $model = null;
+        $run = null;
+        // Recorded on every AI call (roadmap R1.12); the template output links no run.
+        $refs = ['scenario' => $scenario->uuid, 'signals' => array_map(fn ($item) => $item['signal']->id, $evidence)];
+        $record = fn (string $status, string $error, ?LlmResponse $response = null) => app(AiGenerationRecorder::class)
+            ->unsuccessful($status, 'scenario_narrative', $llm, ScenarioNarrativePrompt::VERSION, $refs, $error, $userId, $scenario->project_id, $response);
 
         if ($llm->isAvailable()) {
+            $response = null;
             try {
                 $response = $llm->generateJson(ScenarioNarrativePrompt::request(
                     $scenario,
                     $evidence,
                     (string) config('services.anthropic.narrative_effort', 'medium'),
                 ));
-                $quadrants = $this->validated($response->data, array_column($evidence, 'ref'));
+                try {
+                    $quadrants = $this->validated($response->data, array_column($evidence, 'ref'));
+                } catch (ValidationException $e) {
+                    $record(AiGenerationRun::REJECTED, (string) collect($e->errors())->flatten()->first(), $response);
+                    throw $e;
+                }
                 $model = $response->model;
+                $run = app(AiGenerationRecorder::class)->completed('scenario_narrative', $response, ScenarioNarrativePrompt::VERSION, $refs, $userId, $scenario->project_id);
             } catch (LlmException $e) {
+                $record($response ? AiGenerationRun::REJECTED : AiGenerationRun::FAILED, $e->reason, $response);
                 // A template would replace a narrative the AI already wrote, so a regeneration keeps it instead.
                 if ($scenario->quadrants->contains('is_ai_generated', true)) {
                     Log::warning('Scenario regeneration failed; previous narrative kept', ['reason' => $e->reason]);
@@ -109,13 +126,14 @@ class ScenarioNarrativeService
 
         $signalIds = collect($evidence)->mapWithKeys(fn ($item) => [$item['ref'] => $item['signal']->id]);
 
-        DB::transaction(function () use ($scenario, $quadrants, $evidence, $signalIds, $provider, $model, $notice, $userId) {
+        DB::transaction(function () use ($scenario, $quadrants, $evidence, $signalIds, $provider, $model, $notice, $userId, $run) {
             // Rows are filled in place: a framework's quadrants exist before any narrative (R0.5).
             $existing = $scenario->quadrants()->get()->keyBy('position');
             foreach ($quadrants as $quadrant) {
                 $attributes = collect($quadrant)->except('cited_refs')->all() + [
                     'cited_signal_ids' => array_values(array_map(fn ($ref) => $signalIds[$ref], $quadrant['cited_refs'])),
                     'is_ai_generated' => $provider !== self::PROVIDER_TEMPLATE,
+                    'origin' => $provider !== self::PROVIDER_TEMPLATE ? Provenance::AI : Provenance::TEMPLATE,
                     'provider' => $provider,
                     'edited_by' => null,
                     'edited_at' => null,
@@ -124,6 +142,7 @@ class ScenarioNarrativeService
                     'reviewed_at' => null,
                     'stale_since' => null,
                     'stale_reason' => null,
+                    'generation_run_id' => $run?->id,
                 ];
                 // An approved framework's quadrant names are a team decision (G5); the narrative leaves them.
                 if ($scenario->isFrameworkApproved()) {
@@ -141,6 +160,7 @@ class ScenarioNarrativeService
                 'generation_status' => LlmJobStatus::COMPLETED,
                 'generation_error' => null,
                 'generation_notice' => $notice,
+                'generation_run_id' => $run?->id,
                 'updated_by' => $userId,
             ]);
         });

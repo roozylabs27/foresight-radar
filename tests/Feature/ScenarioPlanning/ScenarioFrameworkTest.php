@@ -187,6 +187,7 @@ class ScenarioFrameworkTest extends TestCase
         $this->assertSame('Favorable · Slow', $quadrants['HL']->title);
         $this->assertNull($quadrants['HL']->narrative);
         $this->assertNull($quadrants['HL']->edited_at);
+        $this->assertSame('human', $quadrants['HL']->origin);
 
         $this->createFramework()->assertSessionHasErrors('framework');
         $this->assertSame(1, Scenario::count());

@@ -1,7 +1,7 @@
 import { ArrowLeftRightIcon, CircleCheckIcon, PencilIcon, Trash2Icon, UndoIcon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
-import { statusBadge } from "@/Components/StatusBadge";
+import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { Button } from "@/Components/ui/button";
 
 /** One critical uncertainty: its forces, poles, reason and approval state, with the actions allowed. */
@@ -13,9 +13,9 @@ export default function UncertaintyCard({ uncertainty, canManage, locked, onEdit
             <header className="flex flex-wrap items-center gap-2">
                 <h3 className="m-0 text-sm font-semibold text-foreground">{uncertainty.name}</h3>
                 {approved ? (
-                    <span className={statusBadge({ tone: "approved" })}>Sumbu {uncertainty.axis} · disetujui</span>
+                    <ProvenanceBadge review="approved" reviewLabel={`Sumbu ${uncertainty.axis} · disetujui`} />
                 ) : (
-                    <span className={statusBadge({ tone: "pending" })}>Usulan</span>
+                    <ProvenanceBadge origin={uncertainty.origin} review="proposed" />
                 )}
             </header>
 

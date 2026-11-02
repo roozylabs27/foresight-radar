@@ -6,6 +6,7 @@ use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\TimeHorizon;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\LlmResponse;
 use App\Services\Llm\Prompts\SignalExtractionPrompt;
 use App\Services\Llm\StructuredLlmClient;
 use App\Support\EvidenceVerifier;
@@ -26,7 +27,7 @@ class LlmSignalExtractor
     public function __construct(protected StructuredLlmClient $llm) {}
 
     /**
-     * @return array{candidates: array<int, array>, meta: array<string, mixed>}
+     * @return array{candidates: array<int, array>, meta: array<string, mixed>, response: LlmResponse}
      *
      * @throws LlmException
      */
@@ -113,6 +114,7 @@ class LlmSignalExtractor
         $capped = max(0, count($candidates) - $limit);
 
         return [
+            'response' => $response,
             'candidates' => array_slice($candidates, 0, $limit),
             'meta' => [
                 'provider' => $response->provider,

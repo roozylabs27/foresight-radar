@@ -30,7 +30,7 @@ class UserRequest extends FormRequest
             function ($attribute, $value, $fail) {
                 $role = Role::find($value);
                 if ($role && in_array($role->name, ['super-admin', 'developer'])) {
-                    if (! auth()->user() || ! auth()->user()->hasAnyRole(['super-admin', 'developer'])) {
+                    if (! $this->user() || ! $this->user()->hasAnyRole(['super-admin', 'developer'])) {
                         $fail('You are not authorized to assign this privileged role.');
                     }
                 }

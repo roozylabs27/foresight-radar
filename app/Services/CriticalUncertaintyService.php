@@ -127,6 +127,7 @@ class CriticalUncertaintyService
                 'high_pole_label' => $uncertainty->high_pole_label,
                 'selection_rationale' => $uncertainty->selection_rationale,
                 'status' => $uncertainty->status,
+                'origin' => $uncertainty->origin,
                 'axis' => $uncertainty->axis,
                 'approved_by' => $uncertainty->approver?->name,
                 'approved_at' => $uncertainty->approved_at?->toISOString(),

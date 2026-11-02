@@ -2,6 +2,7 @@ import { PencilIcon, Trash2Icon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
+import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { INDICATOR_DIRECTIONS, INDICATOR_FREQUENCIES, INDICATOR_SOURCES } from "@/domain/scenarioPlanning";
@@ -16,7 +17,7 @@ export default function IndicatorCard({ indicator, quadrants, canManage, onEdit,
             <header className="flex flex-wrap items-center gap-2">
                 <h3 className="m-0 text-sm font-semibold text-foreground">{indicator.name}</h3>
                 <span className={statusBadge({ tone: indicator.source_type === "manual" ? "neutral" : "approved" })}>{INDICATOR_SOURCES[indicator.source_type]}</span>
-                {indicator.review_status === "proposed" && <span className={statusBadge({ tone: "pending" })}>Usulan dari narasi</span>}
+                {indicator.review_status === "proposed" && <ProvenanceBadge origin={indicator.origin} review="proposed" />}
                 {indicator.status === "retired" && <span className={statusBadge({ tone: "closed" })}>Tidak dipantau lagi</span>}
                 {!indicator.discriminates && Object.keys(indicator.directions).length > 0 && (
                     <HintTooltip content="Arahnya sama di semua kuadran yang dinilai, jadi indikator ini belum membedakan skenario.">

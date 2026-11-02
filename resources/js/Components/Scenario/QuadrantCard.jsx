@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { CircleCheckIcon, EyeIcon, LoaderCircleIcon, PencilIcon, UndoIcon } from "lucide-react";
 
 import HintTooltip from "@/Components/HintTooltip";
+import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -23,11 +24,7 @@ import { cn } from "@/lib/utils";
 export function ProvenanceBadges({ quadrant }) {
     return (
         <span className="flex flex-wrap gap-1">
-            {quadrant.is_ai_generated ? (
-                <span className={cn(statusBadge(), "bg-primary text-primary-foreground")}>{providerLabel(quadrant.provider)}</span>
-            ) : quadrant.provider ? (
-                <span className={cn(statusBadge(), "bg-muted text-muted-foreground")}>Kerangka tanpa AI</span>
-            ) : null}
+            <ProvenanceBadge origin={quadrant.origin} originLabel={quadrant.origin === "ai" ? providerLabel(quadrant.provider) : undefined} />
             {quadrant.edited && <span className={cn(statusBadge(), "bg-warning-soft text-warning")}>Diedit analis</span>}
             {quadrant.stale_reason && (
                 <HintTooltip content={quadrant.stale_reason}>
@@ -39,13 +36,6 @@ export function ProvenanceBadges({ quadrant }) {
         </span>
     );
 }
-
-/** Narrative review states (App\Models\ScenarioQuadrant::REVIEW_STATUSES); approved is gate G6. */
-const REVIEW = {
-    draft: { label: "Draf", tone: "neutral" },
-    reviewed: { label: "Ditinjau", tone: "pending" },
-    approved: { label: "Disetujui", tone: "approved" },
-};
 
 /** Review badge and, for managers, the next review actions of a quadrant with a narrative. */
 function ReviewControls({ quadrant, canManage, onReview }) {
@@ -59,7 +49,7 @@ function ReviewControls({ quadrant, canManage, onReview }) {
 
     return (
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <span className={statusBadge({ tone: REVIEW[status].tone })}>{REVIEW[status].label}</span>
+            <ProvenanceBadge review={status} />
             {quadrant.reviewed_by && status !== "draft" && <span className="text-[11px] text-muted-foreground">oleh {quadrant.reviewed_by}</span>}
             {canManage && onReview && (
                 <div className="ml-auto flex flex-wrap gap-1.5">

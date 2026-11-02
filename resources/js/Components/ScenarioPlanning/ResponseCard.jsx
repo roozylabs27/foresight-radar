@@ -2,6 +2,7 @@ import { CircleCheckIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
+import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { RESPONSE_FITS, RESPONSE_STATUSES, ROBUSTNESS } from "@/domain/scenarioPlanning";
@@ -16,7 +17,7 @@ export default function ResponseCard({ response, quadrants, canManage, busy, onE
         <article className="flex flex-col gap-3 rounded-lg border border-border p-4">
             <header className="flex flex-wrap items-center gap-2">
                 <h3 className="m-0 text-sm font-semibold text-foreground">{response.title}</h3>
-                <span className={statusBadge({ tone: status.tone })}>{status.label}</span>
+                <ProvenanceBadge origin={response.origin} review={response.status} reviewLabel={status.label} />
                 {robustness && (
                     <HintTooltip content={robustness.hint}>
                         <span tabIndex={0} className={statusBadge({ tone: response.robustness === "robust" ? "approved" : "neutral" })}>

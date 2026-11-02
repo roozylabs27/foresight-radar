@@ -9,7 +9,7 @@
 - **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
 - **Current objective:** Tenant isolation & invitation audit remediation complete (2026-10-30); next: scenario planning roadmap. The audit's original verdict (NOT READY, 2026-10-26) is superseded by the remediation table in `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`.
 - **Current blocker:** None. Every numbered tenant/invitation finding is fixed and covered by tests (TENANT-001..010, INVITE-001..009, UX-001), all uncommitted. Not done: Playwright smoke for the members page (UX-001 checklist), audit log for membership changes (P3), MySQL row-lock behaviour (tests run on SQLite).
-- **Highest-priority next task:** User review and commit of AI guardrails (R1.14, R2.10), taxonomy (R0.3), scenario planning R0.1/R1.13/R0.2/R1.1/R1.3/R0.4/R0.5/R1.5–R1.11, the tooltip sweep, the frontend state fixes and the route throttle fix — tenant work is committed (`ceaf715`, `5cc2f77`). No matrix row is misaligned any more. Remaining R1 items: R1.2 (force description and influence on the focal issue), R1.12 (AI generation runs); step 6 still lives on `/scenarios`. R0.4 uses the default answers to Pak Jaka's questions 3–5.
+- **Highest-priority next task:** User review and commit of R1.12, R0.6 and R3.3 plus the session 38–41 records; all P0/P1 roadmap items are done. Next small items: R2.9 (response assumptions linked to conditions), R3.4 (mark superseded product docs). Step 6 still lives on `/scenarios`. R0.4 uses the default answers to Pak Jaka's questions 3–5.
 - **Scenario planning blueprint (2026-10-30):** Methodology alignment audit against `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` complete (docs only). Overall alignment partial: steps 2, 3, 4, 6 usable; 1, 5, 8 missing; 7, 9 minimal. First product slice after tenant work: roadmap R0.3 (taxonomy), then R0.1 → R0.2 → R0.4 → R0.5 (`docs/product/SCENARIO_PLANNING_DEVELOPMENT_ROADMAP.md`).
 
 ---
@@ -423,6 +423,10 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-02 (uncommitted) | Roadmap R3.3 `auth()` helper cleanup + policy guard | **PASS** | Pint PASS (1 import order fixed); Larastan L5 `[OK] No errors`; PHPUnit 495 passed (4,742 assertions, 443.60s); backend only |
+| 2026-11-02 (uncommitted) | Scenario roadmap R0.6 origin and review convention | **PASS** | Pint PASS (1 file fixed); Larastan L5 `[OK] No errors`; PHPUnit 494 passed (4,741 assertions, 502.07s) — build ran before the suite, not during; `npm run build` PASS; migration `2026_11_02_000003` applied to the dev DB (quadrants backfilled); browser: one provider badge per AI quadrant, review badge, response "Usulan" |
+| 2026-11-02 (uncommitted) | Scenario roadmap R1.12 AI generation runs | **PASS** | Pint 370 files (2 import orders fixed); Larastan L5 `[OK] No errors`; PHPUnit 494 passed (4,735 assertions, 284.06s); migration `2026_11_02_000002` applied to the dev DB; backend only, no build needed |
+| 2026-11-02 (uncommitted) | R1.2 description length; radar markers by Status of Action, FIRM disc, marker spacing; 12-month default period | **PASS** | Pint 368 files PASS; Larastan L5 `[OK] No errors`; PHPUnit 489 passed (4,711 assertions, 401.00s); `npm run build` PASS; an earlier full run had 1 failure (`ProjectTest` confirm focal issue) caused by running `npm run build` during the suite (Vite manifest rewritten mid-test) — the test passes alone and in the clean rerun; browser (light and dark): no marker overlap, FIRM disc clear |
 | 2026-11-02 (uncommitted) | Scenario roadmap R1.3 signals aggregate into forces + force merge | **PASS** | Pint 368 files (1 fixed); Larastan L5 `[OK] No errors` (one collection value type fixed); PHPUnit 488 passed (4,700 assertions, 1459.82s — container was slow); `npm run build` PASS (5m 18s); migration `2026_11_02_000001` applied to the dev DB; browser: merge dialog validation and target list (cancelled, no dev data merged), review form force name field and validation (cancelled) |
 | 2026-11-02 (uncommitted) | Scenario roadmap R1.11 workspace stepper + grouped navigation | **PASS** | Pint 365 files PASS; Larastan L5 `[OK] No errors`; PHPUnit 483 passed (4,656 assertions, 646.43s); `npm run build` PASS (2m 57s); browser (signed in again with the seeded local test account after the session expired): grouped sidebar, overview card (next step 5, last gate G5 by Roozy), stepper on step 4, all page requests 2xx/304 (earlier 401/502 console entries came from the expired session and a PHP-FPM reload) |
 | 2026-11-01 (uncommitted) | Scenario roadmap R1.10 staleness flags | **PASS** | Pint 364 files (1 fixed); Larastan L5 `[OK] No errors` (one nullable `fresh()` fixed); PHPUnit 480 passed (4,455 assertions, 424.52s); `npm run build` PASS; migration `2026_10_31_000011` applied to the dev DB; browser: sample framework flagged via tinker (a real score change would also withdraw the sample's G3–G5), banner with reason and affected quadrant, keep cleared it, 0 console errors |
@@ -444,6 +448,43 @@
 ---
 
 ## Session Log
+
+### 2026-11-02 — Session 41 (R3.3 `auth()` helper cleanup)
+
+- **RED → GREEN:** new `tests/Unit/AuthHelperPolicyTest` scans app, routes, database and tests for the `auth()` helper; with the unfixed `CrossImpactController` it failed and named `CrossImpactController.php:46` (file temporarily stashed for the check, then restored).
+- **Fix:** `CrossImpactController`, `DrivingForceController` (2), `UserController` → `Auth::id()` / `Auth::user()`; `UserRequest` → `$this->user()`. No `auth()` call remains.
+- **Docs:** roadmap R3.3 done; `feature_list.json` FEAT-038.
+- **Next recommended action:** user review and commit; then R2.9 or R3.4.
+
+### 2026-11-02 — Session 40 (R0.6 origin and review convention)
+
+- **RED → GREEN:** origin assertions added to `ProjectDrivingForceTest` (exercise forces `library`), `ScenarioFrameworkTest` (framework quadrants `human`) and `Llm/ScenarioTest` (template `template`, AI `ai`) failed first.
+- **Data:** migration `2026_11_02_000003_add_origin_to_project_forces_and_quadrants` (`project_driving_forces.origin` default library; `scenario_quadrants.origin` default human, backfilled ai / template from `is_ai_generated` / `provider`). `App\Support\Provenance` holds the origin values; narratives set `origin`; services use the constants instead of string literals; quadrant, project force and critical uncertainty payloads expose `origin`.
+- **Convention:** tables with their own decision column use it as the review state (CU / response `status`, `inclusion_status`, `framework_status`) instead of a duplicate `review_status`; documented in `docs/architecture/origin-review-convention.md` (note: `/docs` is gitignored).
+- **Frontend:** `domain/provenance.js` (origins, review states) and shared `Components/ProvenanceBadge.jsx`; replaces the per-component badges in `QuadrantCard` (provider / template / review), `QuadrantImplications` and `IndicatorCard` ("Usulan dari narasi"), `ResponseCard` and `UncertaintyCard`.
+- **Docs:** roadmap R0.6 done; matrix X.3 complete (73/10/11/0); `feature_list.json` FEAT-037.
+- **Next recommended action:** user review and commit; then R3.3.
+
+### 2026-11-02 — Session 39 (R1.12 AI generation runs)
+
+- **RED → GREEN:** 5 new tests in `LlmSignalExtractionTest` (completed run linked from signals; failed call recorded, keyword fallback unlinked; no run without AI) and `Llm/ScenarioTest` (completed run linked from scenario and quadrants; rejected citations and failed provider recorded, template unlinked) failed first.
+- **Data:** migration `2026_11_02_000002_create_ai_generation_runs_table` (`ai_generation_runs` + nullable `generation_run_id` on `signals`, `scenarios`, `scenario_quadrants`); `AiGenerationRun` model (`COMPLETED`, `FAILED`, `REJECTED`).
+- **Recording:** `Services/Llm/AiGenerationRecorder` (`completed`, `unsuccessful`); `SignalExtractionService` records each AI extraction (input: source uuid; user = uploader) and links the run from the signals it wrote; `LlmSignalExtractor` also returns the raw response. `ScenarioNarrativeService::generate` records completed, failed and rejected calls (input: scenario uuid + evidence signal ids; exercise id for frameworks) and links the run from the scenario and quadrants it filled.
+- **Mistake caught:** a `sed` meant for a new test also changed `'overloaded'` in the existing `test_a_failed_regeneration_keeps_the_previous_ai_narrative`; restored, the diff now only adds tests.
+- **Scope:** no UI; per-table provider columns stay for display.
+- **Docs:** roadmap R1.12 done; `feature_list.json` FEAT-036.
+- **Next recommended action:** user review and commit; then R0.6 / R3.3.
+
+### 2026-11-02 — Session 38 (R1.2 description length; radar readability; default period)
+
+- **R1.2 RED → GREEN:** `DrivingForceTest::test_a_description_of_up_to_120_words_is_accepted_on_create_and_update` failed first (100 words → 422). `DrivingForceRequest::DESCRIPTION_WORDS = 120` for create and update (was 20 / 30); keyword stays ≤4 words; the force form validates both on the client and shows a live word count. The per-exercise influence note already existed (R0.2).
+- **Radar (user requests):** markers drawn by `status_actions.symbol` — Monitoring triangle, Decided Plan circle (`MarkerShape` in `RadarScope.jsx`), legend row for both shapes, tooltip shows the action name. Centre disc "FIRM" with new tokens `--radar-core` / `--radar-core-foreground` (navy disc light mode, near-black disc dark mode, white text).
+- **Marker spacing:** `radarLayout.js` keeps markers ≥2.2 units from the centre (clear of the disc) and the relaxation now separates any overlapping pair, across dimensions too, by pushing along the line between them while clamping each marker to its own sector (±16°) and horizon band. Previously only same-dimension pairs were pushed sideways with a 0.95-unit gap, so #1/#9/#2/#20 and #26/#5 overlapped. Measured: no pair under 31 px, closest marker 61 px from the centre.
+- **Default period:** the analysis pages (`AnalysisFilters.defaultPeriod`, Radar, Prioritizing, Overall Status) and the backend fallbacks (`ForesightReportingService::resolveDateRange`, `DrivingForceService`) now use the last 12 calendar months instead of the current month, which left the radar empty at the start of each month. `ForesightReportingServiceTest` updated.
+- **Test race noted:** running `npm run build` while PHPUnit runs can fail Inertia page tests (manifest rewritten); keep builds out of suite runs.
+- **Docs:** roadmap R1.2 done; matrix 2.4 complete (72/11/11/0); audit G04 fixed; `feature_list.json` FEAT-034, FEAT-035.
+- **Commits by the user meanwhile:** `5c4e630` briefly restored the current-month backend fallback, `42bc73b` put the 12-month fallback back and aligned `ReasoningEngineTest`; rerun on HEAD: `ReasoningEngineTest` + `ForesightReportingServiceTest` 18 passed.
+- **Next recommended action:** R1.12.
 
 ### 2026-11-02 — Session 37 (R1.3 signals aggregate into forces; merge)
 

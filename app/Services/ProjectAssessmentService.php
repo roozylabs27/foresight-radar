@@ -7,6 +7,7 @@ use App\Models\ForceAssessment;
 use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
+use App\Support\Provenance;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -38,7 +39,7 @@ class ProjectAssessmentService
             'uncertainty' => (int) $validated['uncertainty'],
             'impact_rationale' => $validated['impact_rationale'] ?? null,
             'uncertainty_rationale' => $validated['uncertainty_rationale'] ?? null,
-            'origin' => 'human',
+            'origin' => Provenance::HUMAN,
             'updated_by' => $user->id,
         ]);
         $assessment->project_driving_force_id = $link->id;

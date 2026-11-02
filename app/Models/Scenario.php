@@ -59,6 +59,7 @@ class Scenario extends Model
         'generation_status',
         'generation_error',
         'generation_notice',
+        'generation_run_id',
         'created_by',
         'updated_by',
     ];

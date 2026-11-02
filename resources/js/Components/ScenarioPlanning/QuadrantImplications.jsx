@@ -2,6 +2,7 @@ import { CopyPlusIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
+import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { IMPACT_LEVELS, IMPLICATION_TYPES } from "@/domain/scenarioPlanning";
@@ -14,7 +15,8 @@ function Item({ item, canManage, onEdit, onRemove }) {
         <li className="flex items-start gap-2 rounded-md bg-muted/40 p-2">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                    {type ? <span className={statusBadge({ tone: type.tone })}>{type.label}</span> : <span className={statusBadge({ tone: "pending" })}>Usulan dari narasi</span>}
+                    {type && <span className={statusBadge({ tone: type.tone })}>{type.label}</span>}
+                    {item.review_status === "proposed" && <ProvenanceBadge origin={item.origin} review="proposed" />}
                     {item.priority && <span className="font-medium text-foreground">P{item.priority}</span>}
                     {item.impact_level && <span>{IMPACT_LEVELS[item.impact_level]}</span>}
                     {item.generic && (

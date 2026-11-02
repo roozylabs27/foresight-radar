@@ -8,6 +8,7 @@ use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\User;
+use App\Support\Provenance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,7 +30,7 @@ class ScenarioImplicationService
 
         return DB::transaction(function () use ($quadrant, $validated, $forces, $conditions, $user) {
             $implication = $quadrant->implicationItems()->create($this->attributes($validated) + [
-                'origin' => 'human',
+                'origin' => Provenance::HUMAN,
                 'review_status' => 'accepted',
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
@@ -136,7 +137,7 @@ class ScenarioImplicationService
                 'type' => null,
                 'title' => Str::limit('Implikasi narasi: '.$row->title, 160, ''),
                 'description' => $row->implications,
-                'origin' => 'migrated',
+                'origin' => Provenance::MIGRATED,
                 'review_status' => 'proposed',
                 'created_at' => now(),
                 'updated_at' => now(),

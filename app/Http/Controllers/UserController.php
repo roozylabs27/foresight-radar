@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
@@ -19,7 +20,7 @@ class UserController extends Controller
     public function index()
     {
         $title = 'User';
-        $user = auth()->user();
+        $user = Auth::user();
         if ($user?->hasRole('developer')) {
             $roles = Role::select('id', 'display_name')->get();
         } elseif ($user?->hasRole('super-admin')) {

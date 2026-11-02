@@ -6,6 +6,7 @@ use App\Models\EarlyWarningIndicator;
 use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
+use App\Support\Provenance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,7 +30,7 @@ class EarlyWarningIndicatorService
             $indicator = EarlyWarningIndicator::create($this->attributes($validated, $links) + [
                 'project_id' => $project->id,
                 'status' => $validated['status'] ?? 'active',
-                'origin' => 'human',
+                'origin' => Provenance::HUMAN,
                 'review_status' => 'accepted',
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
@@ -158,7 +159,7 @@ class EarlyWarningIndicatorService
                         'frequency' => 'ad_hoc',
                         'source_type' => 'manual',
                         'status' => 'active',
-                        'origin' => 'migrated',
+                        'origin' => Provenance::MIGRATED,
                         'review_status' => 'proposed',
                         'created_at' => now(),
                         'updated_at' => now(),
