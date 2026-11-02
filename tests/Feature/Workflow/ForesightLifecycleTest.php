@@ -54,9 +54,9 @@ class ForesightLifecycleTest extends TestCase
         $dim = Dimension::create(['name' => 'Technology', 'symbol' => 'T', 'environment_id' => $env->id, 'uuid' => Uuid::uuid1()]);
         $th = TimeHorizon::create(['name' => 'Mid Term', 'code' => 'MT', 'uuid' => Uuid::uuid1()]);
         $sa = StatusAction::create(['name' => 'Act', 'symbol' => 'A', 'uuid' => Uuid::uuid1()]);
-        Priority::create(['id' => 1, 'name' => 'High', 'color' => '#ff0000', 'uuid' => Uuid::uuid1()]);
-        Priority::create(['id' => 2, 'name' => 'Medium', 'color' => '#ffff00', 'uuid' => Uuid::uuid1()]);
-        Priority::create(['id' => 3, 'name' => 'Low', 'color' => '#00ff00', 'uuid' => Uuid::uuid1()]);
+        $highPriority = Priority::create(['name' => 'High', 'color' => '#ff0000', 'uuid' => Uuid::uuid1()]);
+        Priority::create(['name' => 'Medium', 'color' => '#ffff00', 'uuid' => Uuid::uuid1()]);
+        Priority::create(['name' => 'Low', 'color' => '#00ff00', 'uuid' => Uuid::uuid1()]);
 
         // Stage 1: Create Driving Force (PENDING status)
         $res1 = $this->actingAs($user)->postJson('/driving-force', [
@@ -95,7 +95,7 @@ class ForesightLifecycleTest extends TestCase
         $rating->refresh();
         $this->assertEquals(8, $rating->impact_analysis);
         $this->assertEquals(7, $rating->uncertainty_analysis);
-        $this->assertEquals(1, $rating->priority_id); // High priority
+        $this->assertEquals($highPriority->id, $rating->priority_id); // High priority
 
         // Stage 4: Assign Status Action
         $res4 = $this->actingAs($user)->postJson("/status-action/{$rating->uuid}", [
