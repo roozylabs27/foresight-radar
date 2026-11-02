@@ -97,6 +97,8 @@ jobs:
 
       - name: Build production assets
         run: npm run build
+        env:
+          VITE_APP_NAME: "Foresight Radar"
 
   e2e:
     name: Headless E2E Smoke & Critical Journeys
@@ -137,6 +139,8 @@ jobs:
 
       - name: Build assets
         run: npm run build
+        env:
+          VITE_APP_NAME: "Foresight Radar"
 
       - name: Prepare Laravel application
         env:

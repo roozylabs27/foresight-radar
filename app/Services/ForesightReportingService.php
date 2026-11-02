@@ -26,7 +26,8 @@ class ForesightReportingService
         }
 
         return [
-            Carbon::now()->startOfMonth()->format('Y-m-d 00:00:00'),
+            // Same default as the analysis pages: the last 12 calendar months, this month included.
+            Carbon::now()->subMonthsNoOverflow(11)->startOfMonth()->format('Y-m-d 00:00:00'),
             Carbon::now()->endOfMonth()->format('Y-m-d 23:59:59'),
         ];
     }

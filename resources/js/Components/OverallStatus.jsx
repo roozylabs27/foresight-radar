@@ -5,7 +5,7 @@ import qs from "qs";
 import { toast } from "sonner";
 import { CheckIcon, FileSpreadsheetIcon, LoaderCircleIcon } from "lucide-react";
 
-import { currentMonth } from "@/Components/AnalysisFilters";
+import { defaultPeriod } from "@/Components/AnalysisFilters";
 import DataTable, { spanEqual, useServerTable } from "@/Components/DataTable";
 import DimensionChip from "@/Components/DimensionChip";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -117,7 +117,7 @@ async function exportWorkbook(records) {
  * Registered driving forces grouped by dimension, with an Overall and a
  * Detail Info view and an Excel export (`export-registered-list`).
  *
- * `date` is `{ date: [start, end] }` (defaults to this month) and `selectedData`
+ * `date` is `{ date: [start, end] }` (defaults to the last 12 months) and `selectedData`
  * holds the extra filters (`dimension`, `time_horizon`, `priority`,
  * `status_action`); empty values are not sent. `setLoading` mirrors the
  * loading state for a parent that shows its own indicator.
@@ -127,7 +127,7 @@ export default function OverallStatus({ date, selectedData, permissions = [], se
     const [exporting, setExporting] = useState(false);
 
     const params = {
-        date: date?.date ?? currentMonth(),
+        date: date?.date ?? defaultPeriod(),
         ...Object.fromEntries(
             Object.entries(selectedData ?? {}).filter(([, value]) => value !== null && value !== undefined && value !== "")
         ),

@@ -32,6 +32,8 @@ jobs:
 
       - name: Build production assets
         run: npm run build
+        env:
+          VITE_APP_NAME: "Foresight Radar"
 
       - name: Package build artifacts
         run: |

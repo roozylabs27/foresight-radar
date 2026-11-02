@@ -6,6 +6,12 @@
 
 export const RADAR_MAX_RADIUS = 9;
 
+/** The "FIRM" disc at the centre covers the first ring (radius units). */
+export const CORE_RADIUS = 1;
+
+/** Closest a marker centre may come to the centre, so a marker (triangles included) clears the core. */
+const MIN_MARKER_RADIUS = 2.2;
+
 /**
  * The eleven categories of the scenario planning method and the polar angle their sector is
  * centred on, 360/11 degrees apart: macro (six) on the left half, mezzo (five) on the right.
@@ -126,46 +132,67 @@ export function computeAntiCollisionPoints(items) {
             dispersed.push({
                 ...item,
                 angle: (centerAngle + angleOffsets[idx] + 360) % 360,
-                radius: Math.max(1.8, Math.min(8.6, item.baseRadius + radiusOffsets[idx])),
+                radius: Math.max(MIN_MARKER_RADIUS, Math.min(8.6, item.baseRadius + radiusOffsets[idx])),
                 centerAngle,
             });
         });
     });
 
-    // Relaxation pass so markers in a dimension do not overlap
-    const MIN_DIST = 0.95;
-    for (let iter = 0; iter < 12; iter++) {
+    // Relaxation pass so no two markers overlap, also across neighbouring sectors near the centre.
+    // Overlapping markers push each other apart along the line between them; each stays inside its own
+    // sector and horizon band, so its position keeps its meaning.
+    const MIN_DIST = 1.15;
+    for (let iter = 0; iter < 80; iter++) {
         let hasOverlap = false;
         for (let i = 0; i < dispersed.length; i++) {
             for (let j = i + 1; j < dispersed.length; j++) {
                 const p1 = dispersed[i];
                 const p2 = dispersed[j];
-                if (p1.dimension !== p2.dimension) continue;
+                const a = toXY(p1);
+                const b = toXY(p2);
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                let dist = Math.hypot(dx, dy);
+                if (dist >= MIN_DIST) continue;
 
-                const rad1 = (p1.angle * Math.PI) / 180;
-                const rad2 = (p2.angle * Math.PI) / 180;
-                const dx = p2.radius * Math.cos(rad2) - p1.radius * Math.cos(rad1);
-                const dy = p2.radius * Math.sin(rad2) - p1.radius * Math.sin(rad1);
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist < MIN_DIST && dist > 0.001) {
-                    hasOverlap = true;
-                    const overlap = (MIN_DIST - dist) / 2;
-                    const avgR = Math.max(2, (p1.radius + p2.radius) / 2);
-                    const angleShift = (overlap / avgR) * (180 / Math.PI);
-
-                    if (p1.angle <= p2.angle) {
-                        p1.angle = Math.max(p1.centerAngle - 18, p1.angle - angleShift);
-                        p2.angle = Math.min(p2.centerAngle + 18, p2.angle + angleShift);
-                    } else {
-                        p1.angle = Math.min(p1.centerAngle + 18, p1.angle + angleShift);
-                        p2.angle = Math.max(p1.centerAngle - 18, p2.angle - angleShift);
-                    }
+                hasOverlap = true;
+                if (dist < 0.001) {
+                    // Same spot: separate along the tangent.
+                    const tangent = ((p1.angle + 90) * Math.PI) / 180;
+                    dx = Math.cos(tangent);
+                    dy = Math.sin(tangent);
+                    dist = 1;
                 }
+                const push = (MIN_DIST - Math.min(dist, MIN_DIST)) / 2 + 0.01;
+                const ux = dx / dist;
+                const uy = dy / dist;
+                place(p1, a.x - ux * push, a.y - uy * push);
+                place(p2, b.x + ux * push, b.y + uy * push);
             }
         }
         if (!hasOverlap) break;
     }
 
     return dispersed;
+}
+
+function toXY(item) {
+    const radians = (item.angle * Math.PI) / 180;
+    return { x: item.radius * Math.cos(radians), y: item.radius * Math.sin(radians) };
+}
+
+/** Radius range a marker may use: its horizon band, minus a margin, and never inside the core. */
+function radiusBounds(item) {
+    const band = HORIZON_BANDS.find((entry) => entry.horizon === item.horizon) ?? HORIZON_BANDS[1];
+    const outer = item.horizon === 3 ? 8.6 : band.to - 0.4;
+    return [Math.max(MIN_MARKER_RADIUS, band.from + 0.4), outer];
+}
+
+/** Move a marker to (x, y), then keep it within 16° of its sector centre and inside its band. */
+function place(item, x, y) {
+    const [low, high] = radiusBounds(item);
+    item.radius = Math.max(low, Math.min(high, Math.hypot(x, y)));
+    const angle = (Math.atan2(y, x) * 180) / Math.PI;
+    const offset = ((angle - item.centerAngle + 540) % 360) - 180;
+    item.angle = (item.centerAngle + Math.max(-16, Math.min(16, offset)) + 360) % 360;
 }

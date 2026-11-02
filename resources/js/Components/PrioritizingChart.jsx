@@ -12,7 +12,7 @@ import {
     YAxis,
 } from "recharts";
 
-import { currentMonth } from "@/Components/AnalysisFilters";
+import { defaultPeriod } from "@/Components/AnalysisFilters";
 import DataTable from "@/Components/DataTable";
 import DimensionChip from "@/Components/DimensionChip";
 import { Skeleton } from "@/Components/ui/skeleton";
@@ -131,7 +131,7 @@ export default function PrioritizingChart({ date, selectData, dimensions = [], s
     const [loading, setLocalLoading] = useState(true);
 
     const dimension = selectData?.dimension ?? null;
-    const range = date?.date ?? currentMonth();
+    const range = date?.date ?? defaultPeriod();
     const queryKey = qs.stringify({ date: range, dimension: dimension ?? undefined });
 
     useEffect(() => {

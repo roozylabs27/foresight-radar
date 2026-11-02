@@ -49,6 +49,9 @@
     --horizon-short: #c9daf3;
     --horizon-mid: #dde8f8;
     --horizon-long: #eef4fc;
+    /* Radar centre ("FIRM"): dark disc with white text on both themes. */
+    --radar-core: #0b1b33;
+    --radar-core-foreground: #ffffff;
 
     --dim-economy: #b07d00;
     --dim-competitor: #d1433a;
@@ -116,6 +119,8 @@
     --horizon-short: #24406b;
     --horizon-mid: #1a3053;
     --horizon-long: #132440;
+    --radar-core: #050b16;
+    --radar-core-foreground: #ffffff;
 
     --dim-economy: #e3b23c;
     --dim-competitor: #ff7a6e;
