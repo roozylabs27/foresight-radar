@@ -16,15 +16,20 @@ export const REVIEW_ACTIONS = {
         submit: "Confirm Acceptance",
         intro: (
             <>
-                Graduating this signal will initialize a new Driving Force in <strong>PENDING</strong> status. It will
-                immediately be accessible in the existing 6-stage lifecycle for time horizon rating and approval.
+                A signal is evidence <em>for</em> a driving force, not the force itself. Name the broader force of change this
+                signal points to; it starts in <strong>PENDING</strong> status. Prefer “Link to DF” when a matching force exists.
             </>
         ),
-        fields: ["title", "summary", "dimension_id"],
+        fields: ["force_keyword", "force_description", "dimension_id", "confirm_signal_title"],
         schema: z.object({
-            title: z.string().trim().min(1, "Title is required"),
-            summary: z.string().trim().min(1, "Description is required"),
+            force_keyword: z
+                .string()
+                .trim()
+                .min(1, "Name the driving force")
+                .refine((value) => value.split(/\s+/).filter(Boolean).length <= 4, "At most 4 words"),
+            force_description: z.string().trim().min(1, "Describe the driving force"),
             dimension_id: z.string().min(1, "Select dimension"),
+            confirm_signal_title: z.boolean(),
         }),
     },
     accept_link: {
@@ -95,6 +100,9 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
             dimension_id: toFieldValue(signal?.dimension_id),
             driving_force_id: toFieldValue(signal?.suggested_driving_force_id ?? ""),
             rejection_reason: "",
+            force_keyword: "",
+            force_description: "",
+            confirm_signal_title: false,
         },
         ids,
         loading,
@@ -129,10 +137,21 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
 
                 {action === "accept_create" && (
                     <>
-                        {textField("title", "Driving Force Title / Keyword (First 4 words will form keyword)", Input, {
+                        {textField("force_keyword", "Driving force name (max. 4 words)", Input, {
                             autoComplete: "off",
+                            placeholder: "e.g. Battery Technology Shift",
                         })}
-                        {textField("summary", "Strategic Description", Textarea, { rows: 3, className: "max-h-40 min-h-20" })}
+                        {textField("force_description", "Driving force description", Textarea, { rows: 3, className: "max-h-40 min-h-20" })}
+                        <Controller
+                            name="confirm_signal_title"
+                            control={control}
+                            render={({ field }) => (
+                                <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                                    <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={field.value} onChange={(event) => field.onChange(event.target.checked)} />
+                                    The name may repeat the signal title (only when the signal itself names the force).
+                                </label>
+                            )}
+                        />
                         <Controller
                             name="dimension_id"
                             control={control}

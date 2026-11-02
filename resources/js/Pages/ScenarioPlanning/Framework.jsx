@@ -4,6 +4,7 @@ import { ArrowLeftIcon, CircleCheckIcon, Grid2x2Icon, LockOpenIcon, PlusIcon, Sl
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import FrameworkMatrix from "@/Components/ScenarioPlanning/FrameworkMatrix";
 import PolesDialog from "@/Components/ScenarioPlanning/PolesDialog";
 import QuadrantDialog from "@/Components/ScenarioPlanning/QuadrantDialog";
@@ -14,7 +15,7 @@ import { useScenarioFramework } from "@/hooks/use-scenario-framework";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 4: the 2x2 framework on the two approved critical uncertainties, and gate G5 (roadmap R0.5). */
-export default function Framework({ auth, title, project, framework, axesApproved, canManage, errors = {} }) {
+export default function Framework({ auth, title, project, steps, framework, axesApproved, canManage, errors = {} }) {
     const actions = useScenarioFramework(project.id);
     const [editingPoles, setEditingPoles] = useState(false);
     const [quadrant, setQuadrant] = useState(null);
@@ -24,6 +25,7 @@ export default function Framework({ auth, title, project, framework, axesApprove
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={4} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <Grid2x2Icon aria-hidden="true" className="text-lg text-primary" />

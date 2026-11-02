@@ -227,18 +227,18 @@ function ActionButtons({ signal, onInspect, onAction }) {
             </Button>
             {signal.review_status === "PENDING" && (
                 <>
-                    <Button size="sm" className="justify-start" onClick={() => onAction("accept_create", signal)}>
-                        <CirclePlusIcon aria-hidden="true" />
-                        Accept as New DF
+                    <Button size="sm" className="justify-start" onClick={() => onAction("accept_link", signal)}>
+                        <LinkIcon aria-hidden="true" />
+                        Link to DF
                     </Button>
                     <Button
                         size="sm"
                         variant="outline"
                         className="justify-start border-input"
-                        onClick={() => onAction("accept_link", signal)}
+                        onClick={() => onAction("accept_create", signal)}
                     >
-                        <LinkIcon aria-hidden="true" />
-                        Link to DF
+                        <CirclePlusIcon aria-hidden="true" />
+                        Accept as New DF
                     </Button>
                     <Button
                         size="sm"

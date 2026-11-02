@@ -4,6 +4,7 @@ import { ArrowLeftIcon, CircleCheckIcon, GaugeIcon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ScoreDialog from "@/Components/ScenarioPlanning/ScoreDialog";
 import ScoreList from "@/Components/ScenarioPlanning/ScoreList";
 import UncertaintyImpactMatrix from "@/Components/ScenarioPlanning/UncertaintyImpactMatrix";
@@ -13,7 +14,7 @@ import { useProjectAssessment } from "@/hooks/use-project-assessment";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 3 of an exercise: impact × uncertainty scores, the matrix and gate G3 (roadmap R1.1). */
-export default function Assessment({ auth, title, project, forces, threshold, canManage, errors = {} }) {
+export default function Assessment({ auth, title, project, steps, forces, threshold, canManage, errors = {} }) {
     const actions = useProjectAssessment(project.id);
     const [editing, setEditing] = useState(null);
     const unscored = forces.filter((item) => item.impact == null).length;
@@ -22,6 +23,7 @@ export default function Assessment({ auth, title, project, forces, threshold, ca
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={3} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <GaugeIcon aria-hidden="true" className="text-lg text-primary" />

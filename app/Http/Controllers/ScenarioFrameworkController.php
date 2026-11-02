@@ -30,6 +30,7 @@ class ScenarioFrameworkController extends Controller
         return Inertia::render('ScenarioPlanning/Framework', [
             'title' => 'Scenario Framework · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'framework' => $this->frameworks->present($project),
             'axesApproved' => $project->uncertaintiesApproved(),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),

@@ -448,6 +448,46 @@
         "A regenerated or edited narrative clears its quadrant flag"
       ],
       "verification_evidence": "2026-11-01: StalenessTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: banner with reason and affected quadrant, keep clears it."
+    },
+    {
+      "id": "FEAT-032",
+      "name": "Exercise Workspace, Stepper & Grouped Navigation",
+      "description": "Scenario planning exercises get a nine-step stepper on every step page, an overview with the next action and the last gate, and a sidebar grouped into Scenario Planning, Library, Analysis and Governance (roadmap R1.11).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Every step page shows the nine steps with their status and the current step; locked steps are not links",
+        "The overview names the next action in plain words with a link, and the last gate passed with approver and date",
+        "The sidebar groups items without removing any route or changing permissions"
+      ],
+      "verification_evidence": "2026-11-02: WorkspaceTest 3 passed; Larastan clean; Pint clean; npm build OK; browser: grouped sidebar, overview card (next step 5, last gate G5), stepper on step 4."
+    },
+    {
+      "id": "FEAT-033",
+      "name": "Signals Aggregate into Forces & Force Merge",
+      "description": "Signals contribute to driving forces instead of becoming them, and duplicate forces can be merged with all their links (roadmap R1.3).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Signal review offers \"link to force\" first; creating a force needs a force-level name distinct from the truncated signal title (or explicit confirmation) and a description",
+        "Other accepted signals can be attached when the force is created",
+        "Merging force X into Y moves signal links, cross-impacts, exercise links, critical uncertainty memberships and legacy scenario axes; X disappears from lists and keeps a tombstone",
+        "A scenario or exercise framework that used X is flagged stale, not deleted"
+      ],
+      "verification_evidence": "2026-11-02: ForceAggregationTest 5 passed; SignalIngestionTest and RatingDataChainTest updated and passing; npm build OK; browser: merge dialog and review form checked without merging dev data."
+    },
+    {
+      "id": "FEAT-034",
+      "name": "Driving Force Description Length",
+      "description": "A driving force description can explain the force in up to 120 words; the keyword stays at four words (roadmap R1.2). The influence on the focal issue is recorded per exercise (R0.2).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A description of 100 words saves on create; 120 words saves on update; 121 words is refused",
+        "The keyword is still limited to four words",
+        "The form shows a live word count and checks both limits before submitting"
+      ],
+      "verification_evidence": "2026-11-02: DrivingForceTest (incl. the new limit test) and WordCountRuleTest 16 passed; Larastan, Pint and build in the same session run."
     }
   ]
 }

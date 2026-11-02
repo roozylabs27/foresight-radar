@@ -265,6 +265,23 @@ class DrivingForceTest extends TestCase
         $this->assertEquals('/rating-urgency', $item2['pipeline']['next_url']);
     }
 
+    /** Roadmap R1.2: a force needs room to be explained; the keyword stays short. */
+    public function test_a_description_of_up_to_120_words_is_accepted_on_create_and_update(): void
+    {
+        $words = fn (int $count) => implode(' ', array_fill(0, $count, 'kata'));
+        $payload = fn (string $description, string $keyword = 'Battery Technology Shift') => [
+            'keyword' => $keyword, 'description' => $description, 'dimension_id' => $this->dimension->id, 'pic_id' => $this->admin->id,
+        ];
+
+        $this->actingAs($this->admin)->postJson('/driving-force', $payload($words(100)))->assertStatus(201);
+        $this->actingAs($this->admin)->postJson('/driving-force', $payload($words(121)))->assertStatus(422)->assertJsonValidationErrors('description');
+        $this->actingAs($this->admin)->postJson('/driving-force', $payload($words(10), 'One two three four five'))->assertStatus(422)->assertJsonValidationErrors('keyword');
+
+        $drivingForce = $this->makeDrivingForce();
+        $this->actingAs($this->admin)->putJson("/driving-force/{$drivingForce->uuid}", $payload($words(120)))->assertStatus(200);
+        $this->actingAs($this->admin)->putJson("/driving-force/{$drivingForce->uuid}", $payload($words(121)))->assertStatus(422)->assertJsonValidationErrors('description');
+    }
+
     public function test_admin_with_edit_permission_can_update_driving_force(): void
     {
         $drivingForce = $this->makeDrivingForce();

@@ -197,6 +197,7 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::get('/fetch-data', 'fetch_data')->name('fetch-data')->can('view-driving-force');
         Route::post('/', 'create')->name('create')->can('create-driving-force');
         Route::put('/{driving_force}', 'update')->name('update')->can('edit-driving-force');
+        Route::post('/{driving_force}/merge', 'merge')->name('merge')->can('edit-driving-force');
         Route::delete('/{driving_force}', 'delete')->name('delete')->can('delete-driving-force');
     });
 

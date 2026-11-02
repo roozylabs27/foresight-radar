@@ -32,6 +32,7 @@ class ScenarioConditionController extends Controller
         return Inertia::render('ScenarioPlanning/Conditions', [
             'title' => 'Develop Scenarios · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'framework' => $framework ? [
                 'id' => $framework->uuid,
                 'name' => $framework->name,

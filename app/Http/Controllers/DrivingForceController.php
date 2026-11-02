@@ -7,8 +7,12 @@ use App\Http\Requests\DrivingForceRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\User;
+use App\Services\DrivingForceMergeService;
 use App\Services\DrivingForceService;
 use App\Services\TenantContext;
+use App\Support\TenantRule;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
@@ -44,8 +48,11 @@ class DrivingForceController extends Controller
             });
 
         $title = 'Driving Force';
+        // Merge targets (roadmap R1.3): live forces only; merged tombstones are soft deleted.
+        $forceOptions = DrivingForce::orderBy('keyword')->get(['uuid', 'keyword'])
+            ->map(fn ($force) => ['value' => $force->uuid, 'label' => $force->keyword]);
 
-        return Inertia::render('DrivingForce/Table', compact('dimensions', 'title', 'users'));
+        return Inertia::render('DrivingForce/Table', compact('dimensions', 'title', 'users', 'forceOptions'));
     }
 
     public function fetch_data()
@@ -119,6 +126,19 @@ class DrivingForceController extends Controller
         }
 
         return response()->json($response, $response['statusCode']);
+    }
+
+    /**
+     * Merge this duplicate into another force (roadmap R1.3). The duplicate becomes a tombstone.
+     */
+    public function merge(Request $request, DrivingForce $driving_force, DrivingForceMergeService $merges): JsonResponse
+    {
+        $validated = $request->validate(['target' => ['required', 'uuid', TenantRule::exists('driving_forces', 'uuid')]], [], ['target' => 'driving force tujuan']);
+        $target = DrivingForce::withTrashed()->where('uuid', $validated['target'])->firstOrFail();
+
+        $merges->merge($driving_force, $target, $request->user());
+
+        return response()->json(['message' => "\"{$driving_force->keyword}\" digabung ke \"{$target->keyword}\"."], Response::HTTP_OK);
     }
 
     public function delete(DrivingForce $driving_force)

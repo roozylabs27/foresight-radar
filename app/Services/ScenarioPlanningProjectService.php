@@ -29,6 +29,85 @@ class ScenarioPlanningProjectService
         9 => ['key' => 'early_warning', 'title' => 'Early Warning Signal', 'module' => null],
     ];
 
+    /** What to do next, per step, in plain words for the overview (roadmap R1.11). */
+    private const NEXT_ACTIONS = [
+        1 => 'Lengkapi lalu konfirmasi pertanyaan fokus, tujuan dan tahun target.',
+        2 => 'Pilih driving force yang relevan lalu sepakati daftarnya.',
+        3 => 'Beri skor dampak dan ketidakpastian, lalu setujui dua critical uncertainty.',
+        4 => 'Buat kerangka 2×2, beri nama tiap kuadran, lalu setujui kerangkanya.',
+        5 => 'Tulis minimal dua kondisi untuk tiap kuadran.',
+        6 => 'Buat narasi tiap skenario lalu tinjau dan setujui keempatnya.',
+        7 => 'Catat minimal satu peluang dan satu tantangan di tiap kuadran.',
+        8 => 'Susun respons strategis, nilai kecocokannya per kuadran, lalu setujui.',
+        9 => 'Tentukan indikator peringatan dini dan arahnya di tiap kuadran.',
+    ];
+
+    /** Gates in the order they are passed (target workflow §4). */
+    private const GATES = [
+        'G1' => 'Focal issue dikonfirmasi',
+        'G2' => 'Daftar driving force disepakati',
+        'G3' => 'Skor disepakati',
+        'G4' => 'Dua critical uncertainty disetujui',
+        'G5' => 'Kerangka skenario disetujui',
+        'G6' => 'Keempat narasi disetujui',
+        'G7' => 'Respons strategis disetujui',
+    ];
+
+    /**
+     * The first step that is open and not done, with its link and what to do, or null when every
+     * open step is done.
+     *
+     * @param  array<int, array{number: int, title: string, status: string, href: ?string}>  $steps
+     * @return array{number: int, title: string, text: string, href: string}|null
+     */
+    public function nextAction(ScenarioPlanningProject $project, array $steps): ?array
+    {
+        $step = collect($steps)->first(fn ($step) => in_array($step['status'], ['in_progress', 'available'], true));
+        if (! $step) {
+            return null;
+        }
+
+        return [
+            'number' => $step['number'],
+            'title' => $step['title'],
+            'text' => self::NEXT_ACTIONS[$step['number']],
+            'href' => $step['href'] ?? route('scenario-planning.show', $project),
+        ];
+    }
+
+    /**
+     * The highest gate the exercise has passed, with who passed it and when, or null before G1.
+     *
+     * @return array{gate: string, label: string, by: ?string, at: ?string}|null
+     */
+    public function lastGate(ScenarioPlanningProject $project): ?array
+    {
+        $framework = $project->framework()->with('approver:id,name')->first();
+        $response = $project->strategicResponses()->where('status', 'approved')->with('approver:id,name')->latest('approved_at')->first();
+        $quadrants = $framework ? $framework->quadrants()->with('reviewer:id,name')->get() : collect();
+        $uncertainty = $project->uncertaintiesApproved()
+            ? $project->criticalUncertainties()->where('status', 'approved')->with('approver:id,name')->latest('approved_at')->first()
+            : null;
+        $lastReview = $quadrants->sortByDesc('reviewed_at')->first();
+
+        $passed = array_filter([
+            'G7' => $response ? [$response->approver?->name, $response->approved_at] : null,
+            'G6' => $quadrants->count() === 4 && $quadrants->every(fn ($quadrant) => $quadrant->review_status === 'approved') ? [$lastReview?->reviewer?->name, $lastReview?->reviewed_at] : null,
+            'G5' => $framework?->isFrameworkApproved() ? [$framework->approver?->name, $framework->approved_at] : null,
+            'G4' => $uncertainty ? [$uncertainty->approver?->name, $uncertainty->approved_at] : null,
+            'G3' => $project->scores_confirmed_at ? [$project->scoresConfirmer?->name, $project->scores_confirmed_at] : null,
+            'G2' => $project->forces_confirmed_at ? [$project->forcesConfirmer?->name, $project->forces_confirmed_at] : null,
+            'G1' => $project->confirmed_at ? [$project->confirmer?->name, $project->confirmed_at] : null,
+        ]);
+        if ($passed === []) {
+            return null;
+        }
+        $gate = array_key_first($passed);
+        [$by, $at] = $passed[$gate];
+
+        return ['gate' => $gate, 'label' => self::GATES[$gate], 'by' => $by, 'at' => $at?->toISOString()];
+    }
+
     public function create(array $validated, User $user): ScenarioPlanningProject
     {
         return ScenarioPlanningProject::create($this->attributes($validated) + [

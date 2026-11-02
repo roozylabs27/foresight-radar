@@ -28,6 +28,7 @@ class ProjectAssessmentController extends Controller
         return Inertia::render('ScenarioPlanning/Assessment', [
             'title' => 'Critical Uncertainties · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'forces' => $this->assessments->list($project),
             'threshold' => ScenarioPlanningProjectService::HIGH_SCORE,
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),

@@ -32,6 +32,7 @@ class ScenarioImplicationController extends Controller
         return Inertia::render('ScenarioPlanning/Implications', [
             'title' => 'Challenges & Opportunities · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'framework' => $framework ? ['id' => $framework->uuid, 'name' => $framework->name, 'approved' => $framework->isFrameworkApproved()] : null,
             'quadrants' => $framework ? $this->implications->quadrants($framework) : [],
             'forces' => $this->implications->forces($project),

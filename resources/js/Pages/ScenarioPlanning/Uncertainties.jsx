@@ -3,6 +3,7 @@ import { Head, Link } from "@inertiajs/react";
 import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, SplitIcon } from "lucide-react";
 
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ApproveUncertaintyDialog from "@/Components/ScenarioPlanning/ApproveUncertaintyDialog";
 import PairSuggestions from "@/Components/ScenarioPlanning/PairSuggestions";
 import UncertaintyCard from "@/Components/ScenarioPlanning/UncertaintyCard";
@@ -13,7 +14,7 @@ import { useCriticalUncertainties } from "@/hooks/use-critical-uncertainties";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 3, second half: propose critical uncertainties and approve two as axes (gate G4, roadmap R0.4). */
-export default function Uncertainties({ auth, title, project, uncertainties, candidates, pairs, threshold, canManage, errors = {} }) {
+export default function Uncertainties({ auth, title, project, steps, uncertainties, candidates, pairs, threshold, canManage, errors = {} }) {
     const actions = useCriticalUncertainties(project.id);
     const [form, setForm] = useState({ open: false, uncertainty: null });
     const [approving, setApproving] = useState(null);
@@ -23,6 +24,7 @@ export default function Uncertainties({ auth, title, project, uncertainties, can
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={3} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <SplitIcon aria-hidden="true" className="text-lg text-primary" />

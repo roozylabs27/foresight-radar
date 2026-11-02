@@ -3,6 +3,7 @@ import { Head, Link } from "@inertiajs/react";
 import { ArrowLeftIcon, ArrowRightIcon, ScaleIcon } from "lucide-react";
 
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ImplicationDialog from "@/Components/ScenarioPlanning/ImplicationDialog";
 import QuadrantImplications from "@/Components/ScenarioPlanning/QuadrantImplications";
 import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
@@ -16,7 +17,7 @@ const LAYOUT = ["LH", "HH", "LL", "HL"];
 const isComplete = (quadrant) => ["opportunity", "challenge"].every((type) => quadrant.items.some((item) => item.type === type));
 
 /** Step 7: opportunities and challenges of each future (roadmap R1.7). */
-export default function Implications({ auth, title, project, framework, quadrants, forces, canManage, errors = {} }) {
+export default function Implications({ auth, title, project, steps, framework, quadrants, forces, canManage, errors = {} }) {
     const actions = useScenarioImplications(project.id);
     const [target, setTarget] = useState(null);
     const ready = framework?.approved;
@@ -27,6 +28,7 @@ export default function Implications({ auth, title, project, framework, quadrant
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={7} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <ScaleIcon aria-hidden="true" className="text-lg text-primary" />

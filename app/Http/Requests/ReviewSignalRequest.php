@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\WordCountRule;
 use App\Support\TenantRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,13 @@ class ReviewSignalRequest extends FormRequest
             'preliminary_uncertainty' => ['nullable', 'integer', 'between:1,10'],
             'driving_force_id' => ['required_if:action,accept_link', 'nullable', TenantRule::exists('driving_forces')],
             'rejection_reason' => ['required_if:action,reject', 'nullable', 'string', 'max:1000'],
+            // accept_create (roadmap R1.3): the force gets its own name; required by the controller after
+            // the status and evidence checks.
+            'force_keyword' => ['nullable', 'string', 'max:100', new WordCountRule(4)],
+            'force_description' => ['nullable', 'string', 'max:2000'],
+            'confirm_signal_title' => ['boolean'],
+            'attach_signals' => ['nullable', 'array', 'max:50'],
+            'attach_signals.*' => ['uuid'],
         ];
     }
 }

@@ -13,10 +13,14 @@ const FIELDS = ["dimension_id", "keyword", "description", "pic_id"];
 
 const required = (message) => z.string().trim().min(1, message);
 
+/** Mirrors App\Http\Requests\DrivingForceRequest: keyword ≤ 4 words, description ≤ 120 words (roadmap R1.2). */
+const DESCRIPTION_WORDS = 120;
+const countWords = (text) => String(text ?? "").trim().split(/\s+/).filter(Boolean).length;
+
 const schema = z.object({
     dimension_id: required("Please select the dimension!"),
-    keyword: required("Please input the keyword!"),
-    description: required("Please input the description!"),
+    keyword: required("Please input the keyword!").refine((value) => countWords(value) <= 4, "The keyword may have at most 4 words."),
+    description: required("Please input the description!").refine((value) => countWords(value) <= DESCRIPTION_WORDS, `The description may have at most ${DESCRIPTION_WORDS} words.`),
     pic_id: required("Please select the personal in charge!"),
 });
 
@@ -95,10 +99,13 @@ export default function FormDrivingForce({ id, initialValues = {}, dimensions = 
                                 value={field.value}
                                 onChange={field.onChange}
                                 onBlur={field.onBlur}
-                                placeholder="Enter a description"
-                                rows={3}
-                                className="max-h-40 min-h-20"
+                                placeholder="What is changing, why, and how it affects the organisation"
+                                rows={5}
+                                className="max-h-64 min-h-24"
                             />
+                            <span className="text-[11px] text-muted-foreground tabular-nums">
+                                {countWords(field.value)} / {DESCRIPTION_WORDS} words
+                            </span>
                         </FormField>
                     )}
                 />

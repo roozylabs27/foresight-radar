@@ -160,6 +160,8 @@ class RatingDataChainTest extends TestCase
         $response = $this->actingAs($this->analyst)->postJson("/signals/{$signal->uuid}/review", [
             'action' => 'accept_create',
             'preliminary_impact' => 9,
+            'force_keyword' => 'Factory Automation',
+            'force_description' => 'Automation of manufacturing with robots.',
         ]);
 
         $response->assertStatus(200);

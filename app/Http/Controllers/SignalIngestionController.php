@@ -18,6 +18,7 @@ use App\Support\EvidenceVerifier;
 use App\Support\TableSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -200,6 +201,42 @@ class SignalIngestionController extends Controller
     }
 
     /**
+     * Name, description and extra signals of a force created from a signal. A name equal to the signal
+     * title cut to four words needs `confirm_signal_title`; attached signals must be accepted ones.
+     *
+     * @return array{0: string, 1: string, 2: Collection<int, int>}
+     *
+     * @throws ValidationException
+     */
+    private function forceFromSignal(Signal $signal, array $validated): array
+    {
+        $keyword = trim((string) ($validated['force_keyword'] ?? ''));
+        $description = trim((string) ($validated['force_description'] ?? ''));
+        if ($keyword === '' || $description === '') {
+            throw ValidationException::withMessages(array_filter([
+                'force_keyword' => $keyword === '' ? 'Beri nama driving force pada tingkat kekuatan perubahan, bukan judul sinyal.' : null,
+                'force_description' => $description === '' ? 'Jelaskan driving force ini.' : null,
+            ]));
+        }
+
+        $normalize = fn (string $text) => mb_strtolower(trim(preg_replace('/[\.\,\;\:\s]+/', ' ', $text)));
+        $titleWords = array_slice(preg_split('/\s+/', $normalize((string) $signal->title)) ?: [], 0, 4);
+        if ($normalize($keyword) === implode(' ', $titleWords) && empty($validated['confirm_signal_title'])) {
+            throw ValidationException::withMessages([
+                'force_keyword' => 'Nama ini sama dengan judul sinyal. Gunakan nama kekuatan perubahan yang lebih umum, atau konfirmasi bila memang sengaja.',
+            ]);
+        }
+
+        $uuids = array_unique($validated['attach_signals'] ?? []);
+        $attach = Signal::whereIn('uuid', $uuids)->where('review_status', 'ACCEPTED')->whereKeyNot($signal->id)->pluck('id');
+        if ($attach->count() !== count($uuids)) {
+            throw ValidationException::withMessages(['attach_signals' => 'Hanya sinyal yang sudah diterima yang bisa ikut dikaitkan.']);
+        }
+
+        return [$keyword, $description, $attach];
+    }
+
+    /**
      * Review, edit, accept, or reject candidate signal.
      */
     public function review(ReviewSignalRequest $request, Signal $signal): JsonResponse
@@ -279,10 +316,9 @@ class SignalIngestionController extends Controller
                 }
 
                 if ($action === 'accept_create') {
-                    // Normalize keyword to first 4 words to respect WordCountRule and strip trailing dots/punctuation
-                    $cleanTitle = trim(preg_replace('/[\.\,\;\:\s]+$/', '', (string) $signal->title));
-                    $words = preg_split('/\s+/', $cleanTitle) ?: [];
-                    $keyword = implode(' ', array_slice($words, 0, 4));
+                    // A signal contributes to a force; it does not become one (roadmap R1.3). The force
+                    // needs its own name and description, not the signal title cut to four words.
+                    [$keyword, $description, $attach] = $this->forceFromSignal($signal, $validated);
 
                     $drivingForce = DrivingForce::create([
                         'uuid' => (string) Uuid::uuid4(),
@@ -290,7 +326,7 @@ class SignalIngestionController extends Controller
                         'created_by' => Auth::id(),
                         'pic' => Auth::id(),
                         'keyword' => $keyword,
-                        'description' => $signal->summary,
+                        'description' => $description,
                         'status' => 'PENDING',
                     ]);
 
@@ -317,6 +353,9 @@ class SignalIngestionController extends Controller
                     $signal->driving_forces()->attach($drivingForce->id, [
                         'notes' => 'Source signal originated this driving force',
                     ]);
+                    $drivingForce->signals()->syncWithoutDetaching(
+                        $attach->mapWithKeys(fn ($id) => [$id => ['notes' => 'Attached when the force was created from signal #'.$signal->id]])->all()
+                    );
 
                     return response()->json([
                         'message' => 'Signal accepted and successfully converted to Driving Force in PENDING status.',

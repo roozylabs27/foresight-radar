@@ -6,6 +6,7 @@ import {
     ArrowRightIcon,
     EllipsisVerticalIcon,
     GlobeIcon,
+    MergeIcon,
     PencilIcon,
     PlusIcon,
     RadarIcon,
@@ -15,6 +16,7 @@ import {
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import ConfirmDialog from "@/Components/ConfirmDialog";
+import MergeForceDialog from "@/Components/DrivingForce/MergeForceDialog";
 import DataTable, { useServerTable } from "@/Components/DataTable";
 import AnalysisFilterBar, { useAnalysisFilters } from "@/Components/AnalysisFilters";
 import DimensionChip from "@/Components/DimensionChip";
@@ -88,7 +90,7 @@ function SignalsCell({ record, onView }) {
     );
 }
 
-function RowActions({ record, onViewSignals, onEdit, onDelete }) {
+function RowActions({ record, onViewSignals, onEdit, onMerge, onDelete }) {
     return (
         // Non-modal so the dialogs opened from it get focus and pointer events cleanly.
         <DropdownMenu modal={false}>
@@ -106,6 +108,10 @@ function RowActions({ record, onViewSignals, onEdit, onDelete }) {
                 <DropdownMenuItem onSelect={() => onEdit(record)}>
                     <PencilIcon aria-hidden="true" />
                     Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onMerge(record)}>
+                    <MergeIcon aria-hidden="true" />
+                    Gabungkan ke…
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onSelect={() => onDelete(record)}>
@@ -208,7 +214,7 @@ function SignalsSheet({ record, open, onOpenChange }) {
     );
 }
 
-export default function TableDrivingForce({ auth, title, dimensions = [], users = [] }) {
+export default function TableDrivingForce({ auth, title, dimensions = [], users = [], forceOptions = [] }) {
     const listHeadingId = useId();
 
     // Filters
@@ -285,6 +291,26 @@ export default function TableDrivingForce({ auth, title, dimensions = [], users 
         }
     };
 
+    // Merge a duplicate into another force (roadmap R1.3).
+    const [mergeRecord, setMergeRecord] = useState(null);
+    const [merging, setMerging] = useState(false);
+
+    const handleMerge = async (targetId) => {
+        setMerging(true);
+        try {
+            const response = await axios.post(route("driving-force.merge", mergeRecord.id), { target: targetId });
+            toast.success(response.data.message);
+            table.reload();
+            return undefined;
+        } catch (error) {
+            if (error.response?.status === 422) return error.response.data.errors;
+            toast.error("Driving force tidak digabung.", { description: error.response?.data?.message ?? error.message });
+            return { target: error.response?.data?.message ?? error.message };
+        } finally {
+            setMerging(false);
+        }
+    };
+
     // Originating signals sheet; the record stays set while the sheet animates closed.
     const [signalsRecord, setSignalsRecord] = useState(null);
     const [signalsOpen, setSignalsOpen] = useState(false);
@@ -347,6 +373,7 @@ export default function TableDrivingForce({ auth, title, dimensions = [], users 
                         record={row.original}
                         onViewSignals={viewSignals}
                         onEdit={openEdit}
+                        onMerge={setMergeRecord}
                         onDelete={confirmDelete}
                     />
                 ),
@@ -437,6 +464,14 @@ export default function TableDrivingForce({ auth, title, dimensions = [], users 
             />
 
             <SignalsSheet record={signalsRecord} open={signalsOpen} onOpenChange={setSignalsOpen} />
+
+            <MergeForceDialog
+                record={mergeRecord}
+                options={forceOptions}
+                loading={merging}
+                onOpenChange={(open) => !open && setMergeRecord(null)}
+                onMerge={handleMerge}
+            />
         </AuthenticatedLayout>
     );
 }

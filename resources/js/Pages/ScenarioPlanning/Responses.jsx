@@ -3,6 +3,7 @@ import { Head, Link } from "@inertiajs/react";
 import { ArrowLeftIcon, ArrowRightIcon, CompassIcon, PlusIcon } from "lucide-react";
 
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ResponseCard from "@/Components/ScenarioPlanning/ResponseCard";
 import ResponseDialog from "@/Components/ScenarioPlanning/ResponseDialog";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -13,7 +14,7 @@ import { useStrategicResponses } from "@/hooks/use-strategic-responses";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 8: strategic responses ranked by robustness, and gate G7 (roadmap R1.8). */
-export default function Responses({ auth, title, project, frameworkApproved, quadrants, responses, implications, owners, canManage, errors = {} }) {
+export default function Responses({ auth, title, project, steps, frameworkApproved, quadrants, responses, implications, owners, canManage, errors = {} }) {
     const actions = useStrategicResponses(project.id);
     const [target, setTarget] = useState(null);
     const [filter, setFilter] = useState("all");
@@ -24,6 +25,7 @@ export default function Responses({ auth, title, project, frameworkApproved, qua
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={8} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <CompassIcon aria-hidden="true" className="text-lg text-primary" />

@@ -39,10 +39,14 @@ class ScenarioPlanningProjectController extends Controller
 
     public function show(Request $request, ScenarioPlanningProject $project): Response
     {
+        $steps = $this->projects->steps($project);
+
         return Inertia::render('ScenarioPlanning/Show', [
             'title' => $project->name,
             'project' => $this->projects->present($project),
-            'steps' => $this->projects->steps($project),
+            'steps' => $steps,
+            'nextAction' => $this->projects->nextAction($project, $steps),
+            'lastGate' => $this->projects->lastGate($project),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
             'owners' => $this->projects->owners($request->user()),
         ]);

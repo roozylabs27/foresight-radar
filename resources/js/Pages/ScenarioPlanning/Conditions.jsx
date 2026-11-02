@@ -3,6 +3,7 @@ import { Head, Link } from "@inertiajs/react";
 import { ArrowLeftIcon, ArrowRightIcon, ListChecksIcon } from "lucide-react";
 
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ConditionDialog from "@/Components/ScenarioPlanning/ConditionDialog";
 import QuadrantConditions from "@/Components/ScenarioPlanning/QuadrantConditions";
 import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
@@ -14,7 +15,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 const LAYOUT = ["LH", "HH", "LL", "HL"];
 
 /** Step 5: conditions of each future and the predetermined elements (roadmap R1.5). */
-export default function Conditions({ auth, title, project, framework, quadrants, predetermined, forces, minimum, canManage, errors = {} }) {
+export default function Conditions({ auth, title, project, steps, framework, quadrants, predetermined, forces, minimum, canManage, errors = {} }) {
     const actions = useScenarioConditions(project.id);
     const [target, setTarget] = useState(null);
     const ready = framework?.approved;
@@ -25,6 +26,7 @@ export default function Conditions({ auth, title, project, framework, quadrants,
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={5} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <ListChecksIcon aria-hidden="true" className="text-lg text-primary" />

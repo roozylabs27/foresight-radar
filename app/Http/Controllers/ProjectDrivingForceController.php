@@ -29,6 +29,7 @@ class ProjectDrivingForceController extends Controller
         return Inertia::render('ScenarioPlanning/DrivingForces', [
             'title' => 'Driving Forces · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'forces' => $this->forces->list($project),
             'library' => $this->forces->library($project),
             'coverage' => $this->forces->coverage($project),

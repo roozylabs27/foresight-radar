@@ -4,6 +4,7 @@ import { ArrowLeftIcon, CircleCheckIcon, PlusIcon, ZapIcon } from "lucide-react"
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import AddForcesDialog from "@/Components/ScenarioPlanning/AddForcesDialog";
 import CoverageChips from "@/Components/ScenarioPlanning/CoverageChips";
 import EditForceDialog from "@/Components/ScenarioPlanning/EditForceDialog";
@@ -14,7 +15,7 @@ import { useProjectForces } from "@/hooks/use-project-forces";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 2 of an exercise: its driving force list and gate G2 (roadmap R0.2). */
-export default function DrivingForces({ auth, title, project, forces, library, coverage, canManage, errors = {} }) {
+export default function DrivingForces({ auth, title, project, steps, forces, library, coverage, canManage, errors = {} }) {
     const actions = useProjectForces(project.id);
     const [adding, setAdding] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -24,6 +25,7 @@ export default function DrivingForces({ auth, title, project, forces, library, c
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={2} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <ZapIcon aria-hidden="true" className="text-lg text-primary" />

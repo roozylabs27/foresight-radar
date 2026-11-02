@@ -3,6 +3,7 @@ import { Head, Link } from "@inertiajs/react";
 import { ArrowLeftIcon, CopyPlusIcon, PlusIcon, RadarIcon } from "lucide-react";
 
 import Panel from "@/Components/Panel";
+import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import IndicatorCard from "@/Components/ScenarioPlanning/IndicatorCard";
 import IndicatorDialog from "@/Components/ScenarioPlanning/IndicatorDialog";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -11,7 +12,7 @@ import { useEarlyWarningIndicators } from "@/hooks/use-early-warning-indicators"
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 9: early warning indicator register with expected direction per scenario (roadmap R1.9). */
-export default function Indicators({ auth, title, project, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, errors = {} }) {
+export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, errors = {} }) {
     const actions = useEarlyWarningIndicators(project.id);
     const [target, setTarget] = useState(null);
     const editable = canManage && frameworkApproved;
@@ -21,6 +22,7 @@ export default function Indicators({ auth, title, project, frameworkApproved, qu
     return (
         <AuthenticatedLayout
             auth={auth}
+            subheader={<ExerciseStepper project={project} steps={steps} current={9} />}
             header={
                 <div className="flex min-w-0 items-center gap-2.5">
                     <RadarIcon aria-hidden="true" className="text-lg text-primary" />

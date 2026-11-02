@@ -30,6 +30,7 @@ class CriticalUncertaintyController extends Controller
         return Inertia::render('ScenarioPlanning/Uncertainties', [
             'title' => 'Critical Uncertainties · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'uncertainties' => $this->uncertainties->list($project),
             'candidates' => $this->uncertainties->candidates($project),
             'pairs' => $this->uncertainties->pairs($project),

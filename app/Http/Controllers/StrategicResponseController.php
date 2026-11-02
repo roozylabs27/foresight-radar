@@ -31,6 +31,7 @@ class StrategicResponseController extends Controller
         return Inertia::render('ScenarioPlanning/Responses', [
             'title' => 'Strategic Response · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'frameworkApproved' => $framework?->isFrameworkApproved() ?? false,
             'quadrants' => $framework ? $framework->quadrants()->get()->map(fn ($quadrant) => [
                 'position' => $quadrant->position, 'title' => $quadrant->title, 'poles' => $framework->poles($quadrant->position),

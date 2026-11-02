@@ -31,6 +31,7 @@ class EarlyWarningIndicatorController extends Controller
         return Inertia::render('ScenarioPlanning/Indicators', [
             'title' => 'Early Warning · '.$project->name,
             'project' => $this->projects->present($project),
+            'steps' => $this->projects->steps($project),
             'frameworkApproved' => $framework?->isFrameworkApproved() ?? false,
             'quadrants' => $framework ? $this->indicators->quadrants($framework) : [],
             'indicators' => $this->indicators->list($project),

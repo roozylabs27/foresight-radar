@@ -139,6 +139,18 @@ class DrivingForce extends Model
         return $this;
     }
 
+    /** Signals that support this force (roadmap R1.3: signals contribute to forces). */
+    public function signals(): BelongsToMany
+    {
+        return $this->belongsToMany(Signal::class, 'signal_driving_force')->withPivot('notes')->withTimestamps();
+    }
+
+    /** The force this duplicate was merged into (a tombstone keeps the pointer). */
+    public function mergedInto(): BelongsTo
+    {
+        return $this->belongsTo(DrivingForce::class, 'merged_into_id')->withTrashed();
+    }
+
     public function getRouteKeyName()
     {
         return 'uuid';
