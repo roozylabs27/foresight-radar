@@ -17,9 +17,20 @@ trait CreatesApplication
         $app->make(Kernel::class)->bootstrap();
 
         // A cached config ignores phpunit.xml, so RefreshDatabase would wipe the dev database.
+        if ($app->configurationIsCached()) {
+            throw new \RuntimeException('Tests cannot run with cached configuration. Run `php artisan config:clear` first.');
+        }
+
         $connection = $app['config']->get('database.default');
-        if ($app->configurationIsCached() || $connection !== 'sqlite' || $app['config']->get("database.connections.{$connection}.database") !== ':memory:') {
-            throw new \RuntimeException('Tests must run on the in-memory sqlite database. Run `php artisan config:clear` first.');
+        $database = (string) $app['config']->get("database.connections.{$connection}.database");
+
+        $isSafe = ($connection === 'sqlite' && ($database === ':memory:' || str_contains($database, 'test')))
+            || in_array($database, ['testing', 'test'], true)
+            || str_ends_with($database, '_test')
+            || str_ends_with($database, '_testing');
+
+        if (! $isSafe) {
+            throw new \RuntimeException("Tests must run on an in-memory SQLite database or a dedicated testing database (e.g. 'testing'). Detected {$connection}:{$database}. Run `php artisan config:clear` first.");
         }
 
         return $app;
