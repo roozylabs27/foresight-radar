@@ -31,6 +31,7 @@ class ProjectDrivingForce extends Model
         'project_id',
         'driving_force_id',
         'inclusion_status',
+        'origin',
         'influence_note',
         'is_predetermined',
         'added_by',

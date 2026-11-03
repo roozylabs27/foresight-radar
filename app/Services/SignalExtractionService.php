@@ -5,14 +5,17 @@ namespace App\Services;
 use App\Enums\LlmJobStatus;
 use App\Enums\TimeHorizonType;
 use App\Jobs\ExtractSignals;
+use App\Models\AiGenerationRun;
 use App\Models\Dimension;
 use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Services\Extraction\LlmSignalExtractor;
+use App\Services\Llm\AiGenerationRecorder;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\Prompts\SignalExtractionPrompt;
 use App\Services\Llm\StructuredLlmClient;
 use App\Support\EvidenceVerifier;
 use Carbon\Carbon;
@@ -137,13 +140,17 @@ class SignalExtractionService
         $meta = [];
 
         if ($mode !== self::PROVIDER_HEURISTIC) {
+            // Every AI call is recorded (roadmap R1.12); signals written by keyword rules link no run.
+            $refs = ['source' => $source->uuid];
             try {
                 $extractor = $userLlm ? new LlmSignalExtractor($userLlm) : ($this->llmExtractor ?? $this->llmExtractor());
                 $result = $extractor->extract($title, $content);
+                $run = app(AiGenerationRecorder::class)->completed('signal_extraction', $result['response'], SignalExtractionPrompt::VERSION, $refs, $source->created_by);
                 $candidates = array_map(fn ($item) => $item + [
                     'extraction_provider' => $result['meta']['provider'],
                     'extraction_model' => $result['meta']['model'],
                     'prompt_version' => $result['meta']['prompt_version'],
+                    'generation_run_id' => $run->id,
                 ], $result['candidates']);
                 $meta = $result['meta'] + ['label' => $llm->label()];
                 if ($meta['irrelevant'] ?? false) {
@@ -151,6 +158,7 @@ class SignalExtractionService
                         .($meta['relevance_reason'] ? ' Alasan: '.$meta['relevance_reason'] : '');
                 }
             } catch (LlmException $e) {
+                app(AiGenerationRecorder::class)->unsuccessful(AiGenerationRun::FAILED, 'signal_extraction', $llm, SignalExtractionPrompt::VERSION, $refs, $e->reason, $source->created_by);
                 Log::warning('Signal extraction fell back to keyword rules', ['reason' => $e->reason]);
                 $notice = $e->userMessage().' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';
                 $meta = ['provider' => self::PROVIDER_HEURISTIC, 'fallback_reason' => $e->reason];
@@ -181,7 +189,7 @@ class SignalExtractionService
                     'dimension_id', 'title', 'summary', 'significance', 'evidence_quote',
                     'suggested_time_horizon_id', 'preliminary_impact', 'preliminary_uncertainty',
                     'confidence_score', 'confidence_rationale', 'extraction_provider', 'extraction_model',
-                    'prompt_version', 'quote_verified', 'suggested_driving_force_id',
+                    'prompt_version', 'quote_verified', 'suggested_driving_force_id', 'generation_run_id',
                 ])->all());
             }
 

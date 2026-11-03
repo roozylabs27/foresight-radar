@@ -108,7 +108,10 @@ class ProjectDrivingForceTest extends TestCase
             ->assertInertia(fn ($page) => $page->component('ScenarioPlanning/DrivingForces')
                 ->has('forces', 2)
                 ->where('forces.0.inclusion_status', 'included')
+                // Roadmap R0.6: every exercise artefact says where it came from.
+                ->where('forces.0.origin', 'library')
                 ->has('library', 0));
+        $this->assertSame(['library'], ProjectDrivingForce::where('project_id', $project->id)->pluck('origin')->unique()->values()->all());
     }
 
     public function test_another_tenants_or_deleted_forces_cannot_be_added(): void

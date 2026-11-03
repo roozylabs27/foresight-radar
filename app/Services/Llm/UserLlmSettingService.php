@@ -10,6 +10,9 @@ use Throwable;
 
 class UserLlmSettingService
 {
+    /** The connection test waits this long for an answer, once; real work keeps its own timeout. */
+    public const TEST_TIMEOUT_SECONDS = 30;
+
     public function __construct(
         protected LlmClientResolver $resolver,
     ) {}
@@ -224,6 +227,8 @@ class UserLlmSettingService
         $startTime = microtime(true);
 
         try {
+            // A test should answer within half a minute and say why it failed, not retry for minutes.
+            $attributes['settings'] = array_merge($attributes['settings'] ?? [], ['timeout' => self::TEST_TIMEOUT_SECONDS, 'max_retries' => 0]);
             $client = $this->resolver->createClient($attributes);
 
             if (! $client->isAvailable()) {
@@ -262,7 +267,7 @@ class UserLlmSettingService
         } catch (Throwable $th) {
             $latencyMs = round((microtime(true) - $startTime) * 1000);
             $message = $th instanceof LlmException
-                ? $th->userMessage()
+                ? $th->userMessage().$this->providerDetail($th, (string) ($attributes['provider'] ?? ''))
                 : $th->getMessage();
 
             return [
@@ -271,5 +276,16 @@ class UserLlmSettingService
                 'message' => 'Uji koneksi gagal: '.$message,
             ];
         }
+    }
+
+    /** " (HTTP 503 · gemini: The model is overloaded ...)", or empty when the provider gave nothing. */
+    private function providerDetail(LlmException $exception, string $provider): string
+    {
+        $parts = array_filter([
+            $exception->status ? 'HTTP '.$exception->status : null,
+            $exception->providerMessage ? trim($provider.': '.$exception->providerMessage, ': ') : null,
+        ]);
+
+        return $parts === [] ? '' : ' ('.implode(' · ', $parts).')';
     }
 }

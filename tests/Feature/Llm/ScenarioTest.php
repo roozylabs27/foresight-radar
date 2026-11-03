@@ -3,6 +3,7 @@
 namespace Tests\Feature\Llm;
 
 use App\Jobs\GenerateScenarioNarrative;
+use App\Models\AiGenerationRun;
 use App\Models\CrossImpact;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -208,6 +209,8 @@ class ScenarioTest extends TestCase
         $this->assertCount(4, $quadrants);
         $this->assertSame('Regulasi ketat · Adopsi lambat', $quadrants['HL']['title']);
         $this->assertFalse($quadrants['HL']['is_ai_generated']);
+        // Roadmap R0.6: the shared origin field names template output as such.
+        $this->assertSame('template', $quadrants['HL']['origin']);
         $this->assertStringStartsWith('Kerangka tanpa AI.', $quadrants['HL']['narrative']);
         $this->assertSame(['S1'], $quadrants['HL']['cited_refs']);
         $this->assertSame('S1', $response->json('scenario.evidence.0.ref'));
@@ -443,5 +446,48 @@ class ScenarioTest extends TestCase
         $this->app->instance(LlmClientResolver::class, $resolver);
 
         return $organization;
+    }
+
+    /** Roadmap R1.12: a narrative run records provider, model, prompt version and evidence. */
+    public function test_an_ai_narrative_is_recorded_as_a_run_that_the_scenario_and_quadrants_link_to(): void
+    {
+        $llm = $this->fakeLlm();
+        $scenario = $this->scenario();
+        $s1 = $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+        $llm->respond($this->narrative(['HH' => ['S1'], 'HL' => ['S1'], 'LH' => ['S2'], 'LL' => ['S2']]));
+
+        $this->generate($scenario)->assertStatus(202);
+
+        $run = AiGenerationRun::sole();
+        $this->assertSame(['scenario_narrative', 'claude', 'claude-fake', 'completed', 'scenario-v2'], [$run->purpose, $run->provider, $run->model, $run->status, $run->prompt_version]);
+        $this->assertSame($scenario->uuid, $run->input_refs['scenario']);
+        $this->assertContains($s1->id, $run->input_refs['signals']);
+        $this->assertSame($run->id, $scenario->fresh()->generation_run_id);
+        $this->assertSame(['ai'], $scenario->quadrants()->pluck('origin')->unique()->values()->all());
+        $this->assertSame([$run->id], $scenario->quadrants()->pluck('generation_run_id')->unique()->values()->all());
+    }
+
+    public function test_rejected_and_failed_narrative_calls_are_recorded_without_links(): void
+    {
+        $llm = $this->fakeLlm();
+        $scenario = $this->scenario();
+        $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+
+        // Citations outside the offered evidence: the whole result is rejected.
+        $llm->respond($this->narrative(['HH' => ['S9']]));
+        $this->generate($scenario);
+        $rejected = AiGenerationRun::latest('id')->first();
+        $this->assertSame('rejected', $rejected->status);
+        $this->assertSame(0, $scenario->quadrants()->count());
+
+        // The provider fails: the template is written and links no run.
+        $llm->respond(new LlmException('rate_limited'));
+        $this->generate($scenario)->assertStatus(202);
+        $failed = AiGenerationRun::latest('id')->first();
+        $this->assertSame(['failed', 'rate_limited'], [$failed->status, $failed->error]);
+        $this->assertNull($scenario->fresh()->generation_run_id);
+        $this->assertSame([null], $scenario->quadrants()->pluck('generation_run_id')->unique()->values()->all());
     }
 }

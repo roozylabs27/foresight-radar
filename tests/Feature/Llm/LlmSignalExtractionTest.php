@@ -4,6 +4,7 @@ namespace Tests\Feature\Llm;
 
 use App\Enums\LlmJobStatus;
 use App\Jobs\ExtractSignals;
+use App\Models\AiGenerationRun;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\Environment;
@@ -14,6 +15,7 @@ use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\Prompts\SignalExtractionPrompt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -395,5 +397,42 @@ class LlmSignalExtractionTest extends TestCase
         $this->app->instance(LlmClientResolver::class, $resolver);
 
         return $organization;
+    }
+
+    /** Roadmap R1.12: every AI call is recorded as a run, and what it produced points to it. */
+    public function test_an_ai_extraction_is_recorded_as_a_run_that_its_signals_link_to(): void
+    {
+        $this->llm->respond(['signals' => [$this->candidate()]]);
+
+        $this->ingest()->assertStatus(202);
+
+        $run = AiGenerationRun::sole();
+        $source = Source::sole();
+        $this->assertSame(['signal_extraction', 'claude', 'claude-fake', 'completed'], [$run->purpose, $run->provider, $run->model, $run->status]);
+        $this->assertSame(SignalExtractionPrompt::VERSION, $run->prompt_version);
+        $this->assertSame(['source' => $source->uuid], $run->input_refs);
+        $this->assertSame(['input_tokens' => 0, 'output_tokens' => 0], $run->usage);
+        $this->assertSame($this->analyst->id, $run->created_by);
+        $this->assertSame([$run->id], Signal::pluck('generation_run_id')->unique()->values()->all());
+    }
+
+    public function test_a_failed_ai_extraction_is_recorded_and_the_keyword_fallback_links_no_run(): void
+    {
+        $this->llm->respond(new LlmException('rate_limited'));
+
+        $this->ingest()->assertStatus(202);
+
+        $run = AiGenerationRun::sole();
+        $this->assertSame(['failed', 'rate_limited'], [$run->status, $run->error]);
+        $this->assertSame([null], Signal::pluck('generation_run_id')->unique()->values()->all());
+    }
+
+    public function test_extraction_without_ai_records_no_run(): void
+    {
+        config(['services.signal_extraction.driver' => 'heuristic']);
+
+        $this->ingest()->assertStatus(202);
+
+        $this->assertSame(0, AiGenerationRun::count());
     }
 }

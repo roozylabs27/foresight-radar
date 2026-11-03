@@ -289,6 +289,7 @@ class ScenarioController extends Controller
                 'early_indicators' => $quadrant->early_indicators ?? [],
                 'cited_refs' => collect($quadrant->cited_signal_ids ?? [])->map(fn ($id) => $refById[$id] ?? null)->filter()->values()->all(),
                 'is_ai_generated' => $quadrant->is_ai_generated,
+                'origin' => $quadrant->origin,
                 'provider' => $quadrant->provider,
                 'review_status' => $quadrant->review_status,
                 'reviewed_by' => $quadrant->reviewer?->name,

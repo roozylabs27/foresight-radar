@@ -12,6 +12,7 @@ use App\Services\Llm\LlmRequest;
 use App\Services\Llm\NullLlmClient;
 use App\Services\Llm\OpenAiCompatibleClient;
 use App\Services\Llm\StructuredLlmClient;
+use App\Services\Llm\UserLlmSettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -261,5 +262,41 @@ class OpenAiCompatibleClientTest extends TestCase
         $this->assertSame('openrouter', $signal->extraction_provider);
         $this->assertSame('vendor/model-x-2026', $signal->extraction_model);
         $this->assertTrue($signal->quote_verified);
+    }
+
+    /** The provider's own reason (Gemini sends its error body as a list) reaches the exception and the log. */
+    public function test_provider_error_status_and_message_are_kept(): void
+    {
+        Log::spy();
+        Http::fake([self::BASE.'/chat/completions' => Http::response([[
+            'error' => ['code' => 503, 'message' => 'The model is overloaded. Please try again later.', 'status' => 'UNAVAILABLE'],
+        ]], 503)]);
+
+        try {
+            (new OpenAiCompatibleClient($this->config(['max_retries' => 0])))->generateJson($this->request());
+            $this->fail('No exception thrown.');
+        } catch (LlmException $e) {
+            $this->assertSame(['overloaded', 503, 'The model is overloaded. Please try again later.'], [$e->reason, $e->status, $e->providerMessage]);
+        }
+
+        Log::shouldHaveReceived('warning')->withArgs(fn ($message, $context = []) => $message === 'llm.error'
+            && ($context['status'] ?? null) === 503 && ($context['provider_message'] ?? null) === 'The model is overloaded. Please try again later.');
+    }
+
+    /** The settings connection test answers fast, once, and says what the provider said. */
+    public function test_connection_test_tries_once_and_shows_the_provider_reason(): void
+    {
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['error' => ['code' => 503, 'message' => 'This model is currently experiencing high demand.']], 503)]);
+
+        $result = app(UserLlmSettingService::class)->testConnection([
+            'provider' => 'gemini', 'model' => 'gemini-test', 'api_key' => 'gm-test-not-real',
+            'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai/',
+        ]);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('Layanan AI sedang sibuk', $result['message']);
+        $this->assertStringContainsString('HTTP 503', $result['message']);
+        $this->assertStringContainsString('This model is currently experiencing high demand.', $result['message']);
+        Http::assertSentCount(1);
     }
 }

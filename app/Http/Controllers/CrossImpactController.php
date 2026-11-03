@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\CrossImpactRequest;
 use App\Services\CrossImpactService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -43,7 +44,7 @@ class CrossImpactController extends Controller
                 $validated['target'],
                 (int) $validated['score'],
                 $validated['note'] ?? null,
-                auth()->id(),
+                Auth::id(),
             );
 
             return response()->json([

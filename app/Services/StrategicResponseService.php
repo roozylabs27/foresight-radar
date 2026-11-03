@@ -7,6 +7,7 @@ use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\StrategicResponse;
 use App\Models\User;
+use App\Support\Provenance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +32,7 @@ class StrategicResponseService
             $response = StrategicResponse::create($this->attributes($validated) + [
                 'project_id' => $project->id,
                 'status' => 'proposed',
-                'origin' => 'human',
+                'origin' => Provenance::HUMAN,
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
             ]);

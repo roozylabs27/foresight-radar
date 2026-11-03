@@ -487,7 +487,60 @@
         "The keyword is still limited to four words",
         "The form shows a live word count and checks both limits before submitting"
       ],
-      "verification_evidence": "2026-11-02: DrivingForceTest (incl. the new limit test) and WordCountRuleTest 16 passed; Larastan, Pint and build in the same session run."
+      "verification_evidence": "2026-11-02: DrivingForceTest + WordCountRuleTest 16 passed; full PHPUnit 489 passed (4,711 assertions); Larastan clean; Pint clean; npm build OK."
+    },
+    {
+      "id": "FEAT-035",
+      "name": "Foresight Radar Readability",
+      "description": "Radar markers show the Status of Action (Monitoring = triangle, Decided Plan = circle), the centre carries a \"FIRM\" disc in both themes, markers never overlap each other or the disc, and analysis pages default to the last 12 months instead of the current month.",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Monitoring markers are triangles and Decided Plan markers circles; the legend and tooltip name the action",
+        "The innermost ring is a dark \"FIRM\" disc with white text in light and dark mode",
+        "No two markers overlap and no marker touches the FIRM disc; markers stay inside their dimension sector and horizon band",
+        "Analysis pages and their backend default to the last 12 calendar months, so data from earlier months is visible without changing the filter"
+      ],
+      "verification_evidence": "2026-11-02: browser (light and dark): 26 markers, 8 triangles, no pair closer than 31 px, closest marker 61 px from the centre (disc 28 px); default period shows the October data in November; ForesightReportingServiceTest updated; full PHPUnit 489 passed."
+    },
+    {
+      "id": "FEAT-036",
+      "name": "AI Generation Runs",
+      "description": "Every AI call (signal extraction, scenario narratives) is recorded with purpose, provider, model, prompt version, inputs, outcome and usage; AI output links its run (roadmap R1.12).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A completed AI call records a run and the signals, scenario and quadrants it produced link to it",
+        "Failed provider calls and rejected answers are recorded with their reason and link nothing",
+        "Output written without AI (keyword rules, template) links no run; extraction without AI records none"
+      ],
+      "verification_evidence": "2026-11-02: tests/Feature/Llm 85 passed (5 new); Larastan clean; Pint clean."
+    },
+    {
+      "id": "FEAT-037",
+      "name": "Origin & Review Convention",
+      "description": "Every scenario planning artefact records where it came from and whether a person accepted it, shown with one shared badge (roadmap R0.6).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Every exercise table has an origin and a review state (own column or its decision column)",
+        "Exercise forces are marked as taken from the library; quadrants as human, AI or template",
+        "One shared ProvenanceBadge shows origin and review state across quadrant, implication, indicator, response and uncertainty cards",
+        "The convention is documented for new artefacts"
+      ],
+      "verification_evidence": "2026-11-02: origin assertions added to three existing test classes; Larastan clean; Pint clean; npm build OK; browser: provider badge on AI quadrants, review badge, response \"Usulan\"."
+    },
+    {
+      "id": "FEAT-038",
+      "name": "Auth Helper Policy Guard",
+      "description": "Backend code uses the Auth facade or $request->user(), never the auth() helper, and a test keeps it that way (roadmap R3.3, AGENTS.md section 10).",
+      "priority": "P3",
+      "status": "passing",
+      "acceptance_criteria": [
+        "No auth() helper call remains in app, routes, database or tests",
+        "A unit test fails on any new auth() call and names the file and line"
+      ],
+      "verification_evidence": "2026-11-02: AuthHelperPolicyTest failed on the unfixed CrossImpactController:46 and passes after the fix; Larastan clean; Pint clean."
     }
   ]
 }

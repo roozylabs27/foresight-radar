@@ -16,8 +16,17 @@ class LlmException extends RuntimeException
         'timeout', 'refusal', 'max_tokens', 'invalid_json', 'quota_exceeded',
     ];
 
-    public function __construct(public readonly string $reason, string $message = '', ?Throwable $previous = null)
-    {
+    /**
+     * @param  int|null  $status  HTTP status the provider answered with, when there was one
+     * @param  string|null  $providerMessage  the provider's own error text (shown in the connection test)
+     */
+    public function __construct(
+        public readonly string $reason,
+        string $message = '',
+        ?Throwable $previous = null,
+        public readonly ?int $status = null,
+        public readonly ?string $providerMessage = null,
+    ) {
         parent::__construct($message !== '' ? $message : $reason, 0, $previous);
     }
 

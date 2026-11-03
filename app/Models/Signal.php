@@ -37,6 +37,7 @@ class Signal extends Model
         'extraction_provider',
         'extraction_model',
         'prompt_version',
+        'generation_run_id',
         'quote_verified',
         'suggested_driving_force_id',
     ];
