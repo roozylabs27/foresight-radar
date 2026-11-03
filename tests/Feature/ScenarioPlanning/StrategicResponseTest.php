@@ -8,6 +8,7 @@ use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\ProjectDrivingForce;
 use App\Models\Scenario;
+use App\Models\ScenarioCondition;
 use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
@@ -298,5 +299,74 @@ class StrategicResponseTest extends TestCase
 
         $this->actingAs($this->manager)->delete(route('scenario-planning.responses.destroy', [$this->project, $response]))->assertSessionHasNoErrors();
         $this->assertSame(0, StrategicResponse::count());
+    }
+
+    private function condition(string $position, string $text): ScenarioCondition
+    {
+        $this->actingAs($this->manager)->post(route('scenario-planning.conditions.store', [$this->project, $this->quadrant($position)]), ['kind' => 'assumption', 'text' => $text])->assertSessionHasNoErrors();
+
+        return ScenarioCondition::latest('id')->firstOrFail();
+    }
+
+    /** Roadmap R2.9: a response names the step 5 conditions it relies on. */
+    public function test_a_response_lists_the_conditions_it_relies_on(): void
+    {
+        $this->readyFramework();
+        $battery = $this->condition('HH', 'Harga baterai turun 40%');
+        $this->condition('LL', 'Subsidi EV dihentikan');
+
+        $this->store(['conditions' => [$battery->uuid]])->assertSessionHasNoErrors();
+        $response = StrategicResponse::sole();
+        $this->assertSame([$battery->id], $response->conditions()->pluck('scenario_conditions.id')->all());
+
+        $this->store(['title' => 'Lain', 'conditions' => [(string) Uuid::uuid4()]])->assertSessionHasErrors('conditions');
+        $this->assertSame(1, StrategicResponse::count());
+
+        $this->actingAs($this->manager)->get(route('scenario-planning.responses.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->has('conditions', 2)
+                ->where('responses.0.conditions.0.id', $battery->uuid)
+                ->where('responses.0.conditions.0.position', 'HH')
+                ->where('responses.0.conditions.0.text', 'Harga baterai turun 40%')
+                ->where('responses.0.stale', null));
+    }
+
+    /** Changing or removing a relied-on condition flags the response, keeps its status, until kept or edited. */
+    public function test_changing_a_relied_on_condition_flags_the_response(): void
+    {
+        $this->readyFramework();
+        $battery = $this->condition('HH', 'Harga baterai turun 40%');
+        $subsidy = $this->condition('LL', 'Subsidi EV dihentikan');
+        $this->store(['conditions' => [$battery->uuid]]);
+        $this->store(['title' => 'Respons lain', 'conditions' => [$subsidy->uuid]]);
+        [$relying, $other] = [StrategicResponse::where('title', 'Secure USP for each xEV model')->sole(), StrategicResponse::where('title', 'Respons lain')->sole()];
+        $this->action($relying, 'approve')->assertSessionHasNoErrors();
+
+        $this->actingAs($this->manager)->put(route('scenario-planning.conditions.update', [$this->project, $battery]), ['kind' => 'assumption', 'text' => 'Harga baterai stagnan'])->assertSessionHasNoErrors();
+
+        $relying->refresh();
+        $this->assertNotNull($relying->stale_since);
+        $this->assertStringContainsString('Harga baterai stagnan', $relying->stale_reason);
+        $this->assertSame('approved', $relying->status);
+        $this->assertNull($other->fresh()->stale_since);
+        $this->actingAs($this->manager)->get(route('scenario-planning.responses.index', $this->project))
+            ->assertInertia(fn ($page) => $page // equal fit and priority: sorted by title
+                ->where('responses.0.title', 'Respons lain')->where('responses.0.stale', null)
+                ->where('responses.1.stale.reasons.0', $relying->stale_reason));
+
+        $this->action($relying, 'keep')->assertSessionHasNoErrors();
+        $this->assertNull($relying->fresh()->stale_since);
+        $this->assertSame('approved', $relying->fresh()->status);
+
+        $this->actingAs($this->manager)->delete(route('scenario-planning.conditions.destroy', [$this->project, $subsidy]))->assertSessionHasNoErrors();
+        $other->refresh();
+        $this->assertNotNull($other->stale_since);
+        $this->assertStringContainsString('Subsidi EV dihentikan', $other->stale_reason);
+        $this->assertSame(0, $other->conditions()->count());
+
+        $this->actingAs($this->manager)->put(route('scenario-planning.responses.update', [$this->project, $other]), $this->responsePayload(['title' => 'Respons lain']))->assertSessionHasNoErrors();
+        $this->assertNull($other->fresh()->stale_since);
+
+        $this->actingAs($this->viewer)->post(route('scenario-planning.responses.keep', [$this->project, $relying]))->assertForbidden();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -59,6 +60,12 @@ class ScenarioCondition extends Model
     public function projectForce(): BelongsTo
     {
         return $this->belongsTo(ProjectDrivingForce::class, 'project_driving_force_id');
+    }
+
+    /** Strategic responses that rely on this condition (roadmap R2.9). */
+    public function responses(): BelongsToMany
+    {
+        return $this->belongsToMany(StrategicResponse::class, 'response_conditions');
     }
 
     public function getRouteKeyName()

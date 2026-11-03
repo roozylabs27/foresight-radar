@@ -21,5 +21,6 @@ export function useStrategicResponses(projectId) {
         remove: (responseId) => visit("delete", url("destroy", responseId)),
         approve: (responseId) => visit("post", url("approve", responseId)),
         reject: (responseId) => visit("post", url("reject", responseId)),
+        keep: (responseId) => visit("post", url("keep", responseId)),
     };
 }

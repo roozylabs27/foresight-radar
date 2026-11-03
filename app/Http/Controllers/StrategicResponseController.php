@@ -6,6 +6,7 @@ use App\Http\Requests\StrategicResponseRequest;
 use App\Models\ScenarioPlanningProject;
 use App\Models\StrategicResponse;
 use App\Services\ScenarioPlanningProjectService;
+use App\Services\StalenessService;
 use App\Services\StrategicResponseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,7 @@ class StrategicResponseController extends Controller
             ])->values()->all() : [],
             'responses' => $this->responses->list($project),
             'implications' => $framework ? $this->responses->implicationOptions($framework) : [],
+            'conditions' => $framework ? $this->responses->conditionOptions($framework) : [],
             'owners' => $this->projects->owners($request->user()),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
         ]);
@@ -77,6 +79,16 @@ class StrategicResponseController extends Controller
         $this->responses->approve($response, $request->user());
 
         return back()->with('success', 'Respons strategis disetujui.');
+    }
+
+    /** "Keep": the response was checked against its changed conditions and stays as it is. */
+    public function keep(ScenarioPlanningProject $project, StrategicResponse $response, StalenessService $staleness): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $staleness->clearResponse($response);
+
+        return back()->with('success', 'Respons dipertahankan.');
     }
 
     public function reject(Request $request, ScenarioPlanningProject $project, StrategicResponse $response): RedirectResponse

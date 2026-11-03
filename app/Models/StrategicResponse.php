@@ -25,6 +25,8 @@ use Ramsey\Uuid\Uuid;
  * @property int|null $approved_by
  * @property Carbon|null $approved_at
  * @property string $origin
+ * @property Carbon|null $stale_since
+ * @property string|null $stale_reason
  */
 class StrategicResponse extends Model
 {
@@ -49,6 +51,8 @@ class StrategicResponse extends Model
         'approved_by',
         'approved_at',
         'origin',
+        'stale_since',
+        'stale_reason',
         'created_by',
         'updated_by',
     ];
@@ -56,6 +60,7 @@ class StrategicResponse extends Model
     protected $casts = [
         'priority' => 'integer',
         'approved_at' => 'datetime',
+        'stale_since' => 'datetime',
     ];
 
     protected static function booted()
@@ -85,6 +90,12 @@ class StrategicResponse extends Model
     public function implications(): BelongsToMany
     {
         return $this->belongsToMany(ScenarioImplication::class, 'response_implications');
+    }
+
+    /** Step 5 conditions this response relies on (roadmap R2.9). */
+    public function conditions(): BelongsToMany
+    {
+        return $this->belongsToMany(ScenarioCondition::class, 'response_conditions');
     }
 
     public function fits(): HasMany

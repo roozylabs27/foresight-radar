@@ -38,6 +38,8 @@ class StrategicResponseRequest extends FormRequest
             'fit.*' => [Rule::in(StrategicResponse::FITS)],
             'implications' => ['nullable', 'array', 'max:30'],
             'implications.*' => ['uuid'],
+            'conditions' => ['nullable', 'array', 'max:30'],
+            'conditions.*' => ['uuid'],
         ];
     }
 
@@ -52,6 +54,7 @@ class StrategicResponseRequest extends FormRequest
             'owner' => 'penanggung jawab',
             'depends_on' => 'asumsi yang mendasari',
             'fit.*' => 'kecocokan',
+            'conditions' => 'kondisi yang diandalkan',
         ];
     }
 }

@@ -6,9 +6,9 @@ import { Input } from "@/Components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
-import { IMPLICATION_TYPES, RESPONSE_FITS } from "@/domain/scenarioPlanning";
+import { CONDITION_KINDS, IMPLICATION_TYPES, RESPONSE_FITS } from "@/domain/scenarioPlanning";
 
-const EMPTY = { title: "", description: "", rationale: "", initiatives: "", priority: "", owner: "", depends_on: "", fit: {}, implications: [] };
+const EMPTY = { title: "", description: "", rationale: "", initiatives: "", priority: "", owner: "", depends_on: "", fit: {}, implications: [], conditions: [] };
 const NONE = "none";
 
 const error = (errors, name) => (errors[name] ? { message: [].concat(errors[name])[0] } : undefined);
@@ -18,7 +18,7 @@ const error = (errors, name) => (errors[name] ? { message: [].concat(errors[name
  * (null response to add) or null when closed. Saving an approved response returns it to proposed.
  * `onSave(values)` resolves to the 422 errors or undefined.
  */
-export default function ResponseDialog({ target, quadrants, implications, owners, loading, onOpenChange, onSave }) {
+export default function ResponseDialog({ target, quadrants, implications, conditions, owners, loading, onOpenChange, onSave }) {
     const [values, setValues] = useState(EMPTY);
     const [errors, setErrors] = useState({});
     const response = target?.response;
@@ -27,13 +27,13 @@ export default function ResponseDialog({ target, quadrants, implications, owners
         if (!target) return;
         setErrors({});
         setValues(response
-            ? { ...EMPTY, ...response, description: response.description ?? "", rationale: response.rationale ?? "", initiatives: response.initiatives ?? "", depends_on: response.depends_on ?? "", priority: response.priority ? String(response.priority) : "", owner: response.owner?.id ?? "", fit: { ...response.fit }, implications: response.implications.map((item) => item.id) }
+            ? { ...EMPTY, ...response, description: response.description ?? "", rationale: response.rationale ?? "", initiatives: response.initiatives ?? "", depends_on: response.depends_on ?? "", priority: response.priority ? String(response.priority) : "", owner: response.owner?.id ?? "", fit: { ...response.fit }, implications: response.implications.map((item) => item.id), conditions: response.conditions.map((item) => item.id) }
             : EMPTY);
     }, [target, response?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const setFit = (position, fit) => setValues((current) => ({ ...current, fit: { ...current.fit, [position]: fit } }));
-    const toggleImplication = (id) => set("implications", values.implications.includes(id) ? values.implications.filter((item) => item !== id) : [...values.implications, id]);
+    const toggle = (name, id) => set(name, values[name].includes(id) ? values[name].filter((item) => item !== id) : [...values[name], id]);
     const save = async () => {
         const result = await onSave({ ...values, priority: values.priority ? Number(values.priority) : null, owner: values.owner || null });
         if (result) return setErrors(result);
@@ -120,7 +120,7 @@ export default function ResponseDialog({ target, quadrants, implications, owners
                             {implications.map((item) => (
                                 <li key={item.id}>
                                     <label className="flex cursor-pointer items-start gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
-                                        <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={values.implications.includes(item.id)} onChange={() => toggleImplication(item.id)} />
+                                        <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={values.implications.includes(item.id)} onChange={() => toggle("implications", item.id)} />
                                         <span>
                                             <span className="text-xs text-muted-foreground">{item.position} · {IMPLICATION_TYPES[item.type]?.label}:</span> {item.title}
                                         </span>
@@ -130,7 +130,26 @@ export default function ResponseDialog({ target, quadrants, implications, owners
                         </ul>
                     )}
                 </FormField>
-                <FormField id="response-depends" label="Asumsi yang mendasari" required={false} error={error(errors, "depends_on")}>
+                <FormField id="response-conditions" label="Bergantung pada kondisi" required={false} error={error(errors, "conditions")} group>
+                    {conditions.length === 0 ? (
+                        <p className="m-0 text-xs text-muted-foreground">Belum ada kondisi skenario (langkah 5).</p>
+                    ) : (
+                        <ul aria-labelledby="response-conditions-label" className="m-0 flex max-h-36 list-none flex-col gap-1 overflow-y-auto p-0">
+                            {conditions.map((item) => (
+                                <li key={item.id}>
+                                    <label className="flex cursor-pointer items-start gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
+                                        <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={values.conditions.includes(item.id)} onChange={() => toggle("conditions", item.id)} />
+                                        <span>
+                                            <span className="text-xs text-muted-foreground">{item.position} · {CONDITION_KINDS[item.kind]?.label}:</span> {item.text}
+                                        </span>
+                                    </label>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <p className="m-0 text-xs text-muted-foreground">Respons ditandai untuk ditinjau bila salah satu kondisi ini diubah atau dihapus.</p>
+                </FormField>
+                <FormField id="response-depends" label="Asumsi lain (teks bebas)" required={false} error={error(errors, "depends_on")}>
                     <Input id="response-depends" value={values.depends_on} onChange={(event) => set("depends_on", event.target.value)} maxLength={1000} placeholder="Contoh: harga baterai terus turun" />
                 </FormField>
                 {errors.responses && <p role="alert" className="m-0 text-sm text-danger">{errors.responses}</p>}

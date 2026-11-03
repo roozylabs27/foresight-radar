@@ -1,4 +1,4 @@
-import { CircleCheckIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react";
+import { AlertCircleIcon, CheckIcon, CircleCheckIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
@@ -8,7 +8,7 @@ import { Button } from "@/Components/ui/button";
 import { RESPONSE_FITS, RESPONSE_STATUSES, ROBUSTNESS } from "@/domain/scenarioPlanning";
 
 /** One strategic response: status, robustness, fit per quadrant, links and actions. */
-export default function ResponseCard({ response, quadrants, canManage, busy, onEdit, onRemove, onApprove, onReject }) {
+export default function ResponseCard({ response, quadrants, canManage, busy, onEdit, onRemove, onApprove, onReject, onKeep }) {
     const status = RESPONSE_STATUSES[response.status];
     const robustness = ROBUSTNESS[response.robustness];
     const initiatives = (response.initiatives ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
@@ -28,6 +28,26 @@ export default function ResponseCard({ response, quadrants, canManage, busy, onE
                 {response.priority && <span className="text-xs font-medium text-foreground">P{response.priority}</span>}
                 {response.owner && <span className="text-xs text-muted-foreground">PJ: {response.owner.name}</span>}
             </header>
+
+            {response.stale && (
+                <div role="status" className="flex flex-col gap-1.5 rounded-md border border-warning/40 bg-warning-soft p-2.5 text-xs text-warning">
+                    <p className="m-0 flex items-center gap-1.5 font-semibold">
+                        <AlertCircleIcon aria-hidden="true" className="size-4" />
+                        Kondisi yang diandalkan berubah. Tinjau respons ini.
+                    </p>
+                    <ul className="m-0 flex list-disc flex-col gap-0.5 pl-5">
+                        {response.stale.reasons.map((reason) => (
+                            <li key={reason}>{reason}</li>
+                        ))}
+                    </ul>
+                    {canManage && (
+                        <Button size="sm" variant="outline" className="self-start" disabled={busy} onClick={onKeep}>
+                            <CheckIcon aria-hidden="true" />
+                            Sudah ditinjau, pertahankan
+                        </Button>
+                    )}
+                </div>
+            )}
 
             <dl className="m-0 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {quadrants.map((quadrant) => {
@@ -53,6 +73,9 @@ export default function ResponseCard({ response, quadrants, canManage, busy, onE
             )}
             {response.implications.length > 0 && (
                 <p className="m-0 text-[11px] text-muted-foreground">Menjawab: {response.implications.map((item) => `${item.position} · ${item.title}`).join("; ")}</p>
+            )}
+            {response.conditions.length > 0 && (
+                <p className="m-0 text-[11px] text-muted-foreground">Bergantung pada: {response.conditions.map((item) => `${item.position} · ${item.text}`).join("; ")}</p>
             )}
             {response.depends_on && <p className="m-0 text-[11px] text-muted-foreground">Asumsi: {response.depends_on}</p>}
             {response.status === "approved" && response.approved_by && <p className="m-0 text-[11px] text-muted-foreground">Disetujui oleh {response.approved_by}</p>}
