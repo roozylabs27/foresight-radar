@@ -423,6 +423,8 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-03 (uncommitted) | Roadmap R2.9 response condition dependencies + test DB guard | **PASS** | Pint 375 files PASS; Larastan L5 `[OK] No errors`; `StrategicResponseTest` + `ScenarioConditionTest` + `StalenessTest` 24 passed (425 assertions); full PHPUnit 499 passed (4,816 assertions, 1696.00s) on sqlite, dev DB still 38 users afterwards; `npm run build` PASS (8 known sourcemap warnings); migration `2026_11_03_000001` applied to the restored dev DB; browser: link, card, warning and keep |
+| 2026-11-03 (local, `/docs` gitignored) | Roadmap R3.4 superseded product docs | **NOT RUN** | Docs only: no code changed, so Pint / Larastan / PHPUnit / build not run; referenced files and classes checked by `ls` / `grep` |
 | 2026-11-03 (uncommitted) | LLM connection test error detail (Gemini 503) | **PASS** | Pint PASS (1 file fixed); Larastan L5 `[OK] No errors`; `OpenAiCompatibleClientTest` 12 passed; PHPUnit 497 passed (4,749 assertions, 903.26s); live connection test with the saved Gemini setting OK (5,073 ms); backend only |
 | 2026-11-02 (uncommitted) | Roadmap R3.3 `auth()` helper cleanup + policy guard | **PASS** | Pint PASS (1 import order fixed); Larastan L5 `[OK] No errors`; PHPUnit 495 passed (4,742 assertions, 443.60s); backend only |
 | 2026-11-02 (uncommitted) | Scenario roadmap R0.6 origin and review convention | **PASS** | Pint PASS (1 file fixed); Larastan L5 `[OK] No errors`; PHPUnit 494 passed (4,741 assertions, 502.07s) — build ran before the suite, not during; `npm run build` PASS; migration `2026_11_02_000003` applied to the dev DB (quadrants backfilled); browser: one provider badge per AI quadrant, review badge, response "Usulan" |
@@ -449,6 +451,24 @@
 ---
 
 ## Session Log
+
+### 2026-11-03 — Session 44 (R2.9 response condition dependencies; dev database incident)
+
+- **Incident — dev database wiped and restored:** the app container restarted at 14:41 and its config and routes were cached at 14:43 (`bootstrap/cache/config.php`, `routes-v7.php`; not run by the agent). A cached config ignores `phpunit.xml`, so `php artisan test` ran `RefreshDatabase` against MySQL `foresight_radar` (08:15:07 UTC: `DROP TABLE` of all 45 tables). Restored by binlog replay: `mysqlbinlog` (OL9 `mysql` 8.0.46 client in a throwaway `mysql:8.0` container, binlog volume read-only) of `binlog.000002`–`000011` (`foresight_radar` was created in `000002`, 2026-10-09 07:15 UTC; the wipe is the first transaction of `000012`), rewritten into `foresight_radar_restore`, checked (45 tables, 41 migrations up to `2026_11_02_000003`, 38 users, 29 forces, 15 signals, 1 exercise, Gemini setting of 11:46:19), then the tables were renamed into `foresight_radar`. A dump of the restored state is in the agent scratchpad (`foresight_radar_restored_2026-11-03.sql`).
+- **Guard:** `tests/CreatesApplication.php` now throws before any test runs when the config is cached or the default connection is not in-memory sqlite. `config:clear`, `route:clear` and `event:clear` were run in the container. Not proven by re-caching the config (that run was blocked as too risky); the normal run passes the guard and left the dev database intact (38 users before and after).
+- **R2.9:** migration `2026_11_03_000001_link_responses_to_conditions` (`response_conditions` pivot; `stale_since` / `stale_reason` on `strategic_responses`). `StrategicResponseService` validates that linked conditions belong to the exercise framework, syncs them, lists them, and clears the flag when a response is edited. `ScenarioConditionService` flags relying responses (`StalenessService::conditionChanged`) when a condition's kind, text, axis or force changes, or before it is deleted; status is kept. New `responses.keep` route clears one response's flag. UI: "Bergantung pada kondisi" checklist in `ResponseDialog`, linked conditions and a warning with "Sudah ditinjau, pertahankan" in `ResponseCard`; free-text `depends_on` renamed "Asumsi lain".
+- **Tests:** 2 new tests in `StrategicResponseTest` (linking + validation + page payload; edit and delete flag only the relying response, status kept, keep and edit clear, viewer forbidden). Not seen RED: the first run was the one that hit MySQL and was stopped, and the code was written before a clean run. First clean run: 1 failure from a wrong row index in the test (responses sorted by title on a tie), fixed; 1 RouteNotFound from the stale route cache, cleared.
+- **Browser:** linked one condition on the existing response, card showed it; stale flag set in SQL showed the warning, "pertahankan" cleared it; the test link was then removed so the response is back to its earlier state.
+- **Docs:** roadmap R2.9 done; matrix 8.8 complete (74/9/11/0; step 8 9/0/1/0); `feature_list.json` FEAT-040.
+- **Next recommended action:** user review and commit (includes the test guard); find what caches config on container start before relying on `php artisan test` after a restart.
+
+### 2026-11-03 — Session 43 (R3.4 superseded product docs)
+
+- **Docs:** dated "Superseded (2026-11-03)" note at the top of `docs/product/DOMAIN_GAPS.md`, `FORESIGHT_DOMAIN_MODEL.md` and `SIGNAL_TO_INSIGHT_SPEC.md`. Each says what changed since 2026-10-09 and points to the current audit, matrix, roadmap, feature specification, data model gap, LLM integration and frontend architecture documents. Old content kept.
+- **Checked:** every referenced document and class exists (`EvidenceVerifier` lives in `app/Support`, not `app/Services`, so the note names it without a path). `/docs` is gitignored, so these edits stay local.
+- **Gemini follow-up:** the saved Gemini key now returns HTTP 429 (quota exhausted); `gemini-2.5-flash` and `gemini-2.0-flash` return 404 (retired). User chose to leave the model dropdown as is for now.
+- **Docs:** roadmap R3.4 done; `feature_list.json` FEAT-039.
+- **Next recommended action:** user review and commit; then R2.9.
 
 ### 2026-11-03 — Session 42 (LLM connection test error detail)
 

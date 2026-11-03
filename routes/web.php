@@ -154,6 +154,7 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::delete('/{response}', 'destroy')->name('destroy')->can('manage-scenario');
         Route::post('/{response}/approve', 'approve')->name('approve')->can('manage-scenario');
         Route::post('/{response}/reject', 'reject')->name('reject')->can('manage-scenario');
+        Route::post('/{response}/keep', 'keep')->name('keep')->can('manage-scenario');
     });
 
     Route::prefix('scenario-planning/{project}/indicators')->controller(EarlyWarningIndicatorController::class)->name('scenario-planning.indicators.')->scopeBindings()->group(function () {

@@ -14,7 +14,7 @@ import { useStrategicResponses } from "@/hooks/use-strategic-responses";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 8: strategic responses ranked by robustness, and gate G7 (roadmap R1.8). */
-export default function Responses({ auth, title, project, steps, frameworkApproved, quadrants, responses, implications, owners, canManage, errors = {} }) {
+export default function Responses({ auth, title, project, steps, frameworkApproved, quadrants, responses, implications, conditions, owners, canManage, errors = {} }) {
     const actions = useStrategicResponses(project.id);
     const [target, setTarget] = useState(null);
     const [filter, setFilter] = useState("all");
@@ -76,6 +76,7 @@ export default function Responses({ auth, title, project, steps, frameworkApprov
                                             onRemove={() => actions.remove(response.id)}
                                             onApprove={() => actions.approve(response.id)}
                                             onReject={() => actions.reject(response.id)}
+                                            onKeep={() => actions.keep(response.id)}
                                         />
                                     ))}
                                 </div>
@@ -101,6 +102,7 @@ export default function Responses({ auth, title, project, steps, frameworkApprov
                 target={target}
                 quadrants={quadrants}
                 implications={implications}
+                conditions={conditions}
                 owners={owners}
                 loading={actions.busy}
                 onOpenChange={(open) => !open && setTarget(null)}

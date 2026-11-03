@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -49,12 +50,16 @@ class ScenarioConditionService
 
         $condition->update($this->attributes($project, $validated) + ['updated_by' => $user->id]);
         $this->flagNarrative($condition->quadrant);
+        if ($condition->wasChanged(['kind', 'text', 'axis', 'project_driving_force_id'])) {
+            app(StalenessService::class)->conditionChanged($condition, 'Kondisi diubah: '.Str::limit($condition->text, 80));
+        }
     }
 
     public function delete(ScenarioCondition $condition): void
     {
         $this->requireApproved($condition->quadrant->scenario);
 
+        app(StalenessService::class)->conditionChanged($condition, 'Kondisi dihapus: '.Str::limit($condition->text, 80));
         $condition->delete();
         $this->flagNarrative($condition->quadrant);
     }

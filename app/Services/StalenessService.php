@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\ScenarioCondition;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\Signal;
+use App\Models\StrategicResponse;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -66,6 +68,22 @@ class StalenessService
             ->filter(fn (ScenarioQuadrant $quadrant) => in_array($signal->id, array_map('intval', $quadrant->cited_signal_ids ?? []), true));
 
         $this->markQuadrants($quadrants, 'Sinyal yang dikutip ditolak atau dihapus: '.Str::limit($signal->title, 80));
+    }
+
+    /** Roadmap R2.9: flag the responses that rely on a condition that changed or is being removed. */
+    public function conditionChanged(ScenarioCondition $condition, string $reason): void
+    {
+        foreach ($condition->responses()->get() as $response) {
+            $response->forceFill(['stale_since' => $response->stale_since ?? now(), 'stale_reason' => $this->append($response->stale_reason, $reason)])->save();
+        }
+    }
+
+    /** "Keep" for one response: the team checked it against the changed conditions. */
+    public function clearResponse(StrategicResponse $response): void
+    {
+        if ($response->stale_since !== null) {
+            $response->forceFill(['stale_since' => null, 'stale_reason' => null])->save();
+        }
     }
 
     public function clearQuadrant(ScenarioQuadrant $quadrant): void

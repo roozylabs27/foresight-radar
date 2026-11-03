@@ -541,6 +541,33 @@
         "A unit test fails on any new auth() call and names the file and line"
       ],
       "verification_evidence": "2026-11-02: AuthHelperPolicyTest failed on the unfixed CrossImpactController:46 and passes after the fix; Larastan clean; Pint clean."
+    },
+    {
+      "id": "FEAT-039",
+      "name": "Superseded Product Docs",
+      "description": "The three 2026-10-09 product documents are marked superseded and point to the current audit, matrix, roadmap and specification (roadmap R3.4, gap G26).",
+      "priority": "P3",
+      "status": "passing",
+      "acceptance_criteria": [
+        "DOMAIN_GAPS.md, FORESIGHT_DOMAIN_MODEL.md and SIGNAL_TO_INSIGHT_SPEC.md each start with a dated superseded note",
+        "Each note says what changed and names the current documents",
+        "Old content is kept, not deleted"
+      ],
+      "verification_evidence": "2026-11-03: notes added; every referenced document and class checked to exist (EvidenceVerifier in app/Support, signal_driving_force in the 2026-10-09 migration, no antd in package.json). Docs only, no code changed."
+    },
+    {
+      "id": "FEAT-040",
+      "name": "Response Condition Dependencies",
+      "description": "A strategic response names the step 5 conditions it relies on; changing or deleting one flags the response for review (roadmap R2.9, matrix 8.8).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A response can link conditions of its own exercise framework only",
+        "Editing or deleting a linked condition flags each relying response with the reason, keeping its status",
+        "Keep or editing the response clears the flag; viewers cannot keep",
+        "Dialog lists conditions per quadrant; card shows the linked conditions and the warning"
+      ],
+      "verification_evidence": "2026-11-03: 2 new tests in StrategicResponseTest; StrategicResponse + ScenarioCondition + Staleness tests 24 passed; Pint 375 files PASS; npm build OK; browser: link saved and shown on card, warning shown and cleared by Keep."
     }
   ]
 }

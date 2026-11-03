@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Scenario;
+use App\Models\ScenarioCondition;
 use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\StrategicResponse;
@@ -26,9 +27,9 @@ class StrategicResponseService
     public function create(ScenarioPlanningProject $project, array $validated, User $user): StrategicResponse
     {
         $framework = $this->requireApproved($project);
-        [$quadrants, $implications] = $this->resolve($framework, $validated);
+        [$quadrants, $implications, $conditions] = $this->resolve($framework, $validated);
 
-        return DB::transaction(function () use ($project, $validated, $quadrants, $implications, $user) {
+        return DB::transaction(function () use ($project, $validated, $quadrants, $implications, $conditions, $user) {
             $response = StrategicResponse::create($this->attributes($validated) + [
                 'project_id' => $project->id,
                 'status' => 'proposed',
@@ -36,7 +37,7 @@ class StrategicResponseService
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
             ]);
-            $this->syncRelations($response, $validated, $quadrants, $implications);
+            $this->syncRelations($response, $validated, $quadrants, $implications, $conditions);
 
             return $response;
         });
@@ -45,16 +46,18 @@ class StrategicResponseService
     public function update(StrategicResponse $response, array $validated, User $user): void
     {
         $framework = $this->requireApproved($response->project);
-        [$quadrants, $implications] = $this->resolve($framework, $validated);
+        [$quadrants, $implications, $conditions] = $this->resolve($framework, $validated);
 
-        DB::transaction(function () use ($response, $validated, $quadrants, $implications, $user) {
+        DB::transaction(function () use ($response, $validated, $quadrants, $implications, $conditions, $user) {
             $response->update($this->attributes($validated) + [
                 'status' => 'proposed',
                 'approved_by' => null,
                 'approved_at' => null,
+                'stale_since' => null,
+                'stale_reason' => null,
                 'updated_by' => $user->id,
             ]);
-            $this->syncRelations($response, $validated, $quadrants, $implications);
+            $this->syncRelations($response, $validated, $quadrants, $implications, $conditions);
         });
     }
 
@@ -95,7 +98,7 @@ class StrategicResponseService
     public function list(ScenarioPlanningProject $project): array
     {
         return $project->strategicResponses()
-            ->with(['fits.quadrant', 'implications.quadrant', 'owner:id,uuid,name', 'approver:id,name'])
+            ->with(['fits.quadrant', 'implications.quadrant', 'conditions.quadrant', 'owner:id,uuid,name', 'approver:id,name'])
             ->get()
             ->map(function (StrategicResponse $response) {
                 $fit = $response->fits->mapWithKeys(fn ($row) => [$row->quadrant->position => $row->fit]);
@@ -120,6 +123,10 @@ class StrategicResponseService
                     'implications' => $response->implications->map(fn ($item) => [
                         'id' => $item->uuid, 'type' => $item->type, 'title' => $item->title, 'position' => $item->quadrant?->position,
                     ])->values()->all(),
+                    'conditions' => $response->conditions->map(fn ($item) => [
+                        'id' => $item->uuid, 'kind' => $item->kind, 'text' => $item->text, 'position' => $item->quadrant?->position,
+                    ])->values()->all(),
+                    'stale' => $response->stale_since ? ['since' => $response->stale_since->toISOString(), 'reasons' => explode('; ', (string) $response->stale_reason)] : null,
                 ];
             })
             ->sortBy([['applies', 'desc'], fn ($a, $b) => ($a['priority'] ?? 99) <=> ($b['priority'] ?? 99), ['title', 'asc']])
@@ -136,6 +143,18 @@ class StrategicResponseService
             ->orderBy('id')
             ->get()
             ->map(fn ($item) => ['id' => $item->uuid, 'type' => $item->type, 'title' => $item->title, 'position' => $item->quadrant?->position])
+            ->all();
+    }
+
+    /** Step 5 conditions of the framework a response may rely on. */
+    public function conditionOptions(Scenario $framework): array
+    {
+        return ScenarioCondition::whereIn('scenario_quadrant_id', $framework->quadrants()->select('scenario_quadrants.id'))
+            ->with('quadrant')
+            ->orderBy('scenario_quadrant_id')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn ($item) => ['id' => $item->uuid, 'kind' => $item->kind, 'text' => $item->text, 'position' => $item->quadrant?->position])
             ->all();
     }
 
@@ -167,7 +186,7 @@ class StrategicResponseService
     }
 
     /**
-     * @return array{0: Collection<string, int>, 1: Collection<int, int>} quadrant ids by position, implication ids
+     * @return array{0: Collection<string, int>, 1: Collection<int, int>, 2: Collection<int, int>} quadrant ids by position, implication ids, condition ids
      */
     private function resolve(Scenario $framework, array $validated): array
     {
@@ -179,16 +198,24 @@ class StrategicResponseService
             throw ValidationException::withMessages(['implications' => 'Pilih peluang atau tantangan dari latihan ini.']);
         }
 
-        return [$quadrants, $implications];
+        $uuids = array_unique($validated['conditions'] ?? []);
+        $conditions = ScenarioCondition::whereIn('scenario_quadrant_id', $quadrants->values())->whereIn('uuid', $uuids)->pluck('id');
+        if ($conditions->count() !== count($uuids)) {
+            throw ValidationException::withMessages(['conditions' => 'Pilih kondisi dari skenario latihan ini.']);
+        }
+
+        return [$quadrants, $implications, $conditions];
     }
 
     /**
      * @param  Collection<string, int>  $quadrants
      * @param  Collection<int, int>  $implications
+     * @param  Collection<int, int>  $conditions
      */
-    private function syncRelations(StrategicResponse $response, array $validated, Collection $quadrants, Collection $implications): void
+    private function syncRelations(StrategicResponse $response, array $validated, Collection $quadrants, Collection $implications, Collection $conditions): void
     {
         $response->implications()->sync($implications->all());
+        $response->conditions()->sync($conditions->all());
         $response->fits()->delete();
         foreach ($validated['fit'] ?? [] as $position => $fit) {
             $response->fits()->create(['scenario_quadrant_id' => $quadrants[$position], 'fit' => $fit]);
