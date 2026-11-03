@@ -4,6 +4,7 @@ namespace App\Services\Llm;
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -95,7 +96,7 @@ class OpenAiCompatibleClient implements StructuredLlmClient
                 $response->status() === 408 || $response->status() === 504 => 'timeout',
                 default => 'api_error',
             };
-            throw $this->fail($request, $reason, $response->status(), $start);
+            throw $this->fail($request, $reason, $response->status(), $start, null, $this->providerMessage($response));
         }
 
         return $this->toResponse($response->json() ?? [], $request->purpose, (int) round((microtime(true) - $start) * 1000));
@@ -181,7 +182,7 @@ class OpenAiCompatibleClient implements StructuredLlmClient
         return $key === '' ? $request : $request->withToken($key);
     }
 
-    private function fail(LlmRequest $request, string $reason, ?int $status, float $start, ?\Throwable $previous = null): LlmException
+    private function fail(LlmRequest $request, string $reason, ?int $status, float $start, ?\Throwable $previous = null, ?string $providerMessage = null): LlmException
     {
         Log::warning('llm.error', [
             'purpose' => $request->purpose,
@@ -189,9 +190,23 @@ class OpenAiCompatibleClient implements StructuredLlmClient
             'model' => $this->model(),
             'reason' => $reason,
             'status' => $status,
+            'provider_message' => $providerMessage,
             'duration_ms' => (int) round((microtime(true) - $start) * 1000),
         ]);
 
-        return new LlmException($reason, $previous ? $previous::class : "HTTP {$status}", $previous);
+        return new LlmException($reason, $previous ? $previous::class : "HTTP {$status}", $previous, $status, $providerMessage);
+    }
+
+    /**
+     * The provider's error text, e.g. Gemini's "The model is overloaded". OpenAI-style bodies carry
+     * `error.message`; Gemini's OpenAI-compatible endpoint may wrap it in a list.
+     */
+    private function providerMessage(Response $response): ?string
+    {
+        $body = $response->json();
+        $error = is_array($body) ? ($body['error'] ?? ($body[0]['error'] ?? null)) : null;
+        $text = is_array($error) ? ($error['message'] ?? null) : $error;
+
+        return is_string($text) && trim($text) !== '' ? Str::limit(trim($text), 300) : null;
     }
 }

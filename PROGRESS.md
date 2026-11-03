@@ -423,6 +423,7 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-03 (uncommitted) | LLM connection test error detail (Gemini 503) | **PASS** | Pint PASS (1 file fixed); Larastan L5 `[OK] No errors`; `OpenAiCompatibleClientTest` 12 passed; PHPUnit 497 passed (4,749 assertions, 903.26s); live connection test with the saved Gemini setting OK (5,073 ms); backend only |
 | 2026-11-02 (uncommitted) | Roadmap R3.3 `auth()` helper cleanup + policy guard | **PASS** | Pint PASS (1 import order fixed); Larastan L5 `[OK] No errors`; PHPUnit 495 passed (4,742 assertions, 443.60s); backend only |
 | 2026-11-02 (uncommitted) | Scenario roadmap R0.6 origin and review convention | **PASS** | Pint PASS (1 file fixed); Larastan L5 `[OK] No errors`; PHPUnit 494 passed (4,741 assertions, 502.07s) — build ran before the suite, not during; `npm run build` PASS; migration `2026_11_02_000003` applied to the dev DB (quadrants backfilled); browser: one provider badge per AI quadrant, review badge, response "Usulan" |
 | 2026-11-02 (uncommitted) | Scenario roadmap R1.12 AI generation runs | **PASS** | Pint 370 files (2 import orders fixed); Larastan L5 `[OK] No errors`; PHPUnit 494 passed (4,735 assertions, 284.06s); migration `2026_11_02_000002` applied to the dev DB; backend only, no build needed |
@@ -448,6 +449,14 @@
 ---
 
 ## Session Log
+
+### 2026-11-03 — Session 42 (LLM connection test error detail)
+
+- **Report:** the Gemini connection test with a new key showed only "Layanan AI sedang sibuk". The log showed `reason overloaded status 503` (Google overloaded, not a key problem), then a second attempt that hung ~244s on the 240s work timeout.
+- **RED → GREEN:** 2 new tests in `Llm/OpenAiCompatibleClientTest` (provider status and message kept on the exception and in the log; the connection test tries once and shows the provider reason) failed first.
+- **Fix:** `LlmException` carries `status` and `providerMessage`; `OpenAiCompatibleClient` reads the provider error text (object or Gemini list body, max 300 chars) and logs it. `UserLlmSettingService::testConnection` uses a 30s timeout with no retry and appends " (HTTP 503 · gemini: ...)" to the message. Normal AI work keeps its own timeout and retries.
+- **Live check:** connection test with the saved Gemini setting succeeded (latency 5,073 ms).
+- **Next recommended action:** user review and commit; then R2.9 or R3.4.
 
 ### 2026-11-02 — Session 41 (R3.3 `auth()` helper cleanup)
 
