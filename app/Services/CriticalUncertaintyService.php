@@ -115,6 +115,7 @@ class CriticalUncertaintyService
     {
         return $project->criticalUncertainties()
             ->with(['projectForces' => fn ($q) => $q->with(['consensus', 'drivingForce.dimension']), 'approver:id,name'])
+            ->withCount(CriticalUncertainty::openCommentsCount())
             ->orderByRaw("CASE status WHEN 'approved' THEN 0 ELSE 1 END")
             ->orderBy('axis')
             ->orderByDesc('id')
@@ -131,6 +132,7 @@ class CriticalUncertaintyService
                 'axis' => $uncertainty->axis,
                 'approved_by' => $uncertainty->approver?->name,
                 'approved_at' => $uncertainty->approved_at?->toISOString(),
+                'open_comments' => (int) $uncertainty->getAttribute('open_comments'),
                 'forces' => $uncertainty->projectForces->map(fn ($link) => $this->forceSummary($link))->values()->all(),
             ])
             ->all();

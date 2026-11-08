@@ -35,11 +35,14 @@ class EarlyWarningIndicatorController extends Controller
             'frameworkApproved' => $framework?->isFrameworkApproved() ?? false,
             'quadrants' => $framework ? $this->indicators->quadrants($framework) : [],
             'indicators' => $this->indicators->list($project),
+            'relevance' => $framework ? $this->indicators->relevance($project, $framework) : null,
             'uncertainties' => $project->criticalUncertainties()->orderBy('name')->get(['uuid', 'name'])->map(fn ($item) => ['id' => $item->uuid, 'name' => $item->name])->all(),
             'forces' => $project->projectForces()->where('inclusion_status', 'included')->with('drivingForce')->get()
                 ->map(fn ($link) => ['id' => $link->uuid, 'keyword' => $link->drivingForce?->keyword])->sortBy('keyword')->values()->all(),
             'owners' => $this->projects->owners($request->user()),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
+            'signals' => $this->indicators->signalOptions(),
+            'canRecord' => $project->acceptsInputFrom($request->user()),
         ]);
     }
 

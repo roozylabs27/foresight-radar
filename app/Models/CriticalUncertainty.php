@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\BelongsToTenant;
+use App\Traits\HasComments;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -27,7 +28,7 @@ use Ramsey\Uuid\Uuid;
  */
 class CriticalUncertainty extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, HasComments;
 
     public const AXES = ['A', 'B'];
 

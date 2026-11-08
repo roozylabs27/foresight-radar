@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\EarlyWarningIndicator;
+use App\Models\IndicatorObservation;
 use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
+use App\Models\Signal;
 use App\Models\User;
 use App\Support\Provenance;
 use Illuminate\Support\Collection;
@@ -63,11 +65,25 @@ class EarlyWarningIndicatorService
         $indicator->delete();
     }
 
+    /** Observations shown per indicator in the register (roadmap R2.3). */
+    public const RECENT_OBSERVATIONS = 5;
+
+    /** Accepted signals an observation may cite, newest first. */
+    public function signalOptions(): array
+    {
+        return Signal::where('review_status', 'ACCEPTED')
+            ->latest('id')
+            ->limit(100)
+            ->get(['uuid', 'title'])
+            ->map(fn (Signal $signal) => ['id' => $signal->uuid, 'title' => $signal->title])
+            ->all();
+    }
+
     /** The register, alphabetical, with directions keyed by quadrant position. */
     public function list(ScenarioPlanningProject $project): array
     {
         return EarlyWarningIndicator::where('project_id', $project->id)
-            ->with(['directions.quadrant', 'uncertainty:id,uuid,name', 'projectForce.drivingForce', 'owner:id,uuid,name'])
+            ->with(['directions.quadrant', 'uncertainty:id,uuid,name', 'projectForce.drivingForce', 'owner:id,uuid,name', 'observations.signal:id,uuid,title', 'observations.recorder:id,name'])
             ->orderBy('name')
             ->get()
             ->map(function (EarlyWarningIndicator $indicator) {
@@ -92,6 +108,19 @@ class EarlyWarningIndicatorService
                     'review_status' => $indicator->review_status,
                     'directions' => (object) $directions->all(),
                     'discriminates' => self::discriminates($directions->pluck('direction')),
+                    'observation_count' => $indicator->observations->count(),
+                    'observations' => $indicator->observations->take(self::RECENT_OBSERVATIONS)->map(fn (IndicatorObservation $row) => [
+                        'id' => $row->uuid,
+                        'observed_at' => $row->observed_at->toDateString(),
+                        'value_numeric' => $row->value_numeric,
+                        'value_text' => $row->value_text,
+                        'direction' => $row->direction,
+                        'crossed_threshold' => $row->crossed_threshold,
+                        'signal' => $row->signal ? ['id' => $row->signal->uuid, 'title' => $row->signal->title] : null,
+                        'note' => $row->note,
+                        'recorded_by' => $row->recorder?->name,
+                        'recorded_by_id' => $row->recorded_by,
+                    ])->values()->all(),
                 ];
             })
             ->values()
@@ -108,6 +137,51 @@ class EarlyWarningIndicatorService
             'poles' => $framework->poles($quadrant->position),
             'narrative_indicators' => array_values($quadrant->early_indicators ?? []),
         ])->values()->all();
+    }
+
+    /**
+     * Roadmap R2.3: which scenario the observations point to. Each observation with a direction
+     * supports every quadrant whose expected direction for that indicator matches it, and
+     * contradicts every quadrant expecting another measurable direction; qualitative or unset
+     * expectations and retired indicators do not count. `leading` is the quadrant with the
+     * highest net support (supporting − contradicting) when it is positive and unique.
+     *
+     * @return array{observations: int, leading: ?string, quadrants: array<int, array{position: string, title: ?string, supporting: int, contradicting: int}>}
+     */
+    public function relevance(ScenarioPlanningProject $project, Scenario $framework): array
+    {
+        $quadrants = $framework->quadrants()->get()->keyBy('position');
+        $tally = collect(Scenario::POSITIONS)->mapWithKeys(fn ($position) => [$position => ['supporting' => 0, 'contradicting' => 0]])->all();
+        $observations = 0;
+
+        $indicators = EarlyWarningIndicator::where('project_id', $project->id)
+            ->where('status', 'active')
+            ->with(['directions.quadrant', 'observations' => fn ($q) => $q->whereNotNull('direction')])
+            ->get();
+        foreach ($indicators as $indicator) {
+            $expected = $indicator->directions
+                ->filter(fn ($row) => in_array($row->expected_direction, IndicatorObservation::DIRECTIONS, true))
+                ->mapWithKeys(fn ($row) => [$row->quadrant->position => $row->expected_direction]);
+            foreach ($indicator->observations as $observation) {
+                $observations++;
+                foreach ($expected as $position => $direction) {
+                    $tally[$position][$direction === $observation->direction ? 'supporting' : 'contradicting']++;
+                }
+            }
+        }
+
+        $net = collect($tally)->map(fn ($row) => $row['supporting'] - $row['contradicting']);
+        $best = $net->max();
+        $leading = $observations > 0 && $best > 0 && $net->filter(fn ($value) => $value === $best)->count() === 1 ? $net->search($best) : null;
+
+        return [
+            'observations' => $observations,
+            'leading' => $leading,
+            'quadrants' => collect(Scenario::POSITIONS)->map(fn ($position) => [
+                'position' => $position,
+                'title' => $quadrants[$position]->title ?? null,
+            ] + $tally[$position])->all(),
+        ];
     }
 
     /** At least two different expected directions across the quadrants. */

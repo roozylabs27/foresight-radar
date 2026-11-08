@@ -7,10 +7,14 @@ use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\EarlyWarningIndicator;
+use App\Models\IndicatorObservation;
 use App\Models\ProjectDrivingForce;
+use App\Models\ProjectParticipant;
 use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
+use App\Models\Signal;
+use App\Models\Source;
 use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Services\EarlyWarningIndicatorService;
@@ -295,5 +299,156 @@ class EarlyWarningIndicatorTest extends TestCase
         $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'in_progress'));
         $this->storeIndicator(['name' => 'Lengkap']);
         $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'done'));
+    }
+
+    private function signal(string $title, string $status = 'ACCEPTED'): Signal
+    {
+        $raw = "{$title} raw text";
+        $source = Source::create([
+            'uuid' => (string) Uuid::uuid4(), 'title' => "{$title} source", 'url' => 'https://example.test/'.md5($title),
+            'raw_content' => $raw, 'content_hash' => hash('sha256', $raw), 'created_by' => $this->manager->id,
+        ]);
+
+        return Signal::create([
+            'uuid' => (string) Uuid::uuid4(), 'source_id' => $source->id, 'dimension_id' => Dimension::where('code', 'TECHNOLOGY')->value('id'),
+            'title' => $title, 'summary' => "{$title}.", 'evidence_quote' => "{$title}.", 'confidence_score' => 0.9, 'review_status' => $status,
+        ]);
+    }
+
+    private function observe(User $user, EarlyWarningIndicator $indicator, array $values)
+    {
+        return $this->actingAs($user)->post(route('scenario-planning.indicators.observations.store', [$this->project, $indicator]), $values);
+    }
+
+    /** Roadmap R2.3 (observation log): a contributor records an observation, optionally evidenced by an accepted signal. */
+    public function test_a_contributor_records_observations_with_an_optional_accepted_signal(): void
+    {
+        $this->readyFramework();
+        $this->storeIndicator();
+        $indicator = EarlyWarningIndicator::sole();
+        $accepted = $this->signal('xEV sales up 40%');
+        $this->signal('Unreviewed rumour', 'PENDING');
+
+        $this->observe($this->viewer, $indicator, [
+            'observed_at' => '2026-10-31', 'value_numeric' => 6.2, 'direction' => 'rising',
+            'note' => 'Data Gaikindo Q3.', 'signal' => $accepted->uuid,
+        ])->assertSessionHasNoErrors();
+        $this->observe($this->manager, $indicator, ['observed_at' => '2026-07-31', 'value_text' => 'Stagnan'])->assertSessionHasNoErrors();
+
+        $first = IndicatorObservation::where('note', 'Data Gaikindo Q3.')->sole();
+        $this->assertSame([6.2, 'rising', $accepted->id, $this->viewer->id, false], [$first->value_numeric, $first->direction, $first->signal_id, $first->recorded_by, $first->crossed_threshold]);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('indicators.0.observation_count', 2)
+                ->where('indicators.0.observations.0.observed_at', '2026-10-31')
+                ->where('indicators.0.observations.0.value_numeric', 6.2)
+                ->where('indicators.0.observations.0.signal.title', 'xEV sales up 40%')
+                ->where('indicators.0.observations.0.recorded_by', $this->viewer->name)
+                ->where('indicators.0.observations.1.value_text', 'Stagnan')
+                ->has('signals', 1)
+                ->where('signals.0.title', 'xEV sales up 40%')
+                ->where('canRecord', true));
+    }
+
+    public function test_observation_rules(): void
+    {
+        $this->readyFramework();
+        $this->storeIndicator();
+        $indicator = EarlyWarningIndicator::sole();
+        $pending = $this->signal('Unreviewed rumour', 'PENDING');
+
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31'])->assertSessionHasErrors('value_numeric');
+        $this->observe($this->viewer, $indicator, ['observed_at' => now()->addDays(3)->toDateString(), 'value_text' => 'x'])->assertSessionHasErrors('observed_at');
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_text' => 'x', 'signal' => $pending->uuid])->assertSessionHasErrors('signal');
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_text' => 'x', 'direction' => 'sideways'])->assertSessionHasErrors('direction');
+        $this->assertSame(0, IndicatorObservation::count());
+
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 5])->assertSessionHasNoErrors();
+        $observation = IndicatorObservation::sole();
+        $colleague = User::factory()->create();
+        $colleague->givePermissionTo(['view-scenario', 'manage-scenario']);
+        $this->actingAs($colleague)->delete(route('scenario-planning.indicators.observations.destroy', [$this->project, $indicator, $observation]))->assertForbidden();
+
+        ProjectParticipant::create(['project_id' => $this->project->id, 'tenant_id' => $this->project->tenant_id, 'user_id' => $this->viewer->id, 'role' => 'viewer']);
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 7])->assertForbidden();
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))->assertInertia(fn ($page) => $page->where('canRecord', false));
+
+        $this->actingAs($this->manager)->delete(route('scenario-planning.indicators.observations.destroy', [$this->project, $indicator, $observation]))->assertSessionHasNoErrors();
+        $this->assertSame(0, IndicatorObservation::count());
+    }
+
+    /**
+     * Roadmap R2.3 (relevance view): an observation's direction supports every quadrant expecting
+     * it and contradicts the others; qualitative or unset expectations, observations without a
+     * direction and retired indicators are not counted.
+     */
+    public function test_observations_show_which_scenario_is_becoming_relevant(): void
+    {
+        $this->readyFramework();
+        $this->storeIndicator(); // HH, HL rising; LL, LH falling
+        $adoption = EarlyWarningIndicator::sole();
+        $this->storeIndicator(['name' => 'Charging stations', 'directions' => [
+            'HH' => ['direction' => 'qualitative'], 'HL' => ['direction' => 'rising'], 'LL' => ['direction' => 'falling'],
+        ]]);
+        $charging = EarlyWarningIndicator::where('name', 'Charging stations')->sole();
+        $this->storeIndicator(['name' => 'Retired one', 'status' => 'retired']);
+        $retired = EarlyWarningIndicator::where('name', 'Retired one')->sole();
+
+        foreach ([[$adoption, 'rising'], [$adoption, 'rising'], [$adoption, 'falling'], [$adoption, null], [$charging, 'rising'], [$retired, 'rising']] as [$indicator, $direction]) {
+            $this->observe($this->manager, $indicator, array_filter(['observed_at' => '2026-10-01', 'value_numeric' => 1, 'direction' => $direction]))->assertSessionHasNoErrors();
+        }
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('relevance.observations', 4)
+                ->where('relevance.quadrants.0.position', 'HH')
+                ->where('relevance.quadrants.0.supporting', 2)
+                ->where('relevance.quadrants.0.contradicting', 1)
+                ->where('relevance.quadrants.1.position', 'HL')
+                ->where('relevance.quadrants.1.supporting', 3)
+                ->where('relevance.quadrants.1.contradicting', 1)
+                ->where('relevance.quadrants.2.position', 'LH')
+                ->where('relevance.quadrants.2.supporting', 1)
+                ->where('relevance.quadrants.2.contradicting', 2)
+                ->where('relevance.quadrants.3.position', 'LL')
+                ->where('relevance.quadrants.3.supporting', 1)
+                ->where('relevance.quadrants.3.contradicting', 3)
+                ->where('relevance.leading', 'HL'));
+    }
+
+    public function test_no_relevance_lead_without_directional_observations(): void
+    {
+        $this->readyFramework();
+        $this->storeIndicator();
+        $this->observe($this->manager, EarlyWarningIndicator::sole(), ['observed_at' => '2026-10-01', 'value_text' => 'Belum jelas'])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('relevance.observations', 0)->where('relevance.leading', null)->where('relevance.quadrants.0.supporting', 0));
+    }
+
+    /** Roadmap R2.3 (review trigger): an observation that crosses the threshold flags the framework and its scenarios for review. */
+    public function test_a_threshold_crossing_flags_the_scenarios_for_review(): void
+    {
+        $framework = $this->readyFramework();
+        $this->storeIndicator();
+        $indicator = EarlyWarningIndicator::sole();
+
+        $this->observe($this->manager, $indicator, ['observed_at' => '2026-09-30', 'value_numeric' => 4, 'direction' => 'rising'])->assertSessionHasNoErrors();
+        $this->assertNull($framework->fresh()->stale_since);
+
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 11, 'direction' => 'rising', 'crossed_threshold' => true])->assertSessionHasNoErrors();
+
+        $framework->refresh();
+        $this->assertNotNull($framework->stale_since);
+        $this->assertStringContainsString('xEV adoption growth', $framework->stale_reason);
+        $this->assertStringContainsString('2026-10-31', $framework->stale_reason);
+        $this->assertSame(4, $framework->quadrants()->whereNotNull('stale_since')->count());
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.show', $this->project))
+            ->assertInertia(fn ($page) => $page->where('project.stale.reasons', fn ($reasons) => collect($reasons)->contains(fn ($reason) => str_contains($reason, 'xEV adoption growth'))));
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.stale.acknowledge', $this->project))->assertSessionHasNoErrors();
+        $this->assertNull($framework->fresh()->stale_since);
     }
 }

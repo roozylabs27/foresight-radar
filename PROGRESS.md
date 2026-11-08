@@ -423,6 +423,13 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-08 (uncommitted) | Roadmap R2.3 slice 3 threshold review trigger | **PASS** | Pint 390 files PASS; Larastan L5 clean; indicator + staleness tests 19 passed (377 assertions); full PHPUnit 515 passed (5,218 assertions, 2887.23s) covering all R2.3 slices, dev DB still 38 users afterwards; no frontend change, no build; browser: banner after a crossing observation, dev data restored |
+| 2026-11-08 (uncommitted) | Roadmap R2.3 slice 2 relevance view | **PASS (partial)** | Pint 390 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 11 passed (262 assertions); full PHPUnit suite not run; `npm run build` PASS (4m 28s); no migration; browser: empty state and counts after one observation |
+| 2026-11-08 (uncommitted) | Roadmap R2.3 slice 1 observation log | **PASS (partial)** | Pint PASS (2 files fixed); Larastan L5 clean; `EarlyWarningIndicatorTest` 9 passed (195 assertions); full PHPUnit suite not run; `npm run build` PASS (6m 46s); migration `2026_11_08_000002` applied to the dev DB after the index-name fix; browser: record and delete |
+| 2026-11-08 (uncommitted) | Roadmap R2.2 slice 3 comments | **PASS** | Pint PASS (2 import orders fixed); Larastan L5 clean (after typing `CommentController::target` and adding a match default; 3 errors before); `tests/Feature/ScenarioPlanning` 114 passed (1,823 assertions, 187s); full PHPUnit 510 passed (5,064 assertions, 537.51s) covering R2.1 and all R2.2 slices, dev DB still 38 users afterwards; `npm run build` PASS (1m 30s); migration `2026_11_08_000001` applied to the dev DB; browser: add, count, resolve, delete |
+| 2026-11-07 (uncommitted) | Roadmap R2.2 slice 2 decision log | **PASS (partial)** | Pint 383 files PASS; Larastan L5 `[OK] No errors` (after fixing one nullsafe call on `created_at`); response + uncertainty + framework + project tests 43 passed (598 assertions, 71s); full PHPUnit suite not run; `npm run build` PASS (1m); migration `2026_11_07_000002` applied to the dev DB; browser: panel empty state, no console errors |
+| 2026-11-07 (uncommitted) | Roadmap R2.2 slice 1 participants | **PASS (partial)** | Pint PASS (2 files fixed); Larastan L5 `[OK] No errors`; participant + assessment + project tests 26 passed (293 assertions, 200s); full PHPUnit suite not run; `npm run build` PASS (1m 52s); migration `2026_11_07_000001` applied to the dev DB; browser: viewer read-only, coordinator add and remove |
+| 2026-11-07 (uncommitted) | Roadmap R2.1 multi-assessor scoring | **PASS (partial)** | Pint 376 files PASS; Larastan L5 `[OK] No errors` (first run aborted when Docker Desktop stopped; rerun clean); `ProjectAssessmentTest` 13 passed (143 assertions, 2927s on a loaded machine); full PHPUnit suite not run; `npm run build` PASS (12m 3s); no migration; browser as BOD viewer: own score, spread, withdraw |
 | 2026-11-03 (uncommitted) | Roadmap R2.9 response condition dependencies + test DB guard | **PASS** | Pint 375 files PASS; Larastan L5 `[OK] No errors`; `StrategicResponseTest` + `ScenarioConditionTest` + `StalenessTest` 24 passed (425 assertions); full PHPUnit 499 passed (4,816 assertions, 1696.00s) on sqlite, dev DB still 38 users afterwards; `npm run build` PASS (8 known sourcemap warnings); migration `2026_11_03_000001` applied to the restored dev DB; browser: link, card, warning and keep |
 | 2026-11-03 (local, `/docs` gitignored) | Roadmap R3.4 superseded product docs | **NOT RUN** | Docs only: no code changed, so Pint / Larastan / PHPUnit / build not run; referenced files and classes checked by `ls` / `grep` |
 | 2026-11-03 (uncommitted) | LLM connection test error detail (Gemini 503) | **PASS** | Pint PASS (1 file fixed); Larastan L5 `[OK] No errors`; `OpenAiCompatibleClientTest` 12 passed; PHPUnit 497 passed (4,749 assertions, 903.26s); live connection test with the saved Gemini setting OK (5,073 ms); backend only |
@@ -451,6 +458,73 @@
 ---
 
 ## Session Log
+
+### 2026-11-08 — Session 51 (R2.3 slice 3: threshold review trigger; R2.3 done)
+
+- **RED → GREEN:** 1 new test in `EarlyWarningIndicatorTest` (a non-crossing observation flags nothing; a crossing one flags the framework and all four quadrants with the indicator name and date; the overview `project.stale.reasons` shows it; "keep" clears it) failed on the unflagged framework; then indicator + staleness tests 19 passed (377 assertions).
+- **Backend:** `IndicatorObservationController::store` calls `StalenessService::markFramework` when `crossed_threshold` is set ("Indikator … melewati ambang batas (date)"); flash message says the scenarios were flagged. No new UI: the overview `StaleBanner` already lists reasons and offers "keep".
+- **Browser:** a crossing observation flagged scenario 6 and its 4 quadrants; the overview banner showed the reason, the affected quadrants and "Sudah ditinjau, pertahankan". Restored by SQL afterwards: observation deleted, stale fields cleared, `stale_acknowledged_by` / `_at` put back to their previous values (user 1, 2026-11-01 01:09:39).
+- **Side session:** "Guard against MySQL index names over 64 chars" added `tests/Unit/MigrationIndexNameLengthTest.php` on its own branch `claude/reverent-edison-5601d3` (uncommitted, not in this checkout).
+- **Docs:** roadmap R2.3 done; matrix 9.10 complete (81/6/7/0; step 9 11/1/0/0); audit G19 fixed; `feature_list.json` FEAT-047.
+- **Next recommended action:** R2.4 (full suite green: 515 passed).
+
+### 2026-11-08 — Session 50 (R2.3 slice 2: relevance view)
+
+- **RED → GREEN:** 2 new tests in `EarlyWarningIndicatorTest` (matching / opposing counts per quadrant across two indicators, qualitative and unset expectations skipped, retired indicator and direction-less observations ignored, unique leader HL; no leader without directional observations) failed on the missing `relevance` prop; then all 11 indicator tests passed (262 assertions).
+- **Backend:** `EarlyWarningIndicatorService::relevance()` (counts per quadrant in `Scenario::POSITIONS` order; `leading` = unique highest positive net support); step 9 prop `relevance`.
+- **Frontend:** `RelevancePanel` ("Skenario yang menguat") full width at the top of step 9, bars for matching and opposing counts, "Paling sesuai" on the leader.
+- **Browser:** empty state; one rising observation showed 1 matching on both favorable quadrants and 1 opposing on the other two, no leader (tie); observation deleted again (dev DB 0 observations).
+- **Docs:** roadmap R2.3 partial; matrix 9.11 complete (80/6/8/0; step 9 10/1/1/0); `feature_list.json` FEAT-046.
+- **Next:** slice 3, threshold crossing flags the scenarios for review.
+
+### 2026-11-08 — Session 49 (R2.3 slice 1: indicator observation log)
+
+- **Decisions (user):** observations are recorded by whoever may give input (same rule as own scores and comments); AI match proposals move to R2.6; R2.3 comes in three slices (observation log, relevance view, threshold review trigger).
+- **RED → GREEN:** 2 new tests in `EarlyWarningIndicatorTest` (recording with an accepted signal, register payload with recent observations, signal options; rules: value required, no future date, only accepted signals, valid direction, viewer-role participant forbidden, delete by recorder or coordinator) failed on the missing route; then all 9 indicator tests passed (195 assertions).
+- **Backend:** migration `2026_11_08_000002_create_indicator_observations_table`; `IndicatorObservation` (`DIRECTIONS`); `EarlyWarningIndicator::observations()`; `IndicatorObservationController` (store gated by `acceptsInputFrom`, destroy by recorder or coordinator) under `scenario-planning.indicators.observations.*`; register payload adds `observation_count` and the 5 latest observations; page props `signals` (latest 100 accepted) and `canRecord`.
+- **Frontend:** `IndicatorObservations` section in `IndicatorCard`, `ObservationDialog` (date, value, text, direction, threshold flag, accepted signal, note); hook actions `record`, `removeObservation`.
+- **Bug caught on the dev DB:** the first migrate failed after creating the table: the auto index name `indicator_observations_early_warning_indicator_id_observed_at_index` is 67 characters (MySQL max 64; sqlite tests do not enforce it). Named the index `indicator_observations_indicator_date`, dropped the empty half table, migrated cleanly. Same class of bug as `response_scenarios` earlier.
+- **Browser:** recorded an observation through the dialog (saved with date, 6.2, rising, note; shown as "Observasi (1)"), then deleted it; dev DB back to 0 observations.
+- **Docs:** roadmap R2.3 partial; matrix 9.8 complete, 9.9 partial (79/6/9/0; step 9 9/1/2/0); `feature_list.json` FEAT-045.
+- **Next:** slice 2, relevance view.
+
+### 2026-11-08 — Session 48 (R2.2 slice 3: comments; R2.2 done)
+
+- **RED → GREEN:** 2 new tests in `StrategicResponseTest` (comments on each artefact type with open counts on steps 2, 3b, 5 and 8 and the JSON thread; rules: unknown type, empty body, artefact of another exercise, resolve / delete by author or coordinator only, viewer-role participant reads but cannot comment) failed on the missing route; then all `tests/Feature/ScenarioPlanning` 114 passed (1,823 assertions).
+- **Backend:** migration `2026_11_08_000001_create_comments_table` (polymorphic, project, body, author, resolved_by / resolved_at). `Comment` (`TYPES` force / uncertainty / quadrant / response), `HasComments` trait (`comments()`, `openCommentsCount()`) on `ProjectDrivingForce`, `CriticalUncertainty`, `ScenarioQuadrant`, `StrategicResponse`; `CommentController` (JSON `index`, `store` gated by `acceptsInputFrom`, `resolve` toggle, `destroy`) under `scenario-planning.comments.*`; `open_comments` added to the four list payloads.
+- **Frontend:** `CommentButton` (side sheet thread; reads the project id from page props) and `use-comments`; added to `ProjectForceList`, `UncertaintyCard`, `QuadrantConditions`, `ResponseCard`.
+- **Browser (coordinator):** a comment on the response showed with author and time and the button counter went to 1; a second, duplicate comment was created by my own repeated send while the first request was still in flight (the server was slow and Inertia POSTs do not show in the network list, so I first misread the disabled button as a typing problem); resolve showed "Selesai oleh" and dropped the counter; delete removed it. Dev DB back to 0 comments. Step 5 shows the button on all four quadrants.
+- **Docs:** roadmap R2.2 done; matrix X.4 and 2.12 complete (78/5/11/0; step 2 11/0/1/0; cross-cutting 6/0/1/0); audit G21 fixed; `feature_list.json` FEAT-044.
+- **Next recommended action:** user review and commit (R2.1 and all three R2.2 slices are uncommitted); then R2.3 (full suite already green: 510 passed).
+
+### 2026-11-07 — Session 47 (R2.2 slice 2: gate decision log)
+
+- **RED → GREEN:** 2 new tests in `StrategicResponseTest` (every gate decision logged with actor, overview lists newest first; a score change after G3 logs G3, G5, G4, G4 withdrawn once each) failed on the missing `ProjectDecision`; then response + critical uncertainty + framework + project tests 43 passed (598 assertions).
+- **Backend:** migration `2026_11_07_000002_create_project_decisions_table` (gate, action approved / rejected / withdrawn, subject, actor, created_at; append-only). `GateDecisionObserver` (registered in `EventServiceProvider` for project, critical uncertainty, scenario, quadrant, response) logs from the gate columns on `updated`, so every service path is covered. `withdrawFrameworkApproval` / `withdrawUncertaintyApprovals` now update row by row (were query-level updates that skip model events). Overview payload `decisions` (latest 50).
+- **Frontend:** `DecisionLog` panel on the exercise overview; `DECISION_ACTIONS` labels.
+- **Not done:** no backfill of decisions made before this change, so existing exercises start with an empty log. Browser check covered the empty state only (making a decision would have changed dev data).
+- **Docs:** roadmap R2.2 still partial (comments next); matrix X.5 complete (76/7/11/0; cross-cutting 5/1/1/0); `feature_list.json` FEAT-043.
+- **Next:** slice 3, comments.
+
+### 2026-11-07 — Session 46 (R2.2 slice 1: exercise participants)
+
+- **Decisions (user):** a participant list restricts input (once listed, only coordinator / contributor / expert participants and the project coordinator give own scores; others still read); R2.2 is delivered in three slices: participants, decision log, comments.
+- **RED → GREEN:** `ProjectParticipantTest` (4 tests) failed on the missing `participants` route; then with `ProjectAssessmentTest` and `ProjectTest` 26 passed (293 assertions).
+- **Backend:** migration `2026_11_07_000001_create_project_participants_table` (unique project + user; role; division). `ProjectParticipant` (`ROLES`, `CONTRIBUTING`); `ScenarioPlanningProject::participants()` and `acceptsInputFrom(User)`; `ProjectParticipantController` (store / update / destroy, project policy, tenant-scoped user, duplicate rejected) under `scenario-planning.participants.*` with scoped bindings; overview payload `participants` and `participantRoles`; `assessment.mine` returns 403 and `canScore` is false for non-contributing users once participants exist.
+- **Frontend:** `ParticipantPanel` (list, role select, remove, add form with person, role, division) on the exercise overview; `use-project-participants`; `PARTICIPANT_ROLES` labels. A Prettier run reformatted all of `Show.jsx` with another line width; reverted and reapplied as a small edit.
+- **Browser:** as BOD the panel is read-only ("Belum ada peserta"); as the seeded super-admin coordinator, Test BOD added as Pengamat (description switches to the restricted text), then removed; dev DB back to 0 participants. Radix select clicks by coordinate picked the wrong item while the pane was hidden; the final add was driven through the DOM.
+- **Next:** slice 2, decision log for gates.
+
+### 2026-11-07 — Session 45 (R2.1 multi-assessor scoring)
+
+- **Decision (user):** until R2.2 adds exercise participants, anyone who can open the exercise (`view-scenario`, e.g. BOD) may enter their own score; only the coordinator (manage-scenario + project policy) sets the consensus.
+- **RED → GREEN:** 3 new tests in `ProjectAssessmentTest` failed on the missing `assessment.mine` route (10 existing passed), then 13 passed (143 assertions).
+- **Backend:** `ForceAssessment::INDIVIDUAL`, `assessor()`; `ProjectDrivingForce::individuals()`; `ProjectAssessmentService::scoreMine` / `withdrawMine` (same rules as the consensus: agreed list, included force; never touch G3 or staleness), `list()` adds `individual` (count, min / max / median per axis, `wide` when max − min ≥ `WIDE_SPREAD` = 4, assessors) and `mine`. `IndividualAssessmentRequest` (view-scenario). Routes `assessment.mine` (PUT) and `assessment.withdraw` (DELETE) on `{projectForce}/mine`. No migration: `kind` and `assessor_id` already existed.
+- **Frontend:** `ScoreList` shows the spread, the viewer's own score with "Tarik", a "Skor saya" button for everyone and "Kesepakatan" for the coordinator; `ScoreDialog` has a `mine` mode, and the consensus mode shows the spread with "Pakai median" (`domain/scenarioPlanning.js` `formatSpread`, `medianScores`).
+- **Browser (as the seeded BOD viewer):** only "Skor saya" shown; own score saved and listed with the spread; consensus and G3 unchanged; "Tarik" removed it (dev DB back to 0 individual rows). The coordinator's consensus dialog with spread and "Pakai median" was not opened in the browser.
+- **Environment:** `laravel_app` / `laravel_nginx` were stopped on arrival and started; later Docker Desktop itself stopped mid-check (engine pipe missing) and was restarted. No config cache appeared after either start; dev DB intact (38 users).
+- **Docs:** roadmap R2.1 done; matrix 3.3 complete (75/8/11/0; step 3 11/1/0/0); `feature_list.json` FEAT-041.
+- **Next recommended action:** user review and commit; then R2.2 (participants, comments, decision log).
 
 ### 2026-11-03 — Session 44 (R2.9 response condition dependencies; dev database incident)
 

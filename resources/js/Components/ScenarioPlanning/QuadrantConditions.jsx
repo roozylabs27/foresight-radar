@@ -2,6 +2,7 @@ import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon, Trash2Icon } from "lu
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
+import CommentButton from "@/Components/ScenarioPlanning/CommentButton";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { CONDITION_KINDS } from "@/domain/scenarioPlanning";
@@ -23,7 +24,10 @@ export default function QuadrantConditions({ quadrant, axes, predetermined, mini
                         {quadrant.conditions.length} kondisi{enough ? "" : ` · min. ${minimum}`}
                     </span>
                 </div>
-                <h3 className="m-0 text-sm font-semibold text-foreground">{quadrant.title}</h3>
+                <div className="flex items-center justify-between gap-2">
+                    <h3 className="m-0 text-sm font-semibold text-foreground">{quadrant.title}</h3>
+                    <CommentButton type="quadrant" id={quadrant.id} title={quadrant.title} count={quadrant.open_comments} />
+                </div>
                 {quadrant.summary && <p className="m-0 text-xs text-muted-foreground">{quadrant.summary}</p>}
             </header>
 

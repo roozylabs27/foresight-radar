@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\BelongsToTenant;
+use App\Traits\HasComments;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,7 +11,7 @@ use Ramsey\Uuid\Uuid;
 
 class ScenarioQuadrant extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, HasComments;
 
     protected $fillable = [
         'tenant_id',

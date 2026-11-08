@@ -2,6 +2,7 @@ import { ArrowLeftRightIcon, CircleCheckIcon, PencilIcon, Trash2Icon, UndoIcon }
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import ProvenanceBadge from "@/Components/ProvenanceBadge";
+import CommentButton from "@/Components/ScenarioPlanning/CommentButton";
 import { Button } from "@/Components/ui/button";
 
 /** One critical uncertainty: its forces, poles, reason and approval state, with the actions allowed. */
@@ -17,6 +18,9 @@ export default function UncertaintyCard({ uncertainty, canManage, locked, onEdit
                 ) : (
                     <ProvenanceBadge origin={uncertainty.origin} review="proposed" />
                 )}
+                <span className="ml-auto">
+                    <CommentButton type="uncertainty" id={uncertainty.id} title={uncertainty.name} count={uncertainty.open_comments} />
+                </span>
             </header>
 
             <p className="m-0 inline-flex items-center gap-2 text-sm text-foreground">

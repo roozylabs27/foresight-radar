@@ -2,8 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\CriticalUncertainty;
 use App\Models\DrivingForceRating;
+use App\Models\Scenario;
+use App\Models\ScenarioPlanningProject;
+use App\Models\ScenarioQuadrant;
+use App\Models\StrategicResponse;
 use App\Observers\DrivingForceRatingObserver;
+use App\Observers\GateDecisionObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -29,6 +35,11 @@ class EventServiceProvider extends ServiceProvider
      */
     protected $observers = [
         DrivingForceRating::class => [DrivingForceRatingObserver::class],
+        ScenarioPlanningProject::class => [GateDecisionObserver::class],
+        CriticalUncertainty::class => [GateDecisionObserver::class],
+        Scenario::class => [GateDecisionObserver::class],
+        ScenarioQuadrant::class => [GateDecisionObserver::class],
+        StrategicResponse::class => [GateDecisionObserver::class],
     ];
 
     /**

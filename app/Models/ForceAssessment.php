@@ -14,6 +14,7 @@ use Ramsey\Uuid\Uuid;
  *
  * @property int $project_driving_force_id
  * @property string $kind
+ * @property int|null $assessor_id
  * @property int $impact
  * @property int $uncertainty
  * @property string|null $impact_rationale
@@ -26,6 +27,12 @@ class ForceAssessment extends Model
 
     public const CONSENSUS = 'consensus';
 
+    /** A score proposed by AI (roadmap R2.4); applies only when the coordinator accepts it. */
+    public const AI_SUGGESTION = 'ai_suggestion';
+
+    /** One participant's own score (roadmap R2.1); never plotted, never part of gate G3. */
+    public const INDIVIDUAL = 'individual';
+
     protected $fillable = [
         'tenant_id',
         'uuid',
@@ -37,12 +44,15 @@ class ForceAssessment extends Model
         'impact_rationale',
         'uncertainty_rationale',
         'origin',
+        'generation_run_id',
+        'cited_signal_ids',
         'updated_by',
     ];
 
     protected $casts = [
         'impact' => 'integer',
         'uncertainty' => 'integer',
+        'cited_signal_ids' => 'array',
     ];
 
     protected static function booted()
@@ -52,6 +62,11 @@ class ForceAssessment extends Model
                 $assessment->uuid = (string) Uuid::uuid4();
             }
         });
+    }
+
+    public function assessor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assessor_id')->withTrashed();
     }
 
     public function updater(): BelongsTo

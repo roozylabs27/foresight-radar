@@ -58,6 +58,8 @@ class ScenarioPlanningProject extends Model
         'forces_confirmed_at',
         'scores_confirmed_by',
         'scores_confirmed_at',
+        'score_suggestion_status',
+        'score_suggestion_error',
         'created_by',
         'updated_by',
     ];
@@ -155,6 +157,37 @@ class ScenarioPlanningProject extends Model
         return $this->hasMany(EarlyWarningIndicator::class, 'project_id');
     }
 
+    /** Comments on the exercise's artefacts (roadmap R2.2). */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'project_id');
+    }
+
+    /** Gate decisions, oldest first (roadmap R2.2). */
+    public function decisions(): HasMany
+    {
+        return $this->hasMany(ProjectDecision::class, 'project_id');
+    }
+
+    /** People taking part, with a role (roadmap R2.2). */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(ProjectParticipant::class, 'project_id');
+    }
+
+    /**
+     * Whether the user may give input (own scores, comments): anyone while the exercise lists no
+     * participants; afterwards contributing participants and the coordinator (project policy).
+     */
+    public function acceptsInputFrom(User $user): bool
+    {
+        if (! $this->participants()->exists() || $user->can('update', $this)) {
+            return true;
+        }
+
+        return $this->participants()->where('user_id', $user->id)->whereIn('role', ProjectParticipant::CONTRIBUTING)->exists();
+    }
+
     /** Step 8 strategic responses (roadmap R1.8). */
     public function strategicResponses(): HasMany
     {
@@ -181,15 +214,18 @@ class ScenarioPlanningProject extends Model
     /** Gate G5 falls back to draft; called whenever an axis it rests on is withdrawn. */
     public function withdrawFrameworkApproval(): void
     {
-        $this->framework()->where('framework_status', 'approved')->update(['framework_status' => 'draft', 'approved_by' => null, 'approved_at' => null]);
+        // Row by row, so the decision log sees each withdrawal (roadmap R2.2).
+        foreach ($this->framework()->where('framework_status', 'approved')->get() as $framework) {
+            $framework->update(['framework_status' => 'draft', 'approved_by' => null, 'approved_at' => null]);
+        }
     }
 
     public function withdrawUncertaintyApprovals(): void
     {
         $this->withdrawFrameworkApproval();
-        $this->criticalUncertainties()->where('status', 'approved')->update([
-            'status' => 'proposed', 'axis' => null, 'approved_by' => null, 'approved_at' => null,
-        ]);
+        foreach ($this->criticalUncertainties()->where('status', 'approved')->orderBy('id')->get() as $uncertainty) {
+            $uncertainty->update(['status' => 'proposed', 'axis' => null, 'approved_by' => null, 'approved_at' => null]);
+        }
     }
 
     public function getRouteKeyName()

@@ -2,18 +2,21 @@
 
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ClosedItemsController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CriticalUncertaintyController;
 use App\Http\Controllers\CrossImpactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DrivingForceController;
 use App\Http\Controllers\EarlyWarningIndicatorController;
 use App\Http\Controllers\ForesightRadarController;
+use App\Http\Controllers\IndicatorObservationController;
 use App\Http\Controllers\KnowledgeGraphController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PrioritizingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectAssessmentController;
 use App\Http\Controllers\ProjectDrivingForceController;
+use App\Http\Controllers\ProjectParticipantController;
 use App\Http\Controllers\RatingUrgencyController;
 use App\Http\Controllers\RegisteredListController;
 use App\Http\Controllers\ScenarioConditionController;
@@ -106,6 +109,19 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::delete('/{project}', 'destroy')->name('destroy')->can('manage-scenario');
     });
     // Step 2: the exercise's driving force list (roadmap R0.2); a link must belong to its project.
+    Route::prefix('scenario-planning/{project}/comments')->controller(CommentController::class)->name('scenario-planning.comments.')->scopeBindings()->group(function () {
+        Route::get('/', 'index')->name('index')->can('view-scenario');
+        Route::post('/', 'store')->name('store')->can('view-scenario');
+        Route::post('/{comment}/resolve', 'resolve')->name('resolve')->can('view-scenario');
+        Route::delete('/{comment}', 'destroy')->name('destroy')->can('view-scenario');
+    });
+
+    Route::prefix('scenario-planning/{project}/participants')->controller(ProjectParticipantController::class)->name('scenario-planning.participants.')->scopeBindings()->group(function () {
+        Route::post('/', 'store')->name('store')->can('manage-scenario');
+        Route::put('/{participant}', 'update')->name('update')->can('manage-scenario');
+        Route::delete('/{participant}', 'destroy')->name('destroy')->can('manage-scenario');
+    });
+
     Route::prefix('scenario-planning/{project}/driving-forces')->controller(ProjectDrivingForceController::class)->name('scenario-planning.forces.')->scopeBindings()->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::post('/', 'store')->name('store')->can('manage-scenario');
@@ -164,10 +180,20 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::delete('/{indicator}', 'destroy')->name('destroy')->can('manage-scenario');
     });
 
+    Route::prefix('scenario-planning/{project}/indicators/{indicator}/observations')->controller(IndicatorObservationController::class)->name('scenario-planning.indicators.observations.')->scopeBindings()->group(function () {
+        Route::post('/', 'store')->name('store')->can('view-scenario');
+        Route::delete('/{observation}', 'destroy')->name('destroy')->can('view-scenario');
+    });
+
     Route::prefix('scenario-planning/{project}/assessment')->controller(ProjectAssessmentController::class)->name('scenario-planning.assessment.')->scopeBindings()->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::post('/confirm', 'confirm')->name('confirm')->can('manage-scenario');
         Route::put('/{projectForce}', 'update')->name('update')->can('manage-scenario');
+        Route::put('/{projectForce}/mine', 'mine')->name('mine')->can('view-scenario');
+        Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
+        Route::post('/{projectForce}/suggestion/accept', 'acceptSuggestion')->name('suggestion.accept')->can('manage-scenario');
+        Route::delete('/{projectForce}/suggestion', 'rejectSuggestion')->name('suggestion.reject')->can('manage-scenario');
+        Route::delete('/{projectForce}/mine', 'withdraw')->name('withdraw')->can('view-scenario');
     });
 
     Route::prefix('scenarios')->controller(ScenarioController::class)->name('scenarios.')->group(function () {

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { inertiaVisit } from "@/lib/inertia-submit";
 
 /**
- * Inertia actions for step 9 early warning indicators (roadmap R1.9).
+ * Inertia actions for step 9 early warning indicators (roadmap R1.9) and their observations (R2.3).
  * Each resolves to Laravel's 422 errors, or undefined on success.
  */
 export function useEarlyWarningIndicators(projectId) {
@@ -19,5 +19,7 @@ export function useEarlyWarningIndicators(projectId) {
         busy,
         save: (values, indicatorId) => (indicatorId ? visit("put", url("update", indicatorId), values) : visit("post", url("store"), values)),
         remove: (indicatorId) => visit("delete", url("destroy", indicatorId)),
+        record: (indicatorId, values) => visit("post", route("scenario-planning.indicators.observations.store", [projectId, indicatorId]), values),
+        removeObservation: (indicatorId, observationId) => visit("delete", route("scenario-planning.indicators.observations.destroy", [projectId, indicatorId, observationId])),
     };
 }

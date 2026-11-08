@@ -140,6 +140,7 @@ class ProjectDrivingForceService
 
         return $project->projectForces()
             ->with(['drivingForce' => fn ($q) => $q->withCount('supporting_signals')->with('dimension.environment')])
+            ->withCount(ProjectDrivingForce::openCommentsCount())
             ->get()
             ->sortBy(fn ($link) => sprintf('%03d-%s', $order[$link->drivingForce?->dimension_id] ?? 999, strtolower((string) $link->drivingForce?->keyword)))
             ->values()
@@ -149,6 +150,7 @@ class ProjectDrivingForceService
                 'origin' => $link->origin,
                 'influence_note' => $link->influence_note,
                 'is_predetermined' => $link->is_predetermined,
+                'open_comments' => (int) $link->getAttribute('open_comments'),
                 'force' => $this->forceSummary($link->drivingForce),
             ])
             ->all();
