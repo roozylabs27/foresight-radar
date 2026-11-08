@@ -97,7 +97,7 @@ class ScenarioConditionService
      */
     public function quadrants(Scenario $framework): array
     {
-        $quadrants = $framework->quadrants()->with(['conditions.projectForce.drivingForce'])->get();
+        $quadrants = $framework->quadrants()->with(['conditions.projectForce.drivingForce'])->withCount(ScenarioQuadrant::openCommentsCount())->get();
         $normalize = fn (string $text) => mb_strtolower(trim(preg_replace('/\s+/', ' ', $text)));
         $shared = $quadrants->count() === count(Scenario::POSITIONS)
             ? $quadrants->map(fn ($quadrant) => $quadrant->conditions->pluck('text')->map($normalize)->unique())
@@ -111,6 +111,7 @@ class ScenarioConditionService
             'poles' => $framework->poles($quadrant->position),
             'title' => $quadrant->title,
             'summary' => $quadrant->summary,
+            'open_comments' => (int) $quadrant->getAttribute('open_comments'),
             'conditions' => $quadrant->conditions->map(fn (ScenarioCondition $condition) => [
                 'id' => $condition->uuid,
                 'kind' => $condition->kind,

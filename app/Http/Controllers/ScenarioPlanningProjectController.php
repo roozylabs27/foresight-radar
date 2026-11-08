@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ScenarioPlanningProjectRequest;
+use App\Models\ProjectParticipant;
 use App\Models\ScenarioPlanningProject;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\StalenessService;
@@ -49,6 +50,9 @@ class ScenarioPlanningProjectController extends Controller
             'lastGate' => $this->projects->lastGate($project),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
             'owners' => $this->projects->owners($request->user()),
+            'participants' => $this->projects->participants($project),
+            'participantRoles' => ProjectParticipant::ROLES,
+            'decisions' => $this->projects->decisions($project),
         ]);
     }
 

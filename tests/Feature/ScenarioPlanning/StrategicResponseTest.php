@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\Comment;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
+use App\Models\ProjectDecision;
 use App\Models\ProjectDrivingForce;
+use App\Models\ProjectParticipant;
 use App\Models\Scenario;
 use App\Models\ScenarioCondition;
 use App\Models\ScenarioImplication;
@@ -368,5 +371,118 @@ class StrategicResponseTest extends TestCase
         $this->assertNull($other->fresh()->stale_since);
 
         $this->actingAs($this->viewer)->post(route('scenario-planning.responses.keep', [$this->project, $relying]))->assertForbidden();
+    }
+
+    /** @return array<int, string> "G1 approved" … in the order they were logged */
+    private function decisions(): array
+    {
+        return ProjectDecision::where('project_id', $this->project->id)->orderBy('id')->get()->map(fn ($row) => "{$row->gate} {$row->action}")->all();
+    }
+
+    /** Roadmap R2.2 (decision log): every gate decision is recorded with who made it, newest first on the overview. */
+    public function test_every_gate_decision_is_logged_with_its_actor(): void
+    {
+        $this->readyFramework();
+        $this->store()->assertSessionHasNoErrors();
+        $response = StrategicResponse::sole();
+        $this->action($response, 'approve')->assertSessionHasNoErrors();
+        $this->action($response, 'reject')->assertSessionHasNoErrors();
+
+        $this->assertSame([
+            'G1 approved', 'G2 approved', 'G3 approved', 'G4 approved', 'G4 approved', 'G5 approved', 'G7 approved', 'G7 rejected',
+        ], $this->decisions());
+        $this->assertSame([$this->manager->id], ProjectDecision::distinct()->pluck('actor_id')->all());
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.show', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('decisions.0.gate', 'G7')
+                ->where('decisions.0.action', 'rejected')
+                ->where('decisions.0.subject', 'Secure USP for each xEV model')
+                ->where('decisions.0.actor', $this->manager->name)
+                ->where('decisions.2.gate', 'G5')
+                ->has('decisions', 8));
+    }
+
+    public function test_withdrawn_gates_are_logged_once_each(): void
+    {
+        $this->readyFramework();
+
+        $this->actingAs($this->manager)->put(route('scenario-planning.assessment.update', [$this->project, $this->link($this->project, 'Politic')]), ['impact' => 3, 'uncertainty' => 8])->assertSessionHasNoErrors();
+
+        $withdrawn = array_values(array_filter($this->decisions(), fn ($row) => str_ends_with($row, 'withdrawn')));
+        $this->assertSame(['G3 withdrawn', 'G5 withdrawn', 'G4 withdrawn', 'G4 withdrawn'], $withdrawn);
+        $this->assertSame('Government Regulation', ProjectDecision::where('gate', 'G4')->where('action', 'withdrawn')->orderBy('id')->first()->subject);
+    }
+
+    private function comment(User $user, string $type, string $id, string $body = 'Perlu data pasar terbaru.')
+    {
+        return $this->actingAs($user)->post(route('scenario-planning.comments.store', $this->project), ['type' => $type, 'id' => $id, 'body' => $body]);
+    }
+
+    /** Roadmap R2.2 (comments): threads on forces, uncertainties, quadrants and responses; open counts on their pages. */
+    public function test_comments_on_each_artefact_of_the_exercise(): void
+    {
+        [$regulation] = $this->approveAxes();
+        $this->createFramework();
+        $this->approveFramework();
+        $this->store();
+        $response = StrategicResponse::sole();
+        $force = $this->link($this->project, 'Politic');
+
+        $this->comment($this->viewer, 'force', $force->uuid)->assertSessionHasNoErrors();
+        $this->comment($this->manager, 'uncertainty', $regulation->uuid)->assertSessionHasNoErrors();
+        $this->comment($this->manager, 'quadrant', $this->quadrant('HH')->uuid)->assertSessionHasNoErrors();
+        $this->comment($this->viewer, 'response', $response->uuid, 'Siapa pemilik inisiatif ini?')->assertSessionHasNoErrors();
+
+        $this->assertSame(4, Comment::where('project_id', $this->project->id)->count());
+        $this->assertTrue(Comment::where('body', 'Siapa pemilik inisiatif ini?')->sole()->commentable->is($response));
+
+        $this->actingAs($this->viewer)->getJson(route('scenario-planning.comments.index', [$this->project, 'type' => 'response', 'id' => $response->uuid]))
+            ->assertOk()
+            ->assertJsonPath('comments.0.body', 'Siapa pemilik inisiatif ini?')
+            ->assertJsonPath('comments.0.author', $this->viewer->name)
+            ->assertJsonPath('comments.0.can_delete', true)
+            ->assertJsonPath('can_comment', true);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.responses.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('responses.0.open_comments', 1));
+        $this->actingAs($this->viewer)->get(route('scenario-planning.forces.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('forces.0.open_comments', 1));
+        $this->actingAs($this->viewer)->get(route('scenario-planning.uncertainties.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('uncertainties.0.open_comments', 1));
+        $this->actingAs($this->viewer)->get(route('scenario-planning.conditions.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('quadrants.0.position', 'HH')->where('quadrants.0.open_comments', 1));
+    }
+
+    public function test_comment_rules(): void
+    {
+        $this->readyFramework();
+        $force = $this->link($this->project, 'Politic');
+
+        $this->comment($this->viewer, 'signal', $force->uuid)->assertSessionHasErrors('type');
+        $this->comment($this->viewer, 'force', $force->uuid, '')->assertSessionHasErrors('body');
+        $other = $this->exercise();
+        $this->comment($this->viewer, 'force', $this->link($other, 'Politic')->uuid)->assertSessionHasErrors('id');
+
+        $this->comment($this->viewer, 'force', $force->uuid)->assertSessionHasNoErrors();
+        $comment = Comment::sole();
+        $colleague = User::factory()->create();
+        $colleague->givePermissionTo(['view-scenario', 'manage-scenario']);
+
+        $this->actingAs($colleague)->post(route('scenario-planning.comments.resolve', [$this->project, $comment]))->assertForbidden();
+        $this->actingAs($colleague)->delete(route('scenario-planning.comments.destroy', [$this->project, $comment]))->assertForbidden();
+        $this->actingAs($this->viewer)->post(route('scenario-planning.comments.resolve', [$this->project, $comment]))->assertSessionHasNoErrors();
+        $this->assertNotNull($comment->fresh()->resolved_at);
+        $this->actingAs($this->manager)->post(route('scenario-planning.comments.resolve', [$this->project, $comment]))->assertSessionHasNoErrors();
+        $this->assertNull($comment->fresh()->resolved_at);
+
+        // Once participants are listed, a viewer-role participant reads but does not comment.
+        ProjectParticipant::create(['project_id' => $this->project->id, 'tenant_id' => $this->project->tenant_id, 'user_id' => $this->viewer->id, 'role' => 'viewer']);
+        $this->comment($this->viewer, 'force', $force->uuid)->assertForbidden();
+        $this->actingAs($this->viewer)->getJson(route('scenario-planning.comments.index', [$this->project, 'type' => 'force', 'id' => $force->uuid]))
+            ->assertOk()->assertJsonPath('can_comment', false)->assertJsonCount(1, 'comments');
+
+        $this->actingAs($this->manager)->delete(route('scenario-planning.comments.destroy', [$this->project, $comment]))->assertSessionHasNoErrors();
+        $this->assertSame(0, Comment::count());
     }
 }

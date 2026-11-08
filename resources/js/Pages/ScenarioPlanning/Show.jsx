@@ -5,6 +5,8 @@ import ConfirmDialog from "@/Components/ConfirmDialog";
 import DetailList, { DetailItem } from "@/Components/DetailList";
 import FormDialog from "@/Components/FormDialog";
 import Panel from "@/Components/Panel";
+import DecisionLog from "@/Components/ScenarioPlanning/DecisionLog";
+import ParticipantPanel from "@/Components/ScenarioPlanning/ParticipantPanel";
 import ProjectForm from "@/Components/ScenarioPlanning/ProjectForm";
 import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
 import NextActionCard from "@/Components/ScenarioPlanning/NextActionCard";
@@ -20,7 +22,7 @@ const FORM_ID = "scenario-planning-project-edit-form";
 const visit = (method, url) => new Promise((resolve) => router.visit(url, { method, preserveScroll: true, onFinish: resolve }));
 
 /** Workspace of one scenario planning exercise: its focal issue (step 1) and the nine steps. */
-export default function Show({ auth, title, project, steps, nextAction, lastGate, canManage, owners }) {
+export default function Show({ auth, title, project, steps, nextAction, lastGate, canManage, owners, participants, decisions }) {
     const dialog = useProjectDialog({ method: "put", url: route("scenario-planning.update", project.id) });
     const status = PROJECT_STATUSES[project.status];
 
@@ -95,22 +97,26 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                     </div>
                 </Panel>
 
-                <Panel
-                    title="Sembilan langkah"
-                    description={!project.confirmed_at ? "Konfirmasi focal issue untuk membuka langkah 2." : !project.forces_confirmed_at ? "Sepakati daftar driving force untuk membuka langkah 3–9." : "Focal issue dan daftar driving force sudah disepakati."}
-                >
-                    <NextActionCard nextAction={nextAction} lastGate={lastGate} />
-                    <StaleBanner project={project} canManage={canManage} />
-                    {project.unreviewed_narratives > 0 && (
-                        <p role="status" className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">
-                            {project.unreviewed_narratives} narasi AI belum ditinjau.{" "}
-                            <Link href={route("scenarios.index")} className="font-medium underline">
-                                Tinjau di halaman Scenarios
-                            </Link>
-                        </p>
-                    )}
-                    <StepList steps={steps} />
-                </Panel>
+                <div className="flex flex-col gap-4">
+                    <Panel
+                        title="Sembilan langkah"
+                        description={!project.confirmed_at ? "Konfirmasi focal issue untuk membuka langkah 2." : !project.forces_confirmed_at ? "Sepakati daftar driving force untuk membuka langkah 3–9." : "Focal issue dan daftar driving force sudah disepakati."}
+                    >
+                        <NextActionCard nextAction={nextAction} lastGate={lastGate} />
+                        <StaleBanner project={project} canManage={canManage} />
+                        {project.unreviewed_narratives > 0 && (
+                            <p role="status" className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">
+                                {project.unreviewed_narratives} narasi AI belum ditinjau.{" "}
+                                <Link href={route("scenarios.index")} className="font-medium underline">
+                                    Tinjau di halaman Scenarios
+                                </Link>
+                            </p>
+                        )}
+                        <StepList steps={steps} />
+                    </Panel>
+                    <ParticipantPanel projectId={project.id} participants={participants} owners={owners} canManage={canManage} />
+                    <DecisionLog decisions={decisions} />
+                </div>
             </main>
 
             <FormDialog title="Ubah latihan" open={dialog.open} onOpenChange={dialog.setOpen} formId={FORM_ID} isEditMode btnText="Simpan" cancelText="Batal" loading={dialog.saving} className="sm:max-w-2xl">

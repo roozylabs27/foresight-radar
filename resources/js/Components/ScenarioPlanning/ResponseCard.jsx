@@ -1,6 +1,7 @@
 import { AlertCircleIcon, CheckIcon, CircleCheckIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
+import CommentButton from "@/Components/ScenarioPlanning/CommentButton";
 import HintTooltip from "@/Components/HintTooltip";
 import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -27,6 +28,9 @@ export default function ResponseCard({ response, quadrants, canManage, busy, onE
                 )}
                 {response.priority && <span className="text-xs font-medium text-foreground">P{response.priority}</span>}
                 {response.owner && <span className="text-xs text-muted-foreground">PJ: {response.owner.name}</span>}
+                <span className="ml-auto">
+                    <CommentButton type="response" id={response.id} title={response.title} count={response.open_comments} />
+                </span>
             </header>
 
             {response.stale && (

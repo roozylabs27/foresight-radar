@@ -568,6 +568,103 @@
         "Dialog lists conditions per quadrant; card shows the linked conditions and the warning"
       ],
       "verification_evidence": "2026-11-03: 2 new tests in StrategicResponseTest; StrategicResponse + ScenarioCondition + Staleness tests 24 passed; Pint 375 files PASS; npm build OK; browser: link saved and shown on card, warning shown and cleared by Keep."
+    },
+    {
+      "id": "FEAT-041",
+      "name": "Multi-assessor Scoring",
+      "description": "Each participant scores impact and uncertainty of an exercise force alone; step 3 shows the spread and the coordinator sets the consensus (roadmap R2.1, matrix 3.3).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Two participants score the same force; each edits or withdraws only their own score",
+        "Spread visible: count, min / max / median per axis, assessors, wide-spread flag",
+        "Consensus row stays distinct and is the only one plotted and used for G3",
+        "Individual scores follow the same rules (agreed list, included force, 1–10) and never withdraw G3"
+      ],
+      "verification_evidence": "2026-11-07: 3 new tests in ProjectAssessmentTest (RED on missing route, then 13 passed); Pint 376 files PASS; npm build OK; browser as BOD viewer: own score shown with spread, consensus and G3 unchanged, withdraw removes it."
+    },
+    {
+      "id": "FEAT-042",
+      "name": "Exercise Participants",
+      "description": "Participants of a scenario planning exercise with a role and division; once listed, only contributing participants and the coordinator give their own scores (roadmap R2.2, slice 1).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Coordinator adds, re-roles and removes participants (coordinator / contributor / expert / viewer)",
+        "A person is listed once per exercise and must belong to the tenant",
+        "Without participants anyone who can open the exercise scores; with participants only contributing roles and the coordinator",
+        "Others with view-scenario still read the exercise"
+      ],
+      "verification_evidence": "2026-11-07: ProjectParticipantTest 4 tests (RED on missing route); with ProjectAssessmentTest and ProjectTest 26 passed; Pint fixed 2 files; npm build OK; browser: BOD sees read-only panel, coordinator adds and removes a participant."
+    },
+    {
+      "id": "FEAT-043",
+      "name": "Gate Decision Log",
+      "description": "Every gate decision of an exercise (G1–G7 approved, rejected or withdrawn) is logged with its actor and listed on the overview (roadmap R2.2, slice 2).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Approvals of G1–G7 are logged with the acting user and the subject",
+        "Withdrawals caused by upstream edits are logged once per gate and subject",
+        "Rejections of uncertainties and responses are logged",
+        "The overview lists the latest decisions, newest first"
+      ],
+      "verification_evidence": "2026-11-07: 2 new tests in StrategicResponseTest (RED: class missing); with CriticalUncertainty, ScenarioFramework and Project tests 43 passed; Pint PASS; npm build OK; browser: panel with empty state."
+    },
+    {
+      "id": "FEAT-044",
+      "name": "Exercise Comments",
+      "description": "Comment threads on exercise forces, critical uncertainties, quadrants and responses, with resolve / reopen and open counts on their pages (roadmap R2.2, slice 3).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Comments attach to an artefact of the same exercise only",
+        "Everyone who can open the exercise reads; only those who may give input comment",
+        "The author or the coordinator resolves, reopens and deletes",
+        "Open comment counts show on steps 2, 3b, 5 and 8"
+      ],
+      "verification_evidence": "2026-11-08: 2 new tests in StrategicResponseTest (RED on missing route); all scenario planning tests 114 passed; Pint fixed 2 import orders; npm build OK; browser: comment added, counter updated, resolved, deleted; buttons on step 5."
+    },
+    {
+      "id": "FEAT-045",
+      "name": "Indicator Observation Log",
+      "description": "Observations of early warning indicators over time, confirmed by the recorder and optionally evidenced by an accepted signal (roadmap R2.3, slice 1).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "An observation has a date (not in the future) and a numeric value, a text, or both",
+        "Direction (rising / falling / stable) and a threshold-crossed flag are recorded",
+        "Only accepted signals can be cited",
+        "Whoever may give input records; the recorder or the coordinator deletes"
+      ],
+      "verification_evidence": "2026-11-08: 2 new tests in EarlyWarningIndicatorTest (RED on missing route); indicator tests 9 passed; Pint fixed 2 files; Larastan clean; npm build OK; dev migration first failed on a 67-character index name (fixed); browser: observation recorded and deleted."
+    },
+    {
+      "id": "FEAT-046",
+      "name": "Scenario Relevance View",
+      "description": "Step 9 shows which scenario the indicator observations point to: per quadrant, directional observations matching or opposing its expected direction (roadmap R2.3, slice 2).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "An observation direction supports quadrants expecting it and opposes quadrants expecting another measurable direction",
+        "Qualitative or unset expectations, observations without a direction and retired indicators are not counted",
+        "The quadrant with the highest positive net support is marked only when unique"
+      ],
+      "verification_evidence": "2026-11-08: 2 new tests in EarlyWarningIndicatorTest (RED: relevance prop missing); indicator tests 11 passed; Pint PASS; Larastan clean; npm build OK; browser: empty state, then one rising observation gave 1/0 on both favorable quadrants and 0/1 on the others with no leader (tie)."
+    },
+    {
+      "id": "FEAT-047",
+      "name": "Threshold Review Trigger",
+      "description": "An indicator observation that crosses its threshold flags the exercise framework and scenarios for review (roadmap R2.3, slice 3).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "An observation marked as crossing the threshold flags the framework and all four quadrants stale",
+        "The reason names the indicator and the observation date and shows in the overview banner",
+        "Observations that do not cross the threshold flag nothing",
+        "The existing \"keep\" action clears the flag"
+      ],
+      "verification_evidence": "2026-11-08: 1 new test in EarlyWarningIndicatorTest (RED: framework not flagged); indicator + staleness tests 19 passed; Pint PASS; Larastan clean; browser: crossing observation flagged 4 quadrants, overview banner showed the reason; dev data restored."
     }
   ]
 }

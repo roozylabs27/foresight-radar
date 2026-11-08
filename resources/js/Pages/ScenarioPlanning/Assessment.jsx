@@ -7,6 +7,7 @@ import Panel from "@/Components/Panel";
 import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ScoreDialog from "@/Components/ScenarioPlanning/ScoreDialog";
 import ScoreList from "@/Components/ScenarioPlanning/ScoreList";
+import SuggestionControl from "@/Components/ScenarioPlanning/SuggestionControl";
 import UncertaintyImpactMatrix from "@/Components/ScenarioPlanning/UncertaintyImpactMatrix";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
@@ -14,7 +15,7 @@ import { useProjectAssessment } from "@/hooks/use-project-assessment";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 3 of an exercise: impact × uncertainty scores, the matrix and gate G3 (roadmap R1.1). */
-export default function Assessment({ auth, title, project, steps, forces, threshold, canManage, errors = {} }) {
+export default function Assessment({ auth, title, project, steps, forces, threshold, canManage, canScore, suggestionStatus, suggestionError, errors = {} }) {
     const actions = useProjectAssessment(project.id);
     const [editing, setEditing] = useState(null);
     const unscored = forces.filter((item) => item.impact == null).length;
@@ -36,10 +37,14 @@ export default function Assessment({ auth, title, project, steps, forces, thresh
         >
             <Head title={title} />
             <main className="grid flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-6 lg:py-5">
-                <Panel title={`Skor driving force (${forces.length})`} description="Impact dan uncertainty 1–10 hasil kesepakatan tim untuk focal issue latihan ini.">
+                <Panel title={`Skor driving force (${forces.length})`} description="Setiap peserta memberi skor sendiri; koordinator menetapkan skor kesepakatan yang dipakai di matriks.">
                     {locked && <p className="m-0 mb-3 rounded-md bg-warning-soft p-3 text-sm text-warning">Sepakati daftar driving force di langkah 2 dulu sebelum memberi skor.</p>}
                     {errors.scores && <p role="alert" className="m-0 mb-3 rounded-md bg-danger-soft p-3 text-sm text-danger">{errors.scores}</p>}
-                    <ScoreList forces={forces} threshold={threshold} canManage={canManage && !locked} onEdit={setEditing} />
+                    {errors.ai && <p role="alert" className="m-0 mb-3 rounded-md bg-danger-soft p-3 text-sm text-danger">{errors.ai}</p>}
+                    <div className="mb-3">
+                        <SuggestionControl status={suggestionStatus} error={suggestionError} canManage={canManage} disabled={locked || forces.length === 0} busy={actions.busy} onSuggest={actions.suggest} />
+                    </div>
+                    <ScoreList forces={forces} threshold={threshold} canManage={canManage && !locked} canScore={canScore && !locked} onEdit={(force, mode) => setEditing({ force, mode })} onWithdraw={locked ? null : (item) => actions.withdrawMine(item.id)} busy={actions.busy} onAcceptSuggestion={(item) => actions.acceptSuggestion(item.id)} onRejectSuggestion={(item) => actions.rejectSuggestion(item.id)} />
                     <Link href={route("scenario-planning.show", project.id)} className="mt-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeftIcon aria-hidden="true" className="size-4" />
                         {project.name}
@@ -78,7 +83,13 @@ export default function Assessment({ auth, title, project, steps, forces, thresh
                 </div>
             </main>
 
-            <ScoreDialog force={editing} onOpenChange={(open) => !open && setEditing(null)} loading={actions.busy} onSave={(values) => actions.save(editing.id, values)} />
+            <ScoreDialog
+                force={editing?.force ?? null}
+                mode={editing?.mode}
+                onOpenChange={(open) => !open && setEditing(null)}
+                loading={actions.busy}
+                onSave={(values) => (editing.mode === "mine" ? actions.saveMine(editing.force.id, values) : actions.save(editing.force.id, values))}
+            />
         </AuthenticatedLayout>
     );
 }

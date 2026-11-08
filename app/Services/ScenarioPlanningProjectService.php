@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ProjectDecision;
+use App\Models\ProjectParticipant;
 use App\Models\ScenarioCondition;
 use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
@@ -251,6 +253,44 @@ class ScenarioPlanningProjectService
             ->orderBy('name')
             ->get(['uuid', 'name'])
             ->map(fn ($member) => ['value' => $member->uuid, 'label' => $member->name])
+            ->all();
+    }
+
+    /** The latest gate decisions of an exercise, newest first (roadmap R2.2). */
+    public function decisions(ScenarioPlanningProject $project, int $limit = 50): array
+    {
+        return $project->decisions()
+            ->with('actor:id,name')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (ProjectDecision $row) => [
+                'gate' => $row->gate,
+                'label' => self::GATES[$row->gate] ?? $row->gate,
+                'action' => $row->action,
+                'subject' => $row->subject,
+                'actor' => $row->actor?->name,
+                'at' => $row->created_at->toISOString(),
+            ])
+            ->all();
+    }
+
+    /** Participants of an exercise, coordinators first, then by name (roadmap R2.2). */
+    public function participants(ScenarioPlanningProject $project): array
+    {
+        $order = array_flip(ProjectParticipant::ROLES);
+
+        return $project->participants()
+            ->with('user:id,uuid,name')
+            ->get()
+            ->sortBy(fn (ProjectParticipant $row) => sprintf('%d-%s', $order[$row->role] ?? 9, strtolower((string) $row->user?->name)))
+            ->map(fn (ProjectParticipant $row) => [
+                'id' => $row->uuid,
+                'user' => ['id' => $row->user?->uuid, 'name' => $row->user?->name],
+                'role' => $row->role,
+                'division' => $row->division,
+            ])
+            ->values()
             ->all();
     }
 

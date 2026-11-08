@@ -76,6 +76,12 @@ class EarlyWarningIndicator extends Model
         });
     }
 
+    /** Observations over time, newest first (roadmap R2.3). */
+    public function observations(): HasMany
+    {
+        return $this->hasMany(IndicatorObservation::class)->orderByDesc('observed_at')->orderByDesc('id');
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(ScenarioPlanningProject::class, 'project_id');

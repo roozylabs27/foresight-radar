@@ -1,6 +1,7 @@
 import { PencilIcon, Trash2Icon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
+import CommentButton from "@/Components/ScenarioPlanning/CommentButton";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { INCLUSION_STATUSES } from "@/domain/scenarioPlanning";
@@ -30,23 +31,26 @@ export default function ProjectForceList({ forces, canManage, onEdit, onRemove }
                             </span>
                             <p className="m-0 text-xs text-muted-foreground">{link.influence_note || "Belum ada catatan pengaruh terhadap focal issue."}</p>
                         </div>
-                        {canManage && (
-                            <div className="flex shrink-0 gap-1">
-                                <Button size="icon" variant="ghost" aria-label={`Ubah ${link.force?.keyword}`} onClick={() => onEdit(link)}>
-                                    <PencilIcon aria-hidden="true" />
-                                </Button>
-                                <ConfirmDialog
-                                    title="Keluarkan dari latihan?"
-                                    description="Driving force tetap ada di pustaka organisasi; hanya dihapus dari daftar latihan ini."
-                                    confirmText="Keluarkan"
-                                    onConfirm={() => onRemove(link)}
-                                >
-                                    <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Keluarkan ${link.force?.keyword}`}>
-                                        <Trash2Icon aria-hidden="true" />
+                        <div className="flex shrink-0 gap-1">
+                            <CommentButton type="force" id={link.id} title={link.force?.keyword} count={link.open_comments} />
+                            {canManage && (
+                                <>
+                                    <Button size="icon" variant="ghost" aria-label={`Ubah ${link.force?.keyword}`} onClick={() => onEdit(link)}>
+                                        <PencilIcon aria-hidden="true" />
                                     </Button>
-                                </ConfirmDialog>
-                            </div>
-                        )}
+                                    <ConfirmDialog
+                                        title="Keluarkan dari latihan?"
+                                        description="Driving force tetap ada di pustaka organisasi; hanya dihapus dari daftar latihan ini."
+                                        confirmText="Keluarkan"
+                                        onConfirm={() => onRemove(link)}
+                                    >
+                                        <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Keluarkan ${link.force?.keyword}`}>
+                                            <Trash2Icon aria-hidden="true" />
+                                        </Button>
+                                    </ConfirmDialog>
+                                </>
+                            )}
+                        </div>
                     </li>
                 );
             })}

@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\AiGenerationRun;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\ForceAssessment;
 use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioPlanningProject;
+use App\Models\Signal;
+use App\Models\Source;
 use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Support\DimensionTaxonomy;
@@ -236,5 +239,162 @@ class ProjectAssessmentTest extends TestCase
         $this->actingAs($this->viewer)->put(route('scenario-planning.assessment.update', [$project, $link]), ['impact' => 5, 'uncertainty' => 5])->assertForbidden();
         $this->actingAs($colleague)->put(route('scenario-planning.assessment.update', [$project, $link]), ['impact' => 5, 'uncertainty' => 5])->assertForbidden();
         $this->assertSame(0, ForceAssessment::count());
+    }
+
+    private function mine(User $user, ScenarioPlanningProject $project, DrivingForce $force, array $values)
+    {
+        return $this->actingAs($user)->put(route('scenario-planning.assessment.mine', [$project, $this->link($project, $force)]), $values);
+    }
+
+    /** Roadmap R2.1 (slide 14): each participant scores alone; the spread is shown; the consensus row stays distinct. */
+    public function test_two_participants_score_the_same_force_and_the_spread_is_shown(): void
+    {
+        $force = $this->force('TKDN Regulation');
+        $project = $this->project(forces: [$force]);
+
+        $this->mine($this->viewer, $project, $force, ['impact' => 9, 'uncertainty' => 3, 'impact_rationale' => 'Akses insentif.'])->assertSessionHasNoErrors();
+        $this->mine($this->manager, $project, $force, ['impact' => 6, 'uncertainty' => 8])->assertSessionHasNoErrors();
+
+        $this->assertSame(2, ForceAssessment::where('kind', 'individual')->count());
+        $this->assertSame(0, ForceAssessment::where('kind', 'consensus')->count());
+        $this->assertEqualsCanonicalizing([$this->viewer->id, $this->manager->id], ForceAssessment::pluck('assessor_id')->all());
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.assessment.index', $project))
+            ->assertInertia(fn ($page) => $page
+                ->where('forces.0.impact', null)
+                ->where('forces.0.individual.count', 2)
+                ->where('forces.0.individual.impact', ['min' => 6, 'max' => 9, 'median' => 7.5])
+                ->where('forces.0.individual.uncertainty', ['min' => 3, 'max' => 8, 'median' => 5.5])
+                ->where('forces.0.individual.wide', true)
+                ->has('forces.0.individual.assessors', 2)
+                ->where('forces.0.mine.impact', 9)
+                ->where('forces.0.mine.impact_rationale', 'Akses insentif.')
+                ->where('canScore', true));
+
+        $this->score($project, $force, ['impact' => 8, 'uncertainty' => 6])->assertSessionHasNoErrors();
+        $this->assertSame([8, 6], [ForceAssessment::where('kind', 'consensus')->sole()->impact, ForceAssessment::where('kind', 'consensus')->sole()->uncertainty]);
+        $this->assertSame(2, ForceAssessment::where('kind', 'individual')->count());
+    }
+
+    public function test_a_participant_edits_and_withdraws_only_their_own_score(): void
+    {
+        $force = $this->force('TKDN Regulation');
+        $project = $this->project(forces: [$force]);
+        $this->mine($this->viewer, $project, $force, ['impact' => 9, 'uncertainty' => 3]);
+        $this->mine($this->manager, $project, $force, ['impact' => 6, 'uncertainty' => 8]);
+
+        $this->mine($this->viewer, $project, $force, ['impact' => 7, 'uncertainty' => 4])->assertSessionHasNoErrors();
+        $this->assertSame(7, ForceAssessment::where('assessor_id', $this->viewer->id)->sole()->impact);
+        $this->assertSame(2, ForceAssessment::count());
+
+        $this->actingAs($this->viewer)->delete(route('scenario-planning.assessment.withdraw', [$project, $this->link($project, $force)]))->assertSessionHasNoErrors();
+        $this->assertSame([$this->manager->id], ForceAssessment::pluck('assessor_id')->all());
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.assessment.index', $project))
+            ->assertInertia(fn ($page) => $page->where('forces.0.mine', null)->where('forces.0.individual.count', 1)->where('forces.0.individual.wide', false));
+    }
+
+    public function test_individual_scores_never_touch_the_agreement_and_follow_the_same_rules(): void
+    {
+        $force = $this->force('TKDN Regulation', [8, 9]);
+        $excluded = $this->force('Solid Battery', [5, 5]);
+        $project = $this->project(agreeForces: false, forces: [$force, $excluded]);
+
+        $this->mine($this->viewer, $project, $force, ['impact' => 9, 'uncertainty' => 3])->assertSessionHasErrors('impact');
+        $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, $excluded)]), ['inclusion_status' => 'excluded']);
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $project));
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project))->assertSessionHasNoErrors();
+
+        $this->mine($this->viewer, $project, $force, ['impact' => 11, 'uncertainty' => 3])->assertSessionHasErrors('impact');
+        $this->mine($this->viewer, $project, $excluded, ['impact' => 5, 'uncertainty' => 5])->assertSessionHasErrors('impact');
+        $this->mine($this->viewer, $project, $force, ['impact' => 2, 'uncertainty' => 2])->assertSessionHasNoErrors();
+
+        $this->assertNotNull($project->fresh()->scores_confirmed_at);
+        $this->assertSame([8, 9], [$this->link($project, $force)->consensus->impact, $this->link($project, $force)->consensus->uncertainty]);
+
+        $outsider = User::factory()->create();
+        $this->mine($outsider, $project, $force, ['impact' => 5, 'uncertainty' => 5])->assertForbidden();
+        $this->assertSame(1, ForceAssessment::where('kind', 'individual')->count());
+    }
+
+    private function acceptedSignal(DrivingForce $force, string $title): Signal
+    {
+        $raw = "{$title} raw";
+        $source = Source::create([
+            'uuid' => (string) Uuid::uuid4(), 'title' => "{$title} source", 'url' => 'https://example.test/'.md5($title),
+            'raw_content' => $raw, 'content_hash' => hash('sha256', $raw), 'created_by' => $this->manager->id,
+        ]);
+        $signal = Signal::create([
+            'uuid' => (string) Uuid::uuid4(), 'source_id' => $source->id, 'dimension_id' => $this->legislative->id,
+            'title' => $title, 'summary' => "{$title}.", 'evidence_quote' => "{$title}.", 'confidence_score' => 0.9, 'review_status' => 'ACCEPTED',
+        ]);
+        $force->supporting_signals()->attach($signal->id);
+
+        return $signal;
+    }
+
+    private function suggestion(string $force, int $impact, int $uncertainty, array $refs): array
+    {
+        return ['force' => $force, 'impact' => $impact, 'uncertainty' => $uncertainty, 'impact_rationale' => "Impact {$impact}.", 'uncertainty_rationale' => "Uncertainty {$uncertainty}.", 'cited_refs' => $refs];
+    }
+
+    /** Roadmap R2.4 (score suggestions): AI proposes scores citing only offered signals; nothing applies until accepted. */
+    public function test_ai_suggests_scores_and_nothing_applies_until_accepted(): void
+    {
+        $alpha = $this->force('Alpha Rule');
+        $beta = $this->force('Beta Rule');
+        $this->acceptedSignal($alpha, 'Insentif TKDN diperluas');
+        $project = $this->project(forces: [$alpha, $beta]);
+        $fake = $this->fakeLlm();
+        $fake->respond(['suggestions' => [$this->suggestion('F1', 9, 8, ['S1']), $this->suggestion('F2', 5, 4, [])]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.suggest', $project))->assertSessionHasNoErrors();
+
+        $this->assertSame('force_assessment', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('Insentif TKDN diperluas', $fake->lastRequest()->user);
+        $this->assertStringContainsString($project->focal_question, $fake->lastRequest()->user);
+        $this->assertSame(2, ForceAssessment::where('kind', 'ai_suggestion')->where('origin', 'ai')->count());
+        $this->assertSame(0, ForceAssessment::where('kind', 'consensus')->count());
+        $run = AiGenerationRun::sole();
+        $this->assertSame(['force_assessment', 'completed'], [$run->purpose, $run->status]);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.assessment.index', $project))
+            ->assertInertia(fn ($page) => $page
+                ->where('forces.0.force.keyword', 'Alpha Rule')
+                ->where('forces.0.impact', null)
+                ->where('forces.0.suggestion.impact', 9)
+                ->where('forces.0.suggestion.uncertainty', 8)
+                ->where('forces.0.suggestion.signals.0.title', 'Insentif TKDN diperluas')
+                ->where('forces.1.suggestion.signals', [])
+                ->where('suggestionStatus', 'completed'));
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.suggestion.accept', [$project, $this->link($project, $alpha)]))->assertSessionHasNoErrors();
+        $consensus = $this->link($project, $alpha)->consensus;
+        $this->assertSame([9, 8, 'ai', 'Impact 9.'], [$consensus->impact, $consensus->uncertainty, $consensus->origin, $consensus->impact_rationale]);
+
+        $this->actingAs($this->manager)->delete(route('scenario-planning.assessment.suggestion.reject', [$project, $this->link($project, $beta)]))->assertSessionHasNoErrors();
+        $this->assertSame(0, ForceAssessment::where('kind', 'ai_suggestion')->count());
+        $this->assertNull($this->link($project, $beta)->consensus);
+    }
+
+    public function test_score_suggestions_citing_unknown_refs_are_rejected_and_rules_apply(): void
+    {
+        $alpha = $this->force('Alpha Rule');
+        $this->acceptedSignal($alpha, 'Insentif TKDN diperluas');
+        $unagreed = $this->project(agreeForces: false, forces: [$alpha]);
+        $this->fakeLlm()->respond(['suggestions' => [$this->suggestion('F1', 9, 8, ['S9'])]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.suggest', $unagreed))->assertSessionHasErrors('ai');
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $unagreed));
+        $this->actingAs($this->viewer)->post(route('scenario-planning.assessment.suggest', $unagreed))->assertForbidden();
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.suggest', $unagreed))->assertSessionHasNoErrors();
+        $this->assertSame(0, ForceAssessment::where('kind', 'ai_suggestion')->count());
+        $this->assertSame('rejected', AiGenerationRun::sole()->status);
+        $this->actingAs($this->manager)->get(route('scenario-planning.assessment.index', $unagreed))
+            ->assertInertia(fn ($page) => $page->where('suggestionStatus', 'failed')->where('suggestionError', fn ($error) => str_contains((string) $error, 'S9')));
+
+        $this->fakeLlm(available: false);
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.suggest', $unagreed))->assertSessionHasErrors('ai');
     }
 }

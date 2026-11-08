@@ -61,6 +61,34 @@ export function classifyScore(impact, uncertainty, threshold = 6) {
     return "minor";
 }
 
+/** Gate decision actions in the decision log (App\Models\ProjectDecision). */
+export const DECISION_ACTIONS = {
+    approved: { label: "Disetujui", tone: "approved" },
+    rejected: { label: "Ditolak", tone: "rejected" },
+    withdrawn: { label: "Dibatalkan", tone: "pending" },
+};
+
+/** Exercise participant roles (App\Models\ProjectParticipant); viewers only read. */
+export const PARTICIPANT_ROLES = {
+    coordinator: { label: "Koordinator" },
+    contributor: { label: "Kontributor" },
+    expert: { label: "Pakar" },
+    viewer: { label: "Pengamat" },
+};
+
+/** "6–9 (median 7,5)" for one axis of the participants' scores (roadmap R2.1). */
+export function formatSpread(axis) {
+    if (!axis) return "–";
+    const median = String(axis.median).replace(".", ",");
+    return axis.min === axis.max ? `${axis.min}` : `${axis.min}–${axis.max} (median ${median})`;
+}
+
+/** The consensus suggested by the participants: medians rounded half up, or null without scores. */
+export function medianScores(spread) {
+    if (!spread?.count) return null;
+    return { impact: Math.round(spread.impact.median), uncertainty: Math.round(spread.uncertainty.median) };
+}
+
 /** @type {Record<string, { label: string, tone: string }>} */
 export const SCORE_CLASSES = {
     candidate: { label: "Kandidat critical uncertainty", tone: "approved" },

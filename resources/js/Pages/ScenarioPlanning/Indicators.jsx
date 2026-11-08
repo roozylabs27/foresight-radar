@@ -6,15 +6,18 @@ import Panel from "@/Components/Panel";
 import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import IndicatorCard from "@/Components/ScenarioPlanning/IndicatorCard";
 import IndicatorDialog from "@/Components/ScenarioPlanning/IndicatorDialog";
+import ObservationDialog from "@/Components/ScenarioPlanning/ObservationDialog";
+import RelevancePanel from "@/Components/ScenarioPlanning/RelevancePanel";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { useEarlyWarningIndicators } from "@/hooks/use-early-warning-indicators";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
-/** Step 9: early warning indicator register with expected direction per scenario (roadmap R1.9). */
-export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, errors = {} }) {
+/** Step 9: early warning indicator register with expected direction per scenario (roadmap R1.9), observations and relevance (R2.3). */
+export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, signals, canRecord, relevance, errors = {} }) {
     const actions = useEarlyWarningIndicators(project.id);
     const [target, setTarget] = useState(null);
+    const [observing, setObserving] = useState(null);
     const editable = canManage && frameworkApproved;
     const active = indicators.filter((indicator) => indicator.status === "active" && indicator.review_status === "accepted").length;
     const narrative = quadrants.filter((quadrant) => quadrant.narrative_indicators.length > 0);
@@ -33,6 +36,11 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
         >
             <Head title={title} />
             <main className="grid flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:px-6 lg:py-5">
+                {relevance && (
+                    <div className="lg:col-span-2">
+                        <RelevancePanel relevance={relevance} />
+                    </div>
+                )}
                 <Panel
                     title={`Indikator (${indicators.length})`}
                     description="Indikator yang baik bergerak ke arah berbeda di skenario yang berbeda."
@@ -58,6 +66,10 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                                     canManage={editable}
                                     onEdit={() => setTarget({ indicator, prefill: null })}
                                     onRemove={() => actions.remove(indicator.id)}
+                                    canRecord={canRecord}
+                                    busy={actions.busy}
+                                    onRecord={() => setObserving(indicator)}
+                                    onRemoveObservation={(observationId) => actions.removeObservation(indicator.id, observationId)}
                                 />
                             ))}
                         </div>
@@ -102,6 +114,13 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                 loading={actions.busy}
                 onOpenChange={(open) => !open && setTarget(null)}
                 onSave={(values) => actions.save(values, target?.indicator?.id)}
+            />
+            <ObservationDialog
+                indicator={observing}
+                signals={signals}
+                loading={actions.busy}
+                onOpenChange={(open) => !open && setObserving(null)}
+                onSave={(values) => actions.record(observing.id, values)}
             />
         </AuthenticatedLayout>
     );

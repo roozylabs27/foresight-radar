@@ -99,6 +99,7 @@ class StrategicResponseService
     {
         return $project->strategicResponses()
             ->with(['fits.quadrant', 'implications.quadrant', 'conditions.quadrant', 'owner:id,uuid,name', 'approver:id,name'])
+            ->withCount(StrategicResponse::openCommentsCount())
             ->get()
             ->map(function (StrategicResponse $response) {
                 $fit = $response->fits->mapWithKeys(fn ($row) => [$row->quadrant->position => $row->fit]);
@@ -115,6 +116,7 @@ class StrategicResponseService
                     'depends_on' => $response->depends_on,
                     'status' => $response->status,
                     'origin' => $response->origin,
+                    'open_comments' => (int) $response->getAttribute('open_comments'),
                     'approved_by' => $response->approver?->name,
                     'approved_at' => $response->approved_at?->toISOString(),
                     'fit' => (object) $fit->all(),
