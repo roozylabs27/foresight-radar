@@ -5,8 +5,10 @@ import { ArrowLeftIcon, ArrowRightIcon, ListChecksIcon } from "lucide-react";
 import Panel from "@/Components/Panel";
 import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ConditionDialog from "@/Components/ScenarioPlanning/ConditionDialog";
+import OverlapWarnings from "@/Components/ScenarioPlanning/OverlapWarnings";
 import QuadrantConditions from "@/Components/ScenarioPlanning/QuadrantConditions";
 import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
+import SuggestionControl from "@/Components/ScenarioPlanning/SuggestionControl";
 import { statusBadge } from "@/Components/StatusBadge";
 import { useScenarioConditions } from "@/hooks/use-scenario-conditions";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
@@ -15,12 +17,12 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 const LAYOUT = ["LH", "HH", "LL", "HL"];
 
 /** Step 5: conditions of each future and the predetermined elements (roadmap R1.5). */
-export default function Conditions({ auth, title, project, steps, framework, quadrants, predetermined, forces, minimum, canManage, errors = {} }) {
+export default function Conditions({ auth, title, project, steps, framework, quadrants, predetermined, forces, minimum, canManage, conditionStatus, conditionError, overlaps = [], errors = {} }) {
     const actions = useScenarioConditions(project.id);
     const [target, setTarget] = useState(null);
     const ready = framework?.approved;
     const editable = canManage && ready;
-    const done = quadrants.filter((quadrant) => quadrant.conditions.length >= minimum).length;
+    const done = quadrants.filter((quadrant) => quadrant.conditions.filter((condition) => condition.review_status !== "proposed").length >= minimum).length;
     const byPosition = Object.fromEntries(quadrants.map((quadrant) => [quadrant.position, quadrant]));
 
     return (
@@ -43,22 +45,36 @@ export default function Conditions({ auth, title, project, steps, framework, qua
                     {!ready ? (
                         <p className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">Setujui kerangka skenario (langkah 4) dulu sebelum menyusun kondisi.</p>
                     ) : (
-                        <div className="grid gap-3 md:grid-cols-2">
-                            {LAYOUT.map((position) => byPosition[position] && (
-                                <QuadrantConditions
-                                    key={position}
-                                    quadrant={byPosition[position]}
-                                    axes={framework.axes}
-                                    predetermined={predetermined}
-                                    minimum={minimum}
-                                    canManage={editable}
-                                    onAdd={() => setTarget({ quadrant: byPosition[position], condition: null })}
-                                    onEdit={(condition) => setTarget({ quadrant: byPosition[position], condition })}
-                                    onRemove={actions.remove}
-                                    onMove={actions.move}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            <SuggestionControl
+                                status={conditionStatus}
+                                error={conditionError}
+                                validationError={errors.ai}
+                                canManage={editable}
+                                busy={actions.busy}
+                                onSuggest={actions.suggest}
+                                label="Minta draf kondisi AI"
+                                pendingLabel="AI sedang menyusun draf kondisi…"
+                                reloadOnly={["quadrants", "conditionStatus", "conditionError"]}
+                            />
+                            <div className="grid gap-3 md:grid-cols-2">
+                                {LAYOUT.map((position) => byPosition[position] && (
+                                    <QuadrantConditions
+                                        key={position}
+                                        quadrant={byPosition[position]}
+                                        axes={framework.axes}
+                                        predetermined={predetermined}
+                                        minimum={minimum}
+                                        canManage={editable}
+                                        onAdd={() => setTarget({ quadrant: byPosition[position], condition: null })}
+                                        onEdit={(condition) => setTarget({ quadrant: byPosition[position], condition })}
+                                        onRemove={actions.remove}
+                                        onMove={actions.move}
+                                        onAccept={actions.accept}
+                                    />
+                                ))}
+                            </div>
+                        </>
                     )}
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <Link href={route("scenario-planning.framework.index", project.id)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -75,6 +91,7 @@ export default function Conditions({ auth, title, project, steps, framework, qua
                 </Panel>
 
                 <div className="flex flex-col gap-4">
+                    {ready && <OverlapWarnings overlaps={overlaps} />}
                     <Panel title={`Elemen predetermined (${predetermined.length})`} description="Berdampak tinggi tetapi hampir pasti; berlaku di keempat skenario.">
                         {predetermined.length === 0 ? (
                             <p className="m-0 text-xs text-muted-foreground">Belum ada driving force yang ditandai predetermined di langkah 2.</p>
@@ -94,6 +111,7 @@ export default function Conditions({ auth, title, project, steps, framework, qua
                             <li>Tiap kuadran butuh minimal {minimum} kondisi agar langkah ini selesai.</li>
                             <li>Sumbu dijelaskan lewat kondisi kutub; driving force lain lewat kondisi perilaku.</li>
                             <li>Kondisi yang sama di keempat kuadran ditandai; mungkin itu elemen predetermined.</li>
+                            <li>Kondisi di kuadran berbeda yang sebagian besar katanya sama ditandai "Mirip".</li>
                         </ul>
                     </Panel>
                 </div>

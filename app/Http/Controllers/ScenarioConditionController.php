@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ScenarioCondition;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
+use App\Services\ConditionSuggestionService;
 use App\Services\ScenarioConditionService;
 use App\Services\ScenarioPlanningProjectService;
 use Illuminate\Http\RedirectResponse;
@@ -43,11 +44,34 @@ class ScenarioConditionController extends Controller
                 ],
             ] : null,
             'quadrants' => $framework ? $this->conditions->quadrants($framework) : [],
+            'overlaps' => $framework ? $this->conditions->overlaps($framework) : [],
             'predetermined' => $this->conditions->predetermined($project),
             'forces' => $this->conditions->forces($project),
             'minimum' => ScenarioConditionService::MIN_PER_QUADRANT,
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
+            'conditionStatus' => $project->condition_suggestion_status,
+            'conditionError' => $project->condition_suggestion_error,
         ]);
+    }
+
+    /** Roadmap R2.5: queue AI condition drafts for the four quadrants. */
+    public function suggest(Request $request, ScenarioPlanningProject $project, ConditionSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang menyusun draf kondisi. Halaman ini diperbarui otomatis.');
+    }
+
+    public function accept(Request $request, ScenarioPlanningProject $project, ScenarioCondition $condition, ConditionSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+        $this->ensureBelongs($project, $condition);
+
+        $suggestions->accept($condition, $request->user());
+
+        return back()->with('success', 'Draf kondisi diterima.');
     }
 
     public function store(Request $request, ScenarioPlanningProject $project, ScenarioQuadrant $quadrant): RedirectResponse

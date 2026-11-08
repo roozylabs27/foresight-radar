@@ -20,5 +20,7 @@ export function useScenarioConditions(projectId) {
         save: (values, { quadrantId, conditionId }) => (conditionId ? visit("put", url("update", conditionId), values) : visit("post", url("store", quadrantId), values)),
         remove: (conditionId) => visit("delete", url("destroy", conditionId)),
         move: (conditionId, direction) => visit("post", url("move", conditionId), { direction }),
+        accept: (conditionId) => visit("post", url("accept", conditionId)),
+        suggest: () => visit("post", route("scenario-planning.conditions.suggest", projectId)),
     };
 }

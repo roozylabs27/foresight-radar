@@ -25,6 +25,15 @@ class ScenarioConditionService
     /** Conditions per quadrant before step 5 counts as done. */
     public const MIN_PER_QUADRANT = 2;
 
+    /** Word overlap (Jaccard) from which two conditions in different quadrants count as alike (roadmap R2.5). */
+    public const SIMILARITY = 0.6;
+
+    /** Words too common to tell two conditions apart. */
+    private const STOPWORDS = [
+        'yang', 'dan', 'di', 'ke', 'dari', 'untuk', 'dengan', 'pada', 'akan', 'ini', 'itu', 'oleh', 'atau', 'juga', 'lebih', 'tidak', 'masih', 'sudah', 'tetap',
+        'the', 'of', 'and', 'to', 'in', 'a', 'an', 'for', 'is', 'are', 'on', 'by', 'with',
+    ];
+
     public function create(ScenarioQuadrant $quadrant, array $validated, User $user): ScenarioCondition
     {
         $project = $this->requireApproved($quadrant->scenario);
@@ -99,11 +108,12 @@ class ScenarioConditionService
     {
         $quadrants = $framework->quadrants()->with(['conditions.projectForce.drivingForce'])->withCount(ScenarioQuadrant::openCommentsCount())->get();
         $normalize = fn (string $text) => mb_strtolower(trim(preg_replace('/\s+/', ' ', $text)));
-        $shared = $quadrants->count() === count(Scenario::POSITIONS)
-            ? $quadrants->map(fn ($quadrant) => $quadrant->conditions->pluck('text')->map($normalize)->unique())
-                ->reduce(fn (?Collection $carry, Collection $texts) => $carry === null ? $texts : $carry->intersect($texts))
-                ->flip()
-            : collect();
+        $shared = $this->sharedTexts($quadrants, $normalize);
+
+        $similar = $this->overlapPairs($quadrants, $shared, $normalize)
+            ->flatMap(fn ($pair) => [[$pair['a']['id'], $pair['b']['position']], [$pair['b']['id'], $pair['a']['position']]])
+            ->groupBy(0)
+            ->map(fn ($rows) => $rows->pluck(1)->unique()->values()->all());
 
         return $quadrants->map(fn (ScenarioQuadrant $quadrant) => [
             'id' => $quadrant->uuid,
@@ -121,8 +131,84 @@ class ScenarioConditionService
                 'origin' => $condition->origin,
                 'review_status' => $condition->review_status,
                 'shared' => $shared->has($normalize($condition->text)),
+                'similar_to' => $similar->get($condition->uuid, []),
             ])->values()->all(),
         ])->values()->all();
+    }
+
+    /**
+     * Roadmap R2.5: pairs of conditions in different quadrants whose words overlap by at least
+     * SIMILARITY, most alike first. Texts shared by all four quadrants are left out (already
+     * flagged as possible predetermined elements).
+     *
+     * @return array<int, array{a: array{id: string, position: string, text: string}, b: array{id: string, position: string, text: string}, similarity: float}>
+     */
+    public function overlaps(Scenario $framework): array
+    {
+        $quadrants = $framework->quadrants()->with('conditions')->get();
+        $normalize = fn (string $text) => mb_strtolower(trim(preg_replace('/\s+/', ' ', $text)));
+
+        return $this->overlapPairs($quadrants, $this->sharedTexts($quadrants, $normalize), $normalize)->values()->all();
+    }
+
+    /**
+     * @param  EloquentCollection<int, ScenarioQuadrant>  $quadrants
+     * @param  Collection<string, int>  $shared
+     * @return Collection<int, array{a: array{id: string, position: string, text: string}, b: array{id: string, position: string, text: string}, similarity: float}>
+     */
+    private function overlapPairs(EloquentCollection $quadrants, Collection $shared, callable $normalize): Collection
+    {
+        $items = $quadrants->flatMap(fn (ScenarioQuadrant $quadrant) => $quadrant->conditions
+            ->reject(fn (ScenarioCondition $condition) => $shared->has($normalize($condition->text)))
+            ->map(fn (ScenarioCondition $condition) => [
+                'id' => $condition->uuid,
+                'position' => $quadrant->position,
+                'text' => $condition->text,
+                'words' => $this->words($condition->text),
+            ]))->values();
+
+        $pairs = collect();
+        foreach ($items as $i => $a) {
+            foreach ($items->slice($i + 1) as $b) {
+                if ($a['position'] === $b['position'] || $a['words'] === [] || $b['words'] === []) {
+                    continue;
+                }
+                $union = count(array_unique([...$a['words'], ...$b['words']]));
+                $similarity = count(array_intersect($a['words'], $b['words'])) / $union;
+                if ($similarity >= self::SIMILARITY) {
+                    $pairs->push([
+                        'a' => array_diff_key($a, ['words' => true]),
+                        'b' => array_diff_key($b, ['words' => true]),
+                        'similarity' => round($similarity, 2),
+                    ]);
+                }
+            }
+        }
+
+        return $pairs->sortByDesc('similarity')->values();
+    }
+
+    /** @return array<int, string> distinct meaningful words of a condition */
+    private function words(string $text): array
+    {
+        $tokens = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return array_values(array_unique(array_filter($tokens, fn ($token) => mb_strlen($token) >= 2 && ! in_array($token, self::STOPWORDS, true))));
+    }
+
+    /**
+     * Normalized texts present in all four quadrants.
+     *
+     * @param  EloquentCollection<int, ScenarioQuadrant>  $quadrants
+     * @return Collection<string, int>
+     */
+    private function sharedTexts(EloquentCollection $quadrants, callable $normalize): Collection
+    {
+        return $quadrants->count() === count(Scenario::POSITIONS)
+            ? $quadrants->map(fn ($quadrant) => $quadrant->conditions->pluck('text')->map($normalize)->unique())
+                ->reduce(fn (?Collection $carry, Collection $texts) => $carry === null ? $texts : $carry->intersect($texts))
+                ->flip()
+            : collect();
     }
 
     /** Predetermined forces of the exercise: they hold in every scenario. */

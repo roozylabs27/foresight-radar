@@ -146,6 +146,11 @@ jobs:
             docker exec laravel_app php artisan view:cache
             docker exec -u 0 laravel_app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
+            # 4b. opcache.validate_timestamps=0 (docker/php/local.ini): PHP-FPM keeps serving the
+            # previous release's bytecode until it reloads, while the new JS bundle is already live.
+            echo "[4b/5] Reloading PHP-FPM to flush opcache..."
+            docker exec laravel_app sh -c 'kill -USR2 1'
+
             # 5. Restart background queue worker
             echo "[5/5] Restarting Laravel queue worker..."
             docker restart laravel_queue || docker compose restart queue

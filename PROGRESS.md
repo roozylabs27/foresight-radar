@@ -423,6 +423,10 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-08 (uncommitted) | Roadmap R2.5 slice 2 distinctness check | **PASS (partial)** | Pint LARASTAN_PINT; Larastan L5 LARASTAN_RESULT; `ScenarioConditionTest` 11 passed (233 assertions); full PHPUnit suite not run; `npm run build` PASS (61m 30s, loaded machine); no migration; browser check blocked (step 5 locked) |
+| 2026-11-08 (uncommitted) | Roadmap R2.5 slice 1 AI condition drafts | **PASS (partial)** | Pint PASS (1 file fixed); Larastan L5 clean after 1 fix; `ScenarioConditionTest` 10 passed (200 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (4m 8s); migration `2026_11_08_000005` applied to the dev DB; browser check blocked (dev framework withdrawn to draft by the user's accepted AI candidates) |
+| 2026-11-08 (uncommitted) | Roadmap R2.4 slice 2 AI candidate forces | **PASS** | Pint PASS (1 file fixed); Larastan L5 clean; `ProjectDrivingForceTest` 12 passed (174 assertions, FakeLlmClient); full PHPUnit 519 passed (5,340 assertions, 2320.37s) covering both R2.4 slices, dev DB still 38 users afterwards; `npm run build` PASS (3m 18s); migration `2026_11_08_000004` applied to the dev DB; browser: panel, candidate from a SQL row, discard; no real provider call |
+| 2026-11-08 (uncommitted) | Roadmap R2.4 slice 1 AI score suggestions | **PASS (partial)** | Pint PASS (1 import order fixed); Larastan L5 clean; `ProjectAssessmentTest` 15 passed (197 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (4m 39s after the label fix); migration `2026_11_08_000003` applied to the dev DB; browser: button, suggestion box from a SQL row, discard; no real provider call |
 | 2026-11-08 (uncommitted) | Roadmap R2.3 slice 3 threshold review trigger | **PASS** | Pint 390 files PASS; Larastan L5 clean; indicator + staleness tests 19 passed (377 assertions); full PHPUnit 515 passed (5,218 assertions, 2887.23s) covering all R2.3 slices, dev DB still 38 users afterwards; no frontend change, no build; browser: banner after a crossing observation, dev data restored |
 | 2026-11-08 (uncommitted) | Roadmap R2.3 slice 2 relevance view | **PASS (partial)** | Pint 390 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 11 passed (262 assertions); full PHPUnit suite not run; `npm run build` PASS (4m 28s); no migration; browser: empty state and counts after one observation |
 | 2026-11-08 (uncommitted) | Roadmap R2.3 slice 1 observation log | **PASS (partial)** | Pint PASS (2 files fixed); Larastan L5 clean; `EarlyWarningIndicatorTest` 9 passed (195 assertions); full PHPUnit suite not run; `npm run build` PASS (6m 46s); migration `2026_11_08_000002` applied to the dev DB after the index-name fix; browser: record and delete |
@@ -458,6 +462,46 @@
 ---
 
 ## Session Log
+
+### 2026-11-08 — Session 55 (R2.5 slice 2: distinctness check)
+
+- **RED → GREEN:** 1 new test in `ScenarioConditionTest` (two cross-quadrant pairs listed most alike first, same-quadrant pair and a text shared by all four quadrants left out, `similar_to` per condition) failed on the missing `overlaps` prop; then all 11 condition tests passed (233 assertions).
+- **Backend:** `ScenarioConditionService::overlaps()` and `similar_to` in `quadrants()`: Jaccard overlap of distinct words (lowercased, punctuation split, Indonesian / English stop words and 1-letter tokens removed) ≥ `SIMILARITY` = 0.6 between conditions of different quadrants; shared-by-all-four texts excluded (extracted `sharedTexts()`); step 5 prop `overlaps`.
+- **Frontend:** `OverlapWarnings` panel on step 5 ("Kondisi yang mirip", pairs with % words in common); "Mirip dengan …" badge on each condition; rules list mentions it.
+- **Not checked in the browser:** the dev exercise framework is in draft (see session 54), so step 5 is locked.
+- **Docs:** roadmap R2.5 partial; matrix 5.5 stays partial (comparison grid remains); `feature_list.json` FEAT-051.
+- **Next:** slice 3, AI pole labels and quadrant names (`framework-v1`).
+
+### 2026-11-08 — Session 54 (R2.5 slice 1: AI condition drafts)
+
+- **Decisions (user):** distinctness check is rule-based (no AI); order: condition drafts, distinctness check, pole / name suggestions.
+- **RED → GREEN:** 2 new tests in `ScenarioConditionTest` with `FakeLlmClient` (four drafts stored as `ai` / `proposed`, force label mapped to the exercise force, prompt carries forces and existing conditions, page payload, step 5 not done by drafts, accept turns a draft into a condition, discard deletes it, a new run replaces only waiting drafts; rules: approved framework, viewer forbidden, pole expression without axis rejects the run, AI unavailable) failed on the missing route; then all 10 condition tests passed (200 assertions).
+- **Backend:** migration `2026_11_08_000005_add_condition_suggestion_status`; prompt `ScenarioConditionPrompt` (`conditions-v1`, schema uses "none" instead of null for axis / force); `ConditionSuggestionService` (request, generate with validation, accept); job `SuggestConditions`; routes `conditions.suggest`, `conditions.accept` (discard reuses `conditions.destroy`).
+- **Frontend:** `SuggestionControl` on step 5; `QuadrantConditions` marks drafts (dashed border, AI badge, accept button) and counts only accepted conditions; the page's "x dari 4 kuadran lengkap" also counts accepted only.
+- **Larastan:** one error (`collect([$condition->quadrant])` may hold null) fixed with `$condition->quadrant()->get()`; clean after.
+- **Dev data finding:** the user ran the real AI candidate-force assist (R2.4) with Gemini at 15:26 (run completed) and accepted two candidates ("Battery Mineral Circularity", "Critical Material Trade Realignments") at 15:40–15:41. Adding forces to an agreed list withdraws G2, which cascaded to G3, G5 and both G4 approvals (all logged in `project_decisions`). Expected under the existing rules, but the framework is now draft, so step 5 is locked and the condition drafts could not be checked in the browser. My test draft row was removed.
+- **Docs:** roadmap R2.5 partial; matrix 5.7 complete (84/4/6/0; step 5 5/1/1/0); `feature_list.json` FEAT-050.
+- **Follow-up (user asked):** once the force list is agreed, "Terima" on an AI candidate now opens a confirmation that names the withdrawn agreements (G2, G3, G4, G5); the "Tambah dari pustaka" dialog shows the same warning in its description. Frontend only (`CandidateForces`, `AddForcesDialog`, `DrivingForces` pass `agreed`); `npm run build` PASS (3m 7s). Not seen in the browser: showing it needs an agreed list, and setting that state directly in the dev DB was blocked by the permission check (rightly), so nothing was changed there.
+- **Next:** slice 2, rule-based distinctness check.
+
+### 2026-11-08 — Session 53 (R2.4 slice 2: AI candidate forces; R2.4 done)
+
+- **RED → GREEN:** 2 new tests in `ProjectDrivingForceTest` with `FakeLlmClient` (only accepted signals not behind an exercise force are offered; two candidates stored; page payload; accept creates a PENDING TECHNOLOGY force by the coordinator with both signals, adds it as included, marks the candidate accepted; reject marks rejected and creates nothing; rules: unconfirmed focal issue, no signals, viewer forbidden, unknown ref and 5-word keyword reject the run) failed on the missing route; then all 12 step 2 tests passed (174 assertions).
+- **Backend:** migration `2026_11_08_000004_create_force_candidates_table` (+ project `force_suggestion_status` / `_error`); `ForceCandidate`; prompt `ForceClusterPrompt` (`force-cluster-v1`, up to 40 signals, categories by code, max 6 candidates); `ForceCandidateService` (request, generate with validation, accept via `DrivingForce` + `supporting_signals` + `ProjectDrivingForceService::add`, reject, proposed list); job `SuggestForceCandidates`; routes `forces.suggest`, `forces.candidates.accept`, `forces.candidates.reject`.
+- **Frontend:** `CandidateForces` panel on step 2 (reuses `SuggestionControl`, now generic with labels, reloaded props and a `validationError`).
+- **Browser:** panel and button render; a candidate inserted by SQL showed with its signal; "Buang" set it rejected (reviewer recorded) and no library force was created; the test row was then deleted. No real provider call made.
+- **Docs:** roadmap R2.4 done; matrix 2.9 complete (83/5/6/0; step 2 12/0/0/0); audit G22 partly fixed; `feature_list.json` FEAT-049.
+- **Next recommended action:** R2.5 (full suite green: 519 passed).
+
+### 2026-11-08 — Session 52 (R2.4 slice 1: AI score suggestions)
+
+- **Decisions (user):** score suggestions first, candidate forces second; AI calls run as background jobs; an accepted candidate force will go to the library as PENDING and into the exercise with its signals.
+- **RED → GREEN:** 2 new tests in `ProjectAssessmentTest` with `FakeLlmClient` (suggestions stored as `ai_suggestion` rows citing the offered signal, prompt carries focal question and signal titles, run recorded, page payload, accept copies into the consensus with origin `ai`, reject discards; a ref not offered for the force rejects the run and shows the error; rules: agreed list, viewer forbidden, AI unavailable) failed on the missing route; then all 15 assessment tests passed (197 assertions).
+- **Backend:** migration `2026_11_08_000003_add_score_suggestions` (`force_assessments.generation_run_id`, `cited_signal_ids`; project `score_suggestion_status` / `_error`); prompt `ForceAssessmentPrompt` (`assessment-v1`, forces F1…, up to 3 accepted signals per force as S1…, schema with enums); `ScoreSuggestionService` (request, generate with validation: every force once, 1–10, refs only from the force's own signals; accept via `ProjectAssessmentService::score(..., origin)`, reject); job `SuggestForceScores` (unique per exercise, tenant context); routes `assessment.suggest`, `assessment.suggestion.accept`, `assessment.suggestion.reject`.
+- **Frontend:** `SuggestionControl` (button with `BotIcon`, job state, reloads forces every 5 s while queued or processing, failure message) and `ScoreSuggestion` (scores, AI badge, rationale without [S…] labels, cited signal titles, "Pakai sebagai kesepakatan" / "Buang") on step 3.
+- **Browser:** the button renders; no real AI call was made (it would hit the user's provider, whose Gemini quota was exhausted earlier). A suggestion row inserted by SQL showed correctly; "Buang" removed it and the TKDN consensus (8 / 9, human) stayed unchanged.
+- **Docs:** roadmap R2.4 partial; matrix 3.11 complete (82/5/7/0; step 3 12/0/0/0); `feature_list.json` FEAT-048.
+- **Next:** slice 2, AI candidate forces from signal clusters.
 
 ### 2026-11-08 — Session 51 (R2.3 slice 3: threshold review trigger; R2.3 done)
 

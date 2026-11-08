@@ -60,6 +60,10 @@ class ScenarioPlanningProject extends Model
         'scores_confirmed_at',
         'score_suggestion_status',
         'score_suggestion_error',
+        'force_suggestion_status',
+        'force_suggestion_error',
+        'condition_suggestion_status',
+        'condition_suggestion_error',
         'created_by',
         'updated_by',
     ];
@@ -155,6 +159,12 @@ class ScenarioPlanningProject extends Model
     public function indicators(): HasMany
     {
         return $this->hasMany(EarlyWarningIndicator::class, 'project_id');
+    }
+
+    /** AI candidate forces of this exercise (roadmap R2.4). */
+    public function candidates(): HasMany
+    {
+        return $this->hasMany(ForceCandidate::class, 'project_id');
     }
 
     /** Comments on the exercise's artefacts (roadmap R2.2). */

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\AiGenerationRun;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -299,5 +300,105 @@ class ScenarioConditionTest extends TestCase
             $this->addCondition($position, ['text' => "Kondisi B {$position}."]);
         }
         $step()->assertInertia(fn ($page) => $page->where('steps.4.status', 'done'));
+    }
+
+    private function draft(string $position, string $kind, string $text, ?string $axis = null, ?string $force = null): array
+    {
+        return ['position' => $position, 'kind' => $kind, 'text' => $text, 'axis' => $axis, 'force' => $force];
+    }
+
+    /** Roadmap R2.5 (conditions-v1): AI drafts conditions per quadrant as proposals, accepted or discarded one by one. */
+    public function test_ai_drafts_conditions_as_proposals_reviewed_one_by_one(): void
+    {
+        $this->readyFramework();
+        $this->addCondition('HH', ['text' => 'Kondisi manual tim.'])->assertSessionHasNoErrors();
+        $fake = $this->fakeLlm();
+        $fake->respond(['conditions' => [
+            $this->draft('HH', 'pole_expression', 'Regulasi mendukung insentif penuh.', 'A'),
+            $this->draft('HL', 'assumption', 'Teknologi baterai berjalan lambat.'),
+            $this->draft('LH', 'force_behaviour', 'Daya beli kelas menengah turun.', null, 'F1'),
+            $this->draft('LL', 'assumption', 'Transisi tertahan hingga 2030.'),
+        ]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.conditions.suggest', $this->project))->assertSessionHasNoErrors();
+
+        $prompt = $fake->lastRequest()->user;
+        $this->assertSame('scenario_conditions', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('Purchasing Power', $prompt);
+        $this->assertStringContainsString('Kondisi manual tim.', $prompt);
+        $this->assertSame(4, ScenarioCondition::where('origin', 'ai')->where('review_status', 'proposed')->count());
+        $this->assertSame('Purchasing Power', ScenarioCondition::where('kind', 'force_behaviour')->sole()->projectForce->drivingForce->keyword);
+        $this->assertSame('completed', AiGenerationRun::sole()->status);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.conditions.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('quadrants.0.position', 'HH')
+                ->where('quadrants.0.conditions.1.review_status', 'proposed')
+                ->where('quadrants.0.conditions.1.origin', 'ai')
+                ->where('conditionStatus', 'completed')
+                ->where('steps.4.status', 'in_progress'));
+
+        $proposal = ScenarioCondition::where('text', 'Regulasi mendukung insentif penuh.')->sole();
+        $this->actingAs($this->manager)->post(route('scenario-planning.conditions.accept', [$this->project, $proposal]))->assertSessionHasNoErrors();
+        $this->assertSame('accepted', $proposal->fresh()->review_status);
+
+        $discard = ScenarioCondition::where('text', 'Transisi tertahan hingga 2030.')->sole();
+        $this->actingAs($this->manager)->delete(route('scenario-planning.conditions.destroy', [$this->project, $discard]))->assertSessionHasNoErrors();
+        $this->assertNull($discard->fresh());
+
+        // A new draft replaces only the AI proposals still waiting; accepted conditions stay.
+        $fake->respond(['conditions' => [$this->draft('HL', 'assumption', 'Draf baru HL.')]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.conditions.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertEqualsCanonicalizing(['Draf baru HL.'], ScenarioCondition::where('review_status', 'proposed')->pluck('text')->all());
+        $this->assertSame(2, ScenarioCondition::where('review_status', 'accepted')->count());
+    }
+
+    public function test_ai_condition_drafts_are_checked_and_follow_the_rules(): void
+    {
+        $this->approveAxes();
+        $this->createFramework();
+        $this->actingAs($this->manager)->post(route('scenario-planning.conditions.suggest', $this->project))->assertSessionHasErrors('ai');
+        $this->approveFramework()->assertSessionHasNoErrors();
+        $this->actingAs($this->viewer)->post(route('scenario-planning.conditions.suggest', $this->project))->assertForbidden();
+
+        $this->fakeLlm()->respond(['conditions' => [$this->draft('HH', 'pole_expression', 'Tanpa sumbu.')]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.conditions.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, ScenarioCondition::count());
+        $this->assertSame('rejected', AiGenerationRun::sole()->status);
+        $this->actingAs($this->manager)->get(route('scenario-planning.conditions.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('conditionStatus', 'failed')->where('conditionError', fn ($error) => str_contains((string) $error, 'sumbu')));
+
+        $this->fakeLlm(available: false);
+        $this->actingAs($this->manager)->post(route('scenario-planning.conditions.suggest', $this->project))->assertSessionHasErrors('ai');
+    }
+
+    /**
+     * Roadmap R2.5 (distinctness check): conditions in different quadrants that share most of their
+     * words are listed as overlapping; same-quadrant pairs and texts shared by all four quadrants
+     * (already flagged as possible predetermined elements) are not.
+     */
+    public function test_overlapping_conditions_across_quadrants_are_listed(): void
+    {
+        $this->readyFramework();
+        $this->addCondition('HH', ['text' => 'Harga baterai turun tajam sebelum 2028.']);
+        $this->addCondition('HL', ['text' => 'Harga baterai turun tajam sebelum tahun 2028!']);
+        $this->addCondition('HH', ['text' => 'Harga baterai turun tajam sebelum 2028, kata analis.']);
+        $this->addCondition('LH', ['text' => 'Subsidi kendaraan listrik dihentikan pemerintah.']);
+        foreach (['HH', 'HL', 'LH', 'LL'] as $position) {
+            $this->addCondition($position, ['text' => 'Inflasi tetap rendah.']);
+        }
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.conditions.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->has('overlaps', 2)
+                ->where('overlaps.0.a.position', 'HH')
+                ->where('overlaps.0.b.position', 'HL')
+                ->where('overlaps.0.b.text', 'Harga baterai turun tajam sebelum tahun 2028!')
+                ->where('overlaps.0.similarity', fn ($value) => $value >= 0.6 && $value < 1)
+                ->where('overlaps.1.a.text', 'Harga baterai turun tajam sebelum 2028, kata analis.')
+                ->where('quadrants.0.position', 'HH')
+                ->where('quadrants.0.conditions.0.similar_to', ['HL'])
+                ->where('quadrants.0.conditions.2.similar_to', [])
+                ->where('quadrants.2.conditions.0.similar_to', []));
     }
 }

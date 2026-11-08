@@ -126,6 +126,9 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::post('/', 'store')->name('store')->can('manage-scenario');
         Route::post('/confirm', 'confirm')->name('confirm')->can('manage-scenario');
+        Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
+        Route::post('/candidates/{candidate}/accept', 'acceptCandidate')->name('candidates.accept')->can('manage-scenario');
+        Route::delete('/candidates/{candidate}', 'rejectCandidate')->name('candidates.reject')->can('manage-scenario');
         Route::put('/{projectForce}', 'update')->name('update')->can('manage-scenario');
         Route::delete('/{projectForce}', 'destroy')->name('destroy')->can('manage-scenario');
     });
@@ -151,6 +154,8 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
     Route::prefix('scenario-planning/{project}/conditions')->controller(ScenarioConditionController::class)->name('scenario-planning.conditions.')->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::post('/quadrants/{quadrant}', 'store')->name('store')->can('manage-scenario');
+        Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
+        Route::post('/{condition}/accept', 'accept')->name('accept')->can('manage-scenario');
         Route::put('/{condition}', 'update')->name('update')->can('manage-scenario');
         Route::delete('/{condition}', 'destroy')->name('destroy')->can('manage-scenario');
         Route::post('/{condition}/move', 'move')->name('move')->can('manage-scenario');
