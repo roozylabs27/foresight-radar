@@ -148,6 +148,9 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::put('/', 'update')->name('update')->can('manage-scenario');
         Route::post('/approve', 'approve')->name('approve')->can('manage-scenario');
         Route::post('/reopen', 'reopen')->name('reopen')->can('manage-scenario');
+        Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
+        Route::post('/suggestion/accept', 'acceptSuggestion')->name('suggestion.accept')->can('manage-scenario');
+        Route::delete('/suggestion', 'rejectSuggestion')->name('suggestion.reject')->can('manage-scenario');
         Route::put('/quadrants/{quadrant}', 'updateQuadrant')->name('quadrant')->can('manage-scenario');
     });
 
@@ -164,6 +167,8 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
     Route::prefix('scenario-planning/{project}/implications')->controller(ScenarioImplicationController::class)->name('scenario-planning.implications.')->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::post('/quadrants/{quadrant}', 'store')->name('store')->can('manage-scenario');
+        Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
+        Route::post('/{implication}/accept', 'accept')->name('accept')->can('manage-scenario');
         Route::put('/{implication}', 'update')->name('update')->can('manage-scenario');
         Route::delete('/{implication}', 'destroy')->name('destroy')->can('manage-scenario');
     });

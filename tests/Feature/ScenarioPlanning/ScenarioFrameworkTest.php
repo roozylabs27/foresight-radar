@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\AiGenerationRun;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -358,5 +359,73 @@ class ScenarioFrameworkTest extends TestCase
 
         $this->forces['Purchasing Power']->forceDelete();
         $this->assertNull(DrivingForce::withTrashed()->find($this->forces['Purchasing Power']->id));
+    }
+
+    private function frameworkSuggestion(array $overrides = []): array
+    {
+        return $overrides + [
+            'axis_a_low_label' => 'Regulasi Tertahan',
+            'axis_a_high_label' => 'Regulasi Progresif',
+            'axis_b_low_label' => 'Teknologi Mahal',
+            'axis_b_high_label' => 'Teknologi Terjangkau',
+            'quadrants' => [
+                ['position' => 'HH', 'title' => 'Lompatan Elektrifikasi', 'summary' => 'Regulasi dan teknologi bergerak bersama.'],
+                ['position' => 'HL', 'title' => 'Dorongan Tanpa Daya', 'summary' => 'Insentif ada, harga tetap tinggi.'],
+                ['position' => 'LH', 'title' => 'Pasar Mendahului Aturan', 'summary' => 'Teknologi murah tanpa dukungan kebijakan.'],
+                ['position' => 'LL', 'title' => 'Transisi Tertahan', 'summary' => 'Keduanya lambat.'],
+            ],
+            'rationale' => 'Kutub menggambarkan ujung masing-masing ketidakpastian.',
+        ];
+    }
+
+    /** Roadmap R2.5 (framework-v1): AI suggests pole labels and quadrant names for a draft framework; nothing changes until accepted. */
+    public function test_ai_suggests_poles_and_quadrant_names_applied_only_when_accepted(): void
+    {
+        $this->approveAxes();
+        $this->createFramework()->assertSessionHasNoErrors();
+        $before = $this->framework()->only(['axis_a_low_label', 'axis_a_high_label']);
+        $fake = $this->fakeLlm();
+        $fake->respond($this->frameworkSuggestion());
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggest', $this->project))->assertSessionHasNoErrors();
+
+        $this->assertSame('scenario_framework', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('Government Regulation', $fake->lastRequest()->user);
+        $this->assertSame($before, $this->framework()->only(['axis_a_low_label', 'axis_a_high_label']));
+        $this->assertSame('completed', AiGenerationRun::sole()->status);
+        $this->actingAs($this->viewer)->get(route('scenario-planning.framework.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('framework.suggestion.axis_a_high_label', 'Regulasi Progresif')
+                ->where('framework.suggestion.quadrants.HH.title', 'Lompatan Elektrifikasi')
+                ->where('framework.suggestionStatus', 'completed'));
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggestion.accept', $this->project))->assertSessionHasNoErrors();
+        $framework = $this->framework();
+        $this->assertSame(['Regulasi Tertahan', 'Regulasi Progresif', 'Teknologi Mahal', 'Teknologi Terjangkau'], [$framework->axis_a_low_label, $framework->axis_a_high_label, $framework->axis_b_low_label, $framework->axis_b_high_label]);
+        $this->assertSame(['Lompatan Elektrifikasi', 'Regulasi dan teknologi bergerak bersama.'], [$this->quadrant('HH')->title, $this->quadrant('HH')->summary]);
+        $this->assertSame('Transisi Tertahan', $this->quadrant('LL')->title);
+        $this->assertNull($framework->framework_suggestion);
+
+        $fake->respond($this->frameworkSuggestion(['axis_a_high_label' => 'Lain']));
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggest', $this->project));
+        $this->actingAs($this->manager)->delete(route('scenario-planning.framework.suggestion.reject', $this->project))->assertSessionHasNoErrors();
+        $this->assertNull($this->framework()->framework_suggestion);
+        $this->assertSame('Regulasi Progresif', $this->framework()->axis_a_high_label);
+    }
+
+    public function test_framework_suggestions_are_checked_and_need_a_draft_framework(): void
+    {
+        $this->approveAxes();
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggest', $this->project))->assertSessionHasErrors('ai');
+        $this->createFramework();
+        $this->actingAs($this->viewer)->post(route('scenario-planning.framework.suggest', $this->project))->assertForbidden();
+
+        $this->fakeLlm()->respond($this->frameworkSuggestion(['axis_b_high_label' => 'Teknologi Mahal']));
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertNull($this->framework()->framework_suggestion);
+        $this->assertSame('rejected', AiGenerationRun::sole()->status);
+
+        $this->approveFramework()->assertSessionHasNoErrors();
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggest', $this->project))->assertSessionHasErrors('ai');
     }
 }

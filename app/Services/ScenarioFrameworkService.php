@@ -160,6 +160,9 @@ class ScenarioFrameworkService
                 'summary' => $quadrant->summary,
                 'has_narrative' => filled($quadrant->narrative),
             ])->values()->all(),
+            'suggestion' => $scenario->framework_suggestion,
+            'suggestionStatus' => $project->framework_suggestion_status,
+            'suggestionError' => $project->framework_suggestion_error,
         ];
     }
 

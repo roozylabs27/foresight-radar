@@ -45,6 +45,7 @@ class Scenario extends Model
         'axis_b_high_label',
         'status',
         'framework_status',
+        'framework_suggestion',
         'approved_by',
         'approved_at',
         'stale_since',
@@ -66,6 +67,7 @@ class Scenario extends Model
 
     protected $casts = [
         'input_signal_ids' => 'array',
+        'framework_suggestion' => 'array',
         'generated_at' => 'datetime',
         'approved_at' => 'datetime',
         'stale_since' => 'datetime',

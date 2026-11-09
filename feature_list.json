@@ -720,6 +720,34 @@
         "Each listed condition shows which quadrants it resembles"
       ],
       "verification_evidence": "2026-11-08: 1 new test in ScenarioConditionTest (RED: overlaps prop missing); condition tests 11 passed; npm build OK (61 min on a loaded machine). Not seen in the browser: the dev exercise framework is in draft, so step 5 is locked."
+    },
+    {
+      "id": "FEAT-052",
+      "name": "AI Pole and Quadrant Name Suggestions",
+      "description": "A queued AI call suggests pole labels for both axes and names with summaries for the four quadrants of a draft framework; the coordinator applies or discards it (roadmap R2.5, slice 3).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only a saved, not yet approved framework takes suggestions",
+        "Poles must differ within an axis and the four quadrant names must be distinct and short; otherwise the run is rejected",
+        "Nothing changes until applied; applying uses the normal pole update (narratives flagged) and renames the quadrants",
+        "Discarding drops the suggestion"
+      ],
+      "verification_evidence": "2026-11-09: 2 new tests in ScenarioFrameworkTest with FakeLlmClient (RED on missing route); framework tests 14 passed; Pint PASS; Larastan clean; npm build OK (7m 8s). Not seen in the browser: the session kept returning to the login page while the user was using the same tab; the test suggestion set by SQL was removed."
+    },
+    {
+      "id": "FEAT-053",
+      "name": "AI Implication Drafts and Generic Check",
+      "description": "A queued AI call drafts opportunities and challenges per quadrant, each citing accepted conditions of its own quadrant; items alike across quadrants are flagged as generic (roadmap R2.6, slice 1).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Every AI item cites at least one accepted condition of its own quadrant; otherwise the run is rejected",
+        "Drafts are proposed items linked to their conditions and count for step 7 only once accepted",
+        "A new run replaces only the AI drafts still waiting",
+        "Items whose titles overlap an item of another quadrant by at least 60% (or appear in all four) are flagged"
+      ],
+      "verification_evidence": "2026-11-09: 3 new tests in ScenarioImplicationTest with FakeLlmClient (RED on missing route); implication + condition tests 20 passed (condition tests confirm the shared TextSimilarity refactor). Browser check not possible: the dev framework is in draft, so step 7 is locked."
     }
   ]
 }

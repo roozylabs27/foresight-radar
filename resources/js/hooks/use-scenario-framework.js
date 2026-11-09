@@ -22,5 +22,8 @@ export function useScenarioFramework(projectId) {
         saveQuadrant: (quadrantId, values) => visit("put", url("quadrant", quadrantId), values),
         approve: () => visit("post", url("approve")),
         reopen: () => visit("post", url("reopen")),
+        suggest: () => visit("post", url("suggest")),
+        acceptSuggestion: () => visit("post", url("suggestion.accept")),
+        rejectSuggestion: () => visit("delete", url("suggestion.reject")),
     };
 }

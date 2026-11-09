@@ -8,6 +8,7 @@ use App\Models\ScenarioCondition;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\User;
+use App\Support\TextSimilarity;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -26,13 +27,7 @@ class ScenarioConditionService
     public const MIN_PER_QUADRANT = 2;
 
     /** Word overlap (Jaccard) from which two conditions in different quadrants count as alike (roadmap R2.5). */
-    public const SIMILARITY = 0.6;
-
-    /** Words too common to tell two conditions apart. */
-    private const STOPWORDS = [
-        'yang', 'dan', 'di', 'ke', 'dari', 'untuk', 'dengan', 'pada', 'akan', 'ini', 'itu', 'oleh', 'atau', 'juga', 'lebih', 'tidak', 'masih', 'sudah', 'tetap',
-        'the', 'of', 'and', 'to', 'in', 'a', 'an', 'for', 'is', 'are', 'on', 'by', 'with',
-    ];
+    public const SIMILARITY = TextSimilarity::THRESHOLD;
 
     public function create(ScenarioQuadrant $quadrant, array $validated, User $user): ScenarioCondition
     {
@@ -112,8 +107,8 @@ class ScenarioConditionService
 
         $similar = $this->overlapPairs($quadrants, $shared, $normalize)
             ->flatMap(fn ($pair) => [[$pair['a']['id'], $pair['b']['position']], [$pair['b']['id'], $pair['a']['position']]])
-            ->groupBy(0)
-            ->map(fn ($rows) => $rows->pluck(1)->unique()->values()->all());
+            ->groupBy(fn (array $row) => $row[0])
+            ->map(fn ($rows) => $rows->map(fn (array $row) => $row[1])->unique()->values()->all());
 
         return $quadrants->map(fn (ScenarioQuadrant $quadrant) => [
             'id' => $quadrant->uuid,
@@ -164,17 +159,16 @@ class ScenarioConditionService
                 'id' => $condition->uuid,
                 'position' => $quadrant->position,
                 'text' => $condition->text,
-                'words' => $this->words($condition->text),
+                'words' => TextSimilarity::words($condition->text),
             ]))->values();
 
         $pairs = collect();
         foreach ($items as $i => $a) {
             foreach ($items->slice($i + 1) as $b) {
-                if ($a['position'] === $b['position'] || $a['words'] === [] || $b['words'] === []) {
+                if ($a['position'] === $b['position']) {
                     continue;
                 }
-                $union = count(array_unique([...$a['words'], ...$b['words']]));
-                $similarity = count(array_intersect($a['words'], $b['words'])) / $union;
+                $similarity = TextSimilarity::jaccard($a['words'], $b['words']);
                 if ($similarity >= self::SIMILARITY) {
                     $pairs->push([
                         'a' => array_diff_key($a, ['words' => true]),
@@ -186,14 +180,6 @@ class ScenarioConditionService
         }
 
         return $pairs->sortByDesc('similarity')->values();
-    }
-
-    /** @return array<int, string> distinct meaningful words of a condition */
-    private function words(string $text): array
-    {
-        $tokens = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-
-        return array_values(array_unique(array_filter($tokens, fn ($token) => mb_strlen($token) >= 2 && ! in_array($token, self::STOPWORDS, true))));
     }
 
     /**

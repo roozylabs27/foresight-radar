@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\AiGenerationRun;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -293,5 +294,84 @@ class ScenarioImplicationTest extends TestCase
             $this->addItem($position, ['type' => 'challenge', 'title' => "Tantangan {$position}"]);
         }
         $step()->assertInertia(fn ($page) => $page->where('steps.6.status', 'done'));
+    }
+
+    private function draftItem(string $position, string $type, string $title, array $refs): array
+    {
+        return ['position' => $position, 'type' => $type, 'title' => $title, 'description' => "{$title}.", 'impact_level' => 'high', 'condition_refs' => $refs];
+    }
+
+    /** Roadmap R2.6 (implications-v1): AI drafts opportunities and challenges per quadrant, each citing a condition of that quadrant. */
+    public function test_ai_drafts_implications_citing_conditions_reviewed_one_by_one(): void
+    {
+        $this->readyFramework();
+        $battery = $this->condition('HH', 'Harga baterai turun 40%.');
+        $subsidy = $this->condition('LL', 'Subsidi EV dihentikan.');
+        $fake = $this->fakeLlm();
+        $fake->respond(['items' => [
+            $this->draftItem('HH', 'opportunity', 'Ekspor paket baterai', ['C1']),
+            $this->draftItem('HH', 'challenge', 'Perang harga produsen baru', ['C1']),
+            $this->draftItem('LL', 'challenge', 'Permintaan EV turun', ['C2']),
+        ]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.suggest', $this->project))->assertSessionHasNoErrors();
+
+        $this->assertSame('scenario_implications', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('Harga baterai turun 40%.', $fake->lastRequest()->user);
+        $this->assertSame(3, ScenarioImplication::where('origin', 'ai')->where('review_status', 'proposed')->count());
+        $export = ScenarioImplication::where('title', 'Ekspor paket baterai')->sole();
+        $this->assertSame([$battery->id], $export->conditions()->pluck('scenario_conditions.id')->all());
+        $this->assertSame([$subsidy->id], ScenarioImplication::where('title', 'Permintaan EV turun')->sole()->conditions()->pluck('scenario_conditions.id')->all());
+        $this->assertSame('completed', AiGenerationRun::sole()->status);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.implications.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('implicationStatus', 'completed')->where('quadrants.0.items.0.review_status', 'proposed'));
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.accept', [$this->project, $export]))->assertSessionHasNoErrors();
+        $this->assertSame('accepted', $export->fresh()->review_status);
+
+        $fake->respond(['items' => [$this->draftItem('LL', 'opportunity', 'Pasar mobil bekas', ['C2'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertEqualsCanonicalizing(['Pasar mobil bekas'], ScenarioImplication::where('review_status', 'proposed')->pluck('title')->all());
+        $this->assertSame(['Ekspor paket baterai'], ScenarioImplication::where('review_status', 'accepted')->pluck('title')->all());
+    }
+
+    public function test_ai_implication_drafts_are_checked_and_follow_the_rules(): void
+    {
+        $this->approveAxes();
+        $this->createFramework();
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.suggest', $this->project))->assertSessionHasErrors('ai');
+        $this->approveFramework()->assertSessionHasNoErrors();
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.suggest', $this->project))->assertSessionHasErrors('ai');
+
+        $this->condition('HH', 'Harga baterai turun 40%.');
+        $this->condition('LL', 'Subsidi EV dihentikan.');
+        $this->actingAs($this->viewer)->post(route('scenario-planning.implications.suggest', $this->project))->assertForbidden();
+
+        // An item citing a condition of another quadrant rejects the run.
+        $this->fakeLlm()->respond(['items' => [$this->draftItem('HH', 'challenge', 'Salah kuadran', ['C2'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, ScenarioImplication::count());
+        $this->assertSame('rejected', AiGenerationRun::sole()->status);
+
+        $this->fakeLlm()->respond(['items' => [$this->draftItem('HH', 'challenge', 'Tanpa rujukan', [])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, ScenarioImplication::count());
+    }
+
+    /** Roadmap R2.6 (generic check): an item close to an item of another quadrant does not tell the futures apart. */
+    public function test_items_alike_across_quadrants_are_flagged_as_generic(): void
+    {
+        $this->readyFramework();
+        $this->addItem('HH', ['type' => 'opportunity', 'title' => 'Pangsa pasar xEV naik tajam']);
+        $this->addItem('HL', ['type' => 'opportunity', 'title' => 'Pangsa pasar xEV naik tajam sekali']);
+        $this->addItem('LL', ['type' => 'challenge', 'title' => 'Subsidi dicabut pemerintah']);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.implications.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('quadrants.0.items.0.generic', true)
+                ->where('quadrants.0.items.0.similar_to', ['HL'])
+                ->where('quadrants.1.items.0.similar_to', ['HH'])
+                ->where('quadrants.3.items.0.generic', false));
     }
 }

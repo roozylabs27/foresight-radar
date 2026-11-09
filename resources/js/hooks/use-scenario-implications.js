@@ -19,5 +19,7 @@ export function useScenarioImplications(projectId) {
         busy,
         save: (values, { quadrantId, itemId }) => (itemId ? visit("put", url("update", itemId), values) : visit("post", url("store", quadrantId), values)),
         remove: (itemId) => visit("delete", url("destroy", itemId)),
+        accept: (itemId) => visit("post", url("accept", itemId)),
+        suggest: () => visit("post", route("scenario-planning.implications.suggest", projectId)),
     };
 }

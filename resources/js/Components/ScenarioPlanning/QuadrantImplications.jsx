@@ -1,4 +1,4 @@
-import { CopyPlusIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, CopyPlusIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
@@ -8,7 +8,7 @@ import { Button } from "@/Components/ui/button";
 import { IMPACT_LEVELS, IMPLICATION_TYPES } from "@/domain/scenarioPlanning";
 
 /** One opportunity, challenge or untyped proposal, with its links and actions. */
-function Item({ item, canManage, onEdit, onRemove }) {
+function Item({ item, canManage, onEdit, onRemove, onAccept }) {
     const type = IMPLICATION_TYPES[item.type];
 
     return (
@@ -20,9 +20,9 @@ function Item({ item, canManage, onEdit, onRemove }) {
                     {item.priority && <span className="font-medium text-foreground">P{item.priority}</span>}
                     {item.impact_level && <span>{IMPACT_LEVELS[item.impact_level]}</span>}
                     {item.generic && (
-                        <HintTooltip content="Judul yang sama ada di keempat kuadran, jadi item ini tidak membedakan skenario.">
+                        <HintTooltip content={item.similar_to?.length > 0 ? "Judulnya sangat mirip dengan item di kuadran lain, jadi item ini kurang membedakan skenario." : "Judul yang sama ada di keempat kuadran, jadi item ini tidak membedakan skenario."}>
                             <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
-                                Sama di 4 kuadran
+                                {item.similar_to?.length > 0 ? `Generik · mirip ${item.similar_to.join(", ")}` : "Sama di 4 kuadran"}
                             </span>
                         </HintTooltip>
                     )}
@@ -37,6 +37,11 @@ function Item({ item, canManage, onEdit, onRemove }) {
             </div>
             {canManage && (
                 <div className="flex shrink-0 items-center">
+                    {item.review_status === "proposed" && item.type && (
+                        <Button size="icon-xs" variant="ghost" aria-label="Terima draf" className="text-success" onClick={() => onAccept(item.id)}>
+                            <CheckIcon aria-hidden="true" />
+                        </Button>
+                    )}
                     <Button size="icon-xs" variant="ghost" aria-label={item.type ? "Ubah item" : "Tinjau usulan"} onClick={() => onEdit(item)}>
                         <PencilIcon aria-hidden="true" />
                     </Button>
@@ -55,8 +60,8 @@ function Item({ item, canManage, onEdit, onRemove }) {
  * Opportunities and challenges of one quadrant, plus the narrative's own implications text that the
  * team can copy into an item. Actions render only when `canManage`.
  */
-export default function QuadrantImplications({ quadrant, canManage, onAdd, onEdit, onRemove }) {
-    const accepted = quadrant.items.filter((item) => item.type);
+export default function QuadrantImplications({ quadrant, canManage, onAdd, onEdit, onRemove, onAccept }) {
+    const accepted = quadrant.items.filter((item) => item.type && item.review_status !== "proposed");
     const complete = accepted.some((item) => item.type === "opportunity") && accepted.some((item) => item.type === "challenge");
 
     return (
@@ -74,7 +79,7 @@ export default function QuadrantImplications({ quadrant, canManage, onAdd, onEdi
             ) : (
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
                     {quadrant.items.map((item) => (
-                        <Item key={item.id} item={item} canManage={canManage} onEdit={onEdit} onRemove={onRemove} />
+                        <Item key={item.id} item={item} canManage={canManage} onEdit={onEdit} onRemove={onRemove} onAccept={onAccept} />
                     ))}
                 </ul>
             )}

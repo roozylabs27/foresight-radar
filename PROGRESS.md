@@ -423,7 +423,9 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
-| 2026-11-08 (uncommitted) | Roadmap R2.5 slice 2 distinctness check | **PASS (partial)** | Pint LARASTAN_PINT; Larastan L5 LARASTAN_RESULT; `ScenarioConditionTest` 11 passed (233 assertions); full PHPUnit suite not run; `npm run build` PASS (61m 30s, loaded machine); no migration; browser check blocked (step 5 locked) |
+| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 1 AI implications + generic check | **PASS (partial)** | Pint 412 files PASS; Larastan L5 clean; implication + condition tests 20 passed (418 assertions); full PHPUnit suite not run; `npm run build` PASS (2m); migration `2026_11_09_000002` applied to the dev DB; browser check blocked (step 7 locked) |
+| 2026-11-09 (uncommitted) | Roadmap R2.5 slice 3 AI pole and name suggestions | **PASS** | Pint 407 files PASS; Larastan L5 clean; `ScenarioFrameworkTest` 14 passed (216 assertions, FakeLlmClient); full PHPUnit 524 passed (5,481 assertions, 2795.41s) covering all R2.5 slices, dev DB still 38 users afterwards; `npm run build` PASS (7m 8s); migration `2026_11_09_000001` applied to the dev DB; browser check not completed (login kept resetting) |
+| 2026-11-08 (uncommitted) | Roadmap R2.5 slice 2 distinctness check | **PASS (partial)** | Pint PASS; Larastan L5 clean after fixing `groupBy(0)` (CI reported it too; now a callback); `ScenarioConditionTest` 11 passed (233 assertions); full PHPUnit suite not run; `npm run build` PASS (61m 30s, loaded machine); no migration; browser check blocked (step 5 locked) |
 | 2026-11-08 (uncommitted) | Roadmap R2.5 slice 1 AI condition drafts | **PASS (partial)** | Pint PASS (1 file fixed); Larastan L5 clean after 1 fix; `ScenarioConditionTest` 10 passed (200 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (4m 8s); migration `2026_11_08_000005` applied to the dev DB; browser check blocked (dev framework withdrawn to draft by the user's accepted AI candidates) |
 | 2026-11-08 (uncommitted) | Roadmap R2.4 slice 2 AI candidate forces | **PASS** | Pint PASS (1 file fixed); Larastan L5 clean; `ProjectDrivingForceTest` 12 passed (174 assertions, FakeLlmClient); full PHPUnit 519 passed (5,340 assertions, 2320.37s) covering both R2.4 slices, dev DB still 38 users afterwards; `npm run build` PASS (3m 18s); migration `2026_11_08_000004` applied to the dev DB; browser: panel, candidate from a SQL row, discard; no real provider call |
 | 2026-11-08 (uncommitted) | Roadmap R2.4 slice 1 AI score suggestions | **PASS (partial)** | Pint PASS (1 import order fixed); Larastan L5 clean; `ProjectAssessmentTest` 15 passed (197 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (4m 39s after the label fix); migration `2026_11_08_000003` applied to the dev DB; browser: button, suggestion box from a SQL row, discard; no real provider call |
@@ -462,6 +464,25 @@
 ---
 
 ## Session Log
+
+### 2026-11-09 — Session 57 (R2.6 slice 1: AI implication drafts and generic check)
+
+- **Decisions (user):** R2.6 covers implications, responses, indicators and signal matching; generic detection is rule-based; delivered in method order, one slice at a time.
+- **RED → GREEN:** 3 new tests in `ScenarioImplicationTest` with `FakeLlmClient` (three drafts stored as `ai` / `proposed` with their condition links, prompt carries conditions, accept, a new run replaces only waiting drafts; rules: approved framework, accepted conditions required, viewer forbidden, a ref to another quadrant's condition or no ref rejects the run; generic flag with `similar_to` for alike titles across quadrants) failed on the missing route; then implication + condition tests 20 passed (418 assertions).
+- **Backend:** shared `App\Support\TextSimilarity` (words + Jaccard, threshold 0.6) now used by the step 5 distinctness check and the step 7 generic check; migration `2026_11_09_000002_add_implication_suggestion_status`; prompt `ScenarioImplicationPrompt` (`implications-v1`, conditions labelled C1… per quadrant); `ImplicationSuggestionService`; job `SuggestImplications`; routes `implications.suggest`, `implications.accept`; `quadrants()` adds `similar_to` and widens `generic`.
+- **Frontend:** `SuggestionControl` on step 7; `QuadrantImplications` gets an accept button for AI drafts, a "Generik · mirip …" badge, and counts only accepted items for completeness.
+- **Not checked in the browser:** the dev framework is in draft, so step 7 is locked.
+- **Docs:** roadmap R2.6 partial; matrix 7.7 complete (86/3/5/0; step 7 7/0/0/0); `feature_list.json` FEAT-053.
+- **Next:** slice 2, AI strategic responses (`response-v1`).
+
+### 2026-11-09 — Session 56 (R2.5 slice 3: AI pole and quadrant name suggestions; R2.5 done)
+
+- **RED → GREEN:** 2 new tests in `ScenarioFrameworkTest` with `FakeLlmClient` (suggestion stored on the framework without changing poles, run recorded, page payload, apply sets four poles and the quadrant names and summaries and clears the suggestion, discard clears it; rules: no framework, viewer forbidden, identical poles reject the run, approved framework refused) failed on the missing route; then all 14 framework tests passed (216 assertions).
+- **Backend:** migration `2026_11_09_000001_add_framework_suggestions` (`scenarios.framework_suggestion` JSON, project `framework_suggestion_status` / `_error`); prompt `ScenarioFrameworkPrompt` (`framework-v1`); `FrameworkSuggestionService` (request on a draft framework, generate with validation, accept via `ScenarioFrameworkService::updatePoles` + quadrant titles, reject); job `SuggestFramework`; routes `framework.suggest`, `framework.suggestion.accept`, `framework.suggestion.reject`; framework payload adds `suggestion`, `suggestionStatus`, `suggestionError`.
+- **Frontend:** `FrameworkSuggestion` on step 4 (reuses `SuggestionControl`; shows both axes' poles, the four names and summaries, the rationale; "Pakai saran" asks for confirmation, "Buang").
+- **Not checked in the browser:** the browser session kept returning to the login page (the user was using the same tab); the display-only test suggestion set by SQL was cleared again.
+- **Docs:** roadmap R2.5 done; matrix 4.8 complete (85/4/5/0; step 4 9/1/0/0); audit G22 updated; `feature_list.json` FEAT-052.
+- **Next recommended action:** R2.6 (full suite green: 524 passed).
 
 ### 2026-11-08 — Session 55 (R2.5 slice 2: distinctness check)
 

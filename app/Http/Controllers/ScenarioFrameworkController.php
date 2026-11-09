@@ -6,6 +6,7 @@ use App\Http\Requests\ScenarioFrameworkRequest;
 use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
+use App\Services\FrameworkSuggestionService;
 use App\Services\ScenarioFrameworkService;
 use App\Services\ScenarioPlanningProjectService;
 use Illuminate\Http\RedirectResponse;
@@ -68,6 +69,34 @@ class ScenarioFrameworkController extends Controller
         $this->frameworks->updateQuadrant($quadrant, $validated, $request->user());
 
         return back()->with('success', 'Kuadran disimpan.');
+    }
+
+    /** Roadmap R2.5: queue AI pole labels and quadrant names for the draft framework. */
+    public function suggest(Request $request, ScenarioPlanningProject $project, FrameworkSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang menyiapkan saran kutub dan nama kuadran. Halaman ini diperbarui otomatis.');
+    }
+
+    public function acceptSuggestion(Request $request, ScenarioPlanningProject $project, FrameworkSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->accept($project, $request->user());
+
+        return back()->with('success', 'Saran AI dipakai untuk kutub dan nama kuadran.');
+    }
+
+    public function rejectSuggestion(ScenarioPlanningProject $project, FrameworkSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->reject($project);
+
+        return back()->with('success', 'Saran AI dibuang.');
     }
 
     public function approve(Request $request, ScenarioPlanningProject $project): RedirectResponse

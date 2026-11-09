@@ -64,6 +64,10 @@ class ScenarioPlanningProject extends Model
         'force_suggestion_error',
         'condition_suggestion_status',
         'condition_suggestion_error',
+        'framework_suggestion_status',
+        'framework_suggestion_error',
+        'implication_suggestion_status',
+        'implication_suggestion_error',
         'created_by',
         'updated_by',
     ];
