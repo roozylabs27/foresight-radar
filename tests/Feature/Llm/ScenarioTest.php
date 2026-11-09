@@ -10,6 +10,7 @@ use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\Environment;
 use App\Models\Scenario;
+use App\Models\ScenarioCitation;
 use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TenantLlmSetting;
@@ -249,7 +250,7 @@ class ScenarioTest extends TestCase
 
         $stored = $scenario->fresh();
         $this->assertSame([$s1->id, $s2->id], $stored->input_signal_ids);
-        $this->assertSame('scenario-v2', $stored->prompt_version);
+        $this->assertSame('scenario-v3', $stored->prompt_version);
         $this->assertSame([$s1->id], $stored->quadrants()->where('position', 'HL')->first()->cited_signal_ids);
 
         // The model got the evidence as S-references only, inside the evidence block.
@@ -460,7 +461,7 @@ class ScenarioTest extends TestCase
         $this->generate($scenario)->assertStatus(202);
 
         $run = AiGenerationRun::sole();
-        $this->assertSame(['scenario_narrative', 'claude', 'claude-fake', 'completed', 'scenario-v2'], [$run->purpose, $run->provider, $run->model, $run->status, $run->prompt_version]);
+        $this->assertSame(['scenario_narrative', 'claude', 'claude-fake', 'completed', 'scenario-v3'], [$run->purpose, $run->provider, $run->model, $run->status, $run->prompt_version]);
         $this->assertSame($scenario->uuid, $run->input_refs['scenario']);
         $this->assertContains($s1->id, $run->input_refs['signals']);
         $this->assertSame($run->id, $scenario->fresh()->generation_run_id);
@@ -489,5 +490,92 @@ class ScenarioTest extends TestCase
         $this->assertSame(['failed', 'rate_limited'], [$failed->status, $failed->error]);
         $this->assertNull($scenario->fresh()->generation_run_id);
         $this->assertSame([null], $scenario->quadrants()->pluck('generation_run_id')->unique()->values()->all());
+    }
+
+    /** @param  array<string, array<int, array{0: string, 1: string, 2: array<int, string>}>>  $statements */
+    private function typedNarrative(array $statements): array
+    {
+        return ['quadrants' => array_map(fn ($position) => [
+            'position' => $position,
+            'title' => "Masa depan {$position}",
+            'statements' => array_map(fn ($row) => ['text' => $row[0], 'kind' => $row[1], 'refs' => $row[2]], $statements[$position]),
+            'implications' => "Implikasi {$position}.",
+            'early_indicators' => ["Indikator {$position}"],
+            'cited_refs' => [],
+        ], Scenario::POSITIONS)];
+    }
+
+    /** Roadmap R2.7: each narrative sentence carries its kind, and every citation becomes a row queryable by signal. */
+    public function test_narrative_statements_carry_a_kind_and_become_citation_rows(): void
+    {
+        $llm = $this->fakeLlm();
+        $scenario = $this->scenario();
+        $s1 = $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $s2 = $this->acceptedSignal($this->adoption, 'EV sales doubled');
+        $other = [['Penjualan EV tumbuh.', 'fact', ['S2']]];
+        $llm->respond($this->typedNarrative([
+            'HH' => [
+                ['Aturan TKDN berlaku.', 'fact', ['S1']],
+                ['Permintaan akan naik.', 'analysis', ['S2', 'S9']],
+                ['Harga turun drastis.', 'fact', []],
+            ],
+            'HL' => $other, 'LH' => $other, 'LL' => $other,
+        ]));
+
+        $response = $this->generate($scenario)->assertStatus(202);
+
+        $hh = collect($response->json('scenario.quadrants'))->keyBy('position')['HH'];
+        $this->assertSame(['S1', 'S2'], $hh['cited_refs']);
+        $this->assertSame(['fact', 'analysis', 'interpretation'], array_column($hh['statements'], 'kind'));
+        $this->assertSame([['S1'], ['S2'], []], array_column($hh['statements'], 'refs'));
+        $this->assertStringContainsString('Aturan TKDN berlaku. [S1]', $hh['narrative']);
+        $this->assertSame('scenario-v3', $scenario->fresh()->prompt_version);
+
+        $quadrant = $scenario->quadrants()->where('position', 'HH')->sole();
+        $rows = ScenarioCitation::where('scenario_quadrant_id', $quadrant->id)->orderBy('statement_index')->get();
+        $this->assertSame([[$s1->id, 'S1', 'fact', 0], [$s2->id, 'S2', 'analysis', 1]], $rows->map(fn ($row) => [$row->signal_id, $row->ref, $row->statement_kind, $row->statement_index])->all());
+        $this->assertSame(1, ScenarioCitation::where('signal_id', $s1->id)->count());
+        $this->assertSame(4, ScenarioCitation::where('signal_id', $s2->id)->count());
+    }
+
+    public function test_editing_a_narrative_drops_statement_kinds_but_keeps_its_citations(): void
+    {
+        $llm = $this->fakeLlm();
+        $scenario = $this->scenario();
+        $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+        $one = [['Penjualan EV tumbuh.', 'fact', ['S2']]];
+        $llm->respond($this->typedNarrative(['HH' => [['Aturan TKDN berlaku.', 'fact', ['S1']]], 'HL' => $one, 'LH' => $one, 'LL' => $one]));
+        $this->generate($scenario)->assertStatus(202);
+        $quadrant = $scenario->quadrants()->where('position', 'HH')->sole();
+
+        $this->actingAs($this->manager)->putJson("/scenarios/{$scenario->uuid}/quadrants/{$quadrant->uuid}", [
+            'title' => $quadrant->title, 'narrative' => 'Narasi disunting analis [S1].', 'implications' => 'Implikasi.', 'early_indicators' => ['Indikator'],
+        ])->assertOk();
+
+        $this->assertNull($quadrant->fresh()->narrative_statements);
+        $this->assertSame([[null, null]], ScenarioCitation::where('scenario_quadrant_id', $quadrant->id)->get()->map(fn ($row) => [$row->statement_kind, $row->statement_index])->all());
+    }
+
+    public function test_the_signal_detail_lists_the_quadrants_that_cite_it(): void
+    {
+        $llm = $this->fakeLlm();
+        $scenario = $this->scenario();
+        $s1 = $this->acceptedSignal($this->regulation, 'Local content rule enacted');
+        $this->acceptedSignal($this->adoption, 'EV sales doubled');
+        $one = [['Penjualan EV tumbuh.', 'fact', ['S2']]];
+        $llm->respond($this->typedNarrative(['HH' => [['Aturan TKDN berlaku.', 'fact', ['S1']]], 'HL' => $one, 'LH' => $one, 'LL' => $one]));
+        $this->generate($scenario)->assertStatus(202);
+
+        Permission::firstOrCreate(['name' => 'view-signal', 'guard_name' => 'web'], ['uuid' => (string) Uuid::uuid4(), 'category' => 'signal', 'description' => 'view-signal']);
+        $this->viewer->givePermissionTo('view-signal');
+
+        $this->actingAs($this->viewer)->getJson(route('signals.citations', $s1))
+            ->assertOk()
+            ->assertJsonCount(1, 'citations')
+            ->assertJsonPath('citations.0.scenario', 'EV 2030')
+            ->assertJsonPath('citations.0.position', 'HH')
+            ->assertJsonPath('citations.0.kind', 'fact')
+            ->assertJsonPath('citations.0.statement', 'Aturan TKDN berlaku.');
     }
 }

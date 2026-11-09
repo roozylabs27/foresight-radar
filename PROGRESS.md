@@ -423,7 +423,8 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
-| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 4 AI signal matching | **PASS (partial)** | Pint 424 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 16 passed (382 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (1m 8s); migration `2026_11_09_000005` applied to the dev DB; browser check blocked (framework in draft) |
+| 2026-11-09 (uncommitted) | Roadmap R2.7 statement typing and citation rows | **PASS (partial)** | Pint 426 files PASS; Larastan L5 clean (after one fix); `ScenarioTest` + `StalenessTest` + `ScenarioFrameworkTest` 41/42 then `StalenessTest` 7 passed after the fix (FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (1m); migration `2026_11_09_000006` applied to the dev DB (38 user rows intact); browser check not done |
+| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 4 AI signal matching | **PASS** | Pint 424 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 16 passed (382 assertions, FakeLlmClient); full PHPUnit 533 passed (5,694 assertions, 1515.41s) covering all R2.6 slices, dev DB still 38 users afterwards; `npm run build` PASS (1m 8s); migration `2026_11_09_000005` applied to the dev DB; browser check blocked (framework in draft) |
 | 2026-11-09 (uncommitted) | Roadmap R2.6 slice 3 AI indicators | **PASS (partial)** | Pint 420 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 14 passed (330 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (3m 52s); migration `2026_11_09_000004` applied to the dev DB; browser check blocked (framework in draft) |
 | 2026-11-09 (uncommitted) | Roadmap R2.6 slice 2 AI responses | **PASS (partial)** | Pint PASS (1 file fixed); Larastan L5 clean; `StrategicResponseTest` 15 passed (364 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (1m 43s); migration `2026_11_09_000003` applied to the dev DB; browser check blocked (step 8 locked) |
 | 2026-11-09 (uncommitted) | Roadmap R2.6 slice 1 AI implications + generic check | **PASS (partial)** | Pint 412 files PASS; Larastan L5 clean; implication + condition tests 20 passed (418 assertions); full PHPUnit suite not run; `npm run build` PASS (2m); migration `2026_11_09_000002` applied to the dev DB; browser check blocked (step 7 locked) |
@@ -468,6 +469,15 @@
 
 ## Session Log
 
+### 2026-11-09 — Session 61 (R2.7: statement typing and citation rows)
+
+- **RED → GREEN:** 3 new tests in `tests/Feature/Llm/ScenarioTest.php` (typed statements and citation rows; editing drops kinds but keeps citations; signal detail lists citing quadrants) plus the `scenario-v3` version assertions. `ScenarioTest`, `StalenessTest` and `ScenarioFrameworkTest`: first run 41 passed, 1 failed (deleting a cited signal no longer flagged quadrants, because the foreign-key cascade removed the citation rows before the `deleted` hook ran); fixed by flagging on `deleting`; `StalenessTest` then 7 passed.
+- **Backend:** migration `2026_11_09_000006_create_scenario_citations_table` (`scenario_quadrants.narrative_statements`; `scenario_citations` with ref, statement kind and index; backfill from `cited_signal_ids`, 8 rows in the dev DB); model `ScenarioCitation`; prompt `scenario-v3` (`statements[]` with `kind`, `refs`); `ScenarioNarrativeService` builds the narrative from the statements with inline labels, downgrades unsupported facts to interpretation and writes citation rows (template / legacy narratives get untyped rows); `ScenarioController` presents `statements` and clears kinds when a narrative is edited; `StalenessService::signalWithdrawn` reads the citation rows; route `signals.citations`.
+- **Frontend:** `QuadrantCard` shows a kind marker per sentence (F / An / As / I) with a legend of the kinds used; `Components/Signals/SignalCitations.jsx` adds "Dikutip di skenario" to the signal detail dialog.
+- **Not checked in the browser:** the dev browser session was signed out, and existing dev narratives stay untyped until regenerated.
+- **Docs:** roadmap R2.7 done; matrix 6.7 complete (89/2/3/0; step 6 9/0/0/0); audit G13 closed; `feature_list.json` FEAT-057.
+- **Next recommended action:** full suite for R2.7; then R2.8 (scenario comparison and consistency review).
+
 ### 2026-11-09 — Session 60 (R2.6 slice 4: AI signal matching; R2.6 done)
 
 - **RED → GREEN:** 2 new tests in `EarlyWarningIndicatorTest` with `FakeLlmClient` (only accepted, not yet cited signals are offered; a match becomes an `ai` / `proposed` observation citing its signal; relevance ignores it until confirmed, then counts it; confirming sets the recorder; rules: no indicators, no new signals, viewer forbidden, unknown signal ref rejects the run) failed on the missing route; then all 16 indicator tests passed (382 assertions).
@@ -475,7 +485,7 @@
 - **Frontend:** `IndicatorAiControls` (indicator proposals + signal matching, keeps the step 9 page under 150 lines); proposed observations show the AI badge and a confirm button in `IndicatorObservations`.
 - **Not checked in the browser:** the dev framework is in draft, so step 9 assists cannot run.
 - **Docs:** roadmap R2.6 done; matrix 9.9 complete (88/2/4/0; step 9 12/0/0/0); audit G19 and G22 updated (only the focal issue assist, R3.1, remains); `feature_list.json` FEAT-056.
-- **Next recommended action:** full suite for R2.6; then R2.7.
+- **Next recommended action:** R2.7 (full suite green: 533 passed).
 
 ### 2026-11-09 — Session 59 (R2.6 slice 3: AI indicator proposals)
 

@@ -47,6 +47,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip
 import { cn } from "@/lib/utils";
 import IngestForm from "./IngestForm";
 import ReviewForm, { REVIEW_ACTIONS } from "./ReviewForm";
+import SignalCitations from "@/Components/Signals/SignalCitations";
 
 const REVIEW_FORM_ID = "signal-review-form";
 
@@ -288,6 +289,9 @@ function InspectDialog({ signal, open, onOpenChange }) {
                             </DetailItem>
                             <DetailItem label="Diekstrak oleh" className="sm:col-span-2">
                                 {extractedBy(signal)}
+                            </DetailItem>
+                            <DetailItem label="Dikutip di skenario" className="sm:col-span-2">
+                                <SignalCitations signal={signal} />
                             </DetailItem>
                             {signal.suggested_driving_force && (
                                 <DetailItem label="Usulan Driving Force" className="sm:col-span-2">

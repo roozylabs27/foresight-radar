@@ -9,6 +9,7 @@ use App\Http\Requests\ReviewSignalRequest;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
+use App\Models\ScenarioCitation;
 use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TimeHorizon;
@@ -239,6 +240,21 @@ class SignalIngestionController extends Controller
     /**
      * Review, edit, accept, or reject candidate signal.
      */
+    /** Roadmap R2.7: scenario quadrants that cite this signal, with the kind of the citing statement. */
+    public function citations(Signal $signal): JsonResponse
+    {
+        $rows = ScenarioCitation::where('signal_id', $signal->id)->with('quadrant.scenario:id,uuid,name,project_id')->orderBy('id')->get();
+
+        return response()->json(['citations' => $rows->map(fn (ScenarioCitation $row) => [
+            'scenario' => $row->quadrant?->scenario?->name,
+            'scenario_id' => $row->quadrant?->scenario?->uuid,
+            'position' => $row->quadrant?->position,
+            'quadrant' => $row->quadrant?->title,
+            'kind' => $row->statement_kind,
+            'statement' => $row->statement_index === null ? null : ($row->quadrant?->narrative_statements[$row->statement_index]['text'] ?? null),
+        ])->values()]);
+    }
+
     public function review(ReviewSignalRequest $request, Signal $signal): JsonResponse
     {
         try {

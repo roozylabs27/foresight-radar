@@ -788,6 +788,22 @@
         "Confirming makes the confirmer the recorder; discarding deletes the observation"
       ],
       "verification_evidence": "2026-11-09: 2 new tests in EarlyWarningIndicatorTest with FakeLlmClient (RED on missing route); indicator tests 16 passed. Browser check not possible: the dev framework is in draft, so step 9 assists cannot run."
+    },
+    {
+      "id": "FEAT-057",
+      "name": "Typed Narrative Statements and Citation Rows",
+      "description": "Scenario narratives are lists of statements typed as fact, analysis, assumption or interpretation, each with its own evidence labels; every citation is a row queryable by signal (roadmap R2.7).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Prompt scenario-v3 asks for statements with kind and refs; unknown labels are dropped",
+        "A fact without a valid label, or an unknown kind, is stored as interpretation",
+        "Each cited statement becomes a scenario_citations row with kind and position; existing citations are backfilled untyped",
+        "Editing a narrative clears the statement kinds and keeps the citations untyped",
+        "The quadrant card shows a kind marker per sentence with a legend; the signal detail lists the quadrants that cite it",
+        "Withdrawing or deleting a signal flags the quadrants that cite it through the citation rows"
+      ],
+      "verification_evidence": "2026-11-09: 3 new tests in Llm/ScenarioTest with FakeLlmClient; ScenarioTest, StalenessTest and ScenarioFrameworkTest 42 passed after one fix (signal delete now flags quadrants before the cascade). Browser check not done: the dev session was signed out, and dev narratives are untyped until regenerated."
     }
   ]
 }

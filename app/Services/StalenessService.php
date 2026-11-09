@@ -62,10 +62,8 @@ class StalenessService
     /** A signal stopped being evidence (rejected or deleted): flag every quadrant that cites it. */
     public function signalWithdrawn(Signal $signal): void
     {
-        $quadrants = ScenarioQuadrant::whereNotNull('cited_signal_ids')
-            ->where('cited_signal_ids', 'like', '%'.$signal->id.'%')
-            ->get()
-            ->filter(fn (ScenarioQuadrant $quadrant) => in_array($signal->id, array_map('intval', $quadrant->cited_signal_ids ?? []), true));
+        // Citation rows (roadmap R2.7) answer "who cites this signal" without scanning JSON.
+        $quadrants = ScenarioQuadrant::whereHas('citations', fn ($q) => $q->where('signal_id', $signal->id))->get();
 
         $this->markQuadrants($quadrants, 'Sinyal yang dikutip ditolak atau dihapus: '.Str::limit($signal->title, 80));
     }
