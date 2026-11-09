@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StrategicResponseRequest;
 use App\Models\ScenarioPlanningProject;
 use App\Models\StrategicResponse;
+use App\Services\ResponseSuggestionService;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\StalenessService;
 use App\Services\StrategicResponseService;
@@ -42,7 +43,19 @@ class StrategicResponseController extends Controller
             'conditions' => $framework ? $this->responses->conditionOptions($framework) : [],
             'owners' => $this->projects->owners($request->user()),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
+            'responseStatus' => $project->response_suggestion_status,
+            'responseError' => $project->response_suggestion_error,
         ]);
+    }
+
+    /** Roadmap R2.6: queue AI strategic responses citing the accepted implications. */
+    public function suggest(Request $request, ScenarioPlanningProject $project, ResponseSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang menyusun usulan respons. Halaman ini diperbarui otomatis.');
     }
 
     public function store(StrategicResponseRequest $request, ScenarioPlanningProject $project): RedirectResponse

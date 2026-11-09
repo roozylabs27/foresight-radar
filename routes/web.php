@@ -181,17 +181,22 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::post('/{response}/approve', 'approve')->name('approve')->can('manage-scenario');
         Route::post('/{response}/reject', 'reject')->name('reject')->can('manage-scenario');
         Route::post('/{response}/keep', 'keep')->name('keep')->can('manage-scenario');
+        Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
     });
 
     Route::prefix('scenario-planning/{project}/indicators')->controller(EarlyWarningIndicatorController::class)->name('scenario-planning.indicators.')->scopeBindings()->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::post('/', 'store')->name('store')->can('manage-scenario');
+        Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
+        Route::post('/match', 'match')->name('match')->can('manage-scenario');
+        Route::post('/{indicator}/accept', 'accept')->name('accept')->can('manage-scenario');
         Route::put('/{indicator}', 'update')->name('update')->can('manage-scenario');
         Route::delete('/{indicator}', 'destroy')->name('destroy')->can('manage-scenario');
     });
 
     Route::prefix('scenario-planning/{project}/indicators/{indicator}/observations')->controller(IndicatorObservationController::class)->name('scenario-planning.indicators.observations.')->scopeBindings()->group(function () {
         Route::post('/', 'store')->name('store')->can('view-scenario');
+        Route::post('/{observation}/confirm', 'confirm')->name('confirm')->can('view-scenario');
         Route::delete('/{observation}', 'destroy')->name('destroy')->can('view-scenario');
     });
 

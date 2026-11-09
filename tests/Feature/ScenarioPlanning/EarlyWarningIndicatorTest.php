@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\AiGenerationRun;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -450,5 +451,110 @@ class EarlyWarningIndicatorTest extends TestCase
 
         $this->actingAs($this->manager)->post(route('scenario-planning.stale.acknowledge', $this->project))->assertSessionHasNoErrors();
         $this->assertNull($framework->fresh()->stale_since);
+    }
+
+    private function draftIndicator(string $name, array $directions = ['HH' => 'rising', 'HL' => 'falling', 'LH' => 'rising', 'LL' => 'falling'], array $overrides = []): array
+    {
+        return $overrides + [
+            'name' => $name, 'description' => "{$name} per kuartal.", 'axis' => 'B',
+            'metric' => 'Pangsa penjualan', 'unit' => '%', 'frequency' => 'quarterly', 'threshold_rule' => 'Di atas 10%',
+            'directions' => $directions,
+        ];
+    }
+
+    /** Roadmap R2.6 (indicators-v1): AI proposes indicators with a direction per quadrant; proposals wait for review. */
+    public function test_ai_proposes_indicators_that_tell_the_scenarios_apart(): void
+    {
+        $this->readyFramework();
+        $fake = $this->fakeLlm();
+        $fake->respond(['indicators' => [$this->draftIndicator('Pangsa penjualan xEV')]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.suggest', $this->project))->assertSessionHasNoErrors();
+
+        $this->assertSame('scenario_indicators', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('Technology Development', $fake->lastRequest()->user);
+        $indicator = EarlyWarningIndicator::sole();
+        $this->assertSame(['ai', 'proposed', 'quarterly', '%'], [$indicator->origin, $indicator->review_status, $indicator->frequency, $indicator->unit]);
+        $this->assertSame('Technology Development', $indicator->uncertainty->name);
+        $this->assertSame(4, $indicator->directions()->count());
+        $this->assertSame('completed', AiGenerationRun::sole()->status);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('indicators.0.origin', 'ai')->where('indicators.0.review_status', 'proposed')->where('indicatorStatus', 'completed'));
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.accept', [$this->project, $indicator]))->assertSessionHasNoErrors();
+        $this->assertSame('accepted', $indicator->fresh()->review_status);
+
+        $fake->respond(['indicators' => [$this->draftIndicator('Jumlah SPKLU')]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.suggest', $this->project))->assertSessionHasNoErrors();
+        $fake->respond(['indicators' => [$this->draftIndicator('Harga baterai per kWh')]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertEqualsCanonicalizing(['Pangsa penjualan xEV', 'Harga baterai per kWh'], EarlyWarningIndicator::pluck('name')->all());
+    }
+
+    public function test_ai_indicator_proposals_are_checked_and_follow_the_rules(): void
+    {
+        $this->approveAxes();
+        $this->createFramework();
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.suggest', $this->project))->assertSessionHasErrors('ai');
+        $this->approveFramework()->assertSessionHasNoErrors();
+        $this->actingAs($this->viewer)->post(route('scenario-planning.indicators.suggest', $this->project))->assertForbidden();
+
+        $this->fakeLlm()->respond(['indicators' => [$this->draftIndicator('Sama di semua', ['HH' => 'rising', 'HL' => 'rising', 'LH' => 'rising', 'LL' => 'rising'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, EarlyWarningIndicator::count());
+        $this->assertSame('rejected', AiGenerationRun::sole()->status);
+
+        $this->fakeLlm()->respond(['indicators' => [$this->draftIndicator('Frekuensi aneh', overrides: ['frequency' => 'weekly'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, EarlyWarningIndicator::count());
+    }
+
+    /** Roadmap R2.6 (signal matching): AI proposes which new accepted signals evidence which indicator; proposals count only once confirmed. */
+    public function test_ai_matches_new_signals_to_indicators_as_observations_awaiting_confirmation(): void
+    {
+        $this->readyFramework();
+        $this->storeIndicator();
+        $indicator = EarlyWarningIndicator::sole();
+        $fresh = $this->signal('xEV sales up 40% in Q3');
+        $cited = $this->signal('Charging network doubles');
+        $this->signal('Unreviewed rumour', 'PENDING');
+        $this->observe($this->manager, $indicator, ['observed_at' => '2026-09-30', 'value_text' => 'Sudah dicatat', 'signal' => $cited->uuid])->assertSessionHasNoErrors();
+        $fake = $this->fakeLlm();
+        $fake->respond(['matches' => [['indicator' => 'I1', 'signal' => 'S1', 'direction' => 'rising', 'note' => 'Penjualan xEV naik tajam.']]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.match', $this->project))->assertSessionHasNoErrors();
+
+        $prompt = $fake->lastRequest()->user;
+        $this->assertSame('indicator_signal_match', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('xEV sales up 40% in Q3', $prompt);
+        $this->assertStringNotContainsString('Charging network doubles', $prompt);
+        $this->assertStringNotContainsString('Unreviewed rumour', $prompt);
+        $proposal = IndicatorObservation::where('origin', 'ai')->sole();
+        $this->assertSame(['proposed', $fresh->id, 'rising'], [$proposal->review_status, $proposal->signal_id, $proposal->direction]);
+        $this->assertSame('completed', AiGenerationRun::sole()->status);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('relevance.observations', 0)->where('indicators.0.observations.0.review_status', 'proposed')->where('matchStatus', 'completed'));
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.observations.confirm', [$this->project, $indicator, $proposal]))->assertSessionHasNoErrors();
+        $this->assertSame(['accepted', $this->manager->id], [$proposal->fresh()->review_status, $proposal->fresh()->recorded_by]);
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('relevance.observations', 1));
+    }
+
+    public function test_ai_signal_matching_is_checked_and_follows_the_rules(): void
+    {
+        $this->readyFramework();
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.match', $this->project))->assertSessionHasErrors('ai');
+        $this->storeIndicator();
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.match', $this->project))->assertSessionHasErrors('ai');
+        $this->signal('xEV sales up 40% in Q3');
+        $this->actingAs($this->viewer)->post(route('scenario-planning.indicators.match', $this->project))->assertForbidden();
+
+        $this->fakeLlm()->respond(['matches' => [['indicator' => 'I1', 'signal' => 'S7', 'direction' => 'rising', 'note' => 'x']]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.indicators.match', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, IndicatorObservation::count());
+        $this->assertSame('rejected', AiGenerationRun::sole()->status);
     }
 }

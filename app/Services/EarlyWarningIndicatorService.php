@@ -120,6 +120,8 @@ class EarlyWarningIndicatorService
                         'note' => $row->note,
                         'recorded_by' => $row->recorder?->name,
                         'recorded_by_id' => $row->recorded_by,
+                        'origin' => $row->origin,
+                        'review_status' => $row->review_status,
                     ])->values()->all(),
                 ];
             })
@@ -156,7 +158,7 @@ class EarlyWarningIndicatorService
 
         $indicators = EarlyWarningIndicator::where('project_id', $project->id)
             ->where('status', 'active')
-            ->with(['directions.quadrant', 'observations' => fn ($q) => $q->whereNotNull('direction')])
+            ->with(['directions.quadrant', 'observations' => fn ($q) => $q->whereNotNull('direction')->where('review_status', 'accepted')])
             ->get();
         foreach ($indicators as $indicator) {
             $expected = $indicator->directions

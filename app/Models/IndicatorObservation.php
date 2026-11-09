@@ -22,6 +22,8 @@ use Ramsey\Uuid\Uuid;
  * @property int|null $signal_id
  * @property string|null $note
  * @property int|null $recorded_by
+ * @property string $origin
+ * @property string $review_status
  */
 class IndicatorObservation extends Model
 {
@@ -41,6 +43,8 @@ class IndicatorObservation extends Model
         'crossed_threshold',
         'signal_id',
         'note',
+        'origin',
+        'review_status',
         'recorded_by',
     ];
 

@@ -6,7 +6,9 @@ use App\Http\Requests\EarlyWarningIndicatorRequest;
 use App\Models\EarlyWarningIndicator;
 use App\Models\ScenarioPlanningProject;
 use App\Services\EarlyWarningIndicatorService;
+use App\Services\IndicatorSuggestionService;
 use App\Services\ScenarioPlanningProjectService;
+use App\Services\SignalMatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -43,7 +45,40 @@ class EarlyWarningIndicatorController extends Controller
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
             'signals' => $this->indicators->signalOptions(),
             'canRecord' => $project->acceptsInputFrom($request->user()),
+            'indicatorStatus' => $project->indicator_suggestion_status,
+            'indicatorError' => $project->indicator_suggestion_error,
+            'matchStatus' => $project->match_suggestion_status,
+            'matchError' => $project->match_suggestion_error,
         ]);
+    }
+
+    /** Roadmap R2.6: queue AI early warning indicators. */
+    public function suggest(Request $request, ScenarioPlanningProject $project, IndicatorSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang menyusun usulan indikator. Halaman ini diperbarui otomatis.');
+    }
+
+    /** Roadmap R2.6: queue AI matching of new accepted signals to the indicators. */
+    public function match(Request $request, ScenarioPlanningProject $project, SignalMatchService $matches): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $matches->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang mencocokkan sinyal baru dengan indikator. Halaman ini diperbarui otomatis.');
+    }
+
+    public function accept(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, IndicatorSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->accept($indicator, $request->user());
+
+        return back()->with('success', 'Indikator diterima.');
     }
 
     public function store(EarlyWarningIndicatorRequest $request, ScenarioPlanningProject $project): RedirectResponse
