@@ -2,10 +2,14 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\AiGenerationRun;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\ForceCandidate;
 use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioPlanningProject;
+use App\Models\Signal;
+use App\Models\Source;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -257,5 +261,100 @@ class ProjectDrivingForceTest extends TestCase
                 ->where('coverage.5.included', 1)
                 ->where('coverage.0.name', 'Political')
                 ->where('coverage.0.included', 0));
+    }
+
+    private function signal(string $title, string $status = 'ACCEPTED', ?DrivingForce $force = null): Signal
+    {
+        $raw = "{$title} raw";
+        $source = Source::create([
+            'uuid' => (string) Uuid::uuid4(), 'title' => "{$title} source", 'url' => 'https://example.test/'.md5($title),
+            'raw_content' => $raw, 'content_hash' => hash('sha256', $raw), 'created_by' => $this->manager->id,
+        ]);
+        $signal = Signal::create([
+            'uuid' => (string) Uuid::uuid4(), 'source_id' => $source->id, 'dimension_id' => $this->technology->id,
+            'title' => $title, 'summary' => "{$title}.", 'evidence_quote' => "{$title}.", 'confidence_score' => 0.9, 'review_status' => $status,
+        ]);
+        $force?->supporting_signals()->attach($signal->id);
+
+        return $signal;
+    }
+
+    private function candidate(string $keyword, array $refs, string $dimension = 'TECHNOLOGY'): array
+    {
+        return ['keyword' => $keyword, 'description' => "{$keyword} grows across Indonesia.", 'dimension' => $dimension, 'signal_refs' => $refs, 'rationale' => 'Beberapa sinyal menunjuk ke arah yang sama.'];
+    }
+
+    /** Roadmap R2.4 (candidate forces): AI groups accepted signals not yet behind an exercise force into candidate forces, reviewed one by one. */
+    public function test_ai_proposes_candidate_forces_and_accepting_one_adds_it_to_library_and_exercise(): void
+    {
+        $project = $this->project();
+        $existing = $this->force('TKDN Regulation');
+        $this->add($project, [$existing]);
+        $this->signal('Insentif TKDN diperluas', force: $existing);
+        $swap = $this->signal('Battery swap stations open in Jakarta');
+        $fleet = $this->signal('Ride-hailing fleets switch to swappable scooters');
+        $this->signal('Unreviewed rumour', 'PENDING');
+        $fake = $this->fakeLlm();
+        $fake->respond(['candidates' => [
+            $this->candidate('Battery Swap Network', ['S1', 'S2']),
+            $this->candidate('Fleet Electrification', ['S2']),
+        ]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.suggest', $project))->assertSessionHasNoErrors();
+
+        $prompt = $fake->lastRequest()->user;
+        $this->assertSame('force_cluster', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('Battery swap stations open in Jakarta', $prompt);
+        $this->assertStringNotContainsString('Insentif TKDN diperluas', $prompt);
+        $this->assertStringNotContainsString('Unreviewed rumour', $prompt);
+        $this->assertSame(2, ForceCandidate::where('status', 'proposed')->count());
+        $this->assertSame('completed', AiGenerationRun::sole()->status);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.forces.index', $project))
+            ->assertInertia(fn ($page) => $page
+                ->has('candidates', 2)
+                ->where('candidates.0.keyword', 'Battery Swap Network')
+                ->where('candidates.0.dimension', $this->technology->name)
+                ->has('candidates.0.signals', 2)
+                ->where('candidateStatus', 'completed'));
+
+        $battery = ForceCandidate::where('keyword', 'Battery Swap Network')->sole();
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.candidates.accept', [$project, $battery]))->assertSessionHasNoErrors();
+
+        $force = DrivingForce::where('keyword', 'Battery Swap Network')->sole();
+        $this->assertSame(['PENDING', $this->technology->id, $this->manager->id], [$force->status, $force->dimension_id, $force->created_by]);
+        $this->assertEqualsCanonicalizing([$swap->id, $fleet->id], $force->supporting_signals()->pluck('signals.id')->all());
+        $this->assertSame('included', $this->link($project, $force)->inclusion_status);
+        $this->assertSame(['accepted', $force->id], [$battery->fresh()->status, $battery->fresh()->driving_force_id]);
+
+        $fleetCandidate = ForceCandidate::where('keyword', 'Fleet Electrification')->sole();
+        $this->actingAs($this->manager)->delete(route('scenario-planning.forces.candidates.reject', [$project, $fleetCandidate]))->assertSessionHasNoErrors();
+        $this->assertSame('rejected', $fleetCandidate->fresh()->status);
+        $this->assertSame(0, DrivingForce::where('keyword', 'Fleet Electrification')->count());
+        $this->actingAs($this->viewer)->get(route('scenario-planning.forces.index', $project))->assertInertia(fn ($page) => $page->has('candidates', 0));
+    }
+
+    public function test_candidate_forces_with_unknown_refs_or_long_keywords_are_rejected_and_rules_apply(): void
+    {
+        $draft = $this->project(confirmed: false);
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.suggest', $draft))->assertSessionHasErrors('ai');
+
+        $project = $this->project(name: 'Lain');
+        $this->fakeLlm();
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.suggest', $project))->assertSessionHasErrors('ai');
+
+        $this->signal('Battery swap stations open in Jakarta');
+        $this->actingAs($this->viewer)->post(route('scenario-planning.forces.suggest', $project))->assertForbidden();
+
+        $this->fakeLlm()->respond(['candidates' => [$this->candidate('Battery Swap Network', ['S7'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.suggest', $project))->assertSessionHasNoErrors();
+        $this->assertSame(0, ForceCandidate::count());
+        $this->assertSame('rejected', AiGenerationRun::latest('id')->first()->status);
+        $this->actingAs($this->manager)->get(route('scenario-planning.forces.index', $project))
+            ->assertInertia(fn ($page) => $page->where('candidateStatus', 'failed')->where('candidateError', fn ($error) => str_contains((string) $error, 'S7')));
+
+        $this->fakeLlm()->respond(['candidates' => [$this->candidate('A Very Long Candidate Keyword', ['S1'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.suggest', $project))->assertSessionHasNoErrors();
+        $this->assertSame(0, ForceCandidate::count());
     }
 }

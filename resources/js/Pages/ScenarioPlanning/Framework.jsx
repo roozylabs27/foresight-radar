@@ -6,6 +6,7 @@ import ConfirmDialog from "@/Components/ConfirmDialog";
 import Panel from "@/Components/Panel";
 import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import FrameworkMatrix from "@/Components/ScenarioPlanning/FrameworkMatrix";
+import FrameworkSuggestion from "@/Components/ScenarioPlanning/FrameworkSuggestion";
 import PolesDialog from "@/Components/ScenarioPlanning/PolesDialog";
 import QuadrantDialog from "@/Components/ScenarioPlanning/QuadrantDialog";
 import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
@@ -14,7 +15,7 @@ import { Button } from "@/Components/ui/button";
 import { useScenarioFramework } from "@/hooks/use-scenario-framework";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
-/** Step 4: the 2x2 framework on the two approved critical uncertainties, and gate G5 (roadmap R0.5). */
+/** Step 4: the 2x2 framework on the two approved critical uncertainties, and gate G5 (roadmap R0.5), with AI pole and name suggestions (R2.5). */
 export default function Framework({ auth, title, project, steps, framework, axesApproved, canManage, errors = {} }) {
     const actions = useScenarioFramework(project.id);
     const [editingPoles, setEditingPoles] = useState(false);
@@ -48,6 +49,17 @@ export default function Framework({ auth, title, project, steps, framework, axes
                 >
                     <StaleBanner project={project} canManage={canManage} />
                     {errors.framework && <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{errors.framework}</p>}
+                    {framework && !approved && (
+                        <FrameworkSuggestion
+                            framework={framework}
+                            canManage={editable}
+                            busy={actions.busy}
+                            validationError={errors.ai}
+                            onSuggest={actions.suggest}
+                            onAccept={actions.acceptSuggestion}
+                            onReject={actions.rejectSuggestion}
+                        />
+                    )}
                     {framework ? (
                         <FrameworkMatrix axes={framework.axes} quadrants={framework.quadrants} onEdit={editable ? setQuadrant : undefined} />
                     ) : !axesApproved ? (

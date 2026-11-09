@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProjectDrivingForceRequest;
+use App\Models\ForceCandidate;
 use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioPlanningProject;
+use App\Services\ForceCandidateService;
 use App\Services\ProjectDrivingForceService;
 use App\Services\ScenarioPlanningProjectService;
 use Illuminate\Http\RedirectResponse;
@@ -33,8 +35,39 @@ class ProjectDrivingForceController extends Controller
             'forces' => $this->forces->list($project),
             'library' => $this->forces->library($project),
             'coverage' => $this->forces->coverage($project),
+            'candidates' => app(ForceCandidateService::class)->proposed($project),
+            'candidateStatus' => $project->force_suggestion_status,
+            'candidateError' => $project->force_suggestion_error,
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
         ]);
+    }
+
+    /** Roadmap R2.4: queue AI candidate forces from accepted signals. */
+    public function suggest(Request $request, ScenarioPlanningProject $project, ForceCandidateService $candidates): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $candidates->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang menyusun usulan driving force. Halaman ini diperbarui otomatis.');
+    }
+
+    public function acceptCandidate(Request $request, ScenarioPlanningProject $project, ForceCandidate $candidate, ForceCandidateService $candidates): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $force = $candidates->accept($candidate, $request->user());
+
+        return back()->with('success', "{$force->keyword} ditambahkan ke latihan dan pustaka (menunggu persetujuan).");
+    }
+
+    public function rejectCandidate(Request $request, ScenarioPlanningProject $project, ForceCandidate $candidate, ForceCandidateService $candidates): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $candidates->reject($candidate, $request->user());
+
+        return back()->with('success', 'Usulan dibuang.');
     }
 
     public function store(ProjectDrivingForceRequest $request, ScenarioPlanningProject $project): RedirectResponse

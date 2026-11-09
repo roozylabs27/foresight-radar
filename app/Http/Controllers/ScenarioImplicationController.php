@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
+use App\Services\ImplicationSuggestionService;
 use App\Services\ScenarioImplicationService;
 use App\Services\ScenarioPlanningProjectService;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +38,29 @@ class ScenarioImplicationController extends Controller
             'quadrants' => $framework ? $this->implications->quadrants($framework) : [],
             'forces' => $this->implications->forces($project),
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
+            'implicationStatus' => $project->implication_suggestion_status,
+            'implicationError' => $project->implication_suggestion_error,
         ]);
+    }
+
+    /** Roadmap R2.6: queue AI drafts of opportunities and challenges. */
+    public function suggest(Request $request, ScenarioPlanningProject $project, ImplicationSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang menyusun draf peluang dan tantangan. Halaman ini diperbarui otomatis.');
+    }
+
+    public function accept(Request $request, ScenarioPlanningProject $project, ScenarioImplication $implication, ImplicationSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+        $this->ensureBelongs($project, $implication);
+
+        $suggestions->accept($implication, $request->user());
+
+        return back()->with('success', 'Draf diterima.');
     }
 
     public function store(Request $request, ScenarioPlanningProject $project, ScenarioQuadrant $quadrant): RedirectResponse

@@ -7,15 +7,16 @@ import { Button } from "@/Components/ui/button";
 const PENDING = ["queued", "processing"];
 
 /**
- * Asks AI for score suggestions on step 3 (roadmap R2.4) and shows the job state. While the job
- * runs the page reloads its forces every few seconds, so suggestions appear without a refresh.
+ * Starts an AI assist job (roadmap R2.4: score suggestions on step 3, candidate forces on step 2)
+ * and shows its state. While the job runs the page reloads `reloadOnly` every few seconds, so the
+ * proposals appear without a refresh.
  */
-export default function SuggestionControl({ status, error, canManage, disabled, busy, onSuggest }) {
+export default function SuggestionControl({ status, error, validationError, canManage, disabled, busy, onSuggest, label = "Minta saran skor AI", pendingLabel = "AI sedang menyiapkan saran…", reloadOnly = ["forces", "suggestionStatus", "suggestionError"] }) {
     const pending = PENDING.includes(status);
 
     useEffect(() => {
         if (!pending) return undefined;
-        const timer = setInterval(() => router.reload({ only: ["forces", "suggestionStatus", "suggestionError"] }), 5000);
+        const timer = setInterval(() => router.reload({ only: reloadOnly }), 5000);
         return () => clearInterval(timer);
     }, [pending]);
 
@@ -24,14 +25,14 @@ export default function SuggestionControl({ status, error, canManage, disabled, 
             {canManage && (
                 <Button size="sm" variant="outline" className="self-start" disabled={disabled || pending || busy} onClick={onSuggest}>
                     {pending ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <BotIcon aria-hidden="true" />}
-                    {pending ? "AI sedang menyiapkan saran…" : "Minta saran skor AI"}
+                    {pending ? pendingLabel : label}
                 </Button>
             )}
-            {!canManage && pending && <p className="m-0 text-xs text-muted-foreground">AI sedang menyiapkan saran skor…</p>}
-            {status === "failed" && error && (
+            {!canManage && pending && <p className="m-0 text-xs text-muted-foreground">{pendingLabel}</p>}
+            {(validationError || (status === "failed" && error)) && (
                 <p role="alert" className="m-0 flex items-start gap-1.5 rounded-md bg-danger-soft p-2 text-xs text-danger">
                     <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                    {error}
+                    {validationError || error}
                 </p>
             )}
         </div>

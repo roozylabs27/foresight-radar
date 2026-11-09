@@ -6,6 +6,7 @@ import ConfirmDialog from "@/Components/ConfirmDialog";
 import Panel from "@/Components/Panel";
 import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import AddForcesDialog from "@/Components/ScenarioPlanning/AddForcesDialog";
+import CandidateForces from "@/Components/ScenarioPlanning/CandidateForces";
 import CoverageChips from "@/Components/ScenarioPlanning/CoverageChips";
 import EditForceDialog from "@/Components/ScenarioPlanning/EditForceDialog";
 import ProjectForceList from "@/Components/ScenarioPlanning/ProjectForceList";
@@ -14,8 +15,8 @@ import { Button } from "@/Components/ui/button";
 import { useProjectForces } from "@/hooks/use-project-forces";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
-/** Step 2 of an exercise: its driving force list and gate G2 (roadmap R0.2). */
-export default function DrivingForces({ auth, title, project, steps, forces, library, coverage, canManage, errors = {} }) {
+/** Step 2 of an exercise: its driving force list and gate G2 (roadmap R0.2), with AI candidate forces (R2.4). */
+export default function DrivingForces({ auth, title, project, steps, forces, library, coverage, candidates, candidateStatus, candidateError, canManage, errors = {} }) {
     const actions = useProjectForces(project.id);
     const [adding, setAdding] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -81,13 +82,26 @@ export default function DrivingForces({ auth, title, project, steps, forces, lib
                             <p className="m-0 text-sm text-muted-foreground">Menunggu koordinator menyepakati daftar.</p>
                         )}
                     </Panel>
+                    <CandidateForces
+                        candidates={candidates}
+                        status={candidateStatus}
+                        error={candidateError}
+                        validationError={errors.ai}
+                        canManage={canManage}
+                        locked={locked}
+                        agreed={Boolean(project.forces_confirmed_at)}
+                        busy={actions.busy}
+                        onSuggest={actions.suggest}
+                        onAccept={actions.acceptCandidate}
+                        onReject={actions.rejectCandidate}
+                    />
                     <Panel title="Cakupan kategori" description="Jumlah driving force yang disertakan per kategori. Kategori kosong ditandai.">
                         <CoverageChips coverage={coverage} />
                     </Panel>
                 </div>
             </main>
 
-            <AddForcesDialog open={adding} onOpenChange={setAdding} library={library} loading={actions.busy} onAdd={actions.add} />
+            <AddForcesDialog open={adding} onOpenChange={setAdding} library={library} loading={actions.busy} agreed={Boolean(project.forces_confirmed_at)} onAdd={actions.add} />
             <EditForceDialog link={editing} onOpenChange={(open) => !open && setEditing(null)} loading={actions.busy} onSave={(values) => actions.update(editing.id, values)} />
         </AuthenticatedLayout>
     );

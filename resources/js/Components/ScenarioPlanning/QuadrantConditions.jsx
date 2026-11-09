@@ -1,18 +1,20 @@
-import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, CheckIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
+import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import CommentButton from "@/Components/ScenarioPlanning/CommentButton";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { CONDITION_KINDS } from "@/domain/scenarioPlanning";
 
 /**
- * One quadrant's conditions in order, with the predetermined elements that hold in it. Actions
- * render only when the handlers are passed (`canManage`).
+ * One quadrant's conditions in order, with the predetermined elements that hold in it. AI drafts
+ * (roadmap R2.5) are marked and count only once accepted. Actions render only with `canManage`.
  */
-export default function QuadrantConditions({ quadrant, axes, predetermined, minimum, canManage, onAdd, onEdit, onRemove, onMove }) {
-    const enough = quadrant.conditions.length >= minimum;
+export default function QuadrantConditions({ quadrant, axes, predetermined, minimum, canManage, onAdd, onEdit, onRemove, onMove, onAccept }) {
+    const accepted = quadrant.conditions.filter((condition) => condition.review_status !== "proposed").length;
+    const enough = accepted >= minimum;
     const axisName = (letter) => axes.find((axis) => axis.axis === letter)?.name ?? letter;
 
     return (
@@ -21,7 +23,7 @@ export default function QuadrantConditions({ quadrant, axes, predetermined, mini
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{quadrant.poles.join(" × ")}</span>
                     <span className={statusBadge({ tone: enough ? "approved" : "pending" })}>
-                        {quadrant.conditions.length} kondisi{enough ? "" : ` · min. ${minimum}`}
+                        {accepted} kondisi{enough ? "" : ` · min. ${minimum}`}
                     </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -36,12 +38,20 @@ export default function QuadrantConditions({ quadrant, axes, predetermined, mini
             ) : (
                 <ol className="m-0 flex list-none flex-col gap-2 p-0">
                     {quadrant.conditions.map((condition, index) => (
-                        <li key={condition.id} className="flex items-start gap-2 rounded-md bg-muted/40 p-2">
+                        <li key={condition.id} className={condition.review_status === "proposed" ? "flex items-start gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 p-2" : "flex items-start gap-2 rounded-md bg-muted/40 p-2"}>
                             <div className="flex min-w-0 flex-1 flex-col gap-1">
                                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                                     <span className="font-medium text-foreground">{CONDITION_KINDS[condition.kind]?.label}</span>
                                     {condition.axis && <span>· Sumbu {condition.axis} ({axisName(condition.axis)})</span>}
                                     {condition.force && <span>· {condition.force.keyword}</span>}
+                                    {condition.review_status === "proposed" && <ProvenanceBadge origin={condition.origin} review="proposed" />}
+                                    {condition.similar_to?.length > 0 && (
+                                        <HintTooltip content="Sebagian besar katanya sama dengan kondisi di kuadran lain. Skenario yang mirip sulit dibedakan.">
+                                            <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
+                                                Mirip dengan {condition.similar_to.join(", ")}
+                                            </span>
+                                        </HintTooltip>
+                                    )}
                                     {condition.shared && (
                                         <HintTooltip content="Teks yang sama ada di keempat kuadran. Mungkin ini elemen predetermined, bukan pembeda skenario.">
                                             <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
@@ -54,6 +64,11 @@ export default function QuadrantConditions({ quadrant, axes, predetermined, mini
                             </div>
                             {canManage && (
                                 <div className="flex shrink-0 items-center">
+                                    {condition.review_status === "proposed" && (
+                                        <Button size="icon-xs" variant="ghost" aria-label="Terima draf kondisi" className="text-success" onClick={() => onAccept(condition.id)}>
+                                            <CheckIcon aria-hidden="true" />
+                                        </Button>
+                                    )}
                                     <Button size="icon-xs" variant="ghost" aria-label="Naikkan" disabled={index === 0} onClick={() => onMove(condition.id, "up")}>
                                         <ArrowUpIcon aria-hidden="true" />
                                     </Button>

@@ -9,6 +9,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\User;
 use App\Support\Provenance;
+use App\Support\TextSimilarity;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -73,6 +74,8 @@ class ScenarioImplicationService
                 ->flip()
             : collect();
 
+        $similar = $this->similarAcrossQuadrants($quadrants);
+
         return $quadrants->map(fn (ScenarioQuadrant $quadrant) => [
             'id' => $quadrant->uuid,
             'position' => $quadrant->position,
@@ -92,9 +95,38 @@ class ScenarioImplicationService
                 'review_status' => $item->review_status,
                 'forces' => $item->projectForces->map(fn ($link) => ['id' => $link->uuid, 'keyword' => $link->drivingForce?->keyword])->values()->all(),
                 'conditions' => $item->conditions->map(fn ($condition) => ['id' => $condition->uuid, 'text' => $condition->text])->values()->all(),
-                'generic' => $generic->has($normalize($item->title)),
+                'generic' => $generic->has($normalize($item->title)) || $similar->has($item->uuid),
+                'similar_to' => $similar->get($item->uuid, []),
             ])->values()->all(),
         ])->values()->all();
+    }
+
+    /**
+     * Roadmap R2.6: items whose title overlaps an item of another quadrant by at least
+     * TextSimilarity::THRESHOLD, keyed by item uuid, with the other quadrants' positions.
+     *
+     * @param  Collection<int, ScenarioQuadrant>  $quadrants
+     * @return Collection<string, non-empty-array<int, string>>
+     */
+    private function similarAcrossQuadrants(Collection $quadrants): Collection
+    {
+        $items = $quadrants->flatMap(fn (ScenarioQuadrant $quadrant) => $quadrant->implicationItems->map(fn (ScenarioImplication $item) => [
+            'id' => $item->uuid,
+            'position' => $quadrant->position,
+            'words' => TextSimilarity::words($item->title),
+        ]))->values();
+
+        $similar = [];
+        foreach ($items as $i => $a) {
+            foreach ($items->slice($i + 1) as $b) {
+                if ($a['position'] !== $b['position'] && TextSimilarity::jaccard($a['words'], $b['words']) >= TextSimilarity::THRESHOLD) {
+                    $similar[$a['id']][] = $b['position'];
+                    $similar[$b['id']][] = $a['position'];
+                }
+            }
+        }
+
+        return collect($similar)->map(fn ($positions) => array_values(array_unique($positions)));
     }
 
     /** Included forces of the exercise an item may link to. */

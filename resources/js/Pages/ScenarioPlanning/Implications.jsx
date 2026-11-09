@@ -7,6 +7,7 @@ import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ImplicationDialog from "@/Components/ScenarioPlanning/ImplicationDialog";
 import QuadrantImplications from "@/Components/ScenarioPlanning/QuadrantImplications";
 import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
+import SuggestionControl from "@/Components/ScenarioPlanning/SuggestionControl";
 import { statusBadge } from "@/Components/StatusBadge";
 import { useScenarioImplications } from "@/hooks/use-scenario-implications";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
@@ -17,7 +18,7 @@ const LAYOUT = ["LH", "HH", "LL", "HL"];
 const isComplete = (quadrant) => ["opportunity", "challenge"].every((type) => quadrant.items.some((item) => item.type === type));
 
 /** Step 7: opportunities and challenges of each future (roadmap R1.7). */
-export default function Implications({ auth, title, project, steps, framework, quadrants, forces, canManage, errors = {} }) {
+export default function Implications({ auth, title, project, steps, framework, quadrants, forces, canManage, implicationStatus, implicationError, errors = {} }) {
     const actions = useScenarioImplications(project.id);
     const [target, setTarget] = useState(null);
     const ready = framework?.approved;
@@ -45,18 +46,32 @@ export default function Implications({ auth, title, project, steps, framework, q
                     {!ready ? (
                         <p className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">Setujui kerangka skenario (langkah 4) dulu sebelum menyusun peluang dan tantangan.</p>
                     ) : (
-                        <div className="grid gap-3 md:grid-cols-2">
-                            {LAYOUT.map((position) => byPosition[position] && (
-                                <QuadrantImplications
-                                    key={position}
-                                    quadrant={byPosition[position]}
-                                    canManage={editable}
-                                    onAdd={(prefill) => setTarget({ quadrant: byPosition[position], item: null, prefill })}
-                                    onEdit={(item) => setTarget({ quadrant: byPosition[position], item, prefill: null })}
-                                    onRemove={actions.remove}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            <SuggestionControl
+                                status={implicationStatus}
+                                error={implicationError}
+                                validationError={errors.ai}
+                                canManage={editable}
+                                busy={actions.busy}
+                                onSuggest={actions.suggest}
+                                label="Minta draf peluang dan tantangan AI"
+                                pendingLabel="AI sedang menyusun draf peluang dan tantangan…"
+                                reloadOnly={["quadrants", "implicationStatus", "implicationError"]}
+                            />
+                            <div className="grid gap-3 md:grid-cols-2">
+                                {LAYOUT.map((position) => byPosition[position] && (
+                                    <QuadrantImplications
+                                        key={position}
+                                        quadrant={byPosition[position]}
+                                        canManage={editable}
+                                        onAdd={(prefill) => setTarget({ quadrant: byPosition[position], item: null, prefill })}
+                                        onEdit={(item) => setTarget({ quadrant: byPosition[position], item, prefill: null })}
+                                        onRemove={actions.remove}
+                                        onAccept={actions.accept}
+                                    />
+                                ))}
+                            </div>
+                        </>
                     )}
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <Link href={route("scenario-planning.conditions.index", project.id)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">

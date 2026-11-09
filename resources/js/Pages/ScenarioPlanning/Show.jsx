@@ -22,7 +22,7 @@ const FORM_ID = "scenario-planning-project-edit-form";
 const visit = (method, url) => new Promise((resolve) => router.visit(url, { method, preserveScroll: true, onFinish: resolve }));
 
 /** Workspace of one scenario planning exercise: its focal issue (step 1) and the nine steps. */
-export default function Show({ auth, title, project, steps, nextAction, lastGate, canManage, owners, participants, decisions }) {
+export default function Show({ auth, title, project, steps, nextAction, lastGate, canManage, owners = [], participants = [], decisions = [] }) {
     const dialog = useProjectDialog({ method: "put", url: route("scenario-planning.update", project.id) });
     const status = PROJECT_STATUSES[project.status];
 

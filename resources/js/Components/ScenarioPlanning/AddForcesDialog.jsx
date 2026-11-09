@@ -8,7 +8,7 @@ import { filterLibrary } from "@/domain/scenarioPlanning";
  * Pick driving forces from the organization's library (any month) to add to
  * the exercise. `onAdd(ids)` resolves when the request finishes.
  */
-export default function AddForcesDialog({ open, onOpenChange, library, loading, onAdd }) {
+export default function AddForcesDialog({ open, onOpenChange, library, loading, agreed, onAdd }) {
     const [query, setQuery] = useState("");
     const [selected, setSelected] = useState([]);
     const visible = useMemo(() => filterLibrary(library, query), [library, query]);
@@ -27,7 +27,9 @@ export default function AddForcesDialog({ open, onOpenChange, library, loading, 
     return (
         <FormDialog
             title="Tambah dari pustaka driving force"
-            description="Pilih driving force organisasi yang memengaruhi focal issue ini. Driving force dari bulan mana pun ditampilkan."
+            description={agreed
+                ? "Daftar sudah disepakati: menambah driving force membatalkan kesepakatan daftar (G2) dan semua kesepakatan sesudahnya (skor, critical uncertainty, kerangka)."
+                : "Pilih driving force organisasi yang memengaruhi focal issue ini. Driving force dari bulan mana pun ditampilkan."}
             open={open}
             onOpenChange={onOpenChange}
             onCancel={close}

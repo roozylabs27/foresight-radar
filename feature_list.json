@@ -665,6 +665,89 @@
         "The existing \"keep\" action clears the flag"
       ],
       "verification_evidence": "2026-11-08: 1 new test in EarlyWarningIndicatorTest (RED: framework not flagged); indicator + staleness tests 19 passed; Pint PASS; Larastan clean; browser: crossing observation flagged 4 quadrants, overview banner showed the reason; dev data restored."
+    },
+    {
+      "id": "FEAT-048",
+      "name": "AI Score Suggestions",
+      "description": "A queued AI call suggests impact and uncertainty for every included force of an exercise, citing only the signals offered for that force; the coordinator accepts or discards each (roadmap R2.4, slice 1).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Suggestions cite only signal refs offered for their force; any other ref rejects the run",
+        "Suggestions are separate rows; the consensus changes only when the coordinator accepts",
+        "Accepting goes through the normal scoring rules (G3 withdrawal, staleness) with origin ai",
+        "Every call is recorded in ai_generation_runs; failures show on step 3"
+      ],
+      "verification_evidence": "2026-11-08: 2 new tests in ProjectAssessmentTest with FakeLlmClient (RED on missing route); assessment tests 15 passed; Pint PASS; npm build OK; browser: button renders, a suggestion row inserted by SQL showed scores, badge, rationale and cited signal, \"Buang\" removed it with the consensus unchanged. No real provider call made."
+    },
+    {
+      "id": "FEAT-049",
+      "name": "AI Candidate Forces",
+      "description": "A queued AI call groups accepted signals that no exercise force rests on into candidate driving forces; the coordinator accepts or discards each (roadmap R2.4, slice 2).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only accepted signals not linked to an exercise force are offered",
+        "Candidates cite only offered refs, have a 1–4 word keyword, ≤120-word description and a known category; otherwise the run is rejected",
+        "Accepting creates a PENDING library force, links its signals and adds it to the exercise",
+        "Rejecting records the reviewer and creates nothing"
+      ],
+      "verification_evidence": "2026-11-08: 2 new tests in ProjectDrivingForceTest with FakeLlmClient (RED on missing route); step 2 tests 12 passed; npm build OK; browser: panel, a candidate inserted by SQL with its signal, \"Buang\" set it rejected with reviewer and created no force; test row deleted. No real provider call made."
+    },
+    {
+      "id": "FEAT-050",
+      "name": "AI Condition Drafts",
+      "description": "A queued AI call drafts conditions per quadrant of an approved framework; drafts are proposed conditions accepted or discarded one by one (roadmap R2.5, slice 1).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Drafts reference only the forces offered (non-axis included forces) and name an axis for pole expressions; otherwise the run is rejected",
+        "Drafts are stored with origin ai and review status proposed and do not count for step 5 until accepted",
+        "A new run replaces only the AI drafts still waiting; accepted and manual conditions stay",
+        "Accepting turns a draft into an ordinary condition; discarding deletes it"
+      ],
+      "verification_evidence": "2026-11-08: 2 new tests in ScenarioConditionTest with FakeLlmClient (RED on missing route); condition tests 10 passed; Pint fixed 1 file; Larastan clean after one fix; npm build OK. Browser check of the drafts was not possible: the dev exercise framework had been withdrawn to draft (see PROGRESS session 54)."
+    },
+    {
+      "id": "FEAT-051",
+      "name": "Condition Distinctness Check",
+      "description": "Step 5 lists conditions in different quadrants that share most of their words, so the team can make the futures distinct (roadmap R2.5, slice 2; rule-based, no AI).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Pairs of conditions in different quadrants with word overlap (Jaccard, common words removed) of at least 0.6 are listed, most alike first",
+        "Same-quadrant pairs and texts shared by all four quadrants are not listed",
+        "Each listed condition shows which quadrants it resembles"
+      ],
+      "verification_evidence": "2026-11-08: 1 new test in ScenarioConditionTest (RED: overlaps prop missing); condition tests 11 passed; npm build OK (61 min on a loaded machine). Not seen in the browser: the dev exercise framework is in draft, so step 5 is locked."
+    },
+    {
+      "id": "FEAT-052",
+      "name": "AI Pole and Quadrant Name Suggestions",
+      "description": "A queued AI call suggests pole labels for both axes and names with summaries for the four quadrants of a draft framework; the coordinator applies or discards it (roadmap R2.5, slice 3).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only a saved, not yet approved framework takes suggestions",
+        "Poles must differ within an axis and the four quadrant names must be distinct and short; otherwise the run is rejected",
+        "Nothing changes until applied; applying uses the normal pole update (narratives flagged) and renames the quadrants",
+        "Discarding drops the suggestion"
+      ],
+      "verification_evidence": "2026-11-09: 2 new tests in ScenarioFrameworkTest with FakeLlmClient (RED on missing route); framework tests 14 passed; Pint PASS; Larastan clean; npm build OK (7m 8s). Not seen in the browser: the session kept returning to the login page while the user was using the same tab; the test suggestion set by SQL was removed."
+    },
+    {
+      "id": "FEAT-053",
+      "name": "AI Implication Drafts and Generic Check",
+      "description": "A queued AI call drafts opportunities and challenges per quadrant, each citing accepted conditions of its own quadrant; items alike across quadrants are flagged as generic (roadmap R2.6, slice 1).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Every AI item cites at least one accepted condition of its own quadrant; otherwise the run is rejected",
+        "Drafts are proposed items linked to their conditions and count for step 7 only once accepted",
+        "A new run replaces only the AI drafts still waiting",
+        "Items whose titles overlap an item of another quadrant by at least 60% (or appear in all four) are flagged"
+      ],
+      "verification_evidence": "2026-11-09: 3 new tests in ScenarioImplicationTest with FakeLlmClient (RED on missing route); implication + condition tests 20 passed (condition tests confirm the shared TextSimilarity refactor). Browser check not possible: the dev framework is in draft, so step 7 is locked."
     }
   ]
 }
