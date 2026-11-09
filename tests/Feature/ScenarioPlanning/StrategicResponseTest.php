@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Models\AiGenerationRun;
 use App\Models\Comment;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
@@ -484,5 +485,68 @@ class StrategicResponseTest extends TestCase
 
         $this->actingAs($this->manager)->delete(route('scenario-planning.comments.destroy', [$this->project, $comment]))->assertSessionHasNoErrors();
         $this->assertSame(0, Comment::count());
+    }
+
+    private function implication(string $position, string $type, string $title): ScenarioImplication
+    {
+        $this->actingAs($this->manager)->post(route('scenario-planning.implications.store', [$this->project, $this->quadrant($position)]), ['type' => $type, 'title' => $title])->assertSessionHasNoErrors();
+
+        return ScenarioImplication::where('title', $title)->sole();
+    }
+
+    private function draftResponse(string $title, array $refs, array $fit = ['HH' => 'applies', 'HL' => 'applies', 'LH' => 'partial', 'LL' => 'applies']): array
+    {
+        return ['title' => $title, 'description' => "{$title}.", 'rationale' => 'Menjawab tantangan di beberapa skenario.', 'initiatives' => "Inisiatif satu\nInisiatif dua", 'priority' => 2, 'fit' => $fit, 'implication_refs' => $refs];
+    }
+
+    /** Roadmap R2.6 (response-v1): AI proposes responses citing implications, with fit per quadrant; they stay proposed until G7. */
+    public function test_ai_proposes_responses_citing_implications_that_wait_for_approval(): void
+    {
+        $this->readyFramework();
+        $price = $this->implication('HH', 'challenge', 'Perang harga produsen baru');
+        $this->implication('LL', 'opportunity', 'Pasar mobil bekas tumbuh');
+        $fake = $this->fakeLlm();
+        $fake->respond(['responses' => [$this->draftResponse('Diversifikasi rantai pasok baterai', ['I1'])]]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasNoErrors();
+
+        $this->assertSame('strategic_responses', $fake->lastRequest()->purpose);
+        $this->assertStringContainsString('Perang harga produsen baru', $fake->lastRequest()->user);
+        $response = StrategicResponse::sole();
+        $this->assertSame(['ai', 'proposed', 2], [$response->origin, $response->status, $response->priority]);
+        $this->assertSame([$price->id], $response->implications()->pluck('scenario_implications.id')->all());
+        $this->assertSame(4, $response->fits()->count());
+        $this->assertSame('completed', AiGenerationRun::sole()->status);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.responses.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('responses.0.origin', 'ai')->where('responses.0.status', 'proposed')->where('responseStatus', 'completed'));
+
+        $this->action($response, 'approve')->assertSessionHasNoErrors();
+        $this->assertSame('approved', $response->fresh()->status);
+
+        // A new run replaces only AI responses still proposed; the approved one stays.
+        $fake->respond(['responses' => [$this->draftResponse('Kemitraan daur ulang baterai', ['I2'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertEqualsCanonicalizing(['Diversifikasi rantai pasok baterai', 'Kemitraan daur ulang baterai'], StrategicResponse::pluck('title')->all());
+        $fake->respond(['responses' => [$this->draftResponse('Satu lagi', ['I2'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertEqualsCanonicalizing(['Diversifikasi rantai pasok baterai', 'Satu lagi'], StrategicResponse::pluck('title')->all());
+    }
+
+    public function test_ai_response_proposals_are_checked_and_follow_the_rules(): void
+    {
+        $this->readyFramework();
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasErrors('ai');
+        $this->implication('HH', 'challenge', 'Perang harga produsen baru');
+        $this->actingAs($this->viewer)->post(route('scenario-planning.responses.suggest', $this->project))->assertForbidden();
+
+        $this->fakeLlm()->respond(['responses' => [$this->draftResponse('Rujukan salah', ['I9'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, StrategicResponse::count());
+        $this->assertSame('rejected', AiGenerationRun::sole()->status);
+
+        $this->fakeLlm()->respond(['responses' => [$this->draftResponse('Kecocokan kurang', ['I1'], ['HH' => 'applies'])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasNoErrors();
+        $this->assertSame(0, StrategicResponse::count());
     }
 }

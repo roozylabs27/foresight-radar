@@ -748,6 +748,46 @@
         "Items whose titles overlap an item of another quadrant by at least 60% (or appear in all four) are flagged"
       ],
       "verification_evidence": "2026-11-09: 3 new tests in ScenarioImplicationTest with FakeLlmClient (RED on missing route); implication + condition tests 20 passed (condition tests confirm the shared TextSimilarity refactor). Browser check not possible: the dev framework is in draft, so step 7 is locked."
+    },
+    {
+      "id": "FEAT-054",
+      "name": "AI Strategic Response Proposals",
+      "description": "A queued AI call proposes strategic responses citing accepted opportunities and challenges, with fit per quadrant; they are proposed responses approved or rejected through gate G7 (roadmap R2.6, slice 2).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Every proposal cites at least one offered implication and rates fit in all four quadrants; otherwise the run is rejected",
+        "Proposals are responses with origin ai and status proposed, linked to their implications and fits",
+        "They are approved through the normal G7 rules; a new run replaces only AI responses still proposed"
+      ],
+      "verification_evidence": "2026-11-09: 2 new tests in StrategicResponseTest with FakeLlmClient (RED on missing route); response tests 15 passed. Browser check not possible: the dev framework is in draft, so step 8 is locked."
+    },
+    {
+      "id": "FEAT-055",
+      "name": "AI Indicator Proposals",
+      "description": "A queued AI call proposes early warning indicators with an expected direction per quadrant that tell at least two futures apart (roadmap R2.6, slice 3).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Each proposal gives a valid direction in all four quadrants and moves differently in at least two; otherwise the run is rejected",
+        "Proposals are indicators with origin ai and review status proposed, linked to the axis uncertainty they track",
+        "Accepting keeps the proposal as is; a new run replaces only AI proposals still waiting"
+      ],
+      "verification_evidence": "2026-11-09: 2 new tests in EarlyWarningIndicatorTest with FakeLlmClient (RED on missing route); indicator tests 14 passed. Browser check not possible: the dev framework is in draft, so step 9 proposals cannot be requested."
+    },
+    {
+      "id": "FEAT-056",
+      "name": "AI Signal-to-Indicator Matching",
+      "description": "A queued AI call matches accepted signals that no observation of the exercise cites yet to its active indicators; matches are observations awaiting confirmation (roadmap R2.6, slice 4).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only accepted signals not yet cited by an observation of the exercise are offered",
+        "Matches cite only offered indicator and signal labels; otherwise the run is rejected",
+        "Matches are observations with origin ai and review status proposed that do not count for relevance until confirmed",
+        "Confirming makes the confirmer the recorder; discarding deletes the observation"
+      ],
+      "verification_evidence": "2026-11-09: 2 new tests in EarlyWarningIndicatorTest with FakeLlmClient (RED on missing route); indicator tests 16 passed. Browser check not possible: the dev framework is in draft, so step 9 assists cannot run."
     }
   ]
 }

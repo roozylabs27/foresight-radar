@@ -423,6 +423,9 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 4 AI signal matching | **PASS (partial)** | Pint 424 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 16 passed (382 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (1m 8s); migration `2026_11_09_000005` applied to the dev DB; browser check blocked (framework in draft) |
+| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 3 AI indicators | **PASS (partial)** | Pint 420 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 14 passed (330 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (3m 52s); migration `2026_11_09_000004` applied to the dev DB; browser check blocked (framework in draft) |
+| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 2 AI responses | **PASS (partial)** | Pint PASS (1 file fixed); Larastan L5 clean; `StrategicResponseTest` 15 passed (364 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (1m 43s); migration `2026_11_09_000003` applied to the dev DB; browser check blocked (step 8 locked) |
 | 2026-11-09 (uncommitted) | Roadmap R2.6 slice 1 AI implications + generic check | **PASS (partial)** | Pint 412 files PASS; Larastan L5 clean; implication + condition tests 20 passed (418 assertions); full PHPUnit suite not run; `npm run build` PASS (2m); migration `2026_11_09_000002` applied to the dev DB; browser check blocked (step 7 locked) |
 | 2026-11-09 (uncommitted) | Roadmap R2.5 slice 3 AI pole and name suggestions | **PASS** | Pint 407 files PASS; Larastan L5 clean; `ScenarioFrameworkTest` 14 passed (216 assertions, FakeLlmClient); full PHPUnit 524 passed (5,481 assertions, 2795.41s) covering all R2.5 slices, dev DB still 38 users afterwards; `npm run build` PASS (7m 8s); migration `2026_11_09_000001` applied to the dev DB; browser check not completed (login kept resetting) |
 | 2026-11-08 (uncommitted) | Roadmap R2.5 slice 2 distinctness check | **PASS (partial)** | Pint PASS; Larastan L5 clean after fixing `groupBy(0)` (CI reported it too; now a callback); `ScenarioConditionTest` 11 passed (233 assertions); full PHPUnit suite not run; `npm run build` PASS (61m 30s, loaded machine); no migration; browser check blocked (step 5 locked) |
@@ -464,6 +467,32 @@
 ---
 
 ## Session Log
+
+### 2026-11-09 — Session 60 (R2.6 slice 4: AI signal matching; R2.6 done)
+
+- **RED → GREEN:** 2 new tests in `EarlyWarningIndicatorTest` with `FakeLlmClient` (only accepted, not yet cited signals are offered; a match becomes an `ai` / `proposed` observation citing its signal; relevance ignores it until confirmed, then counts it; confirming sets the recorder; rules: no indicators, no new signals, viewer forbidden, unknown signal ref rejects the run) failed on the missing route; then all 16 indicator tests passed (382 assertions).
+- **Backend:** migration `2026_11_09_000005_add_review_to_indicator_observations` (`origin`, `review_status` defaulting to human / accepted; project `match_suggestion_status` / `_error`); prompt `SignalMatchPrompt` (`signal-match-v1`); `SignalMatchService` (request, generate with validation, confirm); job `MatchSignals`; routes `indicators.match`, `indicators.observations.confirm`; relevance counts accepted observations only; register payload shows origin and review state.
+- **Frontend:** `IndicatorAiControls` (indicator proposals + signal matching, keeps the step 9 page under 150 lines); proposed observations show the AI badge and a confirm button in `IndicatorObservations`.
+- **Not checked in the browser:** the dev framework is in draft, so step 9 assists cannot run.
+- **Docs:** roadmap R2.6 done; matrix 9.9 complete (88/2/4/0; step 9 12/0/0/0); audit G19 and G22 updated (only the focal issue assist, R3.1, remains); `feature_list.json` FEAT-056.
+- **Next recommended action:** full suite for R2.6; then R2.7.
+
+### 2026-11-09 — Session 59 (R2.6 slice 3: AI indicator proposals)
+
+- **RED → GREEN:** 2 new tests in `EarlyWarningIndicatorTest` with `FakeLlmClient` (a proposal stored as `ai` / `proposed` with frequency, unit, the axis B uncertainty and four directions; prompt carries the axis names; page payload; accept; a new run replaces only waiting AI proposals; rules: approved framework, viewer forbidden, the same direction everywhere or an unknown frequency rejects the run) failed on the missing route; then all 14 indicator tests passed (330 assertions).
+- **Backend:** migration `2026_11_09_000004_add_indicator_suggestion_status`; prompt `ScenarioIndicatorPrompt` (`indicators-v1`); `IndicatorSuggestionService` (uses `EarlyWarningIndicatorService::discriminates`); job `SuggestIndicators`; routes `indicators.suggest`, `indicators.accept`.
+- **Frontend:** `SuggestionControl` on step 9; "Terima" on AI proposals in `IndicatorCard`.
+- **Docs:** roadmap R2.6 partial (signal matching next); no matrix row changes; `feature_list.json` FEAT-055.
+- **Next:** slice 4, AI signal-to-indicator matching as observation proposals.
+
+### 2026-11-09 — Session 58 (R2.6 slice 2: AI strategic response proposals)
+
+- **RED → GREEN:** 2 new tests in `StrategicResponseTest` with `FakeLlmClient` (a proposal stored as `ai` / `proposed` with priority, implication link and four fits, prompt carries implication titles, page payload, approval through G7 works, a new run replaces only proposed AI responses; rules: accepted implications required, viewer forbidden, unknown ref or incomplete fit rejects the run) failed on the missing route; then all 15 response tests passed (364 assertions).
+- **Backend:** migration `2026_11_09_000003_add_response_suggestion_status`; prompt `StrategicResponsePrompt` (`response-v1`, implications labelled I1…, fit object with all four positions); `ResponseSuggestionService`; job `SuggestResponses`; route `responses.suggest`; page props `responseStatus` / `responseError`. No separate accept: proposals go through the existing approve / reject (G7).
+- **Frontend:** `SuggestionControl` on step 8; `ResponseCard` already shows the AI badge via `ProvenanceBadge`.
+- **Not checked in the browser:** step 8 is locked while the dev framework is in draft.
+- **Docs:** roadmap R2.6 partial; matrix 8.9 complete (87/3/4/0; step 8 10/0/0/0); `feature_list.json` FEAT-054.
+- **Next:** slice 3, AI indicators (`indicators-v1`).
 
 ### 2026-11-09 — Session 57 (R2.6 slice 1: AI implication drafts and generic check)
 

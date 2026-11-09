@@ -19,6 +19,10 @@ export function useEarlyWarningIndicators(projectId) {
         busy,
         save: (values, indicatorId) => (indicatorId ? visit("put", url("update", indicatorId), values) : visit("post", url("store"), values)),
         remove: (indicatorId) => visit("delete", url("destroy", indicatorId)),
+        accept: (indicatorId) => visit("post", url("accept", indicatorId)),
+        suggest: () => visit("post", url("suggest")),
+        match: () => visit("post", url("match")),
+        confirmObservation: (indicatorId, observationId) => visit("post", route("scenario-planning.indicators.observations.confirm", [projectId, indicatorId, observationId])),
         record: (indicatorId, values) => visit("post", route("scenario-planning.indicators.observations.store", [projectId, indicatorId]), values),
         removeObservation: (indicatorId, observationId) => visit("delete", route("scenario-planning.indicators.observations.destroy", [projectId, indicatorId, observationId])),
     };

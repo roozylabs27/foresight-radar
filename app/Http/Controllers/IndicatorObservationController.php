@@ -6,6 +6,7 @@ use App\Models\EarlyWarningIndicator;
 use App\Models\IndicatorObservation;
 use App\Models\ScenarioPlanningProject;
 use App\Models\Signal;
+use App\Services\SignalMatchService;
 use App\Services\StalenessService;
 use App\Support\TenantRule;
 use Illuminate\Http\RedirectResponse;
@@ -58,6 +59,16 @@ class IndicatorObservationController extends Controller
         return back()->with('success', $observation->crossed_threshold
             ? 'Observasi dicatat. Ambang batas terlewati: kerangka dan skenario ditandai untuk ditinjau.'
             : 'Observasi dicatat.');
+    }
+
+    /** Roadmap R2.6: confirm an AI-matched observation; from now on it counts as the confirmer's. */
+    public function confirm(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, IndicatorObservation $observation, SignalMatchService $matches): RedirectResponse
+    {
+        abort_unless($project->acceptsInputFrom($request->user()), 403);
+
+        $matches->confirm($observation, $request->user());
+
+        return back()->with('success', 'Observasi dikonfirmasi.');
     }
 
     public function destroy(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, IndicatorObservation $observation): RedirectResponse

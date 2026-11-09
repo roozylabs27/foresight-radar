@@ -4,6 +4,7 @@ import { ArrowLeftIcon, CopyPlusIcon, PlusIcon, RadarIcon } from "lucide-react";
 
 import Panel from "@/Components/Panel";
 import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
+import IndicatorAiControls from "@/Components/ScenarioPlanning/IndicatorAiControls";
 import IndicatorCard from "@/Components/ScenarioPlanning/IndicatorCard";
 import IndicatorDialog from "@/Components/ScenarioPlanning/IndicatorDialog";
 import ObservationDialog from "@/Components/ScenarioPlanning/ObservationDialog";
@@ -14,7 +15,7 @@ import { useEarlyWarningIndicators } from "@/hooks/use-early-warning-indicators"
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 9: early warning indicator register with expected direction per scenario (roadmap R1.9), observations and relevance (R2.3). */
-export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, signals, canRecord, relevance, errors = {} }) {
+export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, signals, canRecord, relevance, indicatorStatus, indicatorError, matchStatus, matchError, errors = {} }) {
     const actions = useEarlyWarningIndicators(project.id);
     const [target, setTarget] = useState(null);
     const [observing, setObserving] = useState(null);
@@ -52,6 +53,20 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                     )}
                 >
                     {errors.indicators && <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{errors.indicators}</p>}
+                    {frameworkApproved && (
+                        <IndicatorAiControls
+                            indicators={indicators}
+                            canManage={editable}
+                            busy={actions.busy}
+                            validationError={errors.ai}
+                            indicatorStatus={indicatorStatus}
+                            indicatorError={indicatorError}
+                            matchStatus={matchStatus}
+                            matchError={matchError}
+                            onSuggest={actions.suggest}
+                            onMatch={actions.match}
+                        />
+                    )}
                     {!frameworkApproved ? (
                         <p className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">Setujui kerangka skenario (langkah 4) dulu sebelum menyusun indikator.</p>
                     ) : indicators.length === 0 ? (
@@ -66,10 +81,12 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                                     canManage={editable}
                                     onEdit={() => setTarget({ indicator, prefill: null })}
                                     onRemove={() => actions.remove(indicator.id)}
+                                    onAccept={() => actions.accept(indicator.id)}
                                     canRecord={canRecord}
                                     busy={actions.busy}
                                     onRecord={() => setObserving(indicator)}
                                     onRemoveObservation={(observationId) => actions.removeObservation(indicator.id, observationId)}
+                                    onConfirmObservation={(observationId) => actions.confirmObservation(indicator.id, observationId)}
                                 />
                             ))}
                         </div>

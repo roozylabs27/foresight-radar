@@ -1,15 +1,16 @@
 import { usePage } from "@inertiajs/react";
-import { PlusIcon, XIcon } from "lucide-react";
+import { CheckIcon, PlusIcon, XIcon } from "lucide-react";
 
+import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { INDICATOR_DIRECTIONS } from "@/domain/scenarioPlanning";
 
 /**
  * Latest observations of one indicator (roadmap R2.3). Anyone who may give input records; the
- * recorder or the coordinator removes an observation.
+ * recorder or the coordinator removes an observation. AI matches (R2.6) wait for confirmation.
  */
-export default function IndicatorObservations({ indicator, canRecord, canManage, busy, onRecord, onRemove }) {
+export default function IndicatorObservations({ indicator, canRecord, canManage, busy, onRecord, onRemove, onConfirm }) {
     const { auth } = usePage().props;
     const value = (row) => [row.value_numeric != null && `${row.value_numeric}${indicator.unit ? ` ${indicator.unit}` : ""}`, row.value_text].filter(Boolean).join(" · ");
 
@@ -39,6 +40,7 @@ export default function IndicatorObservations({ indicator, canRecord, canManage,
                                         {direction && <span title={direction.label}>{direction.short}</span>}
                                         <span>{value(row) || "–"}</span>
                                         {row.crossed_threshold && <span className={statusBadge({ tone: "rejected" })}>Melewati ambang</span>}
+                                        {row.review_status === "proposed" && <ProvenanceBadge origin={row.origin} review="proposed" />}
                                     </span>
                                     {(row.note || row.signal) && (
                                         <span className="text-muted-foreground">
@@ -49,6 +51,11 @@ export default function IndicatorObservations({ indicator, canRecord, canManage,
                                     )}
                                     <span className="text-muted-foreground">oleh {row.recorded_by ?? "pengguna dihapus"}</span>
                                 </div>
+                                {row.review_status === "proposed" && canRecord && (
+                                    <Button size="icon" variant="ghost" className="size-7 text-success" disabled={busy} onClick={() => onConfirm(row.id)} aria-label={`Konfirmasi observasi ${row.observed_at}`}>
+                                        <CheckIcon aria-hidden="true" />
+                                    </Button>
+                                )}
                                 {removable && (
                                     <Button size="icon" variant="ghost" className="size-7 text-muted-foreground" disabled={busy} onClick={() => onRemove(row.id)} aria-label={`Hapus observasi ${row.observed_at}`}>
                                         <XIcon aria-hidden="true" />

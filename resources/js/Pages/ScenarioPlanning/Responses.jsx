@@ -6,6 +6,7 @@ import Panel from "@/Components/Panel";
 import ExerciseStepper from "@/Components/ScenarioPlanning/ExerciseStepper";
 import ResponseCard from "@/Components/ScenarioPlanning/ResponseCard";
 import ResponseDialog from "@/Components/ScenarioPlanning/ResponseDialog";
+import SuggestionControl from "@/Components/ScenarioPlanning/SuggestionControl";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
@@ -14,7 +15,7 @@ import { useStrategicResponses } from "@/hooks/use-strategic-responses";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 8: strategic responses ranked by robustness, and gate G7 (roadmap R1.8). */
-export default function Responses({ auth, title, project, steps, frameworkApproved, quadrants, responses, implications, conditions, owners, canManage, errors = {} }) {
+export default function Responses({ auth, title, project, steps, frameworkApproved, quadrants, responses, implications, conditions, owners, canManage, responseStatus, responseError, errors = {} }) {
     const actions = useStrategicResponses(project.id);
     const [target, setTarget] = useState(null);
     const [filter, setFilter] = useState("all");
@@ -53,6 +54,17 @@ export default function Responses({ auth, title, project, steps, frameworkApprov
                         <p className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">Setujui kerangka skenario (langkah 4) dulu sebelum menyusun respons strategis.</p>
                     ) : (
                         <>
+                            <SuggestionControl
+                                status={responseStatus}
+                                error={responseError}
+                                validationError={errors.ai}
+                                canManage={editable}
+                                busy={actions.busy}
+                                onSuggest={actions.suggest}
+                                label="Minta usulan respons AI"
+                                pendingLabel="AI sedang menyusun usulan respons…"
+                                reloadOnly={["responses", "responseStatus", "responseError"]}
+                            />
                             <ToggleGroup type="single" variant="outline" size="sm" value={filter} onValueChange={(value) => value && setFilter(value)} aria-label="Saring status" className="self-start">
                                 <ToggleGroupItem value="all" className="px-3">Semua</ToggleGroupItem>
                                 {Object.entries(RESPONSE_STATUSES).map(([value, status]) => (
