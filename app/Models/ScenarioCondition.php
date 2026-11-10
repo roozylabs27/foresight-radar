@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ScenarioConsistencyService;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +49,22 @@ class ScenarioCondition extends Model
         static::creating(function ($condition) {
             if (empty($condition->uuid)) {
                 $condition->uuid = (string) Uuid::uuid4();
+            }
+        });
+
+        // Roadmap R2.8: a change to an accepted condition reopens the quadrant's consistency review.
+        static::saved(function (ScenarioCondition $condition) {
+            $accepted = $condition->review_status === 'accepted';
+            $relevant = $condition->wasRecentlyCreated
+                ? $accepted
+                : ($condition->wasChanged('review_status') || ($accepted && $condition->wasChanged(['kind', 'text', 'axis', 'project_driving_force_id'])));
+            if ($relevant) {
+                app(ScenarioConsistencyService::class)->conditionsChanged($condition->scenario_quadrant_id);
+            }
+        });
+        static::deleted(function (ScenarioCondition $condition) {
+            if ($condition->review_status === 'accepted') {
+                app(ScenarioConsistencyService::class)->conditionsChanged($condition->scenario_quadrant_id);
             }
         });
     }

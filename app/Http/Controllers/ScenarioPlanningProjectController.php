@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ScenarioPlanningProjectRequest;
 use App\Models\ProjectParticipant;
 use App\Models\ScenarioPlanningProject;
+use App\Services\FocalIssueSuggestionService;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\StalenessService;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +54,9 @@ class ScenarioPlanningProjectController extends Controller
             'participants' => $this->projects->participants($project),
             'participantRoles' => ProjectParticipant::ROLES,
             'decisions' => $this->projects->decisions($project),
+            'focalSuggestion' => $project->focal_suggestion,
+            'focalStatus' => $project->focal_suggestion_status,
+            'focalError' => $project->focal_suggestion_error,
         ]);
     }
 
@@ -81,6 +85,25 @@ class ScenarioPlanningProjectController extends Controller
         $this->projects->confirm($project, $request->user());
 
         return back()->with('success', 'Focal issue dikonfirmasi. Langkah 2–9 sekarang terbuka.');
+    }
+
+    /** Roadmap R3.1: queue an AI critique of the focal question. */
+    public function suggestFocal(Request $request, ScenarioPlanningProject $project, FocalIssueSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->request($project, $request->user());
+
+        return back()->with('success', 'AI sedang meninjau pertanyaan fokus. Halaman ini diperbarui otomatis.');
+    }
+
+    public function rejectFocal(ScenarioPlanningProject $project, FocalIssueSuggestionService $suggestions): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $suggestions->reject($project);
+
+        return back()->with('success', 'Saran AI dibuang.');
     }
 
     /** "Keep" flagged work after an upstream change (roadmap R1.10). */

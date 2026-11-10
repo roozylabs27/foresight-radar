@@ -6,11 +6,12 @@ import { Input } from "@/Components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
-import { INDICATOR_DIRECTIONS, INDICATOR_FREQUENCIES, INDICATOR_SOURCES } from "@/domain/scenarioPlanning";
+import { EXTERNAL_SOURCES, INDICATOR_DIRECTIONS, INDICATOR_FREQUENCIES, INDICATOR_SOURCES } from "@/domain/scenarioPlanning";
 
 const EMPTY = {
     name: "", description: "", uncertainty: "", force: "", metric: "", unit: "", baseline_value: "", baseline_date: "",
     frequency: "quarterly", owner: "", source_type: "manual", threshold_rule: "", status: "active", directions: {},
+    external_source: "world_bank", external_series: "", external_area: "",
 };
 const NONE = "none";
 
@@ -55,6 +56,7 @@ export default function IndicatorDialog({ target, quadrants, uncertainties, forc
                   force: indicator.force?.id ?? "",
                   owner: indicator.owner?.id ?? "",
                   baseline_value: indicator.baseline_value ?? "",
+                  external_source: indicator.external_source || EMPTY.external_source,
                   directions: Object.fromEntries(Object.entries(indicator.directions).map(([position, row]) => [position, { direction: row.direction, note: row.note ?? "" }])),
               }
             : { ...EMPTY, ...target.prefill });
@@ -179,6 +181,31 @@ export default function IndicatorDialog({ target, quadrants, uncertainties, forc
                 <FormField id="indicator-threshold" label="Ambang perhatian" required={false} error={error(errors, "threshold_rule")}>
                     <Input id="indicator-threshold" value={values.threshold_rule} onChange={(event) => set("threshold_rule", event.target.value)} maxLength={500} placeholder="Contoh: di atas 10% sebelum 2028" />
                 </FormField>
+                {values.source_type === "external" && (
+                    <fieldset className="m-0 grid gap-4 rounded-md border border-border p-3 sm:grid-cols-3">
+                        <legend className="px-1 text-xs font-semibold text-muted-foreground">Sumber eksternal · nilai baru masuk sebagai usulan</legend>
+                        <FormField id="indicator-external-source" label="Penyedia data" error={error(errors, "external_source")}>
+                            <Select value={values.external_source} onValueChange={(value) => set("external_source", value)}>
+                                <SelectTrigger id="indicator-external-source" className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(EXTERNAL_SOURCES).map(([value, source]) => (
+                                        <SelectItem key={value} value={value}>
+                                            {source.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+                        <FormField id="indicator-external-series" label="Kode seri" error={error(errors, "external_series")}>
+                            <Input id="indicator-external-series" value={values.external_series} onChange={(event) => set("external_series", event.target.value)} maxLength={60} placeholder={EXTERNAL_SOURCES[values.external_source]?.seriesHint} />
+                        </FormField>
+                        <FormField id="indicator-external-area" label="Kode wilayah" error={error(errors, "external_area")}>
+                            <Input id="indicator-external-area" value={values.external_area} onChange={(event) => set("external_area", event.target.value)} maxLength={3} placeholder={EXTERNAL_SOURCES[values.external_source]?.areaHint} />
+                        </FormField>
+                    </fieldset>
+                )}
                 {errors.indicators && <p role="alert" className="m-0 text-sm text-danger">{errors.indicators}</p>}
             </div>
         </FormDialog>

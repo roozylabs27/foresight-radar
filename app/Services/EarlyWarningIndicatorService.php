@@ -102,6 +102,12 @@ class EarlyWarningIndicatorService
                     'frequency' => $indicator->frequency,
                     'owner' => $indicator->owner ? ['id' => $indicator->owner->uuid, 'name' => $indicator->owner->name] : null,
                     'source_type' => $indicator->source_type,
+                    'external_source' => $indicator->external_source,
+                    'external_series' => $indicator->external_series,
+                    'external_area' => $indicator->external_area,
+                    'fetch_status' => $indicator->fetch_status,
+                    'fetch_error' => $indicator->fetch_error,
+                    'last_fetched_at' => $indicator->last_fetched_at?->toISOString(),
                     'threshold_rule' => $indicator->threshold_rule,
                     'status' => $indicator->status,
                     'origin' => $indicator->origin,
@@ -122,6 +128,10 @@ class EarlyWarningIndicatorService
                         'recorded_by_id' => $row->recorded_by,
                         'origin' => $row->origin,
                         'review_status' => $row->review_status,
+                        'source' => $row->source,
+                        'source_ref' => $row->source_ref,
+                        'source_period' => $row->source_period,
+                        'fetched_at' => $row->fetched_at?->toISOString(),
                     ])->values()->all(),
                 ];
             })
@@ -264,6 +274,9 @@ class EarlyWarningIndicatorService
             'frequency' => $validated['frequency'] ?? 'ad_hoc',
             'owner_id' => empty($validated['owner']) ? null : User::where('uuid', $validated['owner'])->value('id'),
             'source_type' => $validated['source_type'] ?? 'manual',
+            'external_source' => $validated['external_source'] ?? null,
+            'external_series' => $validated['external_series'] ?? null,
+            'external_area' => isset($validated['external_area']) ? strtoupper($validated['external_area']) : null,
             'threshold_rule' => $validated['threshold_rule'] ?? null,
         ];
     }

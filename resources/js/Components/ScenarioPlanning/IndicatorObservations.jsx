@@ -4,11 +4,12 @@ import { CheckIcon, PlusIcon, XIcon } from "lucide-react";
 import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
-import { INDICATOR_DIRECTIONS } from "@/domain/scenarioPlanning";
+import { EXTERNAL_SOURCES, INDICATOR_DIRECTIONS } from "@/domain/scenarioPlanning";
 
 /**
  * Latest observations of one indicator (roadmap R2.3). Anyone who may give input records; the
- * recorder or the coordinator removes an observation. AI matches (R2.6) wait for confirmation.
+ * recorder or the coordinator removes an observation. AI matches (R2.6) and external values (R3.6)
+ * wait for confirmation.
  */
 export default function IndicatorObservations({ indicator, canRecord, canManage, busy, onRecord, onRemove, onConfirm }) {
     const { auth } = usePage().props;
@@ -49,7 +50,14 @@ export default function IndicatorObservations({ indicator, canRecord, canManage,
                                             {row.signal && <>Sinyal: {row.signal.title}</>}
                                         </span>
                                     )}
-                                    <span className="text-muted-foreground">oleh {row.recorded_by ?? "pengguna dihapus"}</span>
+                                    {row.source ? (
+                                        <span className="text-muted-foreground">
+                                            {EXTERNAL_SOURCES[row.source]?.label ?? row.source} · {row.source_ref} · periode {row.source_period}
+                                            {row.recorded_by && ` · dikonfirmasi ${row.recorded_by}`}
+                                        </span>
+                                    ) : (
+                                        <span className="text-muted-foreground">oleh {row.recorded_by ?? "pengguna dihapus"}</span>
+                                    )}
                                 </div>
                                 {row.review_status === "proposed" && canRecord && (
                                     <Button size="icon" variant="ghost" className="size-7 text-success" disabled={busy} onClick={() => onConfirm(row.id)} aria-label={`Konfirmasi observasi ${row.observed_at}`}>

@@ -243,7 +243,7 @@ class ScenarioNarrativeReviewTest extends TestCase
         $this->assertStringContainsString('[Purchasing Power] Daya beli tertekan inflasi.', $user);
         // Signals of a force named by a condition are evidence too.
         $this->assertStringContainsString('S3 (condition force): Inflasi menekan daya beli', $user);
-        $this->assertSame('scenario-v2', $this->framework()->prompt_version);
+        $this->assertSame('scenario-v3', $this->framework()->prompt_version);
     }
 
     public function test_generated_quadrants_start_as_drafts_and_approval_records_who(): void

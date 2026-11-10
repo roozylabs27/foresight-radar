@@ -46,6 +46,7 @@ class ScenarioQuadrant extends Model
         'edited_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'stale_since' => 'datetime',
+        'consistency_reviewed_at' => 'datetime',
     ];
 
     /** Narrative review states; `approved` is gate G6 (roadmap R1.6). */
@@ -58,6 +59,12 @@ class ScenarioQuadrant extends Model
                 $quadrant->uuid = (string) Uuid::uuid4();
             }
         });
+    }
+
+    /** Who last signed off the quadrant's consistency (roadmap R2.8). */
+    public function consistencyReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'consistency_reviewed_by');
     }
 
     /** Signals this narrative cites, one row per citation (roadmap R2.7). */

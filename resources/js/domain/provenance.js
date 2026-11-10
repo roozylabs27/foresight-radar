@@ -10,6 +10,7 @@ export const ORIGINS = {
     template: { label: "Kerangka tanpa AI", tone: "neutral" },
     library: { label: "Dari pustaka", tone: "neutral" },
     migrated: { label: "Dari narasi", tone: "pending" },
+    external: { label: "Sumber eksternal", tone: "neutral" },
     human: null,
 };
 

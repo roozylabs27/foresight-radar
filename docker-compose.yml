@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: laravel_app
+    restart: unless-stopped
     volumes:
       - .:/var/www
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
@@ -30,9 +31,26 @@ services:
     networks:
       - laravel
 
+  # Runs the Laravel scheduler (routes/console.php), e.g. the daily fetch of
+  # external early warning indicators. Jobs it queues go to the queue service.
+  scheduler:
+    image: foresight-radar-app
+    container_name: laravel_scheduler
+    command: php artisan schedule:work
+    restart: unless-stopped
+    volumes:
+      - .:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      - mysql
+      - queue
+    networks:
+      - laravel
+
   nginx:
     image: nginx:alpine
     container_name: laravel_nginx
+    restart: unless-stopped
     ports:
       - "${APP_PORT:-80}:80"
       - "443:443"

@@ -176,6 +176,23 @@ export const ROBUSTNESS = {
     scenario_specific: { label: "Spesifik skenario", hint: "Cocok di satu kuadran saja." },
 };
 
+/** Focal question weaknesses named by the AI critique (App\Services\Llm\Prompts\FocalIssuePrompt, roadmap R3.1). */
+export const FOCAL_ISSUES = {
+    yes_no: "Pertanyaan ya/tidak",
+    no_horizon: "Tanpa horizon waktu",
+    too_broad: "Terlalu luas",
+    too_narrow: "Terlalu sempit",
+    assumes_answer: "Mengandaikan jawaban",
+    unclear_scope: "Cakupan tidak jelas",
+    other: "Lainnya",
+};
+
+/** Quadrant consistency review (App\Services\ScenarioConsistencyService, roadmap R2.8). */
+export const CONSISTENCY_STATUSES = {
+    consistent: { label: "Konsisten", tone: "approved" },
+    issues: { label: "Ada masalah", tone: "rejected" },
+};
+
 /** Step 9 indicator vocabulary (App\Models\EarlyWarningIndicator). */
 export const INDICATOR_DIRECTIONS = {
     rising: { label: "Naik", short: "↑" },
@@ -190,4 +207,9 @@ export const INDICATOR_SOURCES = {
     manual: "Dipantau manual",
     signal_feed: "Dari feed sinyal",
     external: "Sumber eksternal",
+};
+
+/** Roadmap R3.6: connectors for `source_type = external`, mirroring ExternalIndicatorService::SOURCES. */
+export const EXTERNAL_SOURCES = {
+    world_bank: { label: "World Bank", seriesHint: "Contoh: FP.CPI.TOTL.ZG", areaHint: "Contoh: IDN" },
 };

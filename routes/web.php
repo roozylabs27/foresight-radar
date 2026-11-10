@@ -19,11 +19,13 @@ use App\Http\Controllers\ProjectDrivingForceController;
 use App\Http\Controllers\ProjectParticipantController;
 use App\Http\Controllers\RatingUrgencyController;
 use App\Http\Controllers\RegisteredListController;
+use App\Http\Controllers\ScenarioComparisonController;
 use App\Http\Controllers\ScenarioConditionController;
 use App\Http\Controllers\ScenarioController;
 use App\Http\Controllers\ScenarioFrameworkController;
 use App\Http\Controllers\ScenarioImplicationController;
 use App\Http\Controllers\ScenarioPlanningProjectController;
+use App\Http\Controllers\ScenarioReportController;
 use App\Http\Controllers\Settings\OperatorWorkspaceController;
 use App\Http\Controllers\Settings\OrganizationController;
 use App\Http\Controllers\Settings\TenantMemberController;
@@ -105,6 +107,8 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::get('/{project}', 'show')->name('show')->can('view-scenario');
         Route::put('/{project}', 'update')->name('update')->can('manage-scenario');
         Route::post('/{project}/confirm', 'confirm')->name('confirm')->can('manage-scenario');
+        Route::post('/{project}/focal/suggest', 'suggestFocal')->name('focal.suggest')->can('manage-scenario');
+        Route::delete('/{project}/focal/suggestion', 'rejectFocal')->name('focal.suggestion.reject')->can('manage-scenario');
         Route::post('/{project}/stale/acknowledge', 'acknowledgeStale')->name('stale.acknowledge')->can('manage-scenario');
         Route::delete('/{project}', 'destroy')->name('destroy')->can('manage-scenario');
     });
@@ -190,6 +194,7 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
         Route::post('/match', 'match')->name('match')->can('manage-scenario');
         Route::post('/{indicator}/accept', 'accept')->name('accept')->can('manage-scenario');
+        Route::post('/{indicator}/fetch', 'fetch')->name('fetch')->can('manage-scenario');
         Route::put('/{indicator}', 'update')->name('update')->can('manage-scenario');
         Route::delete('/{indicator}', 'destroy')->name('destroy')->can('manage-scenario');
     });
@@ -199,6 +204,12 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::post('/{observation}/confirm', 'confirm')->name('confirm')->can('view-scenario');
         Route::delete('/{observation}', 'destroy')->name('destroy')->can('view-scenario');
     });
+
+    // Roadmap R2.8: the four futures side by side.
+    Route::get('scenario-planning/{project}/compare', [ScenarioComparisonController::class, 'index'])->name('scenario-planning.compare')->can('view-scenario');
+    Route::post('scenario-planning/{project}/compare/quadrants/{quadrant}/consistency', [ScenarioComparisonController::class, 'consistency'])->name('scenario-planning.consistency')->can('manage-scenario');
+    // Roadmap R3.5: printable report of the exercise.
+    Route::get('scenario-planning/{project}/report', [ScenarioReportController::class, 'show'])->name('scenario-planning.report')->can('view-scenario');
 
     Route::prefix('scenario-planning/{project}/assessment')->controller(ProjectAssessmentController::class)->name('scenario-planning.assessment.')->scopeBindings()->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');

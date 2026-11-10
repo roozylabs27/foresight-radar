@@ -8,6 +8,7 @@ use App\Models\ScenarioCondition;
 use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
+use Carbon\CarbonInterface;
 
 /**
  * Scenario planning exercises (roadmap R0.1): the key focal issue, gate G1
@@ -84,6 +85,45 @@ class ScenarioPlanningProjectService
      */
     public function lastGate(ScenarioPlanningProject $project): ?array
     {
+        $passed = array_reverse($this->passedGates($project));
+        if ($passed === []) {
+            return null;
+        }
+        $gate = array_key_first($passed);
+        [$by, $at] = $passed[$gate];
+
+        return ['gate' => $gate, 'label' => self::GATES[$gate], 'by' => $by, 'at' => $at?->toISOString()];
+    }
+
+    /**
+     * Every gate G1–G7 in order, passed or not, with who passed it and when (roadmap R3.5).
+     *
+     * @return array<int, array{gate: string, label: string, passed: bool, by: ?string, at: ?string}>
+     */
+    public function gates(ScenarioPlanningProject $project): array
+    {
+        $passed = $this->passedGates($project);
+
+        return collect(self::GATES)->map(function (string $label, string $gate) use ($passed) {
+            [$by, $at] = array_key_exists($gate, $passed) ? $passed[$gate] : [null, null];
+
+            return [
+                'gate' => $gate,
+                'label' => $label,
+                'passed' => array_key_exists($gate, $passed),
+                'by' => $by,
+                'at' => $at?->toISOString(),
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Passed gates in order G1..G7, each as [who, when].
+     *
+     * @return array<string, array{0: ?string, 1: ?CarbonInterface}>
+     */
+    private function passedGates(ScenarioPlanningProject $project): array
+    {
         $framework = $project->framework()->with('approver:id,name')->first();
         $response = $project->strategicResponses()->where('status', 'approved')->with('approver:id,name')->latest('approved_at')->first();
         $quadrants = $framework ? $framework->quadrants()->with('reviewer:id,name')->get() : collect();
@@ -92,22 +132,15 @@ class ScenarioPlanningProjectService
             : null;
         $lastReview = $quadrants->sortByDesc('reviewed_at')->first();
 
-        $passed = array_filter([
-            'G7' => $response ? [$response->approver?->name, $response->approved_at] : null,
-            'G6' => $quadrants->count() === 4 && $quadrants->every(fn ($quadrant) => $quadrant->review_status === 'approved') ? [$lastReview?->reviewer?->name, $lastReview?->reviewed_at] : null,
-            'G5' => $framework?->isFrameworkApproved() ? [$framework->approver?->name, $framework->approved_at] : null,
-            'G4' => $uncertainty ? [$uncertainty->approver?->name, $uncertainty->approved_at] : null,
-            'G3' => $project->scores_confirmed_at ? [$project->scoresConfirmer?->name, $project->scores_confirmed_at] : null,
-            'G2' => $project->forces_confirmed_at ? [$project->forcesConfirmer?->name, $project->forces_confirmed_at] : null,
+        return array_filter([
             'G1' => $project->confirmed_at ? [$project->confirmer?->name, $project->confirmed_at] : null,
+            'G2' => $project->forces_confirmed_at ? [$project->forcesConfirmer?->name, $project->forces_confirmed_at] : null,
+            'G3' => $project->scores_confirmed_at ? [$project->scoresConfirmer?->name, $project->scores_confirmed_at] : null,
+            'G4' => $uncertainty ? [$uncertainty->approver?->name, $uncertainty->approved_at] : null,
+            'G5' => $framework?->isFrameworkApproved() ? [$framework->approver?->name, $framework->approved_at] : null,
+            'G6' => $quadrants->count() === 4 && $quadrants->every(fn ($quadrant) => $quadrant->review_status === 'approved') ? [$lastReview?->reviewer?->name, $lastReview?->reviewed_at] : null,
+            'G7' => $response ? [$response->approver?->name, $response->approved_at] : null,
         ]);
-        if ($passed === []) {
-            return null;
-        }
-        $gate = array_key_first($passed);
-        [$by, $at] = $passed[$gate];
-
-        return ['gate' => $gate, 'label' => self::GATES[$gate], 'by' => $by, 'at' => $at?->toISOString()];
     }
 
     public function create(array $validated, User $user): ScenarioPlanningProject
@@ -131,6 +164,10 @@ class ScenarioPlanningProjectService
         }
 
         $reconfirm = $project->isConfirmed() && $project->isDirty(ScenarioPlanningProject::FOCAL_FIELDS);
+        // An AI critique (roadmap R3.1) is about the old question.
+        if ($project->isDirty('focal_question')) {
+            $project->focal_suggestion = null;
+        }
         if ($reconfirm) {
             // The force list was agreed for the old focal issue, so gate G2 goes too.
             $project->confirmed_at = null;

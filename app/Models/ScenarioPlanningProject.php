@@ -74,6 +74,9 @@ class ScenarioPlanningProject extends Model
         'indicator_suggestion_error',
         'match_suggestion_status',
         'match_suggestion_error',
+        'focal_suggestion',
+        'focal_suggestion_status',
+        'focal_suggestion_error',
         'created_by',
         'updated_by',
     ];
@@ -83,6 +86,7 @@ class ScenarioPlanningProject extends Model
         'confirmed_at' => 'datetime',
         'forces_confirmed_at' => 'datetime',
         'scores_confirmed_at' => 'datetime',
+        'focal_suggestion' => 'array',
     ];
 
     protected static function booted()

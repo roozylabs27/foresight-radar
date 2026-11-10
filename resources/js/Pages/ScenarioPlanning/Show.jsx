@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import { ArrowLeftIcon, CircleCheckIcon, PencilIcon, TargetIcon, Trash2Icon } from "lucide-react";
 
@@ -6,6 +7,7 @@ import DetailList, { DetailItem } from "@/Components/DetailList";
 import FormDialog from "@/Components/FormDialog";
 import Panel from "@/Components/Panel";
 import DecisionLog from "@/Components/ScenarioPlanning/DecisionLog";
+import FocalSuggestion from "@/Components/ScenarioPlanning/FocalSuggestion";
 import ParticipantPanel from "@/Components/ScenarioPlanning/ParticipantPanel";
 import ProjectForm from "@/Components/ScenarioPlanning/ProjectForm";
 import StaleBanner from "@/Components/ScenarioPlanning/StaleBanner";
@@ -22,8 +24,13 @@ const FORM_ID = "scenario-planning-project-edit-form";
 const visit = (method, url) => new Promise((resolve) => router.visit(url, { method, preserveScroll: true, onFinish: resolve }));
 
 /** Workspace of one scenario planning exercise: its focal issue (step 1) and the nine steps. */
-export default function Show({ auth, title, project, steps, nextAction, lastGate, canManage, owners = [], participants = [], decisions = [] }) {
+export default function Show({ auth, title, project, steps, nextAction, lastGate, canManage, owners = [], participants = [], decisions = [], focalSuggestion, focalStatus, focalError, errors = {} }) {
     const dialog = useProjectDialog({ method: "put", url: route("scenario-planning.update", project.id) });
+    const [prefill, setPrefill] = useState(null);
+    const edit = (question = null) => {
+        setPrefill(question);
+        dialog.setOpen(true);
+    };
     const status = PROJECT_STATUSES[project.status];
 
     return (
@@ -43,7 +50,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                     title="Langkah 1 · Key Focal Issue"
                     badge={canManage && (
                         <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => dialog.setOpen(true)}>
+                            <Button size="sm" variant="outline" onClick={() => edit()}>
                                 <PencilIcon aria-hidden="true" />
                                 Ubah
                             </Button>
@@ -65,6 +72,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                     )}
                 >
                     <blockquote className="m-0 mb-4 border-0 text-base font-semibold text-foreground">{project.focal_question}</blockquote>
+                    <FocalSuggestion projectId={project.id} suggestion={focalSuggestion} status={focalStatus} error={focalError} validationError={errors.ai} canManage={canManage} onUse={edit} />
                     <DetailList className="sm:grid-cols-2">
                         <DetailItem label="Tujuan" className="sm:col-span-2">{project.purpose}</DetailItem>
                         <DetailItem label="Tahun target">{project.target_year} ({yearsAhead(project.target_year)} tahun lagi)</DetailItem>
@@ -113,6 +121,10 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                             </p>
                         )}
                         <StepList steps={steps} />
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium">
+                            {project.forces_confirmed_at && <Link href={route("scenario-planning.compare", project.id)} className="text-primary hover:underline">Bandingkan empat skenario</Link>}
+                            <Link href={route("scenario-planning.report", project.id)} className="text-primary hover:underline">Laporan (cetak / PDF)</Link>
+                        </div>
                     </Panel>
                     <ParticipantPanel projectId={project.id} participants={participants} owners={owners} canManage={canManage} />
                     <DecisionLog decisions={decisions} />
@@ -121,7 +133,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
 
             <FormDialog title="Ubah latihan" open={dialog.open} onOpenChange={dialog.setOpen} formId={FORM_ID} isEditMode btnText="Simpan" cancelText="Batal" loading={dialog.saving} className="sm:max-w-2xl">
                 {dialog.open && (
-                    <ProjectForm id={FORM_ID} owners={owners} loading={dialog.saving} onSubmit={dialog.submit} initialValues={{ ...project, owner: project.owner?.id }} />
+                    <ProjectForm id={FORM_ID} owners={owners} loading={dialog.saving} onSubmit={dialog.submit} initialValues={{ ...project, owner: project.owner?.id, ...(prefill ? { focal_question: prefill } : {}) }} />
                 )}
             </FormDialog>
         </AuthenticatedLayout>
