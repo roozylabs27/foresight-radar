@@ -59,7 +59,8 @@ class Signal extends Model
                 app(StalenessService::class)->signalWithdrawn($signal);
             }
         });
-        static::deleted(fn ($signal) => app(StalenessService::class)->signalWithdrawn($signal));
+        // Before the delete: the citation rows (R2.7) go with the signal through the foreign key.
+        static::deleting(fn ($signal) => app(StalenessService::class)->signalWithdrawn($signal));
 
         static::creating(function ($signal) {
             if (empty($signal->uuid)) {

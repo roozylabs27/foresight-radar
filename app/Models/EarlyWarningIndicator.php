@@ -23,6 +23,12 @@ use Ramsey\Uuid\Uuid;
  * @property string $frequency
  * @property int|null $owner_id
  * @property string $source_type
+ * @property string|null $external_source
+ * @property string|null $external_series
+ * @property string|null $external_area
+ * @property string|null $fetch_status
+ * @property string|null $fetch_error
+ * @property Carbon|null $last_fetched_at
  * @property string $status
  * @property string $origin
  * @property string $review_status
@@ -54,6 +60,9 @@ class EarlyWarningIndicator extends Model
         'frequency',
         'owner_id',
         'source_type',
+        'external_source',
+        'external_series',
+        'external_area',
         'threshold_rule',
         'status',
         'origin',
@@ -65,6 +74,7 @@ class EarlyWarningIndicator extends Model
     protected $casts = [
         'baseline_value' => 'float',
         'baseline_date' => 'date',
+        'last_fetched_at' => 'datetime',
     ];
 
     protected static function booted()

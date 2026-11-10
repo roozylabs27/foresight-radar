@@ -788,6 +788,93 @@
         "Confirming makes the confirmer the recorder; discarding deletes the observation"
       ],
       "verification_evidence": "2026-11-09: 2 new tests in EarlyWarningIndicatorTest with FakeLlmClient (RED on missing route); indicator tests 16 passed. Browser check not possible: the dev framework is in draft, so step 9 assists cannot run."
+    },
+    {
+      "id": "FEAT-057",
+      "name": "Typed Narrative Statements and Citation Rows",
+      "description": "Scenario narratives are lists of statements typed as fact, analysis, assumption or interpretation, each with its own evidence labels; every citation is a row queryable by signal (roadmap R2.7).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Prompt scenario-v3 asks for statements with kind and refs; unknown labels are dropped",
+        "A fact without a valid label, or an unknown kind, is stored as interpretation",
+        "Each cited statement becomes a scenario_citations row with kind and position; existing citations are backfilled untyped",
+        "Editing a narrative clears the statement kinds and keeps the citations untyped",
+        "The quadrant card shows a kind marker per sentence with a legend; the signal detail lists the quadrants that cite it",
+        "Withdrawing or deleting a signal flags the quadrants that cite it through the citation rows"
+      ],
+      "verification_evidence": "2026-11-09: 3 new tests in Llm/ScenarioTest with FakeLlmClient; ScenarioTest, StalenessTest and ScenarioFrameworkTest 42 passed after one fix (signal delete now flags quadrants before the cascade). Browser check not done: the dev session was signed out, and dev narratives are untyped until regenerated."
+    },
+    {
+      "id": "FEAT-058",
+      "name": "Scenario Comparison Page",
+      "description": "The four futures of an exercise side by side: summary, accepted conditions, opportunities and challenges, response fit and indicator directions (roadmap R2.8, slice 1).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "One column per quadrant in matrix order with its poles and narrative review state",
+        "Only accepted conditions and implications are compared",
+        "Rejected responses are left out; the rest show fit per quadrant and robustness",
+        "Only active, accepted indicators are shown, with expected direction per quadrant",
+        "Viewers with view-scenario can open it; without a framework the page explains what to do"
+      ],
+      "verification_evidence": "2026-11-09: ScenarioComparisonTest 3 passed (72 assertions). Browser check not done (dev session signed out)."
+    },
+    {
+      "id": "FEAT-059",
+      "name": "Quadrant Consistency Review",
+      "description": "Rule checks per quadrant and a coordinator sign-off of its internal consistency on the comparison page (roadmap R2.8, slice 2).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Checks warn about fewer than two accepted conditions, an axis without a pole condition, drafts awaiting review, and conditions alike another quadrant",
+        "Only coordinators (manage-scenario and the project policy) sign off; status is consistent or issues",
+        "A note is required for issues, and for consistent while checks still warn",
+        "Changing, accepting or deleting an accepted condition clears the sign-off and the page asks for a new review; unaccepted drafts do not"
+      ],
+      "verification_evidence": "2026-11-09: 3 new tests in ScenarioComparisonTest (red on the missing route and payload, then green); comparison, condition, staleness and condition suggestion tests 24 passed (493 assertions). Browser check not done (dev session signed out)."
+    },
+    {
+      "id": "FEAT-060",
+      "name": "AI Focal Issue Refinement",
+      "description": "A queued AI critique of the focal question with two or three alternative questions; an alternative is only used through the edit dialog (roadmap R3.1).",
+      "priority": "P3",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only coordinators can request it; without AI the request fails with a message",
+        "The run is recorded in ai_generation_runs with prompt focal-issue-v1",
+        "Two or three distinct alternatives that differ from the current question; otherwise the run is rejected",
+        "The exercise is never changed by the suggestion; saving a new focal question drops it; it can be discarded"
+      ],
+      "verification_evidence": "2026-11-09: FocalIssueSuggestionTest 3 tests (red on the missing route, then green, FakeLlmClient); with ProjectTest 12 passed (123 assertions). Browser check not done (dev session signed out); no real provider call made."
+    },
+    {
+      "id": "FEAT-061",
+      "name": "Printable Exercise Report",
+      "description": "A printable report of one exercise with all nine steps, gate status and the decision log; saved as PDF through the browser (roadmap R3.5).",
+      "priority": "P3",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Anyone who can view the exercise can open it; others are forbidden",
+        "It holds all nine steps with agreed content only (approved narratives, accepted conditions and indicators, responses not rejected)",
+        "It is marked as a draft until G1–G7 have all passed",
+        "The toolbar is hidden when printing"
+      ],
+      "verification_evidence": "2026-11-09: ScenarioReportTest 3 tests (red on the missing route, then green, 88 assertions); with WorkspaceTest 13 passed (328 assertions). Full PHPUnit 548 passed (6,008 assertions). Browser check not done (dev session signed out)."
+    },
+    {
+      "id": "FEAT-062",
+      "name": "External Indicator Data Sources",
+      "description": "Early warning indicators fetch values from an external source (first connector: World Bank API) as proposed observations with provenance (roadmap R3.6).",
+      "priority": "P3",
+      "status": "passing",
+      "acceptance_criteria": [
+        "An external indicator names a provider, a series code and an area; all three are validated",
+        "Coordinators fetch with a button; a daily command fetches every active, accepted external indicator",
+        "Each new period becomes one proposed observation with source, series reference, period and fetch time; repeated fetches add no duplicates",
+        "Fetched values count only after a person confirms them; a failed fetch is recorded on the indicator"
+      ],
+      "verification_evidence": "2026-11-10: ExternalIndicatorSourceTest 4 tests (Http::fake, no real API call); with EarlyWarningIndicatorTest 20 passed (476 assertions). Full PHPUnit 552 passed (6,102 assertions). Browser check not done (dev session signed out)."
     }
   ]
 }

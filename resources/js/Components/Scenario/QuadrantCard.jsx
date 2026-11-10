@@ -144,6 +144,55 @@ function CitedText({ text, evidence }) {
     );
 }
 
+/** Statement kinds of a typed narrative (roadmap R2.7), from evidence to the model's own reading. */
+const STATEMENT_KINDS = {
+    fact: { short: "F", label: "Fakta dari bukti", className: "bg-success-soft text-success" },
+    analysis: { short: "An", label: "Analisis atas bukti", className: "bg-primary/10 text-primary" },
+    assumption: { short: "As", label: "Asumsi skenario", className: "bg-warning-soft text-warning" },
+    interpretation: { short: "I", label: "Interpretasi model", className: "bg-muted text-muted-foreground" },
+};
+
+function KindMarker({ kind }) {
+    const meta = STATEMENT_KINDS[kind] ?? STATEMENT_KINDS.interpretation;
+    return (
+        <abbr
+            title={meta.label}
+            className={cn("mr-1 inline-flex h-4 min-w-4 items-center justify-center rounded px-1 align-[1px] text-[10px] font-semibold no-underline", meta.className)}
+        >
+            {meta.short}
+        </abbr>
+    );
+}
+
+/** A typed narrative: each sentence carries its kind marker and its own citation chips. */
+function StatementText({ statements, evidence }) {
+    const used = Object.keys(STATEMENT_KINDS).filter((kind) => statements.some((row) => row.kind === kind));
+
+    return (
+        <div className="flex flex-col gap-1.5">
+            <p className="m-0 text-[13px] leading-relaxed text-foreground">
+                {statements.map((row, index) => (
+                    <Fragment key={index}>
+                        <KindMarker kind={row.kind} />
+                        {row.text}
+                        {row.refs.map((ref) => (
+                            <CitationChip key={ref} refName={ref} evidence={evidence} />
+                        ))}{" "}
+                    </Fragment>
+                ))}
+            </p>
+            <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground" aria-label="Keterangan jenis pernyataan">
+                {used.map((kind) => (
+                    <span key={kind} className="inline-flex items-center">
+                        <KindMarker kind={kind} />
+                        {STATEMENT_KINDS[kind].label}
+                    </span>
+                ))}
+            </p>
+        </div>
+    );
+}
+
 function EditSheet({ quadrant, open, titleLocked, onOpenChange, onSave }) {
     const [values, setValues] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -263,7 +312,9 @@ export default function QuadrantCard({ quadrant, evidence, canManage = false, ti
                 {quadrant.summary && <p className="m-0 text-xs text-muted-foreground">{quadrant.summary}</p>}
             </header>
 
-            {quadrant.narrative ? (
+            {quadrant.statements?.length > 0 ? (
+                <StatementText statements={quadrant.statements} evidence={evidence} />
+            ) : quadrant.narrative ? (
                 <CitedText text={quadrant.narrative} evidence={evidence} />
             ) : (
                 <p className="m-0 text-[13px] text-muted-foreground italic">Narasi belum dibuat.</p>

@@ -21,6 +21,7 @@ class ScenarioQuadrant extends Model
         'title',
         'summary',
         'narrative',
+        'narrative_statements',
         'implications',
         'early_indicators',
         'cited_signal_ids',
@@ -40,10 +41,12 @@ class ScenarioQuadrant extends Model
     protected $casts = [
         'early_indicators' => 'array',
         'cited_signal_ids' => 'array',
+        'narrative_statements' => 'array',
         'is_ai_generated' => 'boolean',
         'edited_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'stale_since' => 'datetime',
+        'consistency_reviewed_at' => 'datetime',
     ];
 
     /** Narrative review states; `approved` is gate G6 (roadmap R1.6). */
@@ -56,6 +59,18 @@ class ScenarioQuadrant extends Model
                 $quadrant->uuid = (string) Uuid::uuid4();
             }
         });
+    }
+
+    /** Who last signed off the quadrant's consistency (roadmap R2.8). */
+    public function consistencyReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'consistency_reviewed_by');
+    }
+
+    /** Signals this narrative cites, one row per citation (roadmap R2.7). */
+    public function citations(): HasMany
+    {
+        return $this->hasMany(ScenarioCitation::class)->orderBy('statement_index')->orderBy('id');
     }
 
     public function scenario(): BelongsTo

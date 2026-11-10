@@ -6,6 +6,7 @@ use App\Http\Requests\EarlyWarningIndicatorRequest;
 use App\Models\EarlyWarningIndicator;
 use App\Models\ScenarioPlanningProject;
 use App\Services\EarlyWarningIndicatorService;
+use App\Services\ExternalIndicatorService;
 use App\Services\IndicatorSuggestionService;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\SignalMatchService;
@@ -70,6 +71,16 @@ class EarlyWarningIndicatorController extends Controller
         $matches->request($project, $request->user());
 
         return back()->with('success', 'AI sedang mencocokkan sinyal baru dengan indikator. Halaman ini diperbarui otomatis.');
+    }
+
+    /** Roadmap R3.6: queue a fetch of the indicator's external series. */
+    public function fetch(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, ExternalIndicatorService $sources): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $sources->request($indicator);
+
+        return back()->with('success', 'Data sumber eksternal sedang diambil. Nilai baru masuk sebagai usulan.');
     }
 
     public function accept(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, IndicatorSuggestionService $suggestions): RedirectResponse

@@ -136,6 +136,11 @@ class ScenarioController extends Controller
             throw ValidationException::withMessages(['title' => 'Nama kuadran terkunci oleh persetujuan kerangka (G5). Buka kembali kerangkanya di latihan untuk mengganti nama.']);
         }
 
+        // An edited narrative no longer matches its typed statements (roadmap R2.7); citations stay, untyped.
+        if ($request->validated('narrative') !== $quadrant->narrative && $quadrant->narrative_statements !== null) {
+            $quadrant->narrative_statements = null;
+            $quadrant->citations()->update(['statement_kind' => null, 'statement_index' => null]);
+        }
         $quadrant->update($request->validated() + [
             'early_indicators' => $request->validated('early_indicators', []),
             'edited_by' => Auth::id(),
@@ -285,6 +290,11 @@ class ScenarioController extends Controller
                 'title' => $quadrant->title,
                 'summary' => $quadrant->summary,
                 'narrative' => $quadrant->narrative,
+                'statements' => $quadrant->narrative_statements === null ? null : array_map(fn ($row) => [
+                    'text' => $row['text'],
+                    'kind' => $row['kind'],
+                    'refs' => collect($row['signal_ids'] ?? [])->map(fn ($id) => $refById[$id] ?? null)->filter()->values()->all(),
+                ], $quadrant->narrative_statements),
                 'implications' => $quadrant->implications,
                 'early_indicators' => $quadrant->early_indicators ?? [],
                 'cited_refs' => collect($quadrant->cited_signal_ids ?? [])->map(fn ($id) => $refById[$id] ?? null)->filter()->values()->all(),

@@ -3,6 +3,7 @@
 namespace App\Services\Llm\Prompts;
 
 use App\Models\Scenario;
+use App\Models\ScenarioCitation;
 use App\Models\Signal;
 use App\Services\Llm\LlmRequest;
 
@@ -13,7 +14,7 @@ use App\Services\Llm\LlmRequest;
  */
 final class ScenarioNarrativePrompt
 {
-    public const VERSION = 'scenario-v2';
+    public const VERSION = 'scenario-v3';
 
     public const SYSTEM = <<<'PROMPT'
 You write scenario narratives for a strategic foresight team, in Indonesian (Bahasa Indonesia). A scenario matrix crosses two axes, each a critical uncertainty or a driving force; each quadrant is one plausible future in which each axis has reached one of its two poles.
@@ -24,10 +25,14 @@ Write all four quadrants: HH, HL, LH and LL. The first letter is the pole of axi
 
 For each quadrant:
 - title: a short, memorable name for that future, at most six words.
-- narrative: 120 to 200 words on how the world looks in that quadrant with respect to the focal question. When a target year is given, describe the path from today to that year, not only the end state. When the quadrant has conditions, the narrative must reflect each of them and must not contradict them. Predetermined elements hold in all four quadrants; keep them consistent. Ground it in the evidence and cite inline as [S1] or [S2][S5] where a signal supports a statement. Every quadrant must cite at least one signal. Use only the labels given. Do not add sources, numbers or events that the evidence does not support; when you extrapolate, say so ("kemungkinan", "dapat").
+- statements: the narrative as a list of sentences, 120 to 200 words in total, on how the world looks in that quadrant with respect to the focal question. When a target year is given, describe the path from today to that year, not only the end state. When the quadrant has conditions, the narrative must reflect each of them and must not contradict them. Predetermined elements hold in all four quadrants; keep them consistent. Each statement has:
+  - text: one sentence, without citation labels.
+  - kind: fact (stated by the cited evidence), analysis (reasoned from the evidence), assumption (taken as given for this future, such as a condition or pole), or interpretation (your own reading or extrapolation).
+  - refs: the evidence labels that support it. A fact must cite at least one label. Use only the labels given.
+  Every quadrant must cite at least one signal. Do not add sources, numbers or events that the evidence does not support.
 - implications: two to four sentences on what this future would mean for the organisation's strategy.
 - early_indicators: two to four observable signs that this future is starting to emerge.
-- cited_refs: every label you cited in the narrative.
+- cited_refs: every label you cited in the statements.
 
 Make the four futures clearly different from each other and plausible rather than utopian or catastrophic.
 PROMPT;
@@ -143,12 +148,24 @@ PROMPT;
                         'properties' => [
                             'position' => ['type' => 'string', 'enum' => Scenario::POSITIONS],
                             'title' => $text,
-                            'narrative' => $text,
+                            'statements' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'text' => $text,
+                                        'kind' => ['type' => 'string', 'enum' => ScenarioCitation::KINDS],
+                                        'refs' => ['type' => 'array', 'items' => $refSchema],
+                                    ],
+                                    'required' => ['text', 'kind', 'refs'],
+                                    'additionalProperties' => false,
+                                ],
+                            ],
                             'implications' => $text,
                             'early_indicators' => ['type' => 'array', 'items' => $text],
                             'cited_refs' => ['type' => 'array', 'items' => $refSchema],
                         ],
-                        'required' => ['position', 'title', 'narrative', 'implications', 'early_indicators', 'cited_refs'],
+                        'required' => ['position', 'title', 'statements', 'implications', 'early_indicators', 'cited_refs'],
                         'additionalProperties' => false,
                     ],
                 ],

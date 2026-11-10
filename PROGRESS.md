@@ -423,7 +423,13 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
-| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 4 AI signal matching | **PASS (partial)** | Pint 424 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 16 passed (382 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (1m 8s); migration `2026_11_09_000005` applied to the dev DB; browser check blocked (framework in draft) |
+| 2026-11-10 (uncommitted) | Roadmap R3.6 external indicator data sources | **PASS** | Pint PASS; Larastan L5: 1 error (`sortBy(0)` in `previousValue()`) fixed; a scoped rerun on the changed PHP files is clean; `ExternalIndicatorSourceTest` + `EarlyWarningIndicatorTest` 20 passed (476 assertions, Http::fake), after the Larastan fix `ExternalIndicatorSourceTest` 4 passed (94 assertions); full PHPUnit 552 passed (6,102 assertions, 1239.55s), dev DB still 38 users; `npm run build` PASS (2m 54s); migration `2026_11_10_000001` applied to the dev DB (38 users intact); browser check not done |
+| 2026-11-09 (uncommitted) | Roadmap R3.5 printable exercise report | **PASS** | Pint 414 files PASS; Larastan L5: 1 error (array offset in `gates()`) fixed; the full rerun timed out in a parallel worker, a scoped rerun on the three changed PHP files is clean; `ScenarioReportTest` 3 passed (88 assertions); `WorkspaceTest` + `ScenarioReportTest` 13 passed (328 assertions); full PHPUnit 548 passed (6,008 assertions, 1406.17s), dev DB still 38 users; `npm run build` PASS (3m 39s); no migration; browser check not done |
+| 2026-11-09 (uncommitted) | Roadmap R3.1 AI focal issue refinement | **PASS** | Pint 411 files PASS; Larastan L5: first run reported 1 error that a rerun did not reproduce, rerun clean; `FocalIssueSuggestionTest` + `ProjectTest` 12 passed (123 assertions, FakeLlmClient); full PHPUnit 545 passed (5,920 assertions, 1994.84s), dev DB still 38 users; `npm run build` PASS (3m 55s); migration `2026_11_09_000008` applied to the dev DB (38 users intact); browser check not done |
+| 2026-11-09 (uncommitted) | Roadmap R2.8 slice 2 consistency review | **PASS** | Pint 406 files PASS; Larastan L5 clean; `ScenarioComparisonTest` + `ScenarioConditionTest` + `StalenessTest` + condition suggestion tests 24 passed (493 assertions); full PHPUnit 542 passed (5,883 assertions, 824.31s) covering both R2.8 slices; `npm run build` PASS (2m 53s); migration `2026_11_09_000007` applied to the dev DB (38 users intact); browser check not done |
+| 2026-11-09 (uncommitted) | Roadmap R2.8 slice 1 comparison page | **PASS (partial)** | Pint 404 files PASS; Larastan L5 clean; `ScenarioComparisonTest` 3 passed (72 assertions); full PHPUnit suite not run; `npm run build` PASS; no migration; browser check not done |
+| 2026-11-09 (uncommitted) | Roadmap R2.7 statement typing and citation rows | **PASS** | Pint 426 files PASS; Larastan L5 clean (after one fix); `ScenarioTest` + `StalenessTest` + `ScenarioFrameworkTest` 41/42 then `StalenessTest` 7 passed after the fix (FakeLlmClient); full PHPUnit 534 passed, 2 failed (2244.17s): `ScenarioNarrativeReviewTest:246` still expected `scenario-v2` (assertion updated to v3), and the `TenantMemberAuthorizationTest` invite throttle got 302 instead of 429 (likely timing on the slow full run); both classes rerun alone, 24 passed (173 assertions); dev DB still 38 users; `npm run build` PASS (1m); migration `2026_11_09_000006` applied to the dev DB (38 user rows intact); browser check not done |
+| 2026-11-09 (uncommitted) | Roadmap R2.6 slice 4 AI signal matching | **PASS** | Pint 424 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 16 passed (382 assertions, FakeLlmClient); full PHPUnit 533 passed (5,694 assertions, 1515.41s) covering all R2.6 slices, dev DB still 38 users afterwards; `npm run build` PASS (1m 8s); migration `2026_11_09_000005` applied to the dev DB; browser check blocked (framework in draft) |
 | 2026-11-09 (uncommitted) | Roadmap R2.6 slice 3 AI indicators | **PASS (partial)** | Pint 420 files PASS; Larastan L5 clean; `EarlyWarningIndicatorTest` 14 passed (330 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (3m 52s); migration `2026_11_09_000004` applied to the dev DB; browser check blocked (framework in draft) |
 | 2026-11-09 (uncommitted) | Roadmap R2.6 slice 2 AI responses | **PASS (partial)** | Pint PASS (1 file fixed); Larastan L5 clean; `StrategicResponseTest` 15 passed (364 assertions, FakeLlmClient); full PHPUnit suite not run; `npm run build` PASS (1m 43s); migration `2026_11_09_000003` applied to the dev DB; browser check blocked (step 8 locked) |
 | 2026-11-09 (uncommitted) | Roadmap R2.6 slice 1 AI implications + generic check | **PASS (partial)** | Pint 412 files PASS; Larastan L5 clean; implication + condition tests 20 passed (418 assertions); full PHPUnit suite not run; `npm run build` PASS (2m); migration `2026_11_09_000002` applied to the dev DB; browser check blocked (step 7 locked) |
@@ -468,6 +474,68 @@
 
 ## Session Log
 
+### 2026-11-10 — Session 66 (R3.6: external indicator data sources)
+
+- **Choices:** World Bank API as the first connector (public, no key), a button plus a daily schedule, and fetched values as proposals that need confirmation.
+- **RED → GREEN:** new `tests/Feature/ScenarioPlanning/ExternalIndicatorSourceTest.php` (4 tests with `Http::fake`: values become proposed observations with provenance and directions, a second fetch adds only new periods, confirmation; validation of provider, series and area, and only coordinators fetch; a refused or failing request is recorded without observations; the daily command fetches only active external indicators and is on the schedule). The first green run showed two test-side faults: `Http::fake` keeps the first stub for a pattern (switched to `Http::sequence()`), and the schedule was registered in the unused `App\Console\Kernel` (moved to `routes/console.php`). Then 4 passed.
+- **Backend:** migration `2026_11_10_000001_add_external_source_to_indicators` (indicator `external_source`, `external_series`, `external_area`, `fetch_status`, `fetch_error`, `last_fetched_at`; observation `source`, `source_ref`, `source_period`, `fetched_at`); `IndicatorSource` interface, `WorldBankSource`, `IndicatorSourceException`; `ExternalIndicatorService` (request, queue, fetch, fail, due); job `FetchIndicatorSource` (unique per indicator, tenant context); command `indicators:fetch-external` scheduled daily at 02:00; route `scenario-planning.indicators.fetch` (manage-scenario); origin `external` added to `Provenance`.
+- **Frontend:** the indicator dialog asks for provider, series code and area when the source is external; `ExternalFetchControl` on the indicator card (source, last fetch, "Ambil data" with polling, fetch error); observations show source, series and period; `EXTERNAL_SOURCES` in the domain module, `external` origin in `provenance.js`. `Indicators.jsx` is 145 lines.
+- **Operations:** new `scheduler` service in `docker-compose.yml` (container `laravel_scheduler`, `php artisan schedule:work`, same image as the queue, `restart: unless-stopped`); started with `docker compose up -d --no-deps scheduler`. `schedule:list` in the container shows `indicators:fetch-external` at 02:00. The dev DB has 0 external indicators, so no World Bank call is made until one is set up. Docker restarted twice during the session; `laravel_app` and `laravel_nginx` were started again.
+- **Not checked in the browser:** the dev browser session is signed out; no real World Bank call was made.
+- **Docs:** roadmap R3.6 done; `feature_list.json` FEAT-062. R3.6 is outside the feature matrix, so its counts stay 93/1/0/0.
+- **Full suite:** 552 passed (6,102 assertions, 1239.55s).
+- **Restart policy:** `laravel_app` and `laravel_nginx` had none and stayed down after each Docker restart; both now have `restart: unless-stopped` in `docker-compose.yml`, applied to the running containers with `docker update --restart unless-stopped` (no recreate). All five containers report `unless-stopped`.
+- **Next recommended action:** check the indicator page in the browser with one external indicator. All roadmap items R0–R3 are now done.
+
+### 2026-11-09 — Session 65 (R3.5: printable exercise report)
+
+- **RED → GREEN:** new `tests/Feature/ScenarioPlanning/ScenarioReportTest.php` (3 tests: nine steps with agreed content only and a draft flag while G6/G7 are open; a new exercise is a draft without a framework; an outsider is forbidden) failed on the missing route; then 3 passed (88 assertions).
+- **Backend:** `ScenarioReportService::build` (gates, forces, uncertainties, framework, quadrants from `ScenarioComparisonService` with approved narratives only, evidence, responses, indicators, decisions); `ScenarioReportController::show`; route `scenario-planning.report` (view-scenario); `ScenarioPlanningProjectService::gates()` lists G1–G7 with who passed each and when, and `lastGate()` now shares the same helper. No migration.
+- **Frontend:** standalone page `Report.jsx` (no app shell, toolbar hidden in print, "Cetak / simpan PDF" calls `window.print()`, draft banner); sections in `ReportSections.jsx`; Show links to the report next to the comparison page.
+- **Not checked in the browser:** the dev browser session is signed out.
+- **Docs:** roadmap R3.5 done; `feature_list.json` FEAT-061. The matrix has no export row, so its counts stay 93/1/0/0.
+- **Full suite:** 548 passed (6,008 assertions, 1406.17s).
+- **Next recommended action:** R3.6 (external indicator data sources).
+
+### 2026-11-09 — Session 64 (R3.1: AI focal issue refinement)
+
+- **RED → GREEN:** new `tests/Feature/ScenarioPlanning/FocalIssueSuggestionTest.php` (3 tests with `FakeLlmClient`: critique and alternatives stored without changing the exercise, discard; a new focal question drops the suggestion while other edits keep it; viewer forbidden, no AI refused, an alternative equal to the current question rejects the run) failed on the missing route; then 3 passed.
+- **Backend:** migration `2026_11_09_000008_add_focal_suggestion_to_scenario_planning_projects` (`focal_suggestion` JSON, `_status`, `_error`); prompt `FocalIssuePrompt` (`focal-issue-v1`); `FocalIssueSuggestionService`; job `SuggestFocalIssue`; routes `scenario-planning.focal.suggest` and `.focal.suggestion.reject`; `ScenarioPlanningProjectService::update` drops the suggestion when the focal question changes; Show passes `focalSuggestion`, `focalStatus`, `focalError`.
+- **Frontend:** `FocalSuggestion` under the focal question (request button with polling, critique, alternatives with "Gunakan", discard); "Gunakan" opens the edit dialog with the chosen question; `FOCAL_ISSUES` in the domain module. `Show.jsx` is 142 lines.
+- **Not checked in the browser:** the dev browser session is signed out; no real provider call was made.
+- **Docs:** roadmap R3.1 done; matrix 1.7 complete (93/1/0/0; step 1 8/0/0/0); audit G22 fully fixed; `feature_list.json` FEAT-060.
+- **Full suite:** 545 passed (5,920 assertions, 1994.84s).
+- **Next recommended action:** R3.5 (export).
+
+### 2026-11-09 — Session 63 (R2.8 slice 2: consistency review; R2.8 done)
+
+- **RED → GREEN:** 3 new tests in `ScenarioComparisonTest` (rule checks per quadrant; sign-off rules, viewer forbidden, note required with warnings or issues; changing an accepted condition clears the sign-off while an unaccepted draft does not) failed on the missing route and payload; then the class passed 6 tests (169 assertions).
+- **Backend:** migration `2026_11_09_000007_add_consistency_review_to_scenario_quadrants` (`consistency_status`, `_note`, `_reviewed_by`, `_reviewed_at`; short foreign key name); `ScenarioConsistencyService` (checks, signOff, conditionsChanged); `ScenarioCondition` saved/deleted hooks reopen the review when accepted conditions change; route `scenario-planning.consistency`; the comparison payload carries `consistency` and `canManage`.
+- **Frontend:** "Konsistensi" row in `ComparisonTable` (verdict, reviewer, note, warnings, review button); `ConsistencyDialog`; hook `use-consistency-review`; `CONSISTENCY_STATUSES` in the domain module.
+- **Not checked in the browser:** the dev browser session is signed out.
+- **Docs:** roadmap R2.8 done; matrix 5.6 complete (92/1/1/0; step 5 7/0/0/0); `feature_list.json` FEAT-059.
+- **Full suite:** 542 passed (5,883 assertions, 824.31s).
+- **Next recommended action:** R3.1 (AI focal issue).
+
+### 2026-11-09 — Session 62 (R2.8 slice 1: scenario comparison page)
+
+- **Tests:** new `tests/Feature/ScenarioPlanning/ScenarioComparisonTest.php` (3 tests: four columns in matrix order with accepted conditions and implications only, responses that are not rejected with fit and robustness, active accepted indicators with directions; empty page without a framework; `view-scenario` required). They were written before the code but not run red first; then 3 passed (72 assertions).
+- **Backend:** `ScenarioComparisonService` (quadrants, responses, indicators), `ScenarioComparisonController@index`, route `scenario-planning.compare` (`view-scenario`).
+- **Frontend:** page `ScenarioPlanning/Compare.jsx` and organism `ComparisonTable.jsx` (sticky row labels, horizontal scroll on small screens); link "Bandingkan empat skenario" on the exercise overview once the force list is agreed.
+- **Not checked in the browser:** the dev browser session is signed out.
+- **Docs:** roadmap R2.8 partial (slice 1); matrix 5.5 and X.6 complete (91/1/2/0; step 5 6/0/1/0; cross-cutting 7/0/0/0); audit G23 closed.
+- **Next recommended action:** R2.8 slice 2 (rule checks and consistency sign-off per quadrant, matrix 5.6).
+
+### 2026-11-09 — Session 61 (R2.7: statement typing and citation rows)
+
+- **RED → GREEN:** 3 new tests in `tests/Feature/Llm/ScenarioTest.php` (typed statements and citation rows; editing drops kinds but keeps citations; signal detail lists citing quadrants) plus the `scenario-v3` version assertions. `ScenarioTest`, `StalenessTest` and `ScenarioFrameworkTest`: first run 41 passed, 1 failed (deleting a cited signal no longer flagged quadrants, because the foreign-key cascade removed the citation rows before the `deleted` hook ran); fixed by flagging on `deleting`; `StalenessTest` then 7 passed.
+- **Backend:** migration `2026_11_09_000006_create_scenario_citations_table` (`scenario_quadrants.narrative_statements`; `scenario_citations` with ref, statement kind and index; backfill from `cited_signal_ids`, 8 rows in the dev DB); model `ScenarioCitation`; prompt `scenario-v3` (`statements[]` with `kind`, `refs`); `ScenarioNarrativeService` builds the narrative from the statements with inline labels, downgrades unsupported facts to interpretation and writes citation rows (template / legacy narratives get untyped rows); `ScenarioController` presents `statements` and clears kinds when a narrative is edited; `StalenessService::signalWithdrawn` reads the citation rows; route `signals.citations`.
+- **Frontend:** `QuadrantCard` shows a kind marker per sentence (F / An / As / I) with a legend of the kinds used; `Components/Signals/SignalCitations.jsx` adds "Dikutip di skenario" to the signal detail dialog.
+- **Not checked in the browser:** the dev browser session was signed out, and existing dev narratives stay untyped until regenerated.
+- **Docs:** roadmap R2.7 done; matrix 6.7 complete (89/2/3/0; step 6 9/0/0/0); audit G13 closed; `feature_list.json` FEAT-057.
+- **Full suite:** 534 passed, 2 failed; the stale `scenario-v2` assertion in `ScenarioNarrativeReviewTest` was updated; the invite throttle test passes alone (likely timing). Both classes then 24 passed.
+- **Next recommended action:** R2.8 (scenario comparison and consistency review).
+
 ### 2026-11-09 — Session 60 (R2.6 slice 4: AI signal matching; R2.6 done)
 
 - **RED → GREEN:** 2 new tests in `EarlyWarningIndicatorTest` with `FakeLlmClient` (only accepted, not yet cited signals are offered; a match becomes an `ai` / `proposed` observation citing its signal; relevance ignores it until confirmed, then counts it; confirming sets the recorder; rules: no indicators, no new signals, viewer forbidden, unknown signal ref rejects the run) failed on the missing route; then all 16 indicator tests passed (382 assertions).
@@ -475,7 +543,7 @@
 - **Frontend:** `IndicatorAiControls` (indicator proposals + signal matching, keeps the step 9 page under 150 lines); proposed observations show the AI badge and a confirm button in `IndicatorObservations`.
 - **Not checked in the browser:** the dev framework is in draft, so step 9 assists cannot run.
 - **Docs:** roadmap R2.6 done; matrix 9.9 complete (88/2/4/0; step 9 12/0/0/0); audit G19 and G22 updated (only the focal issue assist, R3.1, remains); `feature_list.json` FEAT-056.
-- **Next recommended action:** full suite for R2.6; then R2.7.
+- **Next recommended action:** R2.7 (full suite green: 533 passed).
 
 ### 2026-11-09 — Session 59 (R2.6 slice 3: AI indicator proposals)
 

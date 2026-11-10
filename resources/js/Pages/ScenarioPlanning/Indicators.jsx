@@ -52,7 +52,7 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                         </Button>
                     )}
                 >
-                    {errors.indicators && <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{errors.indicators}</p>}
+                    {(errors.indicators || errors.external) && <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{errors.indicators || errors.external}</p>}
                     {frameworkApproved && (
                         <IndicatorAiControls
                             indicators={indicators}
@@ -87,6 +87,7 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                                     onRecord={() => setObserving(indicator)}
                                     onRemoveObservation={(observationId) => actions.removeObservation(indicator.id, observationId)}
                                     onConfirmObservation={(observationId) => actions.confirmObservation(indicator.id, observationId)}
+                                    onFetch={() => actions.fetch(indicator.id)}
                                 />
                             ))}
                         </div>

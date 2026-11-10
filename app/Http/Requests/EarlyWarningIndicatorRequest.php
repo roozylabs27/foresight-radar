@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\EarlyWarningIndicator;
 use App\Models\Scenario;
+use App\Services\ExternalIndicatorService;
 use App\Support\TenantRule;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -34,6 +35,10 @@ class EarlyWarningIndicatorRequest extends FormRequest
             'frequency' => ['required', Rule::in(EarlyWarningIndicator::FREQUENCIES)],
             'owner' => ['nullable', 'uuid', TenantRule::exists('users', 'uuid')],
             'source_type' => ['required', Rule::in(EarlyWarningIndicator::SOURCE_TYPES)],
+            // Roadmap R3.6: the connector, its series code and the area; kept only for external indicators.
+            'external_source' => ['exclude_unless:source_type,external', 'required', Rule::in(array_keys(ExternalIndicatorService::SOURCES))],
+            'external_series' => ['exclude_unless:source_type,external', 'required', 'string', 'max:60', 'regex:/^[A-Za-z0-9]+(\.[A-Za-z0-9_]+)*$/'],
+            'external_area' => ['exclude_unless:source_type,external', 'required', 'string', 'regex:/^[A-Za-z]{2,3}$/'],
             'threshold_rule' => ['nullable', 'string', 'max:500'],
             'status' => ['nullable', Rule::in(EarlyWarningIndicator::STATUSES)],
             'directions' => ['nullable', 'array', function (string $attribute, mixed $value, Closure $fail) {
@@ -54,6 +59,9 @@ class EarlyWarningIndicatorRequest extends FormRequest
             'frequency' => 'frekuensi',
             'owner' => 'penanggung jawab',
             'source_type' => 'sumber pemantauan',
+            'external_source' => 'penyedia data',
+            'external_series' => 'kode seri',
+            'external_area' => 'kode wilayah',
             'threshold_rule' => 'ambang',
             'directions.*.direction' => 'arah',
         ];

@@ -2,6 +2,7 @@ import { CheckIcon, PencilIcon, Trash2Icon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
+import ExternalFetchControl from "@/Components/ScenarioPlanning/ExternalFetchControl";
 import IndicatorObservations from "@/Components/ScenarioPlanning/IndicatorObservations";
 import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -9,7 +10,7 @@ import { Button } from "@/Components/ui/button";
 import { INDICATOR_DIRECTIONS, INDICATOR_FREQUENCIES, INDICATOR_SOURCES } from "@/domain/scenarioPlanning";
 
 /** One early warning indicator: how it is monitored, its expected direction per quadrant and its observations. */
-export default function IndicatorCard({ indicator, quadrants, canManage, canRecord, busy, onEdit, onRemove, onAccept, onRecord, onRemoveObservation, onConfirmObservation }) {
+export default function IndicatorCard({ indicator, quadrants, canManage, canRecord, busy, onEdit, onRemove, onAccept, onRecord, onRemoveObservation, onConfirmObservation, onFetch }) {
     const metric = [indicator.metric, indicator.unit && `(${indicator.unit})`].filter(Boolean).join(" ");
     const baseline = indicator.baseline_value != null ? `${indicator.baseline_value}${indicator.unit ? ` ${indicator.unit}` : ""}${indicator.baseline_date ? ` per ${indicator.baseline_date}` : ""}` : null;
 
@@ -53,6 +54,8 @@ export default function IndicatorCard({ indicator, quadrants, canManage, canReco
                 {indicator.force && <span>DF: {indicator.force.keyword}</span>}
                 {indicator.owner && <span>PJ: {indicator.owner.name}</span>}
             </p>
+
+            {indicator.source_type === "external" && <ExternalFetchControl indicator={indicator} canManage={canManage} busy={busy} onFetch={onFetch} />}
 
             <IndicatorObservations indicator={indicator} canRecord={canRecord} canManage={canManage} busy={busy} onRecord={onRecord} onRemove={onRemoveObservation} onConfirm={onConfirmObservation} />
 

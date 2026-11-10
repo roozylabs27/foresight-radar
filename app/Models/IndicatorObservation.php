@@ -24,6 +24,10 @@ use Ramsey\Uuid\Uuid;
  * @property int|null $recorded_by
  * @property string $origin
  * @property string $review_status
+ * @property string|null $source
+ * @property string|null $source_ref
+ * @property string|null $source_period
+ * @property Carbon|null $fetched_at
  */
 class IndicatorObservation extends Model
 {
@@ -45,6 +49,10 @@ class IndicatorObservation extends Model
         'note',
         'origin',
         'review_status',
+        'source',
+        'source_ref',
+        'source_period',
+        'fetched_at',
         'recorded_by',
     ];
 
@@ -52,6 +60,7 @@ class IndicatorObservation extends Model
         'observed_at' => 'date',
         'value_numeric' => 'float',
         'crossed_threshold' => 'boolean',
+        'fetched_at' => 'datetime',
     ];
 
     protected static function booted()

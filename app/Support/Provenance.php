@@ -26,5 +26,8 @@ final class Provenance
     /** Converted from older free-text data (narrative implications or indicator strings). */
     public const MIGRATED = 'migrated';
 
-    public const ORIGINS = [self::HUMAN, self::AI, self::TEMPLATE, self::LIBRARY, self::MIGRATED];
+    /** Fetched from an external data source (indicator observations, roadmap R3.6). */
+    public const EXTERNAL = 'external';
+
+    public const ORIGINS = [self::HUMAN, self::AI, self::TEMPLATE, self::LIBRARY, self::MIGRATED, self::EXTERNAL];
 }

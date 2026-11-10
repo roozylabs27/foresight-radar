@@ -6,6 +6,8 @@ use App\Enums\LlmJobStatus;
 use App\Jobs\GenerateScenarioNarrative;
 use App\Models\AiGenerationRun;
 use App\Models\Scenario;
+use App\Models\ScenarioCitation;
+use App\Models\ScenarioQuadrant;
 use App\Services\Llm\AiGenerationRecorder;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
@@ -130,8 +132,14 @@ class ScenarioNarrativeService
             // Rows are filled in place: a framework's quadrants exist before any narrative (R0.5).
             $existing = $scenario->quadrants()->get()->keyBy('position');
             foreach ($quadrants as $quadrant) {
-                $attributes = collect($quadrant)->except('cited_refs')->all() + [
+                $statements = $quadrant['statements'] ?? null;
+                $attributes = collect($quadrant)->except(['cited_refs', 'statements'])->all() + [
                     'cited_signal_ids' => array_values(array_map(fn ($ref) => $signalIds[$ref], $quadrant['cited_refs'])),
+                    'narrative_statements' => $statements === null ? null : array_map(fn ($row) => [
+                        'text' => $row['text'],
+                        'kind' => $row['kind'],
+                        'signal_ids' => array_map(fn ($ref) => $signalIds[$ref], $row['refs']),
+                    ], $statements),
                     'is_ai_generated' => $provider !== self::PROVIDER_TEMPLATE,
                     'origin' => $provider !== self::PROVIDER_TEMPLATE ? Provenance::AI : Provenance::TEMPLATE,
                     'provider' => $provider,
@@ -149,7 +157,12 @@ class ScenarioNarrativeService
                     unset($attributes['title']);
                 }
                 $row = $existing[$quadrant['position']] ?? null;
-                $row ? $row->update($attributes) : $scenario->quadrants()->create($attributes);
+                if ($row) {
+                    $row->update($attributes);
+                } else {
+                    $row = $scenario->quadrants()->create($attributes);
+                }
+                $this->writeCitations($row, $quadrant['cited_refs'], $statements, $signalIds->all());
             }
             $scenario->update([
                 'provider' => $provider,
@@ -166,6 +179,35 @@ class ScenarioNarrativeService
         });
 
         return ['scenario' => $scenario->fresh('quadrants'), 'provider' => $provider, 'notice' => $notice];
+    }
+
+    /**
+     * Roadmap R2.7: one row per cited signal and statement, so citations are queryable by signal.
+     *
+     * @param  array<int, string>  $cited
+     * @param  array<int, array{text: string, kind: string, refs: array<int, string>}>|null  $statements
+     * @param  array<string, int>  $signalIds
+     */
+    protected function writeCitations(ScenarioQuadrant $quadrant, array $cited, ?array $statements, array $signalIds): void
+    {
+        $quadrant->citations()->delete();
+        $rows = [];
+        if ($statements !== null) {
+            foreach ($statements as $index => $statement) {
+                foreach ($statement['refs'] as $ref) {
+                    $rows[] = ['ref' => $ref, 'statement_kind' => $statement['kind'], 'statement_index' => $index];
+                }
+            }
+        }
+        $covered = array_column($rows, 'ref');
+        foreach ($cited as $ref) {
+            if (! in_array($ref, $covered, true)) {
+                $rows[] = ['ref' => $ref, 'statement_kind' => null, 'statement_index' => null];
+            }
+        }
+        foreach ($rows as $row) {
+            $quadrant->citations()->create($row + ['tenant_id' => $quadrant->getAttribute('tenant_id'), 'signal_id' => $signalIds[$row['ref']]]);
+        }
     }
 
     /**
@@ -247,6 +289,11 @@ class ScenarioNarrativeService
 
         foreach (Scenario::POSITIONS as $position) {
             $item = $byPosition[$position];
+            // Roadmap R2.7: typed statements become the narrative, each followed by its own labels.
+            $statements = $this->statements($item['statements'] ?? null, $allowed);
+            if ($statements !== null) {
+                $item['narrative'] = implode(' ', array_map(fn ($row) => trim($row['text'].' '.implode('', array_map(fn ($ref) => "[{$ref}]", $row['refs']))), $statements));
+            }
             // Unknown references are removed from the text; known ones are collected from both places.
             $narrative = preg_replace_callback('/\[(S\d+)\]/', fn ($match) => isset($allowed[$match[1]]) ? $match[0] : '', (string) ($item['narrative'] ?? ''));
             preg_match_all('/\[(S\d+)\]/', $narrative, $inText);
@@ -265,6 +312,7 @@ class ScenarioNarrativeService
                 'implications' => trim((string) ($item['implications'] ?? '')) ?: null,
                 'early_indicators' => array_values(array_filter(array_map('trim', array_map('strval', (array) ($item['early_indicators'] ?? []))))),
                 'cited_refs' => $cited,
+                'statements' => $statements,
             ];
         }
 
@@ -275,6 +323,37 @@ class ScenarioNarrativeService
         }
 
         return $quadrants;
+    }
+
+    /**
+     * Typed statements with only offered labels, or null when the answer has none (an untyped
+     * narrative). A fact without a valid label is not backed by evidence, so it counts as the
+     * model's interpretation; an unknown kind does too.
+     *
+     * @param  array<string, int>  $allowed
+     * @return array<int, array{text: string, kind: string, refs: array<int, string>}>|null
+     */
+    protected function statements(mixed $raw, array $allowed): ?array
+    {
+        if (! is_array($raw) || $raw === []) {
+            return null;
+        }
+
+        $statements = [];
+        foreach ($raw as $row) {
+            $text = trim(preg_replace('/\[S\d+\]/', '', (string) ($row['text'] ?? '')));
+            if ($text === '') {
+                continue;
+            }
+            $refs = array_values(array_unique(array_filter((array) ($row['refs'] ?? []), fn ($ref) => is_string($ref) && isset($allowed[$ref]))));
+            $kind = in_array($row['kind'] ?? null, ScenarioCitation::KINDS, true) ? $row['kind'] : 'interpretation';
+            if ($kind === 'fact' && $refs === []) {
+                $kind = 'interpretation';
+            }
+            $statements[] = ['text' => $text, 'kind' => $kind, 'refs' => $refs];
+        }
+
+        return $statements === [] ? null : $statements;
     }
 
     /**
