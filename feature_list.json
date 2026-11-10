@@ -874,7 +874,7 @@
         "Each new period becomes one proposed observation with source, series reference, period and fetch time; repeated fetches add no duplicates",
         "Fetched values count only after a person confirms them; a failed fetch is recorded on the indicator"
       ],
-      "verification_evidence": "2026-11-10: ExternalIndicatorSourceTest 4 tests (Http::fake, no real API call); with EarlyWarningIndicatorTest 20 passed (476 assertions). Full PHPUnit 552 passed (6,102 assertions). Browser check not done (dev session signed out)."
+      "verification_evidence": "2026-11-10: ExternalIndicatorSourceTest 4 tests (Http::fake, no real API call); with EarlyWarningIndicatorTest 20 passed (476 assertions). Full PHPUnit 552 passed (6,102 assertions). Local browser check against the real World Bank API: found and fixed 502/503 on the mrv parameter (now per_page only, one retry); 20 values stored as proposals, one confirmed, a second fetch added no duplicates. ExternalIndicatorSourceTest 4 passed (98 assertions) after the fix."
     }
   ]
 }

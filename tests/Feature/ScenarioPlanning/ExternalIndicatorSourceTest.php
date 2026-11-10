@@ -231,7 +231,9 @@ class ExternalIndicatorSourceTest extends TestCase
 
         $this->fetch($indicator)->assertSessionHasNoErrors();
 
-        Http::assertSent(fn (HttpRequest $request) => str_starts_with($request->url(), 'https://api.worldbank.org/v2/country/IDN/indicator/FP.CPI.TOTL.ZG?') && $request['format'] === 'json');
+        // No `mrv`: the live API answers 502/503 to it (found when testing against the real API).
+        Http::assertSent(fn (HttpRequest $request) => str_starts_with($request->url(), 'https://api.worldbank.org/v2/country/IDN/indicator/FP.CPI.TOTL.ZG?')
+            && $request['format'] === 'json' && (int) $request['per_page'] === 20 && ! isset($request['mrv']));
         $rows = IndicatorObservation::orderBy('observed_at')->get();
         $this->assertSame(['2021-12-31', '2023-12-31', '2024-12-31'], $rows->map(fn ($row) => $row->observed_at->toDateString())->all());
         $this->assertSame([1.6, 3.7, 2.3], $rows->pluck('value_numeric')->all());
@@ -298,14 +300,24 @@ class ExternalIndicatorSourceTest extends TestCase
 
         Http::fake(['api.worldbank.org/*' => Http::sequence()
             ->push([['message' => [['id' => '120', 'key' => 'Invalid value', 'value' => 'The provided parameter value is not valid']]]])
-            ->push('Server error', 500)]);
+            ->push('Server error', 500)
+            ->push('Server error', 500)
+            ->push('Service unavailable', 503)
+            ->push($this->worldBank([2024 => 2.3]))]);
         $this->fetch($indicator)->assertSessionHasNoErrors();
         $this->assertSame('failed', $indicator->fresh()->fetch_status);
         $this->assertStringContainsString('The provided parameter value is not valid', $indicator->fresh()->fetch_error);
 
+        // A server error is tried twice before the fetch fails.
         $this->fetch($indicator)->assertSessionHasNoErrors();
         $this->assertSame('failed', $indicator->fresh()->fetch_status);
+        $this->assertStringContainsString('500', $indicator->fresh()->fetch_error);
         $this->assertSame(0, IndicatorObservation::count());
+
+        // One transient 503 followed by data still stores the values.
+        $this->fetch($indicator)->assertSessionHasNoErrors();
+        $this->assertSame('completed', $indicator->fresh()->fetch_status);
+        $this->assertSame(1, IndicatorObservation::count());
     }
 
     public function test_the_daily_command_fetches_every_active_external_indicator(): void
