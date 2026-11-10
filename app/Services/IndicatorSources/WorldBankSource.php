@@ -3,6 +3,7 @@
 namespace App\Services\IndicatorSources;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
@@ -20,11 +21,19 @@ class WorldBankSource implements IndicatorSource
 
     public const TIMEOUT_SECONDS = 15;
 
+    /** Attempts in total, and the pause between them. */
+    public const RETRIES = 2;
+
+    public const RETRY_SLEEP_MS = 1000;
+
     public function fetch(string $series, string $area): array
     {
         try {
+            // No `mrv`: the API often answers 502/503 to mrv above 3, while the first page of
+            // `per_page` rows (newest first) is served reliably. Transient failures get one retry.
             $response = Http::timeout(self::TIMEOUT_SECONDS)->acceptJson()
-                ->get(self::BASE_URL.'/country/'.rawurlencode($area).'/indicator/'.rawurlencode($series), ['format' => 'json', 'per_page' => self::RECENT_VALUES, 'mrv' => self::RECENT_VALUES]);
+                ->retry(self::RETRIES, self::RETRY_SLEEP_MS, fn ($e) => $e instanceof ConnectionException || ($e instanceof RequestException && $e->response->serverError()), throw: false)
+                ->get(self::BASE_URL.'/country/'.rawurlencode($area).'/indicator/'.rawurlencode($series), ['format' => 'json', 'per_page' => self::RECENT_VALUES]);
         } catch (ConnectionException) {
             throw new IndicatorSourceException('World Bank tidak dapat dihubungi. Coba lagi nanti.');
         }
