@@ -133,6 +133,25 @@ export function targetYearBounds(today = new Date()) {
     return { min: today.getFullYear() + 1, max: 2100 };
 }
 
+/** Roadmap R4.1: progress of a backcasting milestone, mirroring BackcastingMilestone::STATUSES. */
+export const MILESTONE_STATUSES = {
+    planned: { label: "Direncanakan", tone: "neutral" },
+    in_progress: { label: "Berjalan", tone: "pending" },
+    done: { label: "Selesai", tone: "approved" },
+};
+
+/**
+ * Scenario planning is for medium to long horizons (deck slides 1 and 6–7): around one year ahead a
+ * trend extrapolation usually does. Below this the form warns but still accepts the year.
+ */
+export const MIN_RECOMMENDED_HORIZON_YEARS = 3;
+
+/** True for a valid target year closer than the recommended horizon. */
+export function isShortHorizon(targetYear, today = new Date()) {
+    const years = Number(targetYear) - today.getFullYear();
+    return Number.isInteger(years) && years >= 1 && years < MIN_RECOMMENDED_HORIZON_YEARS;
+}
+
 /** Years left until the target year, never negative. */
 export function yearsAhead(targetYear, today = new Date()) {
     return Math.max(0, Number(targetYear) - today.getFullYear());

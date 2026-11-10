@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\BackcastingController;
 use App\Http\Controllers\ClosedItemsController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CriticalUncertaintyController;
@@ -208,6 +209,15 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
     // Roadmap R2.8: the four futures side by side.
     Route::get('scenario-planning/{project}/compare', [ScenarioComparisonController::class, 'index'])->name('scenario-planning.compare')->can('view-scenario');
     Route::post('scenario-planning/{project}/compare/quadrants/{quadrant}/consistency', [ScenarioComparisonController::class, 'consistency'])->name('scenario-planning.consistency')->can('manage-scenario');
+    // Roadmap R4.1: preferred future and the backcasting path to it.
+    Route::prefix('scenario-planning/{project}/backcasting')->controller(BackcastingController::class)->name('scenario-planning.backcasting.')->scopeBindings()->group(function () {
+        Route::get('/', 'index')->name('index')->can('view-scenario');
+        Route::post('/preferred', 'prefer')->name('preferred')->can('manage-scenario');
+        Route::delete('/preferred', 'clear')->name('preferred.clear')->can('manage-scenario');
+        Route::post('/milestones', 'store')->name('milestones.store')->can('manage-scenario');
+        Route::put('/milestones/{milestone}', 'update')->name('milestones.update')->can('manage-scenario');
+        Route::delete('/milestones/{milestone}', 'destroy')->name('milestones.destroy')->can('manage-scenario');
+    });
     // Roadmap R3.5: printable report of the exercise.
     Route::get('scenario-planning/{project}/report', [ScenarioReportController::class, 'show'])->name('scenario-planning.report')->can('view-scenario');
 
@@ -243,6 +253,7 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::get('/extractions/active', 'activeExtractions')->name('active-extractions')->can('view-signal');
         Route::get('/sources/{source}/extraction', 'extraction')->name('extraction')->can('view-signal');
         Route::post('/{signal}/review', 'review')->name('review')->can('review-signal');
+        Route::post('/{signal}/classify', 'classify')->name('classify')->can('review-signal');
         Route::get('/{signal}/citations', 'citations')->name('citations')->can('view-signal');
     });
 

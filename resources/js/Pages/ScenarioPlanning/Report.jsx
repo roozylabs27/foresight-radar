@@ -2,14 +2,14 @@ import { Head, Link } from "@inertiajs/react";
 import { ArrowLeftIcon, PrinterIcon } from "lucide-react";
 
 import ComparisonTable from "@/Components/ScenarioPlanning/ComparisonTable";
-import { date, DecisionTable, Empty, EvidenceList, ForceTable, GateList, IndicatorTable, QuadrantPages, ResponseTable, Section, UncertaintyList } from "@/Components/ScenarioPlanning/ReportSections";
+import { BackcastingSummary, date, DecisionTable, Empty, EvidenceList, ForceTable, GateList, IndicatorTable, QuadrantPages, ResponseTable, Section, UncertaintyList } from "@/Components/ScenarioPlanning/ReportSections";
 import { Button } from "@/Components/ui/button";
 
 /**
  * Roadmap R3.5: printable report of one exercise, following the deck (slides 15–25). The browser's
  * "Save as PDF" gives the file. Until G1–G7 have all passed it is marked as a draft.
  */
-export default function Report({ title, project, gates, draft, forces, uncertainties, framework, quadrants, evidence, responses, indicators, decisions, generated_at: generatedAt }) {
+export default function Report({ title, project, gates, draft, forces, uncertainties, framework, quadrants, evidence, responses, indicators, backcasting, decisions, generated_at: generatedAt }) {
     return (
         <div className="min-h-svh bg-background text-foreground print:bg-white">
             <Head title={title} />
@@ -83,6 +83,10 @@ export default function Report({ title, project, gates, draft, forces, uncertain
 
                 <Section number={9} title="Early Warning Signals">
                     <IndicatorTable indicators={indicators} quadrants={quadrants} />
+                </Section>
+
+                <Section title="Masa depan pilihan & backcasting">
+                    <BackcastingSummary backcasting={backcasting} />
                 </Section>
 
                 <Section title="Log keputusan">

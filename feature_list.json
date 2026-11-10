@@ -875,6 +875,20 @@
         "Fetched values count only after a person confirms them; a failed fetch is recorded on the indicator"
       ],
       "verification_evidence": "2026-11-10: ExternalIndicatorSourceTest 4 tests (Http::fake, no real API call); with EarlyWarningIndicatorTest 20 passed (476 assertions). Full PHPUnit 552 passed (6,102 assertions). Local browser check against the real World Bank API: found and fixed 502/503 on the mrv parameter (now per_page only, one retry); 20 values stored as proposals, one confirmed, a second fetch added no duplicates. ExternalIndicatorSourceTest 4 passed (98 assertions) after the fix."
+    },
+    {
+      "id": "FEAT-063",
+      "name": "Preferred Future and Backcasting",
+      "description": "One quadrant is chosen as the preferred future with a rationale, and dated milestones are planned back from the target year to now (roadmap R4.1, deck slides 2 and 26).",
+      "priority": "P3",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only after the framework is approved (G5); only coordinators change it",
+        "Choosing or clearing the preferred future is logged as decision PF; clearing keeps the milestones",
+        "Milestones lie between the current year and the target year and may link a non-rejected response and an indicator of the same exercise",
+        "The page and the report list the path from the target year back to now"
+      ],
+      "verification_evidence": "2026-11-10: BackcastingTest 3 tests (written before the code, first run green, 125 assertions); ScenarioReportTest + WorkspaceTest 6 passed (289 assertions). Full PHPUnit 555 passed (6,231 assertions). Local browser: preferred future Fast · Favorable saved with rationale, milestone 2028 linked to the World Bank indicator, report section and PF decision row shown."
     }
   ]
 }

@@ -10,9 +10,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Ramsey\Uuid\Uuid;
 
+/**
+ * @property string|null $horizon
+ * @property bool $wild_card
+ * @property int|null $classified_by
+ */
 class Signal extends Model
 {
     use BelongsToTenant, HasFactory;
+
+    /**
+     * Roadmap R4.2 (deck slide 26): likely = current trend, could = current knowledge,
+     * might = weak signal / future knowledge.
+     */
+    public const HORIZONS = ['likely', 'could', 'might'];
 
     protected $fillable = [
         'tenant_id',
@@ -40,6 +51,10 @@ class Signal extends Model
         'generation_run_id',
         'quote_verified',
         'suggested_driving_force_id',
+        'horizon',
+        'wild_card',
+        'classified_by',
+        'classified_at',
     ];
 
     protected $casts = [
@@ -49,6 +64,8 @@ class Signal extends Model
         'preliminary_impact' => 'integer',
         'preliminary_uncertainty' => 'integer',
         'quote_verified' => 'boolean',
+        'wild_card' => 'boolean',
+        'classified_at' => 'datetime',
     ];
 
     protected static function booted()

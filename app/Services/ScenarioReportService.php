@@ -21,6 +21,7 @@ class ScenarioReportService
         protected StrategicResponseService $responses,
         protected EarlyWarningIndicatorService $indicators,
         protected ScenarioService $scenarios,
+        protected BackcastingService $backcasting,
     ) {}
 
     /** @return array<string, mixed> */
@@ -85,6 +86,8 @@ class ScenarioReportService
                 'directions' => (object) collect((array) $row['directions'])->map(fn ($direction) => $direction['direction'])->all(),
                 'discriminates' => $row['discriminates'],
             ])->values()->all(),
+            // Roadmap R4.1: preferred future and the path back to now.
+            'backcasting' => $this->backcasting->present($project),
             'decisions' => array_reverse($this->projects->decisions($project, 200)),
             'generated_at' => now()->toISOString(),
         ];

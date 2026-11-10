@@ -423,6 +423,7 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-10 (uncommitted) | Roadmap R4.1 preferred future and backcasting | **PASS** | Pint 452 files PASS; Larastan L5 clean on changed files; `BackcastingTest` 3 passed (125 assertions); `ScenarioReportTest` + `WorkspaceTest` 6 passed (289 assertions); full PHPUnit 555 passed (6,231 assertions, 1075.70s), dev DB still 38 users; `npm run build` PASS; migration `2026_11_10_000002` applied to the dev DB (38 users intact); local browser check done |
 | 2026-11-10 (uncommitted) | Roadmap R3.6 external indicator data sources | **PASS** | Pint PASS; Larastan L5: 1 error (`sortBy(0)` in `previousValue()`) fixed; a scoped rerun on the changed PHP files is clean; `ExternalIndicatorSourceTest` + `EarlyWarningIndicatorTest` 20 passed (476 assertions, Http::fake), after the Larastan fix `ExternalIndicatorSourceTest` 4 passed (94 assertions); full PHPUnit 552 passed (6,102 assertions, 1239.55s), dev DB still 38 users; `npm run build` PASS (2m 54s); migration `2026_11_10_000001` applied to the dev DB (38 users intact); browser check not done |
 | 2026-11-09 (uncommitted) | Roadmap R3.5 printable exercise report | **PASS** | Pint 414 files PASS; Larastan L5: 1 error (array offset in `gates()`) fixed; the full rerun timed out in a parallel worker, a scoped rerun on the three changed PHP files is clean; `ScenarioReportTest` 3 passed (88 assertions); `WorkspaceTest` + `ScenarioReportTest` 13 passed (328 assertions); full PHPUnit 548 passed (6,008 assertions, 1406.17s), dev DB still 38 users; `npm run build` PASS (3m 39s); no migration; browser check not done |
 | 2026-11-09 (uncommitted) | Roadmap R3.1 AI focal issue refinement | **PASS** | Pint 411 files PASS; Larastan L5: first run reported 1 error that a rerun did not reproduce, rerun clean; `FocalIssueSuggestionTest` + `ProjectTest` 12 passed (123 assertions, FakeLlmClient); full PHPUnit 545 passed (5,920 assertions, 1994.84s), dev DB still 38 users; `npm run build` PASS (3m 55s); migration `2026_11_09_000008` applied to the dev DB (38 users intact); browser check not done |
@@ -474,6 +475,25 @@
 
 ## Session Log
 
+### 2026-11-10 — Session 68 (R4.1: preferred future and backcasting)
+
+- **Choices:** backcasting before signal classification; one preferred quadrant with milestones (not a path per quadrant); signal classification as horizon (likely / could / might) plus a wild card flag, recorded as roadmap R4.2.
+- **Tests:** new `tests/Feature/ScenarioPlanning/BackcastingTest.php` (3 tests: choose a preferred future, milestones from the target year back to now with response, indicator and owner, edit, delete, change and clear with the PF decisions; rules before G5, viewer forbidden, rationale required, quadrant of the exercise only, milestone needs a preferred future, year between now and the target year, rejected response and unknown indicator refused; report section). Written before the code but not run red separately; the first run passed (125 assertions).
+- **Backend:** migration `2026_11_10_000002_create_backcasting` (project `preferred_*` columns, table `backcasting_milestones`); model `BackcastingMilestone`; `BackcastingService` (choose, clear, save, present, options; decision `PF`); `BackcastingController`; routes `scenario-planning.backcasting.*`; `ScenarioPlanningProjectService::decisions` labels `PF` as "Masa depan pilihan"; `ScenarioReportService` adds `backcasting`.
+- **Frontend:** page `Backcasting.jsx` (79 lines), `PreferredFuture`, `MilestoneList`, `MilestoneDialog`, hook `use-backcasting`, `MILESTONE_STATUSES`; Show links to it once forces are agreed; the report shows the preferred future and its milestones before the decision log.
+- **Local browser check (exercise "Elektrifikasi Kendaraan 2030"):** the page renders at phone width; "Fast · Favorable" saved as the preferred future with a rationale ("Dipilih oleh Roozy"); milestone 2028 "Insentif untuk semua xEV terbit" linked to the World Bank indicator; the report shows the section and the decision row "PF · Masa depan pilihan · Fast · Favorable". The only console errors are the 401s of `/signals/extractions/active` from before sign-in. This data stays in the local exercise.
+- **Verification:** Pint 452 files PASS; Larastan L5 clean on the changed PHP files; `ScenarioReportTest` + `WorkspaceTest` 6 passed (289 assertions; the R3.5 row's "13 passed" for these two files could not be reproduced, they hold 3 tests each); `npm run build` PASS; migration applied to the dev DB (38 users intact). Full suite 555 passed (6,231 assertions, 1075.70s), covering the session 67 fixes as well.
+- **Docs:** roadmap section "P4 — Beyond the Nine Steps" with R4.1 done and R4.2 missing; `feature_list.json` FEAT-063.
+- **Next recommended action:** R4.2 (signal horizon and wild card).
+
+### 2026-11-10 — Session 67 (alignment audit against the methodology deck)
+
+- **Audit:** `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` (26 slides) read slide by slide against the app. All nine steps (slides 13–25) are covered with gates G1–G7, the cross-functional consensus of slide 14 is covered by participants, multi-assessor scoring and the decision log, and the report follows slides 15–25. Findings outside the nine steps: no backcasting / preferred-future step (slides 2 and 26) and no likely / could / might or weak-signal / wild-card classification of signals (slide 26); both optional, candidates for a new roadmap item. Matrix row 4.7 stays Partial. The deck's own axis pair (Regulation × Technology) triggers the independence warning, which only asks for acknowledgement.
+- **Fixed (finding 3):** the exercise form now warns, without blocking, when the target year is fewer than `MIN_RECOMMENDED_HORIZON_YEARS` (3) away (`isShortHorizon` in `domain/scenarioPlanning.js`; deck slides 1 and 6–7). Checked in the local browser: 2027 shows the warning, 2030 does not; the dialog was closed without saving.
+- **Fixed (finding 4):** the indicator fixture in `EarlyWarningIndicatorTest` and `ExternalIndicatorSourceTest` labelled HL as DICHOTOMY although axis A is Government Regulation, so HL is STAGNATION. The fixture now follows slide 25 ("xEV technology adoption grows steadily"): rising in FAVOUR (HH) and DICHOTOMY (LH), falling in STAGNATION (HL) and CHALLENGING (LL). The relevance test was recalculated (HH 2/1, HL 1/2, LH 3/1, LL 1/3; DICHOTOMY leads).
+- **Verification:** `EarlyWarningIndicatorTest` + `ExternalIndicatorSourceTest` 20 passed (480 assertions); Pint 447 files PASS after fixing the line endings of the two test files; `npm run build` PASS (9m 32s, while tests ran); full suite not run for this change.
+- **Next recommended action:** decide whether backcasting / preferred future and signal classification become a roadmap item.
+
 ### 2026-11-10 — Session 66 (R3.6: external indicator data sources)
 
 - **Choices:** World Bank API as the first connector (public, no key), a button plus a daily schedule, and fetched values as proposals that need confirmation.
@@ -488,7 +508,8 @@
 - **Docs:** roadmap R3.6 done; `feature_list.json` FEAT-062. R3.6 is outside the feature matrix, so its counts stay 93/1/0/0.
 - **Full suite:** 552 passed (6,102 assertions, 1239.55s).
 - **Restart policy:** `laravel_app` and `laravel_nginx` had none and stayed down after each Docker restart; both now have `restart: unless-stopped` in `docker-compose.yml`, applied to the running containers with `docker update --restart unless-stopped` (no recreate). All five containers report `unless-stopped`.
-- **Next recommended action:** run the full suite once more for the `WorldBankSource` change. All roadmap items R0–R3 are now done.
+- **Full suite after the `WorldBankSource` fix:** 552 passed (6,106 assertions, 2231.57s), dev DB still 38 users.
+- **Next recommended action:** deploy the `WorldBankSource` fix to production. All roadmap items R0–R3 are now done.
 
 ### 2026-11-09 — Session 65 (R3.5: printable exercise report)
 

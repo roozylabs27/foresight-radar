@@ -45,6 +45,9 @@ class ScenarioPlanningProjectService
         9 => 'Tentukan indikator peringatan dini dan arahnya di tiap kuadran.',
     ];
 
+    /** Logged decisions that are not gates (roadmap R4.1). */
+    private const OTHER_DECISIONS = ['PF' => 'Masa depan pilihan'];
+
     /** Gates in the order they are passed (target workflow §4). */
     private const GATES = [
         'G1' => 'Focal issue dikonfirmasi',
@@ -303,7 +306,7 @@ class ScenarioPlanningProjectService
             ->get()
             ->map(fn (ProjectDecision $row) => [
                 'gate' => $row->gate,
-                'label' => self::GATES[$row->gate] ?? $row->gate,
+                'label' => self::GATES[$row->gate] ?? self::OTHER_DECISIONS[$row->gate] ?? $row->gate,
                 'action' => $row->action,
                 'subject' => $row->subject,
                 'actor' => $row->actor?->name,

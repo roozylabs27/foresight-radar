@@ -6,7 +6,7 @@ import FormField, { fieldControlProps } from "@/Components/FormField";
 import SearchableSelect from "@/Components/SearchableSelect";
 import { Input } from "@/Components/ui/input";
 import { Textarea } from "@/Components/ui/textarea";
-import { targetYearBounds } from "@/domain/scenarioPlanning";
+import { isShortHorizon, MIN_RECOMMENDED_HORIZON_YEARS, targetYearBounds } from "@/domain/scenarioPlanning";
 import { toFieldValue, useDialogForm } from "@/hooks/use-dialog-form";
 
 const FIELDS = ["name", "focal_question", "purpose", "target_year", "geography", "industry", "owner_unit", "owner", "background", "objectives"];
@@ -95,6 +95,11 @@ export default function ProjectForm({ id, initialValues = {}, owners = [], loadi
                     render={({ field, fieldState }) => (
                         <FormField id={ids.target_year} label="Tahun target" error={fieldState.error}>
                             <Input {...controlProps("target_year", field, fieldState)} type="number" inputMode="numeric" min={MIN_YEAR} max={MAX_YEAR} placeholder={String(MIN_YEAR + 4)} className="w-40" />
+                            {!fieldState.error && isShortHorizon(field.value) && (
+                                <p role="status" className="m-0 mt-1.5 text-xs text-warning">
+                                    Horizon kurang dari {MIN_RECOMMENDED_HORIZON_YEARS} tahun. Scenario planning ditujukan untuk jangka menengah–panjang; untuk sekitar satu tahun ke depan, proyeksi tren biasanya sudah cukup.
+                                </p>
+                            )}
                         </FormField>
                     )}
                 />
