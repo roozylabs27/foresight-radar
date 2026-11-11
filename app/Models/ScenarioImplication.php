@@ -6,6 +6,7 @@ use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -21,6 +22,8 @@ use Ramsey\Uuid\Uuid;
  * @property int|null $priority
  * @property string $origin
  * @property string $review_status
+ * @property Carbon|null $stale_since
+ * @property string|null $stale_reason
  */
 class ScenarioImplication extends Model
 {
@@ -47,6 +50,7 @@ class ScenarioImplication extends Model
 
     protected $casts = [
         'priority' => 'integer',
+        'stale_since' => 'datetime',
     ];
 
     protected static function booted()

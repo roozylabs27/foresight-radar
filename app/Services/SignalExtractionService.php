@@ -15,6 +15,7 @@ use App\Services\Extraction\LlmSignalExtractor;
 use App\Services\Llm\AiGenerationRecorder;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\LlmResponse;
 use App\Services\Llm\Prompts\SignalExtractionPrompt;
 use App\Services\Llm\StructuredLlmClient;
 use App\Support\EvidenceVerifier;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Ramsey\Uuid\Uuid;
+use Throwable;
 
 class SignalExtractionService
 {
@@ -191,6 +193,7 @@ class SignalExtractionService
         $useAi = config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC;
         $notice = null;
         $candidates = null;
+        $response = null;
         $meta = [];
 
         if ($useAi && ! $llm->isAvailable()) {
@@ -205,12 +208,12 @@ class SignalExtractionService
             try {
                 $extractor = $userLlm ? new LlmSignalExtractor($userLlm) : ($this->llmExtractor ?? $this->llmExtractor());
                 $result = $extractor->extract($title, $content);
-                $run = app(AiGenerationRecorder::class)->completed('signal_extraction', $result['response'], SignalExtractionPrompt::VERSION, $refs, $source->created_by);
+                // The run is recorded with the signals, inside the transaction below (audit AUD-13).
+                $response = $result['response'];
                 $candidates = array_map(fn ($item) => $item + [
                     'extraction_provider' => $result['meta']['provider'],
                     'extraction_model' => $result['meta']['model'],
                     'prompt_version' => $result['meta']['prompt_version'],
-                    'generation_run_id' => $run->id,
                 ], $result['candidates']);
                 $meta = $result['meta'] + ['label' => $llm->label()];
                 if ($meta['irrelevant'] ?? false) {
@@ -237,10 +240,35 @@ class SignalExtractionService
             $meta += ['provider' => self::PROVIDER_HEURISTIC, 'returned' => count($candidates)];
         }
 
-        DB::transaction(function () use ($source, $candidates, $meta, $notice) {
+        try {
+            $this->store($source, $candidates, $meta, $notice, $response, $refs ?? []);
+        } catch (Throwable $e) {
+            // Nothing was stored, so the call is recorded as failed with the reason; the job marks the source failed.
+            if ($response !== null) {
+                app(AiGenerationRecorder::class)->unsuccessful(AiGenerationRun::FAILED, 'signal_extraction', $llm, SignalExtractionPrompt::VERSION, $refs ?? [], 'storage_failed: '.Str::limit($e->getMessage(), 200, ''), $source->created_by, null, $response);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Save the candidates as pending signals and complete the source, in one transaction. An AI
+     * call's run (roadmap R1.12) is recorded here too, so a rollback leaves no "completed" run without
+     * its signals (audit AUD-13).
+     *
+     * @param  array<int, array<string, mixed>>  $candidates
+     * @param  array<string, mixed>  $meta
+     * @param  array<string, mixed>  $refs
+     */
+    private function store(Source $source, array $candidates, array $meta, ?string $notice, ?LlmResponse $response, array $refs): void
+    {
+        DB::transaction(function () use ($source, $candidates, $meta, $notice, $response, $refs) {
+            $runId = $response === null ? null
+                : app(AiGenerationRecorder::class)->completed('signal_extraction', $response, SignalExtractionPrompt::VERSION, $refs, $source->created_by)->id;
             $source->signals()->where('review_status', 'PENDING')->delete();
 
             foreach ($candidates as $item) {
+                $item['generation_run_id'] = $runId;
                 Signal::create([
                     'uuid' => (string) Uuid::uuid4(),
                     'source_id' => $source->id,

@@ -41,11 +41,13 @@ function interpolate(template, params) {
  * Lightweight, accessible I18nProvider for React 19 + Inertia.js 2.0.
  */
 export function I18nProvider({ children }) {
+    // A nested provider reuses the outer one. The hooks live in I18nRoot, so they always run in the
+    // same order (rules of hooks; found by ESLint, audit AUD-18).
     const parentContext = useContext(I18nContext);
-    if (parentContext) {
-        return children;
-    }
+    return parentContext ? children : <I18nRoot>{children}</I18nRoot>;
+}
 
+function I18nRoot({ children }) {
     const page = usePage();
     const [isChanging, setIsChanging] = useState(false);
 

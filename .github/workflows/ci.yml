@@ -95,6 +95,10 @@ jobs:
       - name: TypeScript typecheck
         run: npm run typecheck
 
+      # Fails on errors (undefined names, rules of hooks, broken JSX); warnings are known debt.
+      - name: ESLint (resources/js)
+        run: npm run lint
+
       - name: Build production assets
         run: npm run build
         env:

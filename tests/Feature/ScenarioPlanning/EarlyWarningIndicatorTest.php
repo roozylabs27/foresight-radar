@@ -9,6 +9,7 @@ use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\EarlyWarningIndicator;
 use App\Models\IndicatorObservation;
+use App\Models\IndicatorThresholdEvent;
 use App\Models\ProjectDrivingForce;
 use App\Models\ProjectParticipant;
 use App\Models\Scenario;
@@ -16,6 +17,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\Signal;
 use App\Models\Source;
+use App\Models\StrategicResponse;
 use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Services\EarlyWarningIndicatorService;
@@ -384,11 +386,12 @@ class EarlyWarningIndicatorTest extends TestCase
     }
 
     /**
-     * Roadmap R2.3 (relevance view): an observation's direction supports every quadrant expecting
-     * it and contradicts the others; qualitative or unset expectations, observations without a
-     * direction and retired indicators are not counted.
+     * Audit U5 (AUD-06): relevance counts each active indicator once, by its latest directional
+     * observation inside the window (12 months). Rising against falling contradicts; "stable" against
+     * a moving expectation (or the reverse) is unclear; qualitative or unset expectations, observations
+     * without a direction and retired indicators are not counted.
      */
-    public function test_observations_show_which_scenario_is_becoming_relevant(): void
+    public function test_each_indicator_counts_once_by_its_latest_recent_observation(): void
     {
         $this->readyFramework();
         $this->storeIndicator(); // HH, LH rising; HL, LL falling
@@ -399,50 +402,100 @@ class EarlyWarningIndicatorTest extends TestCase
         $charging = EarlyWarningIndicator::where('name', 'Charging stations')->sole();
         $this->storeIndicator(['name' => 'Retired one', 'status' => 'retired']);
         $retired = EarlyWarningIndicator::where('name', 'Retired one')->sole();
+        $day = fn (int $months) => now()->subMonths($months)->toDateString();
 
-        foreach ([[$adoption, 'rising'], [$adoption, 'rising'], [$adoption, 'falling'], [$adoption, null], [$charging, 'rising'], [$retired, 'rising']] as [$indicator, $direction]) {
-            $this->observe($this->manager, $indicator, array_filter(['observed_at' => '2026-10-01', 'value_numeric' => 1, 'direction' => $direction]))->assertSessionHasNoErrors();
+        // Adoption rose twice before, then fell most recently: only the latest counts.
+        foreach ([[$adoption, 'rising', 3], [$adoption, 'rising', 2], [$adoption, 'falling', 1], [$adoption, null, 0], [$charging, 'rising', 1], [$retired, 'rising', 1]] as [$indicator, $direction, $months]) {
+            $this->observe($this->manager, $indicator, array_filter(['observed_at' => $day($months), 'value_numeric' => 1, 'direction' => $direction]))->assertSessionHasNoErrors();
         }
 
         $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
             ->assertInertia(fn ($page) => $page
-                ->where('relevance.observations', 4)
+                ->where('relevance.counted', 2)
+                ->where('relevance.window_months', 12)
+                ->where('relevance.since', now()->subMonths(12)->toDateString())
                 ->where('relevance.quadrants.0.position', 'HH')
-                ->where('relevance.quadrants.0.supporting', 2)
+                ->where('relevance.quadrants.0.supporting', 0)
                 ->where('relevance.quadrants.0.contradicting', 1)
+                ->where('relevance.quadrants.0.reading', 'weakening')
                 ->where('relevance.quadrants.1.position', 'HL')
                 ->where('relevance.quadrants.1.supporting', 1)
-                ->where('relevance.quadrants.1.contradicting', 2)
+                ->where('relevance.quadrants.1.contradicting', 0)
+                ->where('relevance.quadrants.1.reading', 'strengthening')
                 ->where('relevance.quadrants.2.position', 'LH')
-                ->where('relevance.quadrants.2.supporting', 3)
+                ->where('relevance.quadrants.2.supporting', 1)
                 ->where('relevance.quadrants.2.contradicting', 1)
+                ->where('relevance.quadrants.2.reading', 'unclear')
                 ->where('relevance.quadrants.3.position', 'LL')
                 ->where('relevance.quadrants.3.supporting', 1)
-                ->where('relevance.quadrants.3.contradicting', 3)
-                ->where('relevance.leading', 'LH'));
+                ->where('relevance.quadrants.3.contradicting', 1)
+                ->where('relevance.leading', 'HL')
+                // The explanation names each indicator, what it did, what the quadrant expected, and when.
+                ->has('relevance.quadrants.0.indicators', 1)
+                ->where('relevance.quadrants.0.indicators.0.name', 'xEV adoption growth')
+                ->where('relevance.quadrants.0.indicators.0.observed', 'falling')
+                ->where('relevance.quadrants.0.indicators.0.expected', 'rising')
+                ->where('relevance.quadrants.0.indicators.0.verdict', 'contradicting')
+                ->where('relevance.quadrants.0.indicators.0.observed_at', $day(1))
+                ->has('relevance.quadrants.2.indicators', 2));
+    }
+
+    public function test_old_observations_and_stable_readings_do_not_tip_the_balance(): void
+    {
+        $this->readyFramework();
+        $this->storeIndicator(); // HH, LH rising; HL, LL falling
+        $adoption = EarlyWarningIndicator::sole();
+        $this->storeIndicator(['name' => 'Old indicator']);
+        $old = EarlyWarningIndicator::where('name', 'Old indicator')->sole();
+
+        $this->observe($this->manager, $adoption, ['observed_at' => now()->subMonth()->toDateString(), 'value_numeric' => 1, 'direction' => 'stable'])->assertSessionHasNoErrors();
+        $this->observe($this->manager, $old, ['observed_at' => now()->subMonths(13)->toDateString(), 'value_numeric' => 1, 'direction' => 'rising'])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('relevance.counted', 1)
+                ->where('relevance.outdated', 1)
+                ->where('relevance.leading', null)
+                ->where('relevance.quadrants.0.supporting', 0)
+                ->where('relevance.quadrants.0.contradicting', 0)
+                ->where('relevance.quadrants.0.unclear', 1)
+                ->where('relevance.quadrants.0.reading', 'unclear')
+                ->where('relevance.quadrants.0.indicators.0.verdict', 'unclear'));
+    }
+
+    public function test_the_explanation_marks_a_threshold_crossing(): void
+    {
+        $this->readyFramework();
+        $this->storeIndicator(['threshold_operator' => 'gt', 'threshold_value' => 10]);
+        $this->observe($this->manager, EarlyWarningIndicator::sole(), ['observed_at' => now()->subMonth()->toDateString(), 'value_numeric' => 12, 'direction' => 'rising'])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('relevance.quadrants.0.indicators.0.crossed_threshold', true)
+                ->where('relevance.quadrants.0.reading', 'strengthening'));
     }
 
     public function test_no_relevance_lead_without_directional_observations(): void
     {
         $this->readyFramework();
         $this->storeIndicator();
-        $this->observe($this->manager, EarlyWarningIndicator::sole(), ['observed_at' => '2026-10-01', 'value_text' => 'Belum jelas'])->assertSessionHasNoErrors();
+        $this->observe($this->manager, EarlyWarningIndicator::sole(), ['observed_at' => now()->subMonth()->toDateString(), 'value_text' => 'Belum jelas'])->assertSessionHasNoErrors();
 
         $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
-            ->assertInertia(fn ($page) => $page->where('relevance.observations', 0)->where('relevance.leading', null)->where('relevance.quadrants.0.supporting', 0));
+            ->assertInertia(fn ($page) => $page->where('relevance.counted', 0)->where('relevance.leading', null)->where('relevance.quadrants.0.supporting', 0)->where('relevance.quadrants.0.reading', 'unclear'));
     }
 
     /** Roadmap R2.3 (review trigger): an observation that crosses the threshold flags the framework and its scenarios for review. */
     public function test_a_threshold_crossing_flags_the_scenarios_for_review(): void
     {
         $framework = $this->readyFramework();
-        $this->storeIndicator();
+        $this->storeIndicator(['threshold_operator' => 'gt', 'threshold_value' => 10]);
         $indicator = EarlyWarningIndicator::sole();
 
         $this->observe($this->manager, $indicator, ['observed_at' => '2026-09-30', 'value_numeric' => 4, 'direction' => 'rising'])->assertSessionHasNoErrors();
         $this->assertNull($framework->fresh()->stale_since);
 
-        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 11, 'direction' => 'rising', 'crossed_threshold' => true])->assertSessionHasNoErrors();
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 11, 'direction' => 'rising'])->assertSessionHasNoErrors();
 
         $framework->refresh();
         $this->assertNotNull($framework->stale_since);
@@ -455,6 +508,130 @@ class EarlyWarningIndicatorTest extends TestCase
 
         $this->actingAs($this->manager)->post(route('scenario-planning.stale.acknowledge', $this->project))->assertSessionHasNoErrors();
         $this->assertNull($framework->fresh()->stale_since);
+    }
+
+    /* Audit 2026-11-11 U4 (AUD-04, AUD-05): the server decides numeric threshold crossings. */
+
+    private function approvedResponse(): StrategicResponse
+    {
+        return StrategicResponse::create([
+            'tenant_id' => $this->project->tenant_id, 'uuid' => (string) Uuid::uuid4(), 'project_id' => $this->project->id,
+            'title' => 'Bangun pabrik baterai', 'status' => 'approved', 'origin' => 'human',
+        ]);
+    }
+
+    public function test_the_server_decides_a_numeric_crossing_and_ignores_the_client_flag(): void
+    {
+        $framework = $this->readyFramework();
+        $response = $this->approvedResponse();
+        $this->storeIndicator(['threshold_operator' => 'gt', 'threshold_value' => 10])->assertSessionHasNoErrors();
+        $this->storeIndicator(['name' => 'Harga baterai', 'threshold_operator' => 'lt', 'threshold_value' => 100])->assertSessionHasNoErrors();
+        $adoption = EarlyWarningIndicator::where('name', 'xEV adoption growth')->sole();
+        $battery = EarlyWarningIndicator::where('name', 'Harga baterai')->sole();
+
+        // Below the threshold: a client claiming a crossing is ignored. On the boundary of "> 10": no crossing.
+        $this->observe($this->manager, $adoption, ['observed_at' => '2026-08-31', 'value_numeric' => 9, 'crossed_threshold' => true])->assertSessionHasNoErrors();
+        $this->observe($this->manager, $adoption, ['observed_at' => '2026-09-30', 'value_numeric' => 10])->assertSessionHasNoErrors();
+        // A text-only observation of a numeric indicator decides nothing.
+        $this->observe($this->manager, $adoption, ['observed_at' => '2026-09-30', 'value_text' => 'Naik tajam', 'crossed_threshold' => true])->assertSessionHasNoErrors();
+        // The other indicator moves the wrong way for its "< 100" rule.
+        $this->observe($this->manager, $battery, ['observed_at' => '2026-09-30', 'value_numeric' => 120])->assertSessionHasNoErrors();
+        $this->assertSame(0, IndicatorObservation::where('crossed_threshold', true)->count());
+        $this->assertSame(0, IndicatorThresholdEvent::count());
+        $this->assertNull($framework->fresh()->stale_since);
+        $this->assertNull($response->fresh()->stale_since);
+
+        $this->observe($this->viewer, $adoption, ['observed_at' => '2026-10-31', 'value_numeric' => 11])->assertSessionHasNoErrors();
+
+        $crossing = IndicatorObservation::where('value_numeric', 11)->sole();
+        $this->assertTrue($crossing->crossed_threshold);
+        $event = IndicatorThresholdEvent::sole();
+        $this->assertSame([$adoption->id, $crossing->id, 'gt', 10.0, 11.0, 'numeric', null], [
+            $event->early_warning_indicator_id, $event->indicator_observation_id, $event->operator, $event->threshold_value, $event->observed_value, $event->kind, $event->closed_at,
+        ]);
+        $this->assertNotNull($framework->fresh()->stale_since);
+        $this->assertStringContainsString('xEV adoption growth', (string) $response->fresh()->stale_reason);
+        $this->assertStringContainsString('> 10', (string) $response->fresh()->stale_reason);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->where('indicators.1.name', 'xEV adoption growth')
+                ->where('indicators.1.threshold_operator', 'gt')
+                ->where('indicators.1.threshold_value', 10)
+                ->where('indicators.1.threshold_numeric', true)
+                ->has('indicators.1.threshold_events', 1)
+                ->where('indicators.1.threshold_events.0.observed_value', 11)
+                ->where('indicators.1.threshold_events.0.observed_at', '2026-10-31')
+                ->has('indicators.0.threshold_events', 0));
+    }
+
+    public function test_threshold_settings_are_validated(): void
+    {
+        $this->readyFramework();
+
+        $this->storeIndicator(['threshold_operator' => 'gt'])->assertSessionHasErrors('threshold_value');
+        $this->storeIndicator(['threshold_value' => 10])->assertSessionHasErrors('threshold_operator');
+        $this->storeIndicator(['threshold_operator' => 'between', 'threshold_value' => 10])->assertSessionHasErrors('threshold_operator');
+        $this->storeIndicator(['threshold_operator' => 'gte', 'threshold_value' => 'x'])->assertSessionHasErrors('threshold_value');
+        $this->assertSame(0, EarlyWarningIndicator::count());
+
+        $this->storeIndicator(['threshold_operator' => 'lte', 'threshold_value' => 2.5])->assertSessionHasNoErrors();
+        $this->assertSame(['lte', 2.5], [EarlyWarningIndicator::sole()->threshold_operator, (float) EarlyWarningIndicator::sole()->threshold_value]);
+    }
+
+    public function test_a_qualitative_indicator_keeps_a_manual_flag_that_needs_a_note(): void
+    {
+        $framework = $this->readyFramework();
+        $this->storeIndicator();
+        $indicator = EarlyWarningIndicator::sole();
+
+        $this->observe($this->manager, $indicator, ['observed_at' => '2026-10-31', 'value_text' => 'Regulasi baru terbit', 'crossed_threshold' => true])
+            ->assertSessionHasErrors('note');
+        $this->assertSame(0, IndicatorObservation::count());
+
+        $this->observe($this->manager, $indicator, ['observed_at' => '2026-10-31', 'value_text' => 'Regulasi baru terbit', 'crossed_threshold' => true, 'note' => 'Permen baru mewajibkan TKDN 60%.'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue(IndicatorObservation::sole()->crossed_threshold);
+        $this->assertSame(['manual', null], [IndicatorThresholdEvent::sole()->kind, IndicatorThresholdEvent::sole()->operator]);
+        $this->assertNotNull($framework->fresh()->stale_since);
+    }
+
+    public function test_a_proposed_value_is_evaluated_once_when_a_person_confirms_it(): void
+    {
+        $framework = $this->readyFramework();
+        $this->storeIndicator(['threshold_operator' => 'gte', 'threshold_value' => 10]);
+        $indicator = EarlyWarningIndicator::sole();
+        $proposal = $indicator->observations()->create([
+            'observed_at' => '2026-10-31', 'value_numeric' => 10, 'crossed_threshold' => false,
+            'origin' => 'external', 'review_status' => 'proposed', 'source' => 'world_bank', 'source_period' => '2026',
+        ]);
+        $this->assertSame(0, IndicatorThresholdEvent::count());
+
+        $confirm = fn () => $this->actingAs($this->manager)->post(route('scenario-planning.indicators.observations.confirm', [$this->project, $indicator, $proposal]));
+        $confirm()->assertSessionHasNoErrors();
+        $confirm()->assertSessionHasErrors('observations');
+
+        $this->assertTrue($proposal->fresh()->crossed_threshold);
+        $this->assertSame(1, IndicatorThresholdEvent::count());
+        $this->assertNotNull($framework->fresh()->stale_since);
+    }
+
+    public function test_deleting_the_observation_closes_its_event_and_keeps_the_review_flag(): void
+    {
+        $framework = $this->readyFramework();
+        $this->storeIndicator(['threshold_operator' => 'gt', 'threshold_value' => 10]);
+        $indicator = EarlyWarningIndicator::sole();
+        $this->observe($this->manager, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 12])->assertSessionHasNoErrors();
+        $observation = IndicatorObservation::sole();
+
+        $this->actingAs($this->manager)->delete(route('scenario-planning.indicators.observations.destroy', [$this->project, $indicator, $observation]))->assertSessionHasNoErrors();
+
+        $event = IndicatorThresholdEvent::sole();
+        $this->assertNotNull($event->closed_at);
+        $this->assertNull($event->indicator_observation_id);
+        $this->assertSame(12.0, $event->observed_value);
+        $this->assertNotNull($framework->fresh()->stale_since);
     }
 
     private function draftIndicator(string $name, array $directions = ['HH' => 'rising', 'HL' => 'falling', 'LH' => 'rising', 'LL' => 'falling'], array $overrides = []): array
@@ -539,12 +716,12 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->assertSame('completed', AiGenerationRun::sole()->status);
 
         $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
-            ->assertInertia(fn ($page) => $page->where('relevance.observations', 0)->where('indicators.0.observations.0.review_status', 'proposed')->where('matchStatus', 'completed'));
+            ->assertInertia(fn ($page) => $page->where('relevance.counted', 0)->where('indicators.0.observations.0.review_status', 'proposed')->where('matchStatus', 'completed'));
 
         $this->actingAs($this->manager)->post(route('scenario-planning.indicators.observations.confirm', [$this->project, $indicator, $proposal]))->assertSessionHasNoErrors();
         $this->assertSame(['accepted', $this->manager->id], [$proposal->fresh()->review_status, $proposal->fresh()->recorded_by]);
         $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
-            ->assertInertia(fn ($page) => $page->where('relevance.observations', 1));
+            ->assertInertia(fn ($page) => $page->where('relevance.counted', 1));
     }
 
     public function test_ai_signal_matching_is_checked_and_follows_the_rules(): void

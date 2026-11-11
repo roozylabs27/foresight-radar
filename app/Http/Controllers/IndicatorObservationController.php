@@ -6,22 +6,27 @@ use App\Models\EarlyWarningIndicator;
 use App\Models\IndicatorObservation;
 use App\Models\ScenarioPlanningProject;
 use App\Models\Signal;
+use App\Services\IndicatorThresholdService;
 use App\Services\SignalMatchService;
-use App\Services\StalenessService;
 use App\Support\TenantRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Observations of an early warning indicator (roadmap R2.3). Whoever may give input on the
  * exercise records them (see ScenarioPlanningProject::acceptsInputFrom); the recorder or the
- * coordinator deletes one. Crossing the threshold flags the scenarios for review (R1.10 staleness).
+ * coordinator deletes one. Whether an observation crosses the threshold is decided on the server
+ * (audit U4, IndicatorThresholdService): by the indicator's numeric rule, or, for a qualitative
+ * indicator only, by a person's flag with a note. A crossing flags the framework, its scenarios and
+ * the strategic responses for review.
  */
 class IndicatorObservationController extends Controller
 {
     public function __construct(
-        protected StalenessService $staleness,
+        protected IndicatorThresholdService $thresholds,
     ) {}
 
     public function store(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator): RedirectResponse
@@ -31,6 +36,7 @@ class IndicatorObservationController extends Controller
             'value_numeric' => ['nullable', 'numeric', 'required_without:value_text'],
             'value_text' => ['nullable', 'string', 'max:255'],
             'direction' => ['nullable', Rule::in(IndicatorObservation::DIRECTIONS)],
+            // Counts only for an indicator without a numeric threshold, and then needs a note.
             'crossed_threshold' => ['boolean'],
             'signal' => ['nullable', 'uuid', TenantRule::exists('signals', 'uuid')->where('review_status', 'ACCEPTED')],
             'note' => ['nullable', 'string', 'max:1000'],
@@ -39,25 +45,27 @@ class IndicatorObservationController extends Controller
             'direction' => 'arah', 'signal' => 'sinyal', 'note' => 'catatan',
         ]);
         abort_unless($project->acceptsInputFrom($request->user()), 403);
+        $manualFlag = ! $this->thresholds->decidesNumerically($indicator) && (bool) ($validated['crossed_threshold'] ?? false);
+        if ($manualFlag && blank($validated['note'] ?? null)) {
+            throw ValidationException::withMessages(['note' => 'Jelaskan di catatan mengapa ambang indikator kualitatif ini terlewati.']);
+        }
 
         $observation = $indicator->observations()->create([
             'observed_at' => $validated['observed_at'],
             'value_numeric' => $validated['value_numeric'] ?? null,
             'value_text' => $validated['value_text'] ?? null,
             'direction' => $validated['direction'] ?? null,
-            'crossed_threshold' => (bool) ($validated['crossed_threshold'] ?? false),
+            'crossed_threshold' => false,
+            'review_status' => 'accepted',
             'signal_id' => empty($validated['signal']) ? null : Signal::where('uuid', $validated['signal'])->value('id'),
             'note' => $validated['note'] ?? null,
             'recorded_by' => $request->user()->id,
         ]);
 
-        // A crossed threshold means the futures may be shifting: flag the framework and its scenarios for review.
-        if ($observation->crossed_threshold) {
-            $this->staleness->markFramework($project, "Indikator {$indicator->name} melewati ambang batas ({$observation->observed_at->toDateString()})");
-        }
+        $crossed = $this->thresholds->evaluate($observation, $manualFlag);
 
-        return back()->with('success', $observation->crossed_threshold
-            ? 'Observasi dicatat. Ambang batas terlewati: kerangka dan skenario ditandai untuk ditinjau.'
+        return back()->with('success', $crossed
+            ? 'Observasi dicatat. Ambang batas terlewati: kerangka, skenario dan respons strategis ditandai untuk ditinjau.'
             : 'Observasi dicatat.');
     }
 
@@ -67,15 +75,19 @@ class IndicatorObservationController extends Controller
         abort_unless($project->acceptsInputFrom($request->user()), 403);
 
         $matches->confirm($observation, $request->user());
+        $crossed = $this->thresholds->evaluate($observation->refresh());
 
-        return back()->with('success', 'Observasi dikonfirmasi.');
+        return back()->with('success', $crossed ? 'Observasi dikonfirmasi. Ambang batas terlewati: kerangka, skenario dan respons strategis ditandai untuk ditinjau.' : 'Observasi dikonfirmasi.');
     }
 
     public function destroy(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, IndicatorObservation $observation): RedirectResponse
     {
         abort_unless($observation->recorded_by === $request->user()->id || $request->user()->can('update', $project), 403);
 
-        $observation->delete();
+        DB::transaction(function () use ($observation) {
+            $this->thresholds->close($observation);
+            $observation->delete();
+        });
 
         return back()->with('success', 'Observasi dihapus.');
     }

@@ -159,6 +159,10 @@ class ScenarioNarrativeService
                 }
                 $row = $existing[$quadrant['position']] ?? null;
                 if ($row) {
+                    if (filled($row->narrative)) {
+                        // Audit U6: the opportunities and challenges were written against the old narrative.
+                        app(StalenessService::class)->markImplications($row->implicationItems()->get(), "Narasi skenario dibuat ulang ({$row->position})");
+                    }
                     ScenarioNarrativeRevision::capture($row, 'regenerate', $userId);
                     $row->update($attributes);
                 } else {

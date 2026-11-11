@@ -17,15 +17,15 @@ Status: **Implemented** (end to end, tested) · **Partial** · **Missing** · **
 | Conditions (Step 5) | Describe each quadrant | quadrant, forces → conditions | narratives, responses | Implemented | — |
 | Consistency review | Check a quadrant hangs together | quadrant → review (proposal) | compare | Implemented | — |
 | Narratives (Step 6) | Story per quadrant with evidence | conditions, signals → narrative + citations, G6 | report, compare | **Implemented (U3)** | Step 6 page inside the exercise, exercise rights, revision history (AUD-01..03 fixed); stale propagation into Steps 7–9 still open (U6) |
-| Challenges & opportunities (Step 7) | Implications per quadrant | quadrant, forces, conditions → implications | responses | Partial | no stale flag on upstream change (AUD-07) |
-| Strategic responses (Step 8) | Actions with cross-scenario fit | implications, conditions → responses, fit, G7 | backcasting, report | Partial | not flagged when implications change; G7 independent of G6 (AUD-07, 08) |
-| Early warning indicators (Step 9) | Monitor which future is unfolding | uncertainty/force, directions → indicators | relevance, report | Partial | thresholds not computed (AUD-04, 05) |
+| Challenges & opportunities (Step 7) | Implications per quadrant | quadrant, forces, conditions → implications | responses | Implemented (U6) | flagged on framework/axis change and narrative regeneration (AUD-07 fixed) |
+| Strategic responses (Step 8) | Actions with cross-scenario fit | implications, conditions → responses, fit, G7 | backcasting, report | Implemented (U6) | flagged when implications or the framework change; G7 needs G6 (AUD-07, 08 fixed) |
+| Early warning indicators (Step 9) | Monitor which future is unfolding | uncertainty/force, directions → indicators | relevance, report | Partial | thresholds computed on the server with events since U4 (AUD-04, 05 fixed); relevance still a raw count (AUD-06, U5) |
 | Observations (manual, AI-matched, World Bank) | Evidence for indicators | values → observations (proposed / accepted) | relevance, staleness | Partial | crossing asserted by user; external never crosses |
-| Scenario relevance | Which scenario is strengthening | accepted observations → per-quadrant count | indicators page | Partial | no recency, no explanation (AUD-06) |
+| Scenario relevance | Which scenario is strengthening | accepted observations → per-quadrant count | indicators page | Implemented (U5) | latest per indicator in 12 months, explained per quadrant, labelled not a probability (AUD-06 fixed); not on report/compare |
 | Sensing panel (weak signals, wild cards) | Faint signals beside indicators | classified accepted signals → list | indicators page | Implemented | — |
 | Preferred future & backcasting | Plan back from the chosen future | quadrant, milestones → path | report | Implemented | — |
 | Comparison & report | Read the exercise as a whole | everything → views, printable report | stakeholders | Implemented | report reads narratives from the same quadrants |
-| Staleness banners | Show what needs review after change | upstream change → flags | every step page | Partial | does not reach Steps 7–9 (AUD-07) |
+| Staleness banners | Show what needs review after change | upstream change → flags | every step page | Implemented (U6) | reaches Steps 7–9 with counts and per-item tags (AUD-07 fixed) |
 
 ## Environmental intelligence
 
@@ -57,6 +57,6 @@ Status: **Implemented** (end to end, tested) · **Partial** · **Missing** · **
 ## Unverified or untested paths
 
 - Browser e2e: none of the scenario planning pages, Signals, Settings (AUD-19).
-- Whole Step 1→9 journey: no automated test (AUD-20).
+- Whole Step 1→9 journey: covered since U7 by `ForesightExerciseJourneyTest` (HTTP level, fake LLM); no browser e2e yet (AUD-19).
 - Dimension migration on a production-like multi-tenant dataset: only the two-organisation dev database (AUD-11).
-- Frontend: no lint; typecheck checks no JSX (AUD-18).
+- Frontend: ESLint since 2026-11-12 (0 errors, 108 warnings as debt); typecheck still checks no JSX (AUD-18).

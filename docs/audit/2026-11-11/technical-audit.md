@@ -35,29 +35,35 @@ Classification vocabulary: confirmed bug · missing functionality · integration
 - **Expected:** the server decides a crossing from a structured rule and the observed value.
 - **Remediation:** U4 — `threshold_operator` + `threshold_value` on indicators, a pure evaluator, server-side evaluation on every observation path; qualitative indicators keep a manual flag with a required note.
 - **Acceptance:** a client boolean is ignored for numeric indicators; boundary cases tested.
+- **Status: fixed in U4 (2026-11-11).** Columns `threshold_operator` (gt/gte/lt/lte) and `threshold_value`; pure `App\Support\ThresholdEvaluator`; `IndicatorThresholdService::evaluate()` decides on the server. For a numeric indicator the client flag is ignored and a text-only observation decides nothing; a qualitative indicator keeps a manual flag that needs a note. The observation dialog shows the server's rule as a preview instead of a checkbox. Tests: `ThresholdEvaluatorTest` (operators, boundaries, no decision), `EarlyWarningIndicatorTest` (client flag ignored, boundary, wrong direction, text-only, two indicators, validation, qualitative note).
 
 ### AUD-05 · P1 · Missing functionality — external and AI-matched observations never cross; no event record
 - **Current:** World Bank fetch and AI signal matching hardcode `crossed_threshold = false` (`app/Services/ExternalIndicatorService.php:99`, `app/Services/SignalMatchService.php:110`); confirming a proposal does not evaluate. No threshold event table; deleting a crossing observation leaves the stale flag with no trace of why.
 - **Remediation:** U4 — `indicator_threshold_events` (unique per observation), evaluation on confirmation, a reason on the framework and on the exercise's approved responses.
 - **Acceptance:** a confirmed World Bank value beyond the threshold creates exactly one event and flags review.
+- **Status: fixed in U4 (2026-11-11).** Table `indicator_threshold_events` (unique per observation; kind numeric/manual; rule, observed value and date). Proposals (World Bank, AI match) are evaluated when a person confirms them, once. A crossing flags the framework, its quadrants and all the exercise's strategic responses (`StalenessService::markResponses`) with a reason that names the indicator, rule and value. Deleting the observation closes its event and keeps the review flags. Events are listed on the indicator card. Found on the dev MySQL run: the default name of the composite index exceeded 64 characters (SQLite tests do not check); named explicitly.
 
 ### AUD-06 · P1 · Missing functionality — scenario relevance is a raw count without explanation
 - **Current:** `EarlyWarningIndicatorService::relevance()` (`app/Services/EarlyWarningIndicatorService.php:187`) adds +1/−1 per accepted observation for every quadrant with an expected direction; no recency, `stable` counts as contradicting, one indicator with many observations dominates, no per-quadrant explanation. The UI does not call it probability (good).
 - **Remediation:** U5 — latest accepted observation per indicator within a window, stable/qualitative neutral, threshold events marked, per-quadrant explanation listing indicators; formula documented in `docs/methodology/`; labelled "bukan probabilitas".
 - **Acceptance:** tests for recency, latest-per-indicator, conflicts, explanation content.
+- **Status: fixed in U5 (2026-11-11).** One vote per active indicator: its latest accepted directional observation inside 12 months (`RELEVANCE_WINDOW_MONTHS`); older ones reported as `outdated`. Rising against falling contradicts; stable against a moving expectation (or the reverse) is unclear. Each quadrant gets a reading (menguat / melemah / belum jelas) and the list of indicators behind it (direction, date, expectation, verdict, threshold crossing). The panel says "Hitungan, bukan probabilitas" with the rule in a tooltip; the formula is in `docs/methodology/scenario-relevance.md`. Report and compare pages do not show relevance (they did not before either); left out to keep the unit small. Tests: 4 relevance tests in `EarlyWarningIndicatorTest` (latest-per-indicator, window, stable, retired, qualitative, threshold mark, no lead).
 
 ### AUD-07 · P1 · Integration gap — upstream changes do not reach Steps 7–9
 - **Current:** `StalenessService::markFramework` (`app/Services/StalenessService.php:22`) flags the framework and quadrants only; implications, responses and indicators are not flagged when axes or uncertainties change; an implication change does not flag responses; regenerating a narrative does not flag implications.
 - **Remediation:** U6 — explicit rules, each with a reason; nothing deleted.
 - **Acceptance:** one test per rule (Scenario F).
+- **Status: fixed in U6 (2026-11-11).** Implications and indicators got `stale_since`/`stale_reason`. Rules (`StalenessService`), each with a reason, nothing deleted: (1) a framework flag from an axis, focal issue or axis-force score change also flags implications, responses and indicators (`markDownstream`); (2) withdrawing G5 (reopen, or a withdrawn uncertainty/score) flags them as "Kerangka skenario dibuka kembali"; (3) an implication edited or deleted flags the responses that rely on it; (4) regenerating a filled narrative flags that quadrant's implications; (5) a threshold crossing flags responses only (U4). An edit clears an implication's or indicator's own flag; "Sudah ditinjau, pertahankan" also clears implications and indicators; responses keep their own "keep". The banner counts flagged Steps 7–9 items; items show "Perlu ditinjau" with the reason. Decision log: unchanged; these are review flags, not gate decisions (G5 withdrawal is already logged). Tests: 5 rule tests in `StrategicResponseTest`.
 
 ### AUD-08 · P2 · Product decision — Steps 7–9 gated only on G5
 - **Current:** implications, responses and indicators require an approved framework (G5) but not approved narratives (G6); G7 (response approval) does not require G6.
 - **Decision proposed in the plan:** G7 approval requires G6; drafting Steps 7–9 earlier stays allowed and the dependency is shown. Implemented in U6.
+- **Status: done in U6 (2026-11-11).** `StrategicResponseService::approve` refuses with `narratives` until all four narratives are approved (G6); drafting Steps 7–9 stays allowed. Test: `test_a_response_is_approved_only_after_all_four_narratives`; six older response tests now approve the narratives first.
 
 ### AUD-20 · P2 · Testing gap — no end-to-end exercise journey
 - **Current:** 20 feature test files under `tests/Feature/ScenarioPlanning/`; the longest chain is `ScenarioNarrativeReviewTest` (Steps 1–6). No test walks Steps 1–9; indicator tests build fixtures directly.
 - **Remediation:** U7 — `ForesightExerciseJourneyTest` and `TenantIsolationJourneyTest`.
+- **Status: done in U7 (2026-11-12).** Both journeys pass (177 and 82 assertions); they needed no application change. Browser e2e for the exercise pages is still open (AUD-19).
 
 ## Reliability
 
@@ -73,6 +79,7 @@ Classification vocabulary: confirmed bug · missing functionality · integration
 
 ### AUD-13 · P2 · Data integrity risk — AI run recorded `completed` before signals are written
 - **Current:** the extraction's `AiGenerationRun` is recorded completed before the insert transaction; a rollback leaves a completed run with no signals. Backlog.
+- **Status: fixed 2026-11-12.** `SignalExtractionService::store()` records the run inside the same transaction as the signals; when storing fails, the call is recorded as `failed` (`storage_failed: <reason>`) and the error reaches the job, which marks the source failed. Test: `LlmSignalExtractionTest::test_a_storage_failure_leaves_no_completed_run_without_signals` (seen red first).
 
 ## Data and migrations
 
@@ -106,6 +113,7 @@ No P0. Details in [tenant-isolation-data-integrity.md](tenant-isolation-data-int
 
 ### AUD-18 · P2 · Architectural improvement — typecheck covers nothing; no lint
 - `resources/js` has 182 `.jsx`, 30 `.js`, 1 `.ts` (unused); `tsconfig.json` includes only TS files, so `npm run typecheck` (CI and `verify.sh`) checks one unused file. No ESLint config or script. Backlog.
+- **Status: ESLint added 2026-11-12.** `eslint.config.js` (ESLint 9, flat config) for `resources/js`: `@eslint/js` recommended, `eslint-plugin-react` (recommended + jsx-runtime, no prop-types), `react-hooks/rules-of-hooks` as error, `exhaustive-deps` and all jsx-a11y recommended rules as warnings. `npm run lint` runs in `verify.sh` and CI and fails on errors. The first run found 7 errors, all fixed: `I18nProvider` called hooks after an early return (hooks moved into an inner `I18nRoot`), `use-comments.js` used a global `axios` without importing it, and a needless regex escape. 108 warnings remain as known debt (51 unused variables, 21 hook dependency lists, the rest accessibility), to be fixed when a file is touched. The typecheck step stays (it checks the one `.ts` file); converting to TypeScript was not decided.
 
 ### AUD-19 · P2 · Testing gap — browser e2e
 - Two specs opened `/register`, which does not exist (accounts are by invitation) — **rewritten in U1** to the password reset page. No e2e covers scenario planning, Signals or Settings; CI runs only the login smoke. The `e2e` runner is agentic and needs a model, so it was not run here.

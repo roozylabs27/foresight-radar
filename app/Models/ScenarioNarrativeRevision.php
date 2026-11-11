@@ -57,7 +57,7 @@ class ScenarioNarrativeRevision extends Model
 
         return self::create([
             'uuid' => (string) Uuid::uuid4(),
-            'tenant_id' => $quadrant->tenant_id,
+            'tenant_id' => $quadrant->getAttribute('tenant_id'),
             'scenario_quadrant_id' => $quadrant->id,
             'reason' => $reason,
             'user_id' => $userId,

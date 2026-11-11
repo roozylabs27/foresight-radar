@@ -231,6 +231,15 @@ export const INDICATOR_DIRECTIONS = {
     qualitative: { label: "Kualitatif", short: "◇" },
 };
 
+/** Audit U4: numeric threshold operators (App\Support\ThresholdEvaluator). The server decides; this is a preview. */
+export const THRESHOLD_OPERATORS = { gt: "lebih dari (>)", gte: "minimal (≥)", lt: "kurang dari (<)", lte: "maksimal (≤)" };
+
+export function crossesThreshold(operator, threshold, value) {
+    if (!THRESHOLD_OPERATORS[operator] || threshold === null || threshold === "" || value === null || value === "" || Number.isNaN(Number(value))) return null;
+    const [t, v] = [Number(threshold), Number(value)];
+    return { gt: v > t, gte: v >= t, lt: v < t, lte: v <= t }[operator];
+}
+
 export const INDICATOR_FREQUENCIES = { monthly: "Bulanan", quarterly: "Kuartalan", ad_hoc: "Sesuai kebutuhan" };
 
 export const INDICATOR_SOURCES = {

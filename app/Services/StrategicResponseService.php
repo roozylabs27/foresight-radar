@@ -77,6 +77,11 @@ class StrategicResponseService
         if ($response->fits()->count() < count(Scenario::POSITIONS)) {
             $errors['fit'] = 'Nilai kecocokan respons di keempat kuadran sebelum menyetujuinya.';
         }
+        // Audit U6 (AUD-08): a response answers the agreed futures, so G7 needs G6 (all four narratives approved).
+        $approved = $response->project->framework()->first()?->quadrants()->where('review_status', 'approved')->count() ?? 0;
+        if ($approved < count(Scenario::POSITIONS)) {
+            $errors['narratives'] = 'Setujui keempat narasi skenario (langkah 6, G6) sebelum menyetujui respons strategis.';
+        }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }

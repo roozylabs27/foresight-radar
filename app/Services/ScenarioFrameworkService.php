@@ -93,7 +93,11 @@ class ScenarioFrameworkService
 
     public function reopen(Scenario $scenario, User $user): void
     {
+        $wasApproved = $scenario->isFrameworkApproved();
         $scenario->update(['framework_status' => 'draft', 'approved_by' => null, 'approved_at' => null, 'updated_by' => $user->id]);
+        if ($wasApproved && $scenario->project) {
+            app(StalenessService::class)->frameworkReopened($scenario->project);
+        }
     }
 
     /**

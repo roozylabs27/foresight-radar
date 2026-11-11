@@ -27,10 +27,19 @@ Earlier audits in [`docs/audit/`](../) (security, performance, reliability, capa
 ## Major risks (by priority)
 
 1. **P1 — Step 6 outside the exercise (AUD-01..03).** Narratives are generated and approved on a global page, authorised by scenario creator instead of exercise coordinator, and keep no revision history. **Fixed in U3.**
-2. **P1 — Early warning thresholds are not computed (AUD-04, 05).** The client ticks "crossed"; World Bank and AI-matched observations never cross; no event record.
-3. **P1 — Monitoring and change do not close the loop (AUD-06, 07).** Relevance counts observations without recency or explanation; axis or implication changes do not flag implications, responses or indicators.
+2. **P1 — Early warning thresholds are not computed (AUD-04, 05).** The client ticks "crossed"; World Bank and AI-matched observations never cross; no event record. **Fixed in U4.**
+3. **P1 — Monitoring and change do not close the loop (AUD-06, 07).** Relevance counts observations without recency or explanation (**fixed in U5**); axis or implication changes do not flag implications, responses or indicators (**fixed in U6**).
 4. **P1 — Operational reliability (AUD-09, 11).** Sources and indicator fetches can stay QUEUED forever; the dimension migration's `down()` is unsafe. **Fixed in U2.**
 5. **P2 — Harness truth (AUD-17..20).** `docs/` was not in git (fixed in this unit), AGENTS.md described the stack wrongly (fixed), typecheck covers nothing, no lint, two e2e specs targeted a route that does not exist (fixed), no end-to-end journey test.
+
+## Status after U2–U7 (2026-11-12)
+
+All seven units are implemented, each with tests and recorded verification (see [test-verification-report.md](test-verification-report.md)); nothing is committed by the agent.
+
+- **Step 1→9 now closes the loop:** Step 6 runs inside the exercise with exercise rights and narrative history (U3); thresholds are decided on the server with one event per crossing (U4); relevance is explained and windowed, labelled not a probability (U5); upstream changes flag Steps 7–9 with reasons, and G7 needs G6 (U6).
+- **Reliability:** lost queued work becomes retryable with atomic claims; the dimension migration refuses a lossy rollback (U2).
+- **Proof:** `ForesightExerciseJourneyTest` walks one exercise from Step 1 to Step 9 and `TenantIsolationJourneyTest` checks another organisation on every step (U7). Full PHPUnit 622 passed.
+- **Still open:** browser e2e for the exercise pages (AUD-19), the 108 ESLint warnings (AUD-18, lint itself added), and the P2/P3 backlog. The dimension migration must still be deployed with the staged procedure in [tenant-isolation-data-integrity.md](tenant-isolation-data-integrity.md).
 
 ## What this stage (U1) changed
 

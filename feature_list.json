@@ -221,7 +221,7 @@
         "Hallucinated citations are rejected and trigger deterministic template fallback",
         "Offline benchmark test evaluates 4-quadrant completeness and signal citation veracity"
       ],
-      "verification_evidence": "Tests/Feature/ScenarioHarnessTest and Tests/Feature/Llm/ScenarioNarrativeBenchmarkTest pass (25 assertions)"
+      "verification_evidence": "Tests/Feature/ScenarioHarnessTest and Tests/Feature/Llm/ScenarioNarrativeBenchmarkTest pass (25 assertions) U3 2026-11-11: Step 6 moved into the exercise (scenario-planning.narratives.*), exercise rights, narrative revision history; ScenarioNarrativeReviewTest 12 passed (6 new); full PHPUnit 604 passed; browser edit + revision checked locally."
     },
     {
       "id": "FEAT-017",
@@ -403,7 +403,7 @@
         "Titles present in all four quadrants are flagged as generic",
         "Step 7 is done when every quadrant has at least one opportunity and one challenge"
       ],
-      "verification_evidence": "2026-10-31: ScenarioImplicationTest 6 passed (plus a conditions-page regression test); Larastan clean; Pint clean; npm build OK; browser: validation in dialog, item with linked condition."
+      "verification_evidence": "2026-10-31: ScenarioImplicationTest 6 passed (plus a conditions-page regression test); Larastan clean; Pint clean; npm build OK; browser: validation in dialog, item with linked condition. U6 2026-11-11: implications flagged on framework/axis change, G5 withdrawal and narrative regeneration; edits clear the flag. Full PHPUnit 620 passed."
     },
     {
       "id": "FEAT-029",
@@ -418,7 +418,7 @@
         "Approval needs a rationale and a fit for all four quadrants; any edit returns a response to proposed",
         "Step 8 is done once a response is approved"
       ],
-      "verification_evidence": "2026-11-01: StrategicResponseTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: create with partial fit, approval refused with both reasons."
+      "verification_evidence": "2026-11-01: StrategicResponseTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: create with partial fit, approval refused with both reasons. U6 2026-11-11: G7 approval requires G6 (all four narratives); responses flagged when implications they rely on or the framework change. Full PHPUnit 620 passed."
     },
     {
       "id": "FEAT-030",
@@ -433,7 +433,7 @@
         "Narrative indicator strings are imported once as proposals and still listed",
         "Step 9 is done when an accepted active indicator has a direction in all four quadrants"
       ],
-      "verification_evidence": "2026-11-01: EarlyWarningIndicatorTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: indicator with four directions saved."
+      "verification_evidence": "2026-11-01: EarlyWarningIndicatorTest 7 passed; Larastan clean; Pint clean; npm build OK; browser: indicator with four directions saved. U4 2026-11-11: thresholds as operator + value decided on the server, one event per crossing, responses flagged; ThresholdEvaluatorTest 3 + EarlyWarningIndicatorTest (5 new/rewritten) seen red, then Unit + ScenarioPlanning 216 passed. U5 2026-11-11: relevance counts each indicator once (latest observation in 12 months) with a per-quadrant explanation, labelled not a probability; 4 relevance tests seen red then passed; formula in docs/methodology/scenario-relevance.md. U6 2026-11-11: indicators flagged when the framework changes; acknowledged with the framework. Full PHPUnit 620 passed."
     },
     {
       "id": "FEAT-031",
@@ -515,7 +515,7 @@
         "Failed provider calls and rejected answers are recorded with their reason and link nothing",
         "Output written without AI (keyword rules, template) links no run; extraction without AI records none"
       ],
-      "verification_evidence": "2026-11-02: tests/Feature/Llm 85 passed (5 new); Larastan clean; Pint clean."
+      "verification_evidence": "2026-11-02: tests/Feature/Llm 85 passed (5 new); Larastan clean; Pint clean. 2026-11-12 (AUD-13): the extraction run is recorded inside the signal transaction; a storage failure records a failed run; new test seen red, Llm tests 117 passed."
     },
     {
       "id": "FEAT-037",
@@ -963,6 +963,21 @@
         "Display order follows environment order, then position; the radar draws one spoke per dimension and colours come from the chosen palette key or a stable default"
       ],
       "verification_evidence": "2026-11-11: TenantDimensionsTest 5 tests red first (5 failed), then 5 passed; DimensionSettingsTest 5 passed (not run red: the full suite held the test database); the two tenant-security fixtures updated to use the organisation's own dimension; dev DB migrated (11 dimensions and 2 environments per organisation, no cross-organisation references, 38 users) after fixing a migration ordering bug that only appears with several organisations. Local browser: settings page lists Macro / Mezzo with usage, delete disabled when in use, added AI Policy appeared as a 12th radar spoke, then deleted again. U2 2026-11-11: migration owner = lowest non-deleted organisation, guarded FK swap, down() refuses lossy merges before any change; DimensionMigrationSafetyTest 5 tests (written with the fix, not seen red); delete locks the row before counting (not testable on SQLite)."
+    },
+    {
+      "id": "FEAT-069",
+      "name": "Step 1-9 Exercise Journey and Tenant Isolation Journey",
+      "description": "Two automated journeys (audit 2026-11-11 U7): one organisation takes one exercise from Step 1 to Step 9 through the page routes with a fake LLM; a second organisation guesses the first one's ids on every step and gets not found.",
+      "priority": "high",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Each step unlocks the next and all nine steps end done; gates G1-G7 are logged once each with the actor",
+        "Narratives cite accepted signals; implications link forces and conditions; the response links an implication and a condition; the indicator has a direction per quadrant and a numeric threshold",
+        "A crossing observation is decided on the server, creates one event and flags the framework and the response; relevance explains the reading",
+        "A second exercise of the same organisation sees none of the first one's work and cannot change it (404)",
+        "Another organisation gets 404 on every step's pages and writes, on signal sources and on scoped report data, sees nothing in lists, and changes nothing"
+      ],
+      "verification_evidence": "2026-11-12: tests/Feature/Journeys/ForesightExerciseJourneyTest (177 assertions) and TenantIsolationJourneyTest (82 assertions) pass; no application change was needed. Full PHPUnit 622 passed (7,473 assertions, 585.30s)."
     }
   ]
 }

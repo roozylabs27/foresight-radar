@@ -47,8 +47,8 @@ export default function Responses({ auth, title, project, steps, frameworkApprov
                         </Button>
                     )}
                 >
-                    {(errors.responses || errors.rationale || errors.fit) && (
-                        <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{[errors.responses, errors.rationale, errors.fit].filter(Boolean).join(" ")}</p>
+                    {(errors.responses || errors.rationale || errors.fit || errors.narratives) && (
+                        <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{[errors.responses, errors.rationale, errors.fit, errors.narratives].filter(Boolean).join(" ")}</p>
                     )}
                     {!frameworkApproved ? (
                         <p className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">Setujui kerangka skenario (langkah 4) dulu sebelum menyusun respons strategis.</p>

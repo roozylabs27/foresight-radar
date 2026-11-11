@@ -8,6 +8,7 @@ use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
+use App\Models\EarlyWarningIndicator;
 use App\Models\ProjectDecision;
 use App\Models\ProjectDrivingForce;
 use App\Models\ProjectParticipant;
@@ -21,6 +22,7 @@ use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Support\DimensionTaxonomy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -238,6 +240,7 @@ class StrategicResponseTest extends TestCase
     public function test_approval_needs_a_rationale_and_fit_for_all_quadrants_and_edits_return_it_to_proposed(): void
     {
         $this->readyFramework();
+        $this->approveNarratives();
         $this->store(['rationale' => null, 'fit' => ['HH' => 'applies']]);
         $response = StrategicResponse::sole();
 
@@ -259,6 +262,7 @@ class StrategicResponseTest extends TestCase
     public function test_the_page_ranks_responses_by_robustness_and_separates_approved_ones(): void
     {
         $this->readyFramework();
+        $this->approveNarratives();
         $this->store(['title' => 'Satu kuadran', 'fit' => ['HH' => 'applies', 'HL' => 'not_applicable', 'LH' => 'not_applicable', 'LL' => 'partial']]);
         $this->store(['title' => 'Tangguh', 'fit' => ['HH' => 'applies', 'HL' => 'applies', 'LH' => 'applies', 'LL' => 'partial']]);
         $this->store();
@@ -282,6 +286,7 @@ class StrategicResponseTest extends TestCase
     public function test_step_eight_is_done_with_an_approved_response(): void
     {
         $this->readyFramework();
+        $this->approveNarratives();
         $step = fn () => $this->actingAs($this->manager)->get(route('scenario-planning.show', $this->project));
 
         $step()->assertInertia(fn ($page) => $page->where('steps.7.status', 'available'));
@@ -344,6 +349,7 @@ class StrategicResponseTest extends TestCase
         $this->store(['conditions' => [$battery->uuid]]);
         $this->store(['title' => 'Respons lain', 'conditions' => [$subsidy->uuid]]);
         [$relying, $other] = [StrategicResponse::where('title', 'Secure USP for each xEV model')->sole(), StrategicResponse::where('title', 'Respons lain')->sole()];
+        $this->approveNarratives();
         $this->action($relying, 'approve')->assertSessionHasNoErrors();
 
         $this->actingAs($this->manager)->put(route('scenario-planning.conditions.update', [$this->project, $battery]), ['kind' => 'assumption', 'text' => 'Harga baterai stagnan'])->assertSessionHasNoErrors();
@@ -384,6 +390,7 @@ class StrategicResponseTest extends TestCase
     public function test_every_gate_decision_is_logged_with_its_actor(): void
     {
         $this->readyFramework();
+        $this->approveNarratives();
         $this->store()->assertSessionHasNoErrors();
         $response = StrategicResponse::sole();
         $this->action($response, 'approve')->assertSessionHasNoErrors();
@@ -521,6 +528,7 @@ class StrategicResponseTest extends TestCase
         $this->actingAs($this->viewer)->get(route('scenario-planning.responses.index', $this->project))
             ->assertInertia(fn ($page) => $page->where('responses.0.origin', 'ai')->where('responses.0.status', 'proposed')->where('responseStatus', 'completed'));
 
+        $this->approveNarratives();
         $this->action($response, 'approve')->assertSessionHasNoErrors();
         $this->assertSame('approved', $response->fresh()->status);
 
@@ -548,5 +556,125 @@ class StrategicResponseTest extends TestCase
         $this->fakeLlm()->respond(['responses' => [$this->draftResponse('Kecocokan kurang', ['I1'], ['HH' => 'applies'])]]);
         $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasNoErrors();
         $this->assertSame(0, StrategicResponse::count());
+    }
+
+    /* Audit 2026-11-11 U6 (AUD-07, AUD-08): upstream changes reach Steps 7–9; G7 needs G6. */
+
+    /** All four narratives approved (G6), written directly so the decision log stays as the test expects. */
+    private function approveNarratives(): void
+    {
+        DB::table('scenario_quadrants')->where('scenario_id', $this->framework()->id)
+            ->update(['narrative' => 'Narasi disepakati tim.', 'review_status' => 'approved', 'reviewed_by' => $this->manager->id, 'reviewed_at' => now()]);
+    }
+
+    private function indicator(string $name = 'xEV adoption growth'): EarlyWarningIndicator
+    {
+        return EarlyWarningIndicator::create([
+            'project_id' => $this->project->id, 'name' => $name, 'frequency' => 'quarterly', 'source_type' => 'manual',
+            'status' => 'active', 'origin' => 'human', 'review_status' => 'accepted',
+        ]);
+    }
+
+    public function test_a_response_is_approved_only_after_all_four_narratives(): void
+    {
+        $this->readyFramework();
+        $this->store()->assertSessionHasNoErrors();
+        $response = StrategicResponse::sole();
+
+        $this->action($response, 'approve')->assertSessionHasErrors('narratives');
+        $this->assertSame('proposed', $response->fresh()->status);
+
+        $this->approveNarratives();
+        $this->action($response, 'approve')->assertSessionHasNoErrors();
+        $this->assertSame('approved', $response->fresh()->status);
+    }
+
+    public function test_reopening_the_framework_flags_implications_responses_and_indicators(): void
+    {
+        $this->readyFramework();
+        $implication = $this->implication('HH', 'opportunity', 'Pasar baterai tumbuh');
+        $this->store()->assertSessionHasNoErrors();
+        $response = StrategicResponse::sole();
+        $indicator = $this->indicator();
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.reopen', $this->project))->assertSessionHasNoErrors();
+
+        foreach ([$implication, $response, $indicator] as $row) {
+            $this->assertNotNull($row->fresh()->stale_since, $row::class);
+            $this->assertStringContainsString('Kerangka skenario dibuka kembali', (string) $row->fresh()->stale_reason, $row::class);
+        }
+        // Nothing is deleted.
+        $this->assertSame([1, 1, 1], [ScenarioImplication::count(), StrategicResponse::count(), EarlyWarningIndicator::count()]);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.show', $this->project))
+            ->assertInertia(fn ($page) => $page->where('project.stale.downstream.implications', 1)
+                ->where('project.stale.downstream.responses', 1)
+                ->where('project.stale.downstream.indicators', 1));
+    }
+
+    public function test_a_new_axis_flags_steps_seven_to_nine(): void
+    {
+        $this->readyFramework();
+        $implication = $this->implication('LL', 'challenge', 'Permintaan turun');
+        $indicator = $this->indicator();
+
+        // Withdrawing an approved uncertainty withdraws G5: downstream work is flagged.
+        $regulation = CriticalUncertainty::where('name', 'Government Regulation')->sole();
+        $this->actingAs($this->manager)->post(route('scenario-planning.uncertainties.withdraw', [$this->project, $regulation]))->assertSessionHasNoErrors();
+
+        $this->assertNotNull($implication->fresh()->stale_since);
+        $this->assertNotNull($indicator->fresh()->stale_since);
+    }
+
+    public function test_changing_an_implication_flags_the_responses_that_rely_on_it(): void
+    {
+        $this->readyFramework();
+        $relied = $this->implication('HH', 'opportunity', 'Pasar baterai tumbuh');
+        $this->implication('HL', 'challenge', 'Biaya impor naik');
+        $this->store(['title' => 'Bergantung', 'implications' => [$relied->uuid]])->assertSessionHasNoErrors();
+        $this->store(['title' => 'Mandiri'])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->manager)->put(route('scenario-planning.implications.update', [$this->project, $relied]), ['type' => 'opportunity', 'title' => 'Pasar baterai tumbuh pesat'])->assertSessionHasNoErrors();
+
+        $flagged = StrategicResponse::where('title', 'Bergantung')->sole();
+        $this->assertStringContainsString('Pasar baterai tumbuh pesat', (string) $flagged->stale_reason);
+        $this->assertNull(StrategicResponse::where('title', 'Mandiri')->sole()->stale_since);
+
+        // Removing it flags them too; the response keeps its other content.
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.keep', [$this->project, $flagged]))->assertSessionHasNoErrors();
+        $this->assertNull($flagged->fresh()->stale_since);
+        $this->actingAs($this->manager)->delete(route('scenario-planning.implications.destroy', [$this->project, $relied->fresh()]))->assertSessionHasNoErrors();
+        $this->assertStringContainsString('dihapus', (string) $flagged->fresh()->stale_reason);
+    }
+
+    public function test_regenerating_a_narrative_flags_the_implications_of_that_quadrant(): void
+    {
+        $this->readyFramework();
+        // Without an AI provider the generation writes the template skeleton.
+        $this->actingAs($this->manager)->postJson(route('scenario-planning.narratives.generate', $this->project))->assertStatus(202);
+        $hh = $this->implication('HH', 'opportunity', 'Pasar baterai tumbuh');
+        $this->assertNull($hh->fresh()->stale_since);
+
+        $this->actingAs($this->manager)->postJson(route('scenario-planning.narratives.generate', $this->project), ['overwrite_edited' => true])->assertStatus(202);
+
+        $this->assertStringContainsString('Narasi skenario dibuat ulang', (string) $hh->fresh()->stale_reason);
+    }
+
+    public function test_editing_clears_an_item_flag_and_keeping_the_framework_clears_the_rest(): void
+    {
+        $this->readyFramework();
+        $edited = $this->implication('HH', 'opportunity', 'Pasar baterai tumbuh');
+        $kept = $this->implication('HL', 'challenge', 'Biaya impor naik');
+        $indicator = $this->indicator();
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.reopen', $this->project))->assertSessionHasNoErrors();
+        $this->approveFramework()->assertSessionHasNoErrors();
+
+        $this->actingAs($this->manager)->put(route('scenario-planning.implications.update', [$this->project, $edited]), ['type' => 'opportunity', 'title' => 'Pasar baterai tumbuh'])->assertSessionHasNoErrors();
+        $this->assertNull($edited->fresh()->stale_since);
+        $this->assertNotNull($kept->fresh()->stale_since);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.stale.acknowledge', $this->project))->assertSessionHasNoErrors();
+        $this->assertNull($kept->fresh()->stale_since);
+        $this->assertNull($indicator->fresh()->stale_since);
     }
 }

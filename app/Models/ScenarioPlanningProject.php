@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StalenessService;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -256,8 +257,14 @@ class ScenarioPlanningProject extends Model
     public function withdrawFrameworkApproval(): void
     {
         // Row by row, so the decision log sees each withdrawal (roadmap R2.2).
+        $withdrawn = false;
         foreach ($this->framework()->where('framework_status', 'approved')->get() as $framework) {
             $framework->update(['framework_status' => 'draft', 'approved_by' => null, 'approved_at' => null]);
+            $withdrawn = true;
+        }
+        // Audit U6: work built on the approved framework (Steps 7–9) is flagged for review.
+        if ($withdrawn) {
+            app(StalenessService::class)->frameworkReopened($this);
         }
     }
 
