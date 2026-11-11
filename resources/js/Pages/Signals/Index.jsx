@@ -3,6 +3,7 @@ import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
+    AlertCircleIcon,
     CirclePlusIcon,
     CircleXIcon,
     ClipboardCheckIcon,
@@ -48,6 +49,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip
 import { cn } from "@/lib/utils";
 import IngestForm from "./IngestForm";
 import ReviewForm, { REVIEW_ACTIONS } from "./ReviewForm";
+import FailedExtractions from "@/Components/Signals/FailedExtractions";
 import SignalCitations from "@/Components/Signals/SignalCitations";
 import ClassifyDialog, { SensingBadges } from "@/Components/Signals/SignalClassification";
 import { SENSING_FILTERS } from "@/domain/signals";
@@ -429,6 +431,8 @@ export default function SignalIndex({
     activeLlm = null,
     maxContentChars = 60000,
     pendingExtractions = [],
+    failedExtractions = [],
+    aiMissing = false,
 }) {
     const { startTracking } = useIngestion();
     const statusFieldId = useId();
@@ -532,6 +536,7 @@ export default function SignalIndex({
         }
         if (progress.status === "failed") {
             toast.error(`Ekstraksi “${source.title}” gagal.`, { description: progress.error, duration });
+            setFailed((current) => [progress, ...current.filter((item) => item.id !== progress.id)]);
             return;
         }
         const action = { label: "Lihat sinyal", onClick: showReview };
@@ -544,22 +549,46 @@ export default function SignalIndex({
         table.reload();
     };
 
+    // A queued extraction: track it until done; without a queue worker (QUEUE_CONNECTION=sync) it has already run.
+    const followExtraction = (response) => {
+        const source = response.data.source;
+        if (isPending(source.status)) {
+            toast.info(response.data.message);
+            setExtractions((current) => [source, ...current]);
+            startTracking(source);
+        } else {
+            finishExtraction(source)(source);
+        }
+    };
+
+    // AI extractions that failed; retrying queues them again through AI.
+    const [failed, setFailed] = useState(failedExtractions);
+    const [retryingId, setRetryingId] = useState(null);
+    const handleRetry = async (source) => {
+        setRetryingId(source.id);
+        try {
+            const response = await axios.post(route("signals.extraction.retry", source.id));
+            setFailed((current) => current.filter((item) => item.id !== source.id));
+            followExtraction(response);
+        } catch (error) {
+            const errors = error.response?.data?.errors;
+            toast.error("Ekstraksi tidak dapat diulang.", { description: [].concat(errors?.ai ?? errors?.source ?? errorMessage(error, error.message))[0] });
+        } finally {
+            setRetryingId(null);
+        }
+    };
+
     const handleIngest = async (payload) => {
         setIngesting(true);
         try {
-            const response = await axios.post("/signals/ingest", payload);
-            const source = response.data.source;
-            if (isPending(source.status)) {
-                toast.info(response.data.message);
-                setExtractions((current) => [source, ...current]);
-                startTracking(source);
-            } else {
-                // Without a queue worker (QUEUE_CONNECTION=sync) the job has already run.
-                finishExtraction(source)(source);
-            }
+            followExtraction(await axios.post("/signals/ingest", payload));
             return true;
         } catch (error) {
             const errors = error.response?.data?.errors;
+            if (error.response?.status === 422 && errors?.ai) {
+                toast.error("Ingest memerlukan AI.", { description: [].concat(errors.ai)[0] });
+                return undefined;
+            }
             if (error.response?.status === 422 && errors && typeof errors === "object") {
                 toast.error("Validation failed", { description: "Periksa kembali isian yang ditandai." });
                 return errors;
@@ -749,15 +778,23 @@ export default function SignalIndex({
                         <span
                             className={cn(
                                 statusBadge(),
-                                extractionMode !== "heuristic"
-                                    ? "border border-primary/20 bg-primary/10 text-primary font-medium"
-                                    : "bg-muted text-muted-foreground"
+                                aiMissing
+                                    ? "bg-warning-soft text-warning font-medium"
+                                    : extractionMode !== "heuristic"
+                                      ? "border border-primary/20 bg-primary/10 text-primary font-medium"
+                                      : "bg-muted text-muted-foreground"
                             )}
                         >
-                            <CpuIcon aria-hidden="true" className="mr-1 inline-block size-3.5" />
-                            {extractionMode !== "heuristic"
-                                ? `Mesin AI: ${extractionLabel}${extractionModel ? ` (${extractionModel})` : ""}`
-                                : "Ekstraksi: Aturan Kata Kunci (Non-AI)"}
+                            {aiMissing ? (
+                                <AlertCircleIcon aria-hidden="true" className="mr-1 inline-block size-3.5" />
+                            ) : (
+                                <CpuIcon aria-hidden="true" className="mr-1 inline-block size-3.5" />
+                            )}
+                            {aiMissing
+                                ? "Mesin AI belum diatur"
+                                : extractionMode !== "heuristic"
+                                  ? `Mesin AI: ${extractionLabel}${extractionModel ? ` (${extractionModel})` : ""}`
+                                  : "Ekstraksi: Aturan Kata Kunci (Non-AI, mode offline)"}
                         </span>
                     }
                     actions={
@@ -786,6 +823,7 @@ export default function SignalIndex({
                         </ul>
                     </section>
                 )}
+                <FailedExtractions sources={failed} busyId={retryingId} onRetry={handleRetry} />
 
                 <Tabs value={tab} onValueChange={setTab} className="gap-4">
                     <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
@@ -858,6 +896,7 @@ export default function SignalIndex({
                             model={extractionModel}
                             label={extractionLabel}
                             maxChars={maxContentChars}
+                            aiMissing={aiMissing}
                         />
                     </TabsContent>
                 </Tabs>

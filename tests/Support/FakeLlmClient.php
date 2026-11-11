@@ -38,6 +38,14 @@ class FakeLlmClient implements StructuredLlmClient
         return $this->available;
     }
 
+    /** Switch the provider off or on, as when an organisation removes or adds its key. */
+    public function setAvailable(bool $available): static
+    {
+        $this->available = $available;
+
+        return $this;
+    }
+
     public function provider(): string
     {
         return 'claude';

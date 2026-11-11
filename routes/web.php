@@ -252,6 +252,7 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::post('/ingest', 'ingest')->name('ingest')->can('create-signal')->middleware('throttle:15,1,signal-ingest');
         Route::get('/extractions/active', 'activeExtractions')->name('active-extractions')->can('view-signal');
         Route::get('/sources/{source}/extraction', 'extraction')->name('extraction')->can('view-signal');
+        Route::post('/sources/{source}/extraction/retry', 'retryExtraction')->name('extraction.retry')->can('create-signal')->middleware('throttle:15,1,signal-ingest');
         Route::post('/{signal}/review', 'review')->name('review')->can('review-signal');
         Route::post('/{signal}/classify', 'classify')->name('classify')->can('review-signal');
         Route::get('/{signal}/citations', 'citations')->name('citations')->can('view-signal');

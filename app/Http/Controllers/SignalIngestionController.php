@@ -78,20 +78,34 @@ class SignalIngestionController extends Controller
                 'isCustom' => (bool) $user?->llmSettings()->where('is_active', true)->exists(),
             ],
             'maxContentChars' => (int) config('services.signal_extraction.max_chars', 60000),
+            // External sources are extracted by AI only: without a provider the ingest form is closed.
+            'aiMissing' => $this->extractionService->aiMissing($user),
             // The analyst's extractions still in the queue, so the page resumes polling them.
-            'pendingExtractions' => Source::whereIn('extraction_status', [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING])
-                ->where('created_at', '>=', now()->subDay())
-                ->where(function ($q) use ($user) {
-                    $q->where('created_by', $user?->id ?? Auth::id());
-                    if ($user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
-                        $q->orWhereNull('created_by');
-                    }
-                })
-                ->latest()
-                ->get()
-                ->map(fn ($source) => $this->extractionService->progress($source))
-                ->values(),
+            'pendingExtractions' => $this->recentSources($user, [LlmJobStatus::QUEUED, LlmJobStatus::PROCESSING]),
+            // Failed AI extractions of the last day, which the analyst can retry.
+            'failedExtractions' => $this->recentSources($user, [LlmJobStatus::FAILED]),
         ]);
+    }
+
+    /**
+     * The analyst's sources of the last day in the given extraction states, as progress rows.
+     *
+     * @param  array<int, LlmJobStatus>  $statuses
+     */
+    private function recentSources(?User $user, array $statuses): Collection
+    {
+        return Source::whereIn('extraction_status', $statuses)
+            ->where('created_at', '>=', now()->subDay())
+            ->where(function ($q) use ($user) {
+                $q->where('created_by', $user?->id ?? Auth::id());
+                if ($user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['developer', 'super-admin', 'admin'])) {
+                    $q->orWhereNull('created_by');
+                }
+            })
+            ->latest()
+            ->get()
+            ->map(fn ($source) => $this->extractionService->progress($source))
+            ->values();
     }
 
     /**
@@ -156,6 +170,8 @@ class SignalIngestionController extends Controller
                 'message' => 'Sumber disimpan. Sinyal sedang diekstrak di latar belakang.',
                 'source' => $this->extractionService->progress($source),
             ], Response::HTTP_ACCEPTED);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $th) {
             $error = $this->handleError($th, 'ingesting source content');
 
@@ -163,10 +179,20 @@ class SignalIngestionController extends Controller
         }
     }
 
-    /**
-     * Extraction status of an ingested source, with the result once it is done.
-     */
-    public function extraction(Source $source): JsonResponse
+    /** Queue a failed extraction again, through AI. Same access as its status. */
+    public function retryExtraction(Source $source): JsonResponse
+    {
+        $this->authorizeSource($source);
+        $source = $this->extractionService->retry($source);
+
+        return response()->json([
+            'message' => 'Ekstraksi diulang di latar belakang.',
+            'source' => $this->extractionService->progress($source),
+        ], Response::HTTP_ACCEPTED);
+    }
+
+    /** The analyst who ingested the source, or a developer / admin. */
+    private function authorizeSource(Source $source): void
     {
         $user = Auth::user();
         $isOwnerOrAdmin = $user && (
@@ -177,6 +203,14 @@ class SignalIngestionController extends Controller
         if (! $isOwnerOrAdmin) {
             abort(Response::HTTP_FORBIDDEN, 'Anda tidak memiliki akses ke status ekstraksi sumber ini.');
         }
+    }
+
+    /**
+     * Extraction status of an ingested source, with the result once it is done.
+     */
+    public function extraction(Source $source): JsonResponse
+    {
+        $this->authorizeSource($source);
 
         return response()->json($this->extractionService->progress($source), Response::HTTP_OK);
     }
