@@ -472,9 +472,9 @@ export default function EdaCharts({
         <div className="grid gap-4 lg:grid-cols-2">
             <Panel
                 icon={<ChartColumnIcon className="text-primary" />}
-                title="Distribusi Frekuensi per Dimensi Makro & Mezzo"
+                title="Distribusi Frekuensi per Dimensi"
                 badge={<span className={cn(statusBadge(), "bg-accent text-primary")}>Frekuensi</span>}
-                description="Jumlah driving force aktif di tiap dimensi makro (Political, Economic, Social, Technology, Ecology, Legislative) dan mezzo (Consumer, Supply Chain, Competitor, New Entrant, Substitute)."
+                description="Jumlah driving force aktif di tiap dimensi organisasi, dikelompokkan per lingkungan (misalnya makro dan mezzo)."
             >
                 {edaFrequency.length > 0 ? (
                     <FrequencyChart data={edaFrequency} />

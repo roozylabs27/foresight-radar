@@ -14,6 +14,7 @@ import ScenarioSimulation from "@/Components/ScenarioSimulation";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Skeleton } from "@/Components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
+import { FIRM } from "@/domain/reportScope";
 import { cn } from "@/lib/utils";
 
 const OverallStatus = lazy(() => import("@/Components/OverallStatus"));
@@ -56,13 +57,14 @@ function useReasoningData(params) {
     return { data, loading };
 }
 
-export default function Dashboard({ auth, dimensions = [] }) {
-    const filters = useAnalysisFilters(dimensions);
+/** Executive dashboard of the whole firm (default) or of one Key Focal Issue (`scopes`, `scope`). */
+export default function Dashboard({ auth, dimensions = [], scopes = [], scope = FIRM }) {
+    const filters = useAnalysisFilters(dimensions, { scopes, scope });
     const [tab, setTab] = useState("overview");
 
     const dimension = filterParam(filters.dimension) ?? null;
     const date = { date: filters.period };
-    const selectData = { dimension };
+    const selectData = { dimension, scope: filters.params.scope ?? null };
     const reasoning = useReasoningData(filters.params);
 
     return (
@@ -75,6 +77,7 @@ export default function Dashboard({ auth, dimensions = [] }) {
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Overview
                     </span>
+                    <span className={cn(statusBadge(), "hidden truncate sm:inline-flex")}>{filters.scopeLabel}</span>
                 </div>
             }
         >
@@ -95,6 +98,11 @@ export default function Dashboard({ auth, dimensions = [] }) {
 
                     <TabsContent value="overview" className="flex flex-col gap-4">
                         <ExecutiveOverview loading={reasoning.loading} reasoningData={reasoning.data} />
+                        {reasoning.data?.scope === "exercise" && (
+                            <p role="note" className="m-0 text-xs text-muted-foreground">
+                                Indeks dan grafik di bawah memakai skor konsensus Key Focal Issue ini. Tren bulanan dan riwayat skor mengikuti rating firm dari waktu ke waktu, jadi hanya tampil untuk FIRM.
+                            </p>
+                        )}
                         <EdaCharts
                             loading={reasoning.loading}
                             edaFrequency={reasoning.data?.eda_frequency ?? []}
@@ -115,12 +123,12 @@ export default function Dashboard({ auth, dimensions = [] }) {
                     </TabsContent>
                     <TabsContent value="prioritizing">
                         <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-xl" />}>
-                            <PrioritizingChart date={date} selectData={selectData} dimensions={dimensions} />
+                            <PrioritizingChart date={date} selectData={selectData} dimensions={dimensions} scopeLabel={filters.scopeLabel} />
                         </Suspense>
                     </TabsContent>
                     <TabsContent value="radar">
                         <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-xl" />}>
-                            <Radar date={date} selectData={selectData} />
+                            <Radar date={date} selectData={selectData} dimensions={dimensions} />
                         </Suspense>
                     </TabsContent>
                     <TabsContent value="registered">

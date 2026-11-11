@@ -12,23 +12,25 @@ export const CORE_RADIUS = 1;
 /** Closest a marker centre may come to the centre, so a marker (triangles included) clears the core. */
 const MIN_MARKER_RADIUS = 2.2;
 
-/**
- * The eleven categories of the scenario planning method and the polar angle their sector is
- * centred on, 360/11 degrees apart: macro (six) on the left half, mezzo (five) on the right.
- */
-export const DIMENSION_CONFIGS = [
-    { name: "Political", angle: 98.2 },
-    { name: "Economic", angle: 130.9 },
-    { name: "Social", angle: 163.6 },
-    { name: "Technology", angle: 196.4 },
-    { name: "Ecology", angle: 229.1 },
-    { name: "Legislative", angle: 261.8 },
-    { name: "Substitute", angle: 294.5 },
-    { name: "New Entrant", angle: 327.3 },
-    { name: "Competitor", angle: 0 },
-    { name: "Supply Chain", angle: 32.7 },
-    { name: "Consumer", angle: 65.5 },
+/** The default taxonomy (App\Support\DimensionTaxonomy), used when a page passes no dimensions. */
+export const DEFAULT_DIMENSION_NAMES = [
+    "Political", "Economic", "Social", "Technology", "Ecology", "Legislative",
+    "Consumer", "Supply Chain", "Competitor", "New Entrant", "Substitute",
 ];
+
+/**
+ * One spoke per dimension, in the organisation's order (plan part B3): counter-clockwise from just
+ * left of north, 360/n degrees apart, so the first environment (macro) fills the left half and the
+ * rest the right. `step` is the sector width in degrees.
+ */
+export function dimensionSectors(names = DEFAULT_DIMENSION_NAMES) {
+    const list = names.length > 0 ? names : DEFAULT_DIMENSION_NAMES;
+    const step = 360 / list.length;
+    return list.map((name, index) => ({ name, angle: Number(((90 + step * (index + 0.5)) % 360).toFixed(1)), step }));
+}
+
+/** Spokes of the default taxonomy. */
+export const DIMENSION_CONFIGS = dimensionSectors();
 
 /** Concentric bands, inner to outer, in radius units. */
 export const HORIZON_BANDS = [
@@ -37,7 +39,6 @@ export const HORIZON_BANDS = [
     { horizon: 3, label: "Long Term (> 3 yrs)", from: 6, to: 8 },
 ];
 
-const DIMENSION_ANGLES = Object.fromEntries(DIMENSION_CONFIGS.map((dimension) => [dimension.name, dimension.angle]));
 
 export function horizonLabel(horizon) {
     return HORIZON_BANDS.find((band) => band.horizon === horizon)?.label ?? HORIZON_BANDS[1].label;
@@ -55,10 +56,15 @@ export function polarToXY(radius, angle, scale, centre) {
 /**
  * Anti-collision layout: groups points by dimension and time horizon, fans
  * them out within the dimension's sector, then runs a relaxation pass so
- * markers in the same dimension do not overlap.
+ * markers in the same dimension do not overlap. `sectors` come from
+ * dimensionSectors(); fans and clamps scale with the sector width.
  */
-export function computeAntiCollisionPoints(items) {
+export function computeAntiCollisionPoints(items, sectors = DIMENSION_CONFIGS) {
     if (!items || items.length === 0) return [];
+
+    const angles = Object.fromEntries(sectors.map((sector) => [sector.name, sector.angle]));
+    // Offsets below were tuned for 11 sectors (about 32.7 degrees); narrower sectors shrink them.
+    const widthScale = Math.min(1, (sectors[0]?.step ?? 360 / 11) / (360 / 11));
 
     const groups = {};
 
@@ -104,7 +110,7 @@ export function computeAntiCollisionPoints(items) {
 
     // Fan out the points of each cluster
     Object.values(groups).forEach((groupItems) => {
-        const centerAngle = DIMENSION_ANGLES[groupItems[0].dimension] ?? 0;
+        const centerAngle = angles[groupItems[0].dimension] ?? 0;
         const count = groupItems.length;
 
         let angleOffsets = [0];
@@ -131,9 +137,10 @@ export function computeAntiCollisionPoints(items) {
         groupItems.forEach((item, idx) => {
             dispersed.push({
                 ...item,
-                angle: (centerAngle + angleOffsets[idx] + 360) % 360,
+                angle: (centerAngle + angleOffsets[idx] * widthScale + 360) % 360,
                 radius: Math.max(MIN_MARKER_RADIUS, Math.min(8.6, item.baseRadius + radiusOffsets[idx])),
                 centerAngle,
+                maxOffset: 16 * widthScale,
             });
         });
     });
@@ -188,11 +195,12 @@ function radiusBounds(item) {
     return [Math.max(MIN_MARKER_RADIUS, band.from + 0.4), outer];
 }
 
-/** Move a marker to (x, y), then keep it within 16° of its sector centre and inside its band. */
+/** Move a marker to (x, y), then keep it within its sector (16° for 11 sectors) and inside its band. */
 function place(item, x, y) {
     const [low, high] = radiusBounds(item);
     item.radius = Math.max(low, Math.min(high, Math.hypot(x, y)));
     const angle = (Math.atan2(y, x) * 180) / Math.PI;
     const offset = ((angle - item.centerAngle + 540) % 360) - 180;
-    item.angle = (item.centerAngle + Math.max(-16, Math.min(16, offset)) + 360) % 360;
+    const limit = item.maxOffset ?? 16;
+    item.angle = (item.centerAngle + Math.max(-limit, Math.min(limit, offset)) + 360) % 360;
 }

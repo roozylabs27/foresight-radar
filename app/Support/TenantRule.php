@@ -20,4 +20,13 @@ class TenantRule
 
         return Rule::exists($table, $column)->when($tenantId !== null, fn (Exists $rule) => $rule->where('tenant_id', $tenantId));
     }
+
+    /**
+     * A dimension of the organisation that takes new data: not archived, except `$keep` (the
+     * dimension a record already sits on, which an edit may leave in place).
+     */
+    public static function activeDimension(?int $keep = null): Exists
+    {
+        return self::exists('dimensions')->where(fn ($query) => $query->whereNull('archived_at')->when($keep !== null, fn ($q) => $q->orWhere('id', $keep)));
+    }
 }

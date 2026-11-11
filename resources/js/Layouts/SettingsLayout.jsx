@@ -3,6 +3,7 @@ import {
     BrainCircuitIcon,
     Building2Icon,
     KeyRoundIcon,
+    LayersIcon,
     SettingsIcon,
     UserIcon,
     UsersIcon,
@@ -28,6 +29,15 @@ const SETTINGS_NAV_CONFIG = [
         icon: Building2Icon,
         href: "/settings/organization",
         match: "/settings/organization",
+    },
+    {
+        key: "dimensions",
+        title: "Dimensi & Lingkungan",
+        description: "Taksonomi driving force organisasi",
+        icon: LayersIcon,
+        href: "/settings/dimensions",
+        match: "/settings/dimensions",
+        permission: "manage-organization",
     },
     {
         key: "members",
@@ -87,7 +97,7 @@ export default function SettingsLayout({
                             </h2>
                         </div>
                         <nav className="flex flex-row gap-1.5 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
-                            {SETTINGS_NAV_CONFIG.map((item) => {
+                            {SETTINGS_NAV_CONFIG.filter((item) => !item.permission || (auth?.permissions ?? []).includes(item.permission)).map((item) => {
                                 const Icon = item.icon;
                                 const isActive = currentUrl.startsWith(item.match);
                                 const itemTitle = t(`settings.${item.key}`, item.title);

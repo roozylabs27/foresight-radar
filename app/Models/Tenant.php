@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\DimensionTaxonomy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -56,6 +57,9 @@ class Tenant extends Model
                 $tenant->slug = Str::slug($tenant->name);
             }
         });
+
+        // Each organisation owns its dimensions; it starts from the default taxonomy.
+        static::created(fn (Tenant $tenant) => DimensionTaxonomy::seedFor($tenant->id));
     }
 
     public function users(): HasMany

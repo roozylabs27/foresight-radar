@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\DrivingForce;
 use App\Rules\WordCountRule;
 use App\Support\TenantRule;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -31,16 +32,25 @@ class DrivingForceRequest extends FormRequest
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(self::DESCRIPTION_WORDS)],
-                'dimension_id' => ['required', 'exists:dimensions,id'],
+                'dimension_id' => ['required', TenantRule::activeDimension()],
                 'pic_id' => ['required', TenantRule::exists('users')],
             ];
         } else {
             return [
                 'keyword' => ['required', 'string', new WordCountRule(4)],
                 'description' => ['required', 'string', new WordCountRule(self::DESCRIPTION_WORDS)],
-                'dimension_id' => ['required', 'exists:dimensions,id'],
+                // An edit may keep the force on its (possibly archived) dimension.
+                'dimension_id' => ['required', TenantRule::activeDimension($this->currentDimensionId())],
                 'pic_id' => ['required', TenantRule::exists('users')],
             ];
         }
+    }
+
+    /** The dimension the edited force sits on, which it may keep even when archived. */
+    private function currentDimensionId(): ?int
+    {
+        $force = $this->route('driving_force');
+
+        return $force instanceof DrivingForce ? $force->dimension_id : null;
     }
 }

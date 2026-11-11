@@ -4,7 +4,6 @@ namespace Tests\Feature\Security;
 
 use App\Models\Dimension;
 use App\Models\DrivingForce;
-use App\Models\Environment;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -49,8 +48,8 @@ class DrivingForcePicTenantScopeTest extends TestCase
         $this->adminB = User::factory()->create(['tenant_id' => $tenantB->id, 'name' => 'Zed Secret Admin B']);
         $this->adminB->assignRole('admin');
 
-        $env = Environment::create(['uuid' => (string) Uuid::uuid4(), 'name' => 'External']);
-        $this->dimension = Dimension::create(['uuid' => (string) Uuid::uuid4(), 'name' => 'Economy', 'environment_id' => $env->id]);
+        // Each organisation owns its dimensions (plan part B1); tenant A got the default taxonomy when it was created.
+        $this->dimension = Dimension::withoutGlobalScopes()->where('tenant_id', $this->tenantA->id)->where('code', 'ECONOMIC')->firstOrFail();
     }
 
     public function test_pic_options_list_only_the_callers_tenant_admins(): void

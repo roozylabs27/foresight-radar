@@ -27,6 +27,7 @@ use App\Http\Controllers\ScenarioFrameworkController;
 use App\Http\Controllers\ScenarioImplicationController;
 use App\Http\Controllers\ScenarioPlanningProjectController;
 use App\Http\Controllers\ScenarioReportController;
+use App\Http\Controllers\Settings\DimensionController;
 use App\Http\Controllers\Settings\OperatorWorkspaceController;
 use App\Http\Controllers\Settings\OrganizationController;
 use App\Http\Controllers\Settings\TenantMemberController;
@@ -348,6 +349,25 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
             Route::get('/', 'index')->name('index');
             Route::patch('/', 'update')->name('update')->can('manage-organization');
             Route::patch('/ai', 'updateAi')->name('ai.update')->can('manage-organization');
+        });
+
+        // Plan part B2: the organisation's own dimensions and environments.
+        Route::middleware('can:manage-organization')->controller(DimensionController::class)->group(function () {
+            Route::prefix('dimensions')->name('dimensions.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::put('/{dimension}', 'update')->name('update');
+                Route::post('/{dimension}/move', 'move')->name('move');
+                Route::post('/{dimension}/archive', 'archive')->name('archive');
+                Route::delete('/{dimension}/archive', 'unarchive')->name('unarchive');
+                Route::delete('/{dimension}', 'destroy')->name('destroy');
+            });
+            Route::prefix('environments')->name('environments.')->group(function () {
+                Route::post('/', 'storeEnvironment')->name('store');
+                Route::put('/{environment}', 'updateEnvironment')->name('update');
+                Route::post('/{environment}/move', 'moveEnvironment')->name('move');
+                Route::delete('/{environment}', 'destroyEnvironment')->name('destroy');
+            });
         });
 
         // Tenant Members & Team Invitations

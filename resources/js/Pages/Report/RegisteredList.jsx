@@ -6,14 +6,16 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import AnalysisFilterBar, { FilterSelect, filterParam, useAnalysisFilters } from "@/Components/AnalysisFilters";
 import OverallStatus from "@/Components/OverallStatus";
 import { statusBadge } from "@/Components/StatusBadge";
+import { FIRM } from "@/domain/reportScope";
 import { cn } from "@/lib/utils";
 
 const ALL_EXTRA = { time_horizon: "all", priority: "all", status_action: "all" };
 
-export default function RegisteredList({ auth, dimensions = [], title, priorities = [], status_actions = [], time_horizons = [] }) {
+/** Register of the whole firm (default) or of one Key Focal Issue (`scopes`, `scope`). */
+export default function RegisteredList({ auth, dimensions = [], title, priorities = [], status_actions = [], time_horizons = [], scopes = [], scope = FIRM }) {
     const listHeadingId = useId();
 
-    const filters = useAnalysisFilters(dimensions);
+    const filters = useAnalysisFilters(dimensions, { scopes, scope });
     const [extra, setExtra] = useState(ALL_EXTRA);
     const setExtraField = (field) => (value) => setExtra((prev) => ({ ...prev, [field]: value }));
 
@@ -34,6 +36,7 @@ export default function RegisteredList({ auth, dimensions = [], title, prioritie
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         Register &amp; Audit Log
                     </span>
+                    <span className={cn(statusBadge(), "hidden truncate sm:inline-flex")}>{filters.scopeLabel}</span>
                 </div>
             }
         >
@@ -84,6 +87,7 @@ export default function RegisteredList({ auth, dimensions = [], title, prioritie
                             time_horizon: filterParam(extra.time_horizon),
                             priority: filterParam(extra.priority),
                             status_action: filterParam(extra.status_action),
+                            scope: filters.params.scope,
                         }}
                     />
                 </section>

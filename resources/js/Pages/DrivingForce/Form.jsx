@@ -59,7 +59,8 @@ export default function FormDrivingForce({ id, initialValues = {}, dimensions = 
                                     <SelectValue placeholder="Select a dimension" />
                                 </SelectTrigger>
                                 <SelectContent position="popper">
-                                    {dimensions.map((dimension) => (
+                                    {/* Archived dimensions take no new forces; an edit may keep the force's own. */}
+                                    {dimensions.filter((dimension) => !dimension.archived || toValue(dimension.value) === toValue(initialValues.dimension_id)).map((dimension) => (
                                         <SelectItem key={dimension.value} value={toValue(dimension.value)}>
                                             {dimension.label}
                                         </SelectItem>

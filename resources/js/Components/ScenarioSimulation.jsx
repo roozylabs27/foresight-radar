@@ -78,6 +78,8 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
             const payload = {
                 date: params?.date ?? null,
                 dimension: params?.dimension ?? null,
+                // A Key Focal Issue simulates on the exercise's forces and consensus scores.
+                scope: params?.scope ?? null,
                 propagate,
                 overrides: Object.entries(overrides).map(([forceId, changes]) => ({
                     force: forceId,

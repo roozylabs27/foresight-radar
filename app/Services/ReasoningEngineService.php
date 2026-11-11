@@ -7,6 +7,7 @@ use App\Enums\StatusActionType;
 use App\Enums\TimeHorizonType;
 use App\Models\Dimension;
 use App\Models\DrivingForceRating;
+use App\Models\ScenarioPlanningProject;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -34,7 +35,12 @@ class ReasoningEngineService
     /** A Monitoring force at or above this impact counts as risk exposure. */
     public const EXPOSURE_IMPACT = 7;
 
-    /** Dimensions whose forces are growth opportunities. */
+    /**
+     * Dimensions whose forces are growth opportunities, by code (an organisation may rename them),
+     * plus the legacy names for dimensions without a code.
+     */
+    public const GROWTH_CODES = ['ECONOMIC', 'TECHNOLOGY', 'CONSUMER'];
+
     public const GROWTH_DIMENSIONS = ['economy', 'technology', 'customer'];
 
     /** Horizon weights; an unset horizon is weighted as Mid Term. */
@@ -53,15 +59,17 @@ class ReasoningEngineService
     /**
      * Compute full executive reasoning payload.
      */
-    public function getExecutiveOverview(?array $dateRange = null, mixed $dimension = null): array
+    public function getExecutiveOverview(?array $dateRange = null, mixed $dimension = null, ?ScenarioPlanningProject $project = null): array
     {
-        $ratings = $this->loadRatings($dateRange, $dimension);
+        // A Key Focal Issue is one snapshot of the exercise: no period, and no month trends or score
+        // history, which follow the firm's ratings over time.
+        $ratings = $project ? $this->reportingService->exerciseRatings($project, $dimension)[0] : $this->loadRatings($dateRange, $dimension);
         $dimensions = Dimension::ordered()->get(['id', 'name']);
 
         $resilience = $this->explainResilienceIndex($ratings);
         $growth = $this->explainGrowthIndex($ratings);
         $readiness = $this->determineReadinessStatus($resilience['index'], $growth['index']);
-        $trend = $this->calculateEdaTrend($dateRange, $dimension);
+        $trend = $project ? ['data' => [], 'range' => null] : $this->calculateEdaTrend($dateRange, $dimension);
 
         return [
             'growth_index' => $growth['index'],
@@ -88,8 +96,9 @@ class ReasoningEngineService
             'eda_comparison' => $this->calculateEdaComparison($ratings, $dimensions),
             'eda_trend' => $trend['data'],
             'eda_trend_range' => $trend['range'],
-            'history_trend' => $this->historyAnalytics->scoreTrend($trend['range'], $dimension, $dimensions),
-            'transition_velocity' => $this->historyAnalytics->transitionVelocity($trend['range'], $dimension),
+            'history_trend' => $project ? null : $this->historyAnalytics->scoreTrend($trend['range'], $dimension, $dimensions),
+            'transition_velocity' => $project ? null : $this->historyAnalytics->transitionVelocity($trend['range'], $dimension),
+            'scope' => $project ? 'exercise' : 'firm',
         ];
     }
 
@@ -155,9 +164,10 @@ class ReasoningEngineService
     public function explainGrowthIndex(Collection $ratings): array
     {
         $opportunities = $ratings->filter(function ($rating) {
-            $name = strtolower($rating->driving_force?->dimension?->name ?? '');
+            $dimension = $rating->driving_force?->dimension;
 
-            return in_array($name, self::GROWTH_DIMENSIONS, true);
+            return in_array($dimension?->code, self::GROWTH_CODES, true)
+                || in_array(strtolower($dimension->name ?? ''), self::GROWTH_DIMENSIONS, true);
         });
 
         return $this->explainIndex($opportunities, self::GROWTH_HORIZON_WEIGHTS, function (DrivingForceRating $rating, array $s) {
@@ -360,7 +370,7 @@ class ReasoningEngineService
     public function calculateEdaFrequency(Collection $ratings, ?Collection $dimensions = null): array
     {
         $countsByDimension = $ratings->groupBy(fn ($rating) => $rating->driving_force?->dimension_id);
-        $dimensionList = $dimensions ?? Dimension::orderBy('id')->get(['id', 'name']);
+        $dimensionList = $dimensions ?? Dimension::ordered()->get(['id', 'name']);
 
         return $dimensionList->map(function ($dim) use ($countsByDimension) {
             $group = $countsByDimension->get($dim->id, collect());
@@ -438,7 +448,7 @@ class ReasoningEngineService
         $byDimension = $ratings->groupBy(fn ($rating) => $rating->driving_force?->dimension?->name ?? 'Tanpa Dimensi');
         $byHorizon = $ratings->groupBy(fn ($rating) => TimeHorizonType::fromModel($rating->time_horizon)?->label() ?? 'Tanpa Horizon');
 
-        $dimensionNames = ($dimensions ?? Dimension::orderBy('id')->get(['id', 'name']))->pluck('name');
+        $dimensionNames = ($dimensions ?? Dimension::ordered()->get(['id', 'name']))->pluck('name');
         $dimensionRows = $dimensionNames
             ->filter(fn ($name) => $byDimension->has($name))
             ->map(fn ($name) => $this->groupSpread($name, $byDimension->get($name)))

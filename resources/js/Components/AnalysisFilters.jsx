@@ -4,7 +4,9 @@ import { RotateCwIcon } from "lucide-react";
 
 import DateRangePicker from "@/Components/DateRangePicker";
 import FilterBar, { FilterField } from "@/Components/FilterBar";
+import ReportScopeSelect from "@/Components/ReportScopeSelect";
 import { Button } from "@/Components/ui/button";
+import { FIRM, initialScope, scopeLabel } from "@/domain/reportScope";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -15,25 +17,47 @@ export function defaultPeriod() {
     return [dayjs().subtract(11, "month").startOf("month").format("YYYY-MM-DD"), dayjs().endOf("month").format("YYYY-MM-DD")];
 }
 
+/** Keep the scope in the address bar, so a Key Focal Issue view can be reloaded and shared. */
+function writeScopeToUrl(scope) {
+    const url = new URL(window.location.href);
+    if (scope === FIRM) url.searchParams.delete("scope");
+    else url.searchParams.set("scope", scope);
+    window.history.replaceState(window.history.state, "", url);
+}
+
 /**
  * Period + dimension filters shared by the analysis tables. `params` is the
  * query the `*.fetch-data` endpoints read (`date[]`, `dimension`).
+ *
+ * The firm reports also pass `scopes` (Key Focal Issues) and the requested `scope`: the data is
+ * the whole firm by default, or one exercise, for which the period does not apply.
  */
-export function useAnalysisFilters(dimensions = []) {
+export function useAnalysisFilters(dimensions = [], { scopes = [], scope: requestedScope = FIRM } = {}) {
     const [period, setPeriod] = useState(defaultPeriod);
     const [dimension, setDimension] = useState(ALL);
+    const [scope, setScopeState] = useState(() => initialScope(requestedScope, scopes));
+    const firm = scope === FIRM;
+    const setScope = (value) => {
+        setScopeState(value);
+        writeScopeToUrl(value);
+    };
 
     return {
         period,
         setPeriod,
         dimension,
         setDimension,
+        scopes,
+        scope,
+        setScope,
+        scopeLabel: scopeLabel(scope, scopes),
         activeDimension: dimensions.find((item) => String(item.value) === dimension) ?? null,
-        params: { date: period, dimension: filterParam(dimension) },
-        isFiltered: dimension !== ALL || period.join() !== defaultPeriod().join(),
+        params: { date: firm ? period : undefined, dimension: filterParam(dimension), scope: firm ? undefined : scope },
+        isFiltered: dimension !== ALL || !firm || period.join() !== defaultPeriod().join(),
         reset: () => {
             setPeriod(defaultPeriod());
             setDimension(ALL);
+            if (!firm) setScope(FIRM);
         },
     };
 }
@@ -95,9 +119,13 @@ export default function AnalysisFilterBar({
                 )
             }
         >
-            <FilterField label="Periode" className="w-full sm:w-auto">
-                <DateRangePicker value={filters.period} onChange={filters.setPeriod} className="w-full sm:w-[260px]" />
-            </FilterField>
+            {filters.scopes?.length > 0 && <ReportScopeSelect value={filters.scope} onChange={filters.setScope} scopes={filters.scopes} />}
+            {/* A Key Focal Issue is one snapshot of the exercise, so the period only applies to the firm view. */}
+            {(filters.scope ?? FIRM) === FIRM && (
+                <FilterField label="Periode" className="w-full sm:w-auto">
+                    <DateRangePicker value={filters.period} onChange={filters.setPeriod} className="w-full sm:w-[260px]" />
+                </FilterField>
+            )}
             <FilterSelect
                 label="Dimensi"
                 allLabel="Semua Dimensi"

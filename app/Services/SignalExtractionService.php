@@ -346,7 +346,7 @@ class SignalExtractionService
      */
     protected function extractCandidatesFromText(string $text, string $sourceTitle): array
     {
-        $dimensions = Dimension::all();
+        $dimensions = Dimension::active()->ordered()->get();
         $timeHorizons = TimeHorizon::all();
 
         // Split by double newlines or headers to identify distinct paragraphs/sections
@@ -408,24 +408,25 @@ class SignalExtractionService
         $textLower = strtolower($text);
 
         $dimensionKeywords = [
-            'Political' => ['government', 'minister', 'election', 'geopolit', 'sanction', 'political', 'national agenda', 'energy security'],
-            'Economic' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance', 'exchange rate'],
-            'Social' => ['society', 'social', 'demographic', 'generation', 'gen z', 'millennial', 'lifestyle', 'culture', 'urban'],
-            'Technology' => ['tech', 'ai', 'algorithm', 'software', 'digital', 'cyber', 'quantum', 'cloud', 'compute', 'data'],
-            'Ecology' => ['climate', 'carbon', 'emission', 'green', 'environment', 'sustainable', 'waste', 'energy', 'biodiversity'],
-            'Legislative' => ['law', 'regulat', 'directive', 'act', 'legal', 'compliance', 'standard', 'decree', 'tkdn'],
-            'Consumer' => ['consumer', 'customer', 'demand', 'preference', 'behavior', 'user', 'habit', 'adoption', 'purchasing power'],
-            'Supply Chain' => ['supply chain', 'logistics', 'vendor', 'supplier', 'raw material', 'shipping', 'manufacturing', 'shortage'],
-            'Competitor' => ['rival', 'compet', 'patent', 'acquisition', 'market share', 'price war'],
-            'New Entrant' => ['new entrant', 'newcomer', 'market entry', 'new player', 'entering the market', 'enters the market', 'startup'],
-            'Substitute' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog', 'car sharing', 'ride-hailing'],
+            'POLITICAL' => ['government', 'minister', 'election', 'geopolit', 'sanction', 'political', 'national agenda', 'energy security'],
+            'ECONOMIC' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance', 'exchange rate'],
+            'SOCIAL' => ['society', 'social', 'demographic', 'generation', 'gen z', 'millennial', 'lifestyle', 'culture', 'urban'],
+            'TECHNOLOGY' => ['tech', 'ai', 'algorithm', 'software', 'digital', 'cyber', 'quantum', 'cloud', 'compute', 'data'],
+            'ECOLOGY' => ['climate', 'carbon', 'emission', 'green', 'environment', 'sustainable', 'waste', 'energy', 'biodiversity'],
+            'LEGISLATIVE' => ['law', 'regulat', 'directive', 'act', 'legal', 'compliance', 'standard', 'decree', 'tkdn'],
+            'CONSUMER' => ['consumer', 'customer', 'demand', 'preference', 'behavior', 'user', 'habit', 'adoption', 'purchasing power'],
+            'SUPPLY_CHAIN' => ['supply chain', 'logistics', 'vendor', 'supplier', 'raw material', 'shipping', 'manufacturing', 'shortage'],
+            'COMPETITOR' => ['rival', 'compet', 'patent', 'acquisition', 'market share', 'price war'],
+            'NEW_ENTRANT' => ['new entrant', 'newcomer', 'market entry', 'new player', 'entering the market', 'enters the market', 'startup'],
+            'SUBSTITUTE' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog', 'car sharing', 'ride-hailing'],
         ];
 
         $highestCount = 0;
         $bestMatch = null;
 
         foreach ($dimensions as $dimension) {
-            $keywords = $dimensionKeywords[$dimension->name] ?? [strtolower($dimension->name)];
+            // Keyed by code, so a renamed default keeps its keywords; a custom dimension matches its own name.
+            $keywords = $dimensionKeywords[$dimension->code ?? ''] ?? [strtolower($dimension->name)];
             $count = 0;
             foreach ($keywords as $kw) {
                 if (str_contains($textLower, $kw)) {

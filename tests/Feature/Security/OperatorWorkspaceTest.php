@@ -5,7 +5,6 @@ namespace Tests\Feature\Security;
 use App\Exceptions\TenantSecurityException;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
-use App\Models\Environment;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -57,8 +56,8 @@ class OperatorWorkspaceTest extends TestCase
         $this->memberA->assignRole('admin');
         $memberB = User::factory()->create(['tenant_id' => $this->tenantB->id]);
 
-        $env = Environment::create(['uuid' => (string) Uuid::uuid4(), 'name' => 'Macro']);
-        $this->dimension = Dimension::create(['uuid' => (string) Uuid::uuid4(), 'name' => 'Economy', 'environment_id' => $env->id]);
+        // Each organisation owns its dimensions (plan part B1); tenant A got the default taxonomy when it was created.
+        $this->dimension = Dimension::withoutGlobalScopes()->where('tenant_id', $this->tenantA->id)->where('code', 'ECONOMIC')->firstOrFail();
 
         $this->force($this->tenantA, $this->memberA, 'Acme Force');
         $this->force($this->tenantB, $memberB, 'Cyberdyne Force');

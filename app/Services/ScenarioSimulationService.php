@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\StatusActionType;
 use App\Models\CrossImpact;
+use App\Models\ScenarioPlanningProject;
 use App\Models\StatusAction;
 use Illuminate\Validation\ValidationException;
 
@@ -19,10 +20,13 @@ class ScenarioSimulationService
      * @param  string|array|null  $dateRange
      * @param  array<int, array{force: string, status_action?: string, impact?: int, uncertainty?: int}>  $overrides
      */
-    public function simulate(mixed $dateRange, mixed $dimension, array $overrides, bool $propagate = false): array
+    public function simulate(mixed $dateRange, mixed $dimension, array $overrides, bool $propagate = false, ?ScenarioPlanningProject $project = null): array
     {
         $date = is_array($dateRange) ? $dateRange : (is_string($dateRange) ? explode(' - ', $dateRange) : null);
-        $ratings = $this->reasoningEngine->loadRatings($date, $dimension);
+        // A Key Focal Issue simulates on the exercise's forces and consensus scores (no period).
+        $ratings = $project
+            ? app(ForesightReportingService::class)->exerciseRatings($project, $dimension)[0]
+            : $this->reasoningEngine->loadRatings($date, $dimension);
 
         $ratingsByUuid = [];
         foreach ($ratings as $r) {

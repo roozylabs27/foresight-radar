@@ -334,6 +334,27 @@ class ScenarioPlanningProjectService
             ->all();
     }
 
+    /**
+     * The exercises the firm reports can be narrowed to (Key Focal Issues): those with at least one
+     * included force, newest first. Light on purpose: one query, no presenter.
+     *
+     * @return array<int, array{id: string, name: string, target_year: int|null, scores_confirmed: bool}>
+     */
+    public function reportScopes(): array
+    {
+        return ScenarioPlanningProject::whereHas('projectForces', fn ($q) => $q->where('inclusion_status', 'included'))
+            ->orderByDesc('updated_at')
+            ->get(['id', 'uuid', 'name', 'target_year', 'scores_confirmed_at'])
+            ->map(fn (ScenarioPlanningProject $project) => [
+                'id' => $project->uuid,
+                'name' => $project->name,
+                'target_year' => $project->target_year,
+                'scores_confirmed' => $project->scores_confirmed_at !== null,
+            ])
+            ->values()
+            ->all();
+    }
+
     public function present(ScenarioPlanningProject $project): array
     {
         $project->loadMissing(['owner:id,uuid,name', 'confirmer:id,name', 'forcesConfirmer:id,name', 'scoresConfirmer:id,name', 'creator:id,name']);

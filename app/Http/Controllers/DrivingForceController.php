@@ -27,10 +27,12 @@ class DrivingForceController extends Controller
 
     public function index()
     {
-        $dimensions = Dimension::ordered()->get(['id', 'name'])->map(function ($dimension) {
+        // Archived dimensions stay in the filter (old forces sit on them); the form leaves them out.
+        $dimensions = Dimension::ordered()->get(['id', 'name', 'archived_at'])->map(function ($dimension) {
             return [
                 'value' => $dimension->id,
                 'label' => $dimension->name,
+                'archived' => $dimension->isArchived(),
             ];
         });
         // User has no tenant scope, so filter by hand. Only the platform bypass has no tenant id.

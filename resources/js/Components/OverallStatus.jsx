@@ -119,15 +119,16 @@ async function exportWorkbook(records) {
  *
  * `date` is `{ date: [start, end] }` (defaults to the last 12 months) and `selectedData`
  * holds the extra filters (`dimension`, `time_horizon`, `priority`,
- * `status_action`); empty values are not sent. `setLoading` mirrors the
+ * `status_action`, and a Key Focal Issue `scope`); empty values are not sent. `setLoading` mirrors the
  * loading state for a parent that shows its own indicator.
  */
 export default function OverallStatus({ date, selectedData, permissions = [], setLoading }) {
     const [view, setView] = useState("overall");
     const [exporting, setExporting] = useState(false);
 
+    // A Key Focal Issue (`selectedData.scope`) is one snapshot of the exercise: no period.
     const params = {
-        date: date?.date ?? defaultPeriod(),
+        date: selectedData?.scope ? undefined : (date?.date ?? defaultPeriod()),
         ...Object.fromEntries(
             Object.entries(selectedData ?? {}).filter(([, value]) => value !== null && value !== undefined && value !== "")
         ),

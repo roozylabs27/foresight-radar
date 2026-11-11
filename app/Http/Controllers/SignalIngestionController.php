@@ -40,9 +40,11 @@ class SignalIngestionController extends Controller
      */
     public function index(): InertiaResponse
     {
-        $dimensions = Dimension::ordered()->get(['id', 'name'])->map(fn ($d) => [
+        // Archived dimensions stay in the filter; the review form leaves them out.
+        $dimensions = Dimension::ordered()->get(['id', 'name', 'archived_at'])->map(fn ($d) => [
             'value' => $d->id,
             'label' => $d->name,
+            'archived' => $d->isArchived(),
         ]);
 
         $timeHorizons = TimeHorizon::select('id', 'name', 'code')->get()->map(fn ($th) => [

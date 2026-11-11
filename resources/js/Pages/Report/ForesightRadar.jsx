@@ -5,10 +5,12 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import AnalysisFilterBar, { filterParam, useAnalysisFilters } from "@/Components/AnalysisFilters";
 import Radar from "@/Components/Radar";
 import { statusBadge } from "@/Components/StatusBadge";
+import { FIRM } from "@/domain/reportScope";
 import { cn } from "@/lib/utils";
 
-export default function ForesightRadar({ auth, dimensions = [], title }) {
-    const filters = useAnalysisFilters(dimensions);
+/** Foresight Radar of the whole firm (default) or of one Key Focal Issue (`scopes`, `scope`). */
+export default function ForesightRadar({ auth, dimensions = [], title, scopes = [], scope = FIRM }) {
+    const filters = useAnalysisFilters(dimensions, { scopes, scope });
 
     return (
         <AuthenticatedLayout
@@ -20,6 +22,7 @@ export default function ForesightRadar({ auth, dimensions = [], title }) {
                     <span className={cn(statusBadge(), "hidden bg-accent text-primary sm:inline-flex")}>
                         360° Strategic Horizon
                     </span>
+                    <span className={cn(statusBadge(), "hidden truncate sm:inline-flex")}>{filters.scopeLabel}</span>
                 </div>
             }
         >
@@ -28,8 +31,9 @@ export default function ForesightRadar({ auth, dimensions = [], title }) {
             <main className="flex flex-1 flex-col gap-4 p-4 lg:px-6 lg:py-5">
                 <AnalysisFilterBar filters={filters} dimensions={dimensions} meta="Horizon 1 / 2 / 3" />
                 <Radar
+                    dimensions={dimensions}
                     date={{ date: filters.period }}
-                    selectData={{ dimension: filterParam(filters.dimension) ?? null }}
+                    selectData={{ dimension: filterParam(filters.dimension) ?? null, scope: filters.params.scope ?? null }}
                 />
             </main>
         </AuthenticatedLayout>
