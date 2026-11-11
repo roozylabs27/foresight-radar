@@ -61,26 +61,18 @@ test.describe('Authentication & Access Control E2E Flows', () => {
     await expect(screen.getByRole('heading', 'Masuk ke Foresight Radar')).toBeVisible();
   });
 
-  test('Unhappy Path: registration validation catches empty submissions and mismatches', async ({ app, screen, browser }) => {
-    await app.open('/register');
+  // Accounts are created by invitation only (routes/auth.php has no /register); the self-service
+  // flow left for a guest is the password reset request.
+  test('Unhappy Path: password reset request validates the email before sending', async ({ app, screen }) => {
+    await app.open('/forgot-password');
+    await expect(screen.getByRole('heading', 'Lupa Kata Sandi?')).toBeVisible();
 
-    // Verify registration heading
-    await expect(screen.getByRole('heading', 'Daftar Akun Baru')).toBeVisible();
-
-    // Submit empty registration form
-    await screen.getByRole('button', 'Daftar Akun').tap();
-    await expect(screen.getByText('Harap masukkan nama lengkap Anda!')).toBeVisible();
+    await screen.getByRole('button', 'Kirim Tautan Reset Kata Sandi').tap();
     await expect(screen.getByText('Harap masukkan email kerja Anda!')).toBeVisible();
-    await expect(screen.getByText('Harap masukkan kata sandi!')).toBeVisible();
 
-    // Fill mismatched confirmation password
-    await screen.getByPlaceholder('Nama lengkap').fill('Test User');
-    await screen.getByPlaceholder('analis@perusahaan.com').fill('testuser@example.com');
-    await screen.getByPlaceholder('Minimal 8 karakter').fill('password123');
-    await screen.getByPlaceholder('Ulangi kata sandi').fill('mismatch321');
-    await screen.getByRole('button', 'Daftar Akun').tap();
-
-    await expect(screen.getByText('Konfirmasi kata sandi tidak cocok!')).toBeVisible();
+    await screen.getByPlaceholder('analis@perusahaan.com').fill('bukan-email');
+    await screen.getByRole('button', 'Kirim Tautan Reset Kata Sandi').tap();
+    await expect(screen.getByText('Format email tidak valid!')).toBeVisible();
   });
 
   test('Happy Path: user logout terminates session and returns to login page', async ({ app, screen, browser }) => {

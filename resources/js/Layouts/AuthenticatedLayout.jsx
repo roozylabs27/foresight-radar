@@ -10,7 +10,6 @@ import {
     GaugeIcon,
     GitCompareArrowsIcon,
     InboxIcon,
-    LayersIcon,
     LayoutGridIcon,
     ListIcon,
     LogOutIcon,
@@ -55,7 +54,7 @@ const COLLAPSED_KEY = "foresight-sidebar-collapsed";
 const NAV_ITEMS = [
     { key: "dashboard", label: "Dashboard", route: "dashboard.", match: "/dashboard", icon: LayoutGridIcon, permission: "view-dashboard" },
     { key: "scenario_planning", group: "scenario_planning", label: "Scenario Planning", route: "scenario-planning.index", match: "/scenario-planning", icon: TargetIcon, permission: "view-scenario" },
-    { key: "scenarios", group: "scenario_planning", label: "Scenarios", route: "scenarios.index", match: "/scenarios", icon: LayersIcon, permission: "view-scenario" },
+    // The old Scenarios page (/scenarios) stays reachable by URL; Step 6 lives in each exercise (audit U3).
     { key: "signals", group: "library", label: "Signal Ingestion", route: "signals.index", match: "/signals", icon: WifiIcon, permission: "view-signal" },
     { key: "driving_force", group: "library", label: "Driving Force", route: "driving-force.", match: "/driving-force", icon: ZapIcon, permission: "view-driving-force" },
     { key: "prioritizing", group: "analysis", label: "Prioritizing", route: "visualization.prioritizing.", match: "/visualization/prioritizing", icon: ChartColumnIcon, permission: "view-prioritizing" },

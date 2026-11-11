@@ -118,8 +118,8 @@ export default function Framework({ auth, title, project, steps, framework, axes
                                 </Link>
                             )}
                             {approved && (
-                                <Link href={route("scenarios.index")} className="text-sm text-primary hover:underline">
-                                    Buat narasi di halaman Scenarios
+                                <Link href={route("scenario-planning.narratives.index", project.id)} className="text-sm text-primary hover:underline">
+                                    Narasi skenario (langkah 6)
                                 </Link>
                             )}
                         </Panel>

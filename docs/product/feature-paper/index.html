@@ -1,0 +1,1118 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foresight Radar — Penjelasan Fitur Aplikasi</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+
+<!-- ===================== SAMPUL ===================== -->
+<section class="cover">
+  <div>
+    <div class="mark">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <circle cx="24" cy="24" r="20" stroke="#2fd1c2" stroke-width="2"/>
+        <circle cx="24" cy="24" r="13" stroke="#2fd1c2" stroke-width="2" opacity=".7"/>
+        <circle cx="24" cy="24" r="6" stroke="#2fd1c2" stroke-width="2" opacity=".5"/>
+        <circle cx="24" cy="24" r="2.5" fill="#2fd1c2"/>
+        <path d="M24 24 L40 12" stroke="#2fd1c2" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1 class="title">Foresight Radar</h1>
+    <div class="subtitle">Penjelasan Fitur Aplikasi</div>
+    <p class="lead">Dokumen penjelasan fitur untuk pengguna dan pemangku kepentingan. Ditulis dalam bahasa non-teknis, mengikuti apa yang terlihat dan dapat dilakukan di dalam dashboard.</p>
+  </div>
+  <div class="meta">
+    <span>Oktober 2026</span>
+    <span>Versi: branch pengembangan terkini</span>
+    <span class="foot">Foresight Radar — Penjelasan Fitur</span>
+  </div>
+</section>
+
+<!-- ===================== DAFTAR ISI ===================== -->
+<section class="toc">
+  <h1><span class="chap">Daftar Isi</span>Isi Dokumen</h1>
+  <ol>
+    <li><span class="n">—</span><span class="t">Ringkasan Eksekutif</span><span class="pg">3</span></li>
+    <li><span class="n">1</span><span class="t">Pendahuluan: dari Sinyal ke Keputusan</span><span class="pg">4</span></li>
+    <li><span class="n">2</span><span class="t">Peta Aplikasi dan Kerangka Layar</span><span class="pg">6</span></li>
+    <li><span class="n">3</span><span class="t">Dashboard</span><span class="pg">9</span></li>
+    <li><span class="n">4</span><span class="t">Signal Ingestion</span><span class="pg">14</span></li>
+    <li><span class="n">5</span><span class="t">Driving Force</span><span class="pg">18</span></li>
+    <li><span class="n">6</span><span class="t">Time Horizon</span><span class="pg">21</span></li>
+    <li><span class="n">7</span><span class="t">Rating of Urgency</span><span class="pg">23</span></li>
+    <li><span class="n">8</span><span class="t">Status of Action</span><span class="pg">25</span></li>
+    <li><span class="n">9</span><span class="t">Approval Items dan Closed Items</span><span class="pg">27</span></li>
+    <li><span class="n">10</span><span class="t">Prioritizing</span><span class="pg">30</span></li>
+    <li><span class="n">11</span><span class="t">Registered List</span><span class="pg">31</span></li>
+    <li><span class="n">12</span><span class="t">Foresight Radar</span><span class="pg">33</span></li>
+    <li><span class="n">13</span><span class="t">Cross-Impact</span><span class="pg">36</span></li>
+    <li><span class="n">14</span><span class="t">Knowledge Graph</span><span class="pg">41</span></li>
+    <li><span class="n">15</span><span class="t">Scenarios</span><span class="pg">43</span></li>
+    <li><span class="n">16</span><span class="t">Mesin Penalaran dan Bantuan AI</span><span class="pg">46</span></li>
+    <li><span class="n">17</span><span class="t">Ruang Kerja, Anggota, dan Peran</span><span class="pg">48</span></li>
+    <li><span class="n">18</span><span class="t">Alur Kerja Lengkap dalam Satu Contoh</span><span class="pg">52</span></li>
+    <li><span class="n">19</span><span class="t">Pengembangan Berikutnya</span><span class="pg">54</span></li>
+    <li><span class="n">20</span><span class="t">Penutup dan Glosarium</span><span class="pg">55</span></li>
+  </ol>
+</section>
+
+<!-- ===================== RINGKASAN EKSEKUTIF ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Ringkasan</span>Ringkasan Eksekutif</h1>
+  <p>Foresight Radar adalah aplikasi untuk memantau perubahan lingkungan bisnis sebelum perubahan itu menjadi gangguan. Aplikasi ini membantu organisasi mengumpulkan sinyal perubahan, mengubahnya menjadi faktor pendorong (driving force) yang terdefinisi, menilai setiap faktor secara terstruktur, lalu menyajikannya dalam bentuk radar, matriks prioritas, dan skenario masa depan.</p>
+  <p>Seluruh fitur tersusun dalam satu alur yang runtut. Sinyal masuk melalui <strong>Signal Ingestion</strong>, baik dari dokumen yang ditempel analis maupun dari ekstraksi otomatis. Sinyal yang diterima menjadi <strong>Driving Force</strong>. Setiap driving force kemudian melewati empat tahap penilaian: <strong>Time Horizon</strong> (kapan dampaknya terasa), <strong>Rating of Urgency</strong> (seberapa besar dampak dan ketidakpastiannya), <strong>Status of Action</strong> (apa sikap organisasi), dan <strong>Approval Items</strong> (persetujuan untuk ditampilkan). Hasilnya tampil di <strong>Prioritizing</strong>, <strong>Registered List</strong>, <strong>Foresight Radar</strong>, dan <strong>Knowledge Graph</strong>. Analisis lanjutan tersedia melalui <strong>Cross-Impact</strong> dan <strong>Scenarios</strong>.</p>
+  <p>Tiga hal membedakan Foresight Radar dari pencatatan biasa. Pertama, <strong>bukti selalu melekat</strong>: setiap sinyal membawa kutipan yang dicek kata per kata ke dokumen sumbernya, dan asal-usulnya dicatat. Kedua, <strong>penalaran dapat dijelaskan</strong>: skor pada Dashboard dihitung dari aturan yang terbuka, bukan kotak hitam, dan bantuan kecerdasan buatan hanya dipakai pada dua titik yang jelas, yaitu ekstraksi sinyal dan penulisan narasi skenario. Ketiga, <strong>setiap organisasi bekerja di ruang kerjanya sendiri</strong>: data satu organisasi tidak terlihat oleh organisasi lain, dan anggota serta perannya dikelola dari halaman pengaturan.</p>
+  <p>Dokumen ini menjelaskan setiap fitur dengan pola yang sama: tujuannya, apa yang dilihat pengguna, apa yang bisa dilakukan, hubungannya dengan tahap lain, dan siapa yang berwenang. Bab 18 merangkai semuanya dalam satu contoh dari awal sampai akhir. Bab 19 memisahkan dengan tegas hal yang belum tersedia dan direncanakan untuk pengembangan berikutnya.</p>
+
+  <div class="callout">
+    <span class="label">Catatan pembaca</span>
+    <p>Label antarmuka dikutip persis seperti yang tampil di aplikasi. Sebagian label berbahasa Inggris dan sebagian berbahasa Indonesia, mengikuti kondisi aplikasi saat ini. Tangkapan layar diambil dari lingkungan pengembangan dengan data contoh bertema industri otomotif dan kendaraan listrik.</p>
+  </div>
+</section>
+
+<!-- ===================== BAB 1 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 1</span>Pendahuluan: dari Sinyal ke Keputusan</h1>
+
+  <h2>1.1 Apa itu strategic foresight</h2>
+  <p>Strategic foresight adalah disiplin untuk membaca perubahan sejak dini dan menyiapkan respons sebelum perubahan itu memaksa organisasi bereaksi. Praktik ini tidak berusaha meramal satu masa depan yang pasti. Ia menyusun beberapa kemungkinan masa depan, menimbang mana yang paling berdampak dan paling tidak pasti, lalu menentukan apa yang perlu dipantau dan apa yang perlu diputuskan sekarang.</p>
+  <p>Dalam praktiknya, foresight bergerak dari bukti kecil menuju keputusan besar. Sebuah artikel regulasi, paten baru, atau pergeseran perilaku pelanggan adalah <em>sinyal</em>. Kumpulan sinyal yang searah membentuk <em>driving force</em>, yaitu kekuatan struktural yang menggerakkan industri. Setiap driving force dinilai dari sisi dampak, ketidakpastian, dan horizon waktu. Penilaian itu kemudian diterjemahkan menjadi implikasi dan tindakan.</p>
+
+  <h2>1.2 Masalah yang dipecahkan</h2>
+  <p>Tanpa alat bantu, foresight sering berhenti sebagai kumpulan pendapat ahli di dokumen presentasi. Sinyal tidak punya jejak sumber. Penilaian berubah tanpa riwayat. Hubungan antar faktor tidak pernah dinilai secara eksplisit. Skenario disusun sekali lalu dilupakan. Foresight Radar dirancang untuk menutup celah tersebut dengan memaksa setiap langkah tercatat, berurutan, dan dapat ditelusuri kembali.</p>
+
+  <h2>1.3 Siapa penggunanya</h2>
+  <ul>
+    <li><strong>Analis dan Admin</strong> yang memasukkan sinyal, mendefinisikan driving force, dan mengisi tahap penilaian.</li>
+    <li><strong>Pimpinan dan Board of Directors</strong> yang membaca radar, matriks prioritas, dan skenario, serta memberi persetujuan.</li>
+    <li><strong>Pengelola ruang kerja</strong> yang mengatur anggota, peran, dan mesin AI yang dipakai organisasi.</li>
+  </ul>
+
+  <h2>1.4 Alur menyeluruh: dari sinyal ke keputusan</h2>
+  <p>Gambar berikut merangkum urutan kerja di dalam aplikasi. Setiap kotak adalah satu menu di sidebar. Panah menunjukkan syarat: sebuah driving force baru muncul di tahap berikutnya setelah tahap sebelumnya terisi.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif" font-size="12">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#0b8f8a"/>
+        </marker>
+      </defs>
+      <!-- row 1 -->
+      <g>
+        <rect x="10" y="20" width="130" height="48" rx="6" fill="#0b1b33"/>
+        <text x="75" y="40" fill="#fff" text-anchor="middle" font-weight="600">Signal Ingestion</text>
+        <text x="75" y="56" fill="#cfe6e4" text-anchor="middle" font-size="10">sinyal + bukti</text>
+      </g>
+      <line x1="140" y1="44" x2="168" y2="44" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="170" y="20" width="130" height="48" rx="6" fill="#12345a"/>
+        <text x="235" y="40" fill="#fff" text-anchor="middle" font-weight="600">Driving Force</text>
+        <text x="235" y="56" fill="#cfe6e4" text-anchor="middle" font-size="10">status PENDING</text>
+      </g>
+      <line x1="300" y1="44" x2="328" y2="44" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="330" y="20" width="130" height="48" rx="6" fill="#12345a"/>
+        <text x="395" y="40" fill="#fff" text-anchor="middle" font-weight="600">Time Horizon</text>
+        <text x="395" y="56" fill="#cfe6e4" text-anchor="middle" font-size="10">Short / Mid / Long</text>
+      </g>
+      <line x1="460" y1="44" x2="488" y2="44" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="490" y="20" width="130" height="48" rx="6" fill="#12345a"/>
+        <text x="555" y="40" fill="#fff" text-anchor="middle" font-weight="600">Rating of Urgency</text>
+        <text x="555" y="56" fill="#cfe6e4" text-anchor="middle" font-size="10">Impact × Uncertainty</text>
+      </g>
+      <line x1="620" y1="44" x2="648" y2="44" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="650" y="20" width="100" height="48" rx="6" fill="#12345a"/>
+        <text x="700" y="40" fill="#fff" text-anchor="middle" font-weight="600">Status of</text>
+        <text x="700" y="56" fill="#fff" text-anchor="middle" font-weight="600">Action</text>
+      </g>
+      <!-- down arrow -->
+      <path d="M700,68 L700,100 L555,100 L555,118" fill="none" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <!-- row 2 -->
+      <g>
+        <rect x="490" y="120" width="130" height="48" rx="6" fill="#12345a"/>
+        <text x="555" y="140" fill="#fff" text-anchor="middle" font-weight="600">Approval Items</text>
+        <text x="555" y="156" fill="#cfe6e4" text-anchor="middle" font-size="10">"Show" → APPROVED</text>
+      </g>
+      <line x1="490" y1="144" x2="462" y2="144" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="170" y="112" width="290" height="64" rx="6" fill="#0b8f8a"/>
+        <text x="315" y="134" fill="#fff" text-anchor="middle" font-weight="600">Visualisasi</text>
+        <text x="315" y="152" fill="#e6fffd" text-anchor="middle" font-size="10">Prioritizing · Registered List · Foresight Radar</text>
+        <text x="315" y="166" fill="#e6fffd" text-anchor="middle" font-size="10">Knowledge Graph</text>
+      </g>
+      <line x1="170" y1="144" x2="142" y2="144" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="10" y="120" width="130" height="48" rx="6" fill="#0b1b33"/>
+        <text x="75" y="140" fill="#fff" text-anchor="middle" font-weight="600">Closed Items</text>
+        <text x="75" y="156" fill="#cfe6e4" text-anchor="middle" font-size="10">"Take out" / "Reopen"</text>
+      </g>
+      <!-- row 3 -->
+      <path d="M315,176 L315,210" fill="none" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="170" y="212" width="130" height="48" rx="6" fill="#1a5fd6"/>
+        <text x="235" y="232" fill="#fff" text-anchor="middle" font-weight="600">Cross-Impact</text>
+        <text x="235" y="248" fill="#dfe9ff" text-anchor="middle" font-size="10">saling pengaruh</text>
+      </g>
+      <line x1="300" y1="236" x2="328" y2="236" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr)"/>
+      <g>
+        <rect x="330" y="212" width="130" height="48" rx="6" fill="#1a5fd6"/>
+        <text x="395" y="232" fill="#fff" text-anchor="middle" font-weight="600">Scenarios</text>
+        <text x="395" y="248" fill="#dfe9ff" text-anchor="middle" font-size="10">matriks 2×2 + narasi</text>
+      </g>
+      <g>
+        <rect x="490" y="212" width="260" height="48" rx="6" fill="#f3f6fa" stroke="#d8dee9"/>
+        <text x="620" y="232" fill="#0b1b33" text-anchor="middle" font-weight="600">Dashboard</text>
+        <text x="620" y="248" fill="#5b6577" text-anchor="middle" font-size="10">indeks kesiapan, Simulasi What-if, ringkasan</text>
+      </g>
+      <text x="380" y="290" fill="#5b6577" text-anchor="middle" font-size="10">Semua tahap berjalan di dalam satu ruang kerja organisasi; data tidak bercampur antar organisasi.</text>
+    </svg>
+    <figcaption>Diagram 1. Alur kerja Foresight Radar dari sinyal hingga skenario.</figcaption>
+  </figure>
+
+  <h2>1.5 Kerangka penalaran yang melandasi urutan fitur</h2>
+  <p>Urutan fitur di atas tidak disusun sembarangan. Ia mengikuti sebuah kerangka penalaran yang bergerak dari tingkat <em>kontekstual</em> menuju tingkat <em>epistemik</em>: dari memahami konteks, menemukan pola, menjelaskan sebab-akibat, sampai menyusun kerangka keputusan yang bisa dipakai ulang. Kerangka ini memiliki enam tahap, dan setiap tahap punya padanan di aplikasi.</p>
+  <table>
+    <thead><tr><th>Tahap penalaran</th><th>Maknanya</th><th>Padanan di Foresight Radar</th></tr></thead>
+    <tbody>
+      <tr><th>Brainstorming / Hypothesis</th><td>Menyusun dugaan awal tentang apa yang akan memengaruhi masa depan.</td><td>Signal Ingestion dan Driving Force: sinyal dan faktor pendorong didaftarkan sebagai hipotesis yang masih perlu diuji.</td></tr>
+      <tr><th>Data Analysis</th><td>Memberi ukuran pada dugaan dan melihat sebarannya.</td><td>Time Horizon, Rating of Urgency, dan grafik eksploratif di Dashboard.</td></tr>
+      <tr><th>Dashboard</th><td>Menyajikan gambaran menyeluruh yang mudah dibaca pengambil keputusan.</td><td>Dashboard, Prioritizing, Registered List, Foresight Radar.</td></tr>
+      <tr><th>Pattern Recognition</th><td>Menemukan struktur hubungan yang tidak terlihat bila faktor dinilai sendiri-sendiri.</td><td>Cross-Impact (matriks, loop sebab-akibat, peran Vester) dan Knowledge Graph.</td></tr>
+      <tr><th>Causal Reasoning</th><td>Menjawab mengapa pola terjadi dan ke mana arahnya.</td><td>Scenarios (matriks 2×2 dengan narasi) dan Simulasi What-if dengan propagasi.</td></tr>
+      <tr><th>Framework Synthesis</th><td>Mengunci hasil penalaran menjadi keputusan, tindakan, dan siklus perbaikan.</td><td>Status of Action, Approval Items, Closed Items, dan indeks kesiapan strategis.</td></tr>
+    </tbody>
+  </table>
+  <p>Dengan pemetaan ini, aplikasi tidak sekadar menyimpan data foresight. Ia memandu pengguna menapaki tangga penalaran yang sama setiap kali, sehingga hasilnya konsisten dan dapat dipertanggungjawabkan.</p>
+</section>
+
+<!-- ===================== BAB 2 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 2</span>Peta Aplikasi dan Kerangka Layar</h1>
+
+  <h2>2.1 Lima belas menu dalam empat kelompok</h2>
+  <p>Setelah masuk, pengguna melihat sidebar di sisi kiri berisi lima belas menu. Menu yang tampil mengikuti hak akses pengguna, sehingga seorang anggota Board of Directors melihat daftar yang lebih pendek daripada seorang Admin. Untuk memudahkan pembacaan, dokumen ini mengelompokkan menu ke dalam empat kelompok fungsi.</p>
+
+  <table>
+    <thead><tr><th style="width:26%">Kelompok</th><th style="width:22%">Menu</th><th>Fungsi singkat</th><th style="width:20%">Siapa yang melihat</th></tr></thead>
+    <tbody>
+      <tr><th rowspan="2">Pemantauan Sinyal</th><td>"Dashboard"</td><td>Gambaran kesiapan strategis, indeks, simulasi, dan ringkasan visual.</td><td>Semua peran</td></tr>
+      <tr><td>"Signal Ingestion"</td><td>Memasukkan dokumen, mengekstrak sinyal kandidat, meninjau bukti, dan mengangkatnya menjadi driving force.</td><td>Semua peran; Board of Directors hanya melihat</td></tr>
+      <tr><th rowspan="6">Alur Penilaian Driving Force</th><td>"Driving Force"</td><td>Daftar dan pendaftaran faktor pendorong beserta tahap pipeline-nya.</td><td>Developer, Super Admin, Admin</td></tr>
+      <tr><td>"Time Horizon"</td><td>Menetapkan jangka waktu dampak: Short, Mid, atau Long Term.</td><td>Developer, Super Admin, Admin</td></tr>
+      <tr><td>"Rating of Urgency"</td><td>Memberi skor Impact dan Uncertainty 1–10; prioritas dihitung otomatis.</td><td>Developer, Super Admin, Admin</td></tr>
+      <tr><td>"Status of Action"</td><td>Menetapkan sikap organisasi: Monitoring atau Decided Plan, dengan alasan dan riwayat.</td><td>Developer, Super Admin, Admin</td></tr>
+      <tr><td>"Approval Items"</td><td>Menyetujui driving force agar tampil di laporan, atau mengeluarkannya.</td><td>Semua peran</td></tr>
+      <tr><td>"Closed Items"</td><td>Arsip driving force yang sudah ditutup, dengan opsi mengaktifkan kembali.</td><td>Semua peran</td></tr>
+      <tr><th rowspan="6">Visualisasi &amp; Analisis</th><td>"Prioritizing"</td><td>Matriks Impact × Uncertainty.</td><td>Semua peran</td></tr>
+      <tr><td>"Registered List"</td><td>Daftar lengkap per dimensi dengan ekspor ke Excel.</td><td>Semua peran</td></tr>
+      <tr><td>"Foresight Radar"</td><td>Radar 360° per dimensi dan horizon.</td><td>Semua peran</td></tr>
+      <tr><td>"Cross-Impact"</td><td>Matriks dan jejaring saling pengaruh antar driving force.</td><td>Semua peran; Board of Directors hanya melihat</td></tr>
+      <tr><td>"Knowledge Graph"</td><td>Peta hubungan dokumen, sinyal, dan driving force.</td><td>Semua peran</td></tr>
+      <tr><td>"Scenarios"</td><td>Skenario masa depan dalam matriks 2×2 dengan narasi berbasis bukti.</td><td>Semua peran; Board of Directors hanya melihat</td></tr>
+      <tr><th>Pengaturan &amp; Ruang Kerja</th><td>"Settings"</td><td>Mesin AI, organisasi, anggota tim, dan profil akun.</td><td>Semua pengguna</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot tall">
+    <img src="screenshots/01-sidebar.png" alt="Sidebar Foresight Radar dengan lima belas menu dan halaman Dashboard">
+    <figcaption>Gambar 1. Sidebar dengan lima belas menu, dilihat oleh pengguna dengan hak akses penuh.</figcaption>
+  </figure>
+
+  <h2>2.2 Kerangka layar yang sama di semua halaman</h2>
+  <p>Di luar isi tiap halaman, ada beberapa elemen tetap yang membantu orientasi.</p>
+  <ul>
+    <li><strong>Judul halaman dan badge.</strong> Setiap halaman menampilkan judulnya beserta badge pendek yang menjelaskan perannya, misalnya "Signal Repository" di Driving Force atau "360° Strategic Horizon" di Foresight Radar.</li>
+    <li><strong>Breadcrumb.</strong> Di bawah judul ada jejak navigasi seperti "Dashboard › Time Horizon". Halaman pengaturan menampilkan tiga tingkat, misalnya "Dashboard › Pengaturan › Mesin AI &amp; Reasoning".</li>
+    <li><strong>Badge ruang kerja.</strong> Di kanan atas tampil nama organisasi tempat pengguna bekerja. Semua data yang dilihat berasal dari ruang kerja ini.</li>
+    <li><strong>Lonceng "Notifikasi".</strong> Lonceng menampilkan hasil ekstraksi sinyal: "Ekstraksi Selesai" atau "Ekstraksi Gagal", judul dokumen, waktu relatif, dan jumlah kandidat sinyal. Ada tombol "Tandai dibaca", "Bersihkan riwayat", dan "Buka Signal Review". Riwayat notifikasi tersimpan di browser yang dipakai, bukan di akun.</li>
+    <li><strong>Pemilih bahasa "ID" / "EN".</strong> Pilihan bahasa saat ini hanya mengubah label kerangka layar, yaitu menu sidebar, menu pengguna, judul pengaturan, dan breadcrumb. Isi halaman tidak ikut berganti bahasa. Pilihan disimpan di browser dan berlaku untuk perangkat tersebut.</li>
+    <li><strong>Menu pengguna.</strong> Berisi "Profil Pengguna", "Settings", sakelar "Mode gelap", dan "Keluar (Logout)".</li>
+    <li><strong>Filter standar.</strong> Hampir semua halaman memiliki filter "Periode" (bawaan: bulan berjalan) dan "Dimensi" (bawaan: "Semua Dimensi"). Tombol "Reset Filter" muncul bila ada yang diubah.</li>
+    <li><strong>Tabel standar.</strong> Tabel mendukung urutan kolom, pilihan "Baris per halaman" (10, 20, 50, 100), dan pesan "Tidak ada data." bila kosong.</li>
+    <li><strong>Widget "Ekstraksi Sinyal".</strong> Saat ekstraksi berjalan, kartu kecil muncul di kanan bawah semua halaman. Kartu ini bisa diperkecil menjadi pil "N Proses Ekstraksi" dan tetap ada walau pengguna berpindah halaman.</li>
+  </ul>
+
+  <figure class="shot">
+    <img src="screenshots/44-language.png" alt="Pemilih bahasa ID dan EN di header">
+    <figcaption>Gambar 2. Pemilih bahasa di header; pilihan hanya memengaruhi label kerangka layar.</figcaption>
+  </figure>
+
+  <div class="callout">
+    <span class="label">Catatan</span>
+    <p>Filter "Periode" pada halaman alur kerja menyaring berdasarkan tanggal driving force dibuat. Pada halaman laporan (Prioritizing, Registered List, Foresight Radar) penyaringan mengikuti tanggal penilaian dibuat. Bila sebuah item tidak muncul, periksa dulu rentang periode yang dipilih.</p>
+  </div>
+</section>
+
+<!-- ===================== BAB 3 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 3</span>Dashboard</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Memberi pimpinan satu halaman untuk membaca kesiapan strategis organisasi, memahami alasannya, dan menguji "bagaimana jika" tanpa mengubah data.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Dashboard memiliki lima tab: "Overview", "Simulasi What-if", "Prioritizing", "Foresight Radar", dan "Registered List". Tiga tab terakhir menampilkan komponen yang sama dengan halaman laporannya, sehingga dijelaskan pada bab masing-masing.</dd>
+  </dl>
+
+  <h2>3.1 Tab "Overview"</h2>
+  <p>Bagian teratas adalah banner <strong>"Postur Kesiapan Strategis"</strong>. Banner ini menyimpulkan kondisi organisasi dalam satu dari empat postur, lengkap dengan penjelasan dan jumlah driving force aktif yang dievaluasi.</p>
+  <table>
+    <thead><tr><th>Postur</th><th>Badge</th><th>Maknanya</th></tr></thead>
+    <tbody>
+      <tr><th>Agile &amp; Resilient</th><td>Strong</td><td>Peluang pertumbuhan ditangkap dan risiko besar sudah punya rencana.</td></tr>
+      <tr><th>Defensive Prepared</th><td>Moderate</td><td>Ketahanan terhadap ancaman solid, tetapi inisiatif menangkap peluang masih terbatas.</td></tr>
+      <tr><th>Growth-Aggressive (Exposed)</th><td>Attention</td><td>Agresif mengejar peluang, namun eksposur risiko belum dimitigasi.</td></tr>
+      <tr><th>Vulnerable (Needs Attention)</th><td>Action Needed</td><td>Peluang belum ditangkap dan risiko besar masih dipantau tanpa rencana.</td></tr>
+    </tbody>
+  </table>
+  <p>Di bawah banner ada dua pengukur setengah lingkaran berskala 0–100 dengan titik tengah 50 sebagai garis dasar.</p>
+  <ul>
+    <li><strong>"Growth Index"</strong> dengan badge "Peluang Pasar". Indeks ini membandingkan peluang yang sudah ditangkap, yaitu driving force berstatus Decided Plan, dengan yang belum ditangkap, khusus pada dimensi Customer, Technology, dan Economy. Skalanya "0: Stagnant / 50: Baseline / 100: High Growth".</li>
+    <li><strong>"Resilience Index"</strong> dengan badge "Mitigasi Risiko". Indeks ini membandingkan mitigasi yang sudah direncanakan dengan driving force berdampak tinggi yang masih berstatus Monitoring. Skalanya "0: Vulnerable / 50: Baseline / 100: Fully Resilient".</li>
+  </ul>
+
+  <figure class="shot">
+    <img src="screenshots/02-dashboard-overview.png" alt="Tab Overview Dashboard dengan banner postur dan dua pengukur indeks">
+    <figcaption>Gambar 3. Tab "Overview": banner postur kesiapan dan dua pengukur Growth Index serta Resilience Index.</figcaption>
+  </figure>
+
+  <p>Panel <strong>"Mengapa skor ini?"</strong> berbadge "Berbasis Aturan" membuka kotak hitam. Panel ini menampilkan aturan postur yang terpenuhi, lalu daftar driving force penyumbang terbesar beserta aturan yang dipicunya, dipisah dalam sub-tab "Resilience" dan "Growth". Tombol "Tampilkan semua (N)" membuka sisanya. Penting dicatat: <strong>seluruh perhitungan indeks ini adalah aturan yang ditetapkan, bukan hasil kecerdasan buatan</strong>. Setiap driving force memicu satu aturan, kontribusinya ditambahkan ke garis dasar 50, lalu ditimbang menurut time horizon.</p>
+
+  <figure class="shot">
+    <img src="screenshots/03-dashboard-why.png" alt="Panel Mengapa skor ini dengan daftar kontribusi">
+    <figcaption>Gambar 4. Panel "Mengapa skor ini?" menjelaskan kontribusi setiap driving force terhadap indeks.</figcaption>
+  </figure>
+
+  <p>Panel <strong>"Top Driving Forces Kritis (Perhatian BoD)"</strong> berbadge "Perlu Mitigasi Segera" menyorot tiga driving force paling berisiko. Setiap kartu menampilkan dimensi, prioritas, nama, "Status Aksi:", "Impact: x/10", "Uncertainty: y/10", dan batang dampak yang memerah bila nilainya tujuh ke atas. Bila tidak ada yang kritis, panel menulis "Tidak ada driving force berisiko tinggi yang membutuhkan mitigasi darurat saat ini."</p>
+
+  <p>Bagian berikutnya adalah <strong>grafik eksploratif</strong> yang membantu membaca sebaran data tanpa harus membuka tabel satu per satu:</p>
+  <ul>
+    <li>"Distribusi Frekuensi per Dimensi Makro &amp; Mezzo": jumlah driving force per dimensi.</li>
+    <li>"Tren Pertumbuhan Driving Forces Bulanan": garis "Total Forces", "Decided Plan", dan "Monitoring" selama minimal dua belas bulan terakhir.</li>
+    <li>"Distribusi Skor Impact &amp; Uncertainty": jumlah per nilai 1–10 beserta median dan rata-rata.</li>
+    <li>"Hubungan Impact × Uncertainty": gelembung yang membesar bila banyak driving force berada pada kombinasi skor yang sama.</li>
+    <li>"Perbandingan Impact per Dimensi" dan "Perbandingan Impact per Time Horizon": sebaran skor dampak.</li>
+  </ul>
+  <p>Dua grafik terakhir memanfaatkan <strong>riwayat penilaian</strong>. "Tren Skor dari Riwayat Rating" menampilkan rata-rata Impact dan Uncertainty pada akhir setiap bulan dan baru bermakna setelah ada perubahan skor minimal dua bulan. "Kecepatan Monitoring → Decided Plan" mengukur berapa hari sebuah item bertahan di Monitoring sebelum menjadi Decided Plan, dengan ringkasan "Perpindahan", "Median", "Rata-rata", dan "Masih Monitoring".</p>
+
+  <figure class="shot">
+    <img src="screenshots/04-dashboard-charts.png" alt="Grafik eksploratif Dashboard">
+    <figcaption>Gambar 5. Grafik eksploratif pada tab "Overview".</figcaption>
+  </figure>
+
+  <h2>3.2 Tab "Simulasi What-if"</h2>
+  <p>Tab ini memungkinkan pimpinan bertanya: "Bagaimana indeks kami berubah jika faktor ini kami tangani?" Daftar "Daftar Driving Force untuk Simulasi" menampilkan setiap driving force aktif. Pengguna dapat mengubah statusnya (Monitoring atau Decided Plan), nilai Impact, atau nilai Uncertainty. Dua kartu, "Resilience Index (Simulasi)" dan "Growth Index (Simulasi)", langsung menampilkan "Baseline: x → Simulasi: y" beserta postur strategis yang baru. Setiap baris punya "Reset ke baseline", dan tombol "Reset Semua (N)" mengembalikan seluruhnya.</p>
+  <p>Secara bawaan, banner kuning menegaskan <strong>"Simulasi What-if (Efek Langsung)"</strong>: simulasi tidak menyimpan perubahan apa pun, dan efek perambatan lintas-force belum dihitung. Tombol <strong>"Aktifkan Propagasi"</strong> mengubah mode menjadi <strong>"Propagasi Aktif"</strong>. Banner berubah menjadi biru nila dengan judul "Simulasi Sistemik (Propagasi Aktif)": perubahan status dan nilai merambat ke driving force yang terhubung melalui matriks cross-impact.</p>
+  <p>Saat propagasi aktif, panel <strong>"Efek Riak Lintas-Force (N Relasi Terpengaruh)"</strong> merinci perambatannya. Setiap kartu menunjukkan force sumber, skor pengaruh, force tujuan, "Δ Impact", dan "Δ Uncertainty". Perambatan hanya berjalan satu langkah, dari force yang diubah ke force yang langsung dipengaruhinya. Bila force sumber menjadi Decided Plan, ketidakpastian force tujuan turun dan dampaknya naik; selain itu hanya ketidakpastian yang bergeser sedikit. Semua nilai tetap dijaga dalam rentang 1–10. Bila tidak ada relasi, panel menulis "Tidak ada relasi cross-impact aktif yang terhubung dengan driving force yang disesuaikan saat ini."</p>
+
+  <figure class="shot">
+    <img src="screenshots/05-dashboard-whatif.png" alt="Tab Simulasi What-if">
+    <figcaption>Gambar 6. Tab "Simulasi What-if" dalam mode efek langsung.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/43-whatif-propagation.png" alt="Simulasi What-if dengan propagasi aktif dan panel Efek Riak Lintas-Force">
+    <figcaption>Gambar 7. Mode "Propagasi Aktif" dengan panel "Efek Riak Lintas-Force".</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Dashboard hanya membaca driving force yang sudah APPROVED dan memiliki status aksi. Ia tidak mengubah data apa pun. Efek riak mengambil hubungan dari halaman Cross-Impact.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran dapat membuka Dashboard dan menjalankan simulasi, karena simulasi bersifat hanya baca.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 4 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 4</span>Signal Ingestion</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Memastikan sinyal perubahan masuk dengan bukti yang bisa diverifikasi, disaring oleh analis, dan baru kemudian menjadi driving force. Dengan begitu setiap driving force punya jejak asal.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman berjudul "Signal Ingestion &amp; Review" dengan ruang kerja "Signal-to-Insight Workspace". Di sampingnya tampil badge mesin yang sedang dipakai, misalnya "Mesin AI: Gemini (nama model)" atau "Ekstraksi: Aturan Kata Kunci (Non-AI)", dan tautan "Pengaturan Mesin AI". Ada dua tab: "Candidate Review Queue" dan "Ingest Source Document / URL".</dd>
+  </dl>
+
+  <h2>4.1 Memasukkan dokumen</h2>
+  <p>Analis menempelkan teks dokumen pada tab "Ingest Source Document / URL". Formulirnya berisi "Document / Article Title" (wajib), "Publisher / Source Organization", "Source URL (Optional)", "Publication Date", dan "Raw Content / Document Text" (wajib, minimal 30 karakter, dengan penghitung karakter). Setiap kolom memiliki ikon ⓘ yang menjelaskan kegunaannya. Dua hal penting: <strong>alamat URL hanya disimpan sebagai rujukan</strong>, isinya tidak diambil oleh aplikasi; dan <strong>tidak ada unggah berkas</strong>, teks harus ditempel.</p>
+  <p>Kotak "Evidence Provenance Guarantee" menerangkan apa yang terjadi setelah tombol "Ingest &amp; Extract Signals" ditekan. Dalam mode AI, teks dikirim ke mesin yang aktif untuk diusulkan menjadi sinyal; setiap kutipan bukti dicocokkan kata per kata ke teks yang ditempel, dan kutipan yang tidak ditemukan dibuang. Dalam mode "Aturan", sinyal diusulkan dengan aturan kata kunci tanpa AI dan teks tidak keluar dari server. Dalam kedua mode, dokumen diberi sidik jari digital agar isinya terbukti tidak berubah.</p>
+
+  <figure class="shot">
+    <img src="screenshots/07-signals-ingest.png" alt="Formulir Ingest Source Document">
+    <figcaption>Gambar 8. Tab "Ingest Source Document / URL" dengan kotak jaminan asal-usul bukti.</figcaption>
+  </figure>
+
+  <h2>4.2 Proses di latar belakang</h2>
+  <p>Ekstraksi berjalan di latar belakang. Setelah menekan tombol, pengguna melihat pesan "Sumber disimpan. Sinyal sedang diekstrak di latar belakang." Widget "Ekstraksi Sinyal" di kanan bawah menampilkan status per dokumen: "Menunggu antrean pemrosesan...", "AI sedang membaca dokumen &amp; mengekstrak sinyal...", "N sinyal berhasil ditemukan.", atau "Ekstraksi gagal." Catatan kaki widget menegaskan "Boleh tinggalkan halaman, proses tetap berjalan." Widget ini bertahan walau halaman dimuat ulang. Hasil akhir juga masuk ke lonceng "Notifikasi" di header.</p>
+  <p>Bila mesin AI tidak tersedia, misalnya kuota penuh atau layanan sibuk, aplikasi otomatis beralih ke aturan kata kunci dan memberi tahu alasannya. Dokumen yang terlalu panjang ditolak dengan saran untuk memecahnya menjadi beberapa bagian.</p>
+
+  <figure class="shot">
+    <img src="screenshots/42-notifications.png" alt="Lonceng Notifikasi dengan riwayat hasil ekstraksi">
+    <figcaption>Gambar 9. Lonceng "Notifikasi" mencatat hasil ekstraksi yang selesai atau gagal.</figcaption>
+  </figure>
+
+  <h2>4.3 Antrean tinjauan</h2>
+  <p>Tab "Candidate Review Queue" menampilkan sinyal kandidat. Filternya: "Status" (bawaan "Review Status: Pending"), "Dimensi", dan kotak "Cari" dengan placeholder "Search title, summary, or quotes...". Setiap sinyal memiliki salah satu dari tiga status:</p>
+  <table>
+    <thead><tr><th>Status</th><th>Arti</th></tr></thead>
+    <tbody>
+      <tr><th>Pending</th><td>Kandidat yang menunggu keputusan analis.</td></tr>
+      <tr><th>Accepted</th><td>Diterima, baik sebagai driving force baru maupun ditautkan ke driving force yang sudah ada.</td></tr>
+      <tr><th>Rejected</th><td>Ditolak dengan alasan tertulis.</td></tr>
+    </tbody>
+  </table>
+  <p>Tabel memiliki lima kolom, masing-masing dengan ikon ⓘ berisi penjelasan:</p>
+  <ul>
+    <li><strong>"Signal Title &amp; Evidence"</strong>: judul, ringkasan, kutipan bukti, dan status kutipan: "Kutipan terverifikasi", "Kutipan tidak ditemukan di sumber", atau "Kutipan belum diverifikasi (data lama)". Bila AI mengusulkan driving force terkait, tampil "Usulan force: …".</li>
+    <li><strong>"Taxonomy &amp; Origin"</strong>: dimensi, horizon waktu, dan "Source: …".</li>
+    <li><strong>"Assessment &amp; Confidence"</strong>: "{n}% confidence" (hijau bila 80% ke atas), "Est. Impact: … | Uncertainty: …", dan badge asal: nama penyedia AI, "Aturan", atau "Asal tidak tercatat".</li>
+    <li><strong>"Status"</strong> dan <strong>"Action"</strong>.</li>
+  </ul>
+
+  <figure class="shot">
+    <img src="screenshots/06-signals-queue.png" alt="Antrean tinjauan sinyal kandidat">
+    <figcaption>Gambar 10. "Candidate Review Queue" dengan kutipan bukti dan tingkat keyakinan per sinyal.</figcaption>
+  </figure>
+
+  <h2>4.4 Empat tindakan</h2>
+  <ul>
+    <li><strong>"Inspect"</strong> membuka "Signal Inspection &amp; Provenance": judul, ringkasan, signifikansi, kutipan bukti verbatim, mesin pengekstrak beserta modelnya, usulan driving force, dimensi, horizon, estimasi skor, keyakinan beserta alasannya, judul dan alamat sumber, sidik jari dokumen, serta alasan penolakan bila ada.</li>
+    <li><strong>"Accept as New DF"</strong> membuka "Accept Signal &amp; Create Driving Force". Analis mengisi "Driving Force Title / Keyword", "Strategic Description", dan "Taxonomy Dimension", lalu menekan "Confirm Acceptance". Driving force baru lahir dengan status PENDING dan masuk ke alur penilaian. Bila sinyal sudah punya estimasi horizon, penilaian awal dibuat otomatis dari estimasi dampak dan ketidakpastiannya.</li>
+    <li><strong>"Link to DF"</strong> membuka "Accept Signal &amp; Link to Existing Driving Force" untuk menautkan sinyal sebagai bukti pendukung driving force yang sudah ada.</li>
+    <li><strong>"Reject"</strong> membuka "Reject Candidate Signal" dengan "Rejection Reason" yang wajib diisi.</li>
+  </ul>
+  <p>Tiga tindakan terakhir hanya tersedia selama sinyal masih Pending. Sinyal yang sudah ditinjau tidak dapat diubah lagi. <strong>Sinyal yang kutipannya tidak ditemukan di sumber tidak dapat diterima</strong>; aturan ini menjaga agar tidak ada driving force yang lahir dari kutipan yang keliru.</p>
+
+  <figure class="shot">
+    <img src="screenshots/08-signals-inspect.png" alt="Dialog Signal Inspection and Provenance">
+    <figcaption>Gambar 11. Dialog "Signal Inspection &amp; Provenance" menampilkan asal-usul sinyal secara lengkap.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/09-signals-accept.png" alt="Dialog Accept Signal and Create Driving Force">
+    <figcaption>Gambar 12. Dialog "Accept Signal &amp; Create Driving Force".</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Sinyal yang diterima menjadi atau memperkuat Driving Force. Jejaknya tetap terlihat di kolom "Signals" pada halaman Driving Force, di panel detail Foresight Radar, dan sebagai simpul di Knowledge Graph. Sinyal berstatus Accepted juga menjadi bahan narasi di Scenarios.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Developer, Super Admin, dan Admin dapat memasukkan dan meninjau sinyal. Board of Directors hanya melihat antrean.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 5 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 5</span>Driving Force</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Menjadi tempat tinggal resmi setiap faktor pendorong perubahan, lengkap dengan dimensi, penanggung jawab, dan posisinya dalam alur penilaian.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Driving Force" berbadge "Signal Repository" dengan daftar "Daftar Sinyal Perubahan". Ada kotak "Cari kata kunci..." dan tombol "Tambah Sinyal".</dd>
+  </dl>
+
+  <h2>5.1 Delapan dimensi dalam dua lingkungan</h2>
+  <p>Setiap driving force harus masuk ke satu dimensi. Dimensi dibagi dalam dua lingkungan: <strong>Macro</strong> untuk kekuatan besar di luar industri, dan <strong>Mezzo</strong> untuk kekuatan di sekitar rantai nilai. Masing-masing dimensi punya warna tetap yang dipakai di seluruh aplikasi.</p>
+  <table>
+    <thead><tr><th>Lingkungan</th><th>Dimensi</th></tr></thead>
+    <tbody>
+      <tr><th>Macro</th><td><span class="chips"><span>Economy</span><span>Ecology</span><span>Regulation</span><span>Technology</span></span></td></tr>
+      <tr><th>Mezzo</th><td><span class="chips"><span>Substitute</span><span>Supplier</span><span>Customer</span><span>Competitor</span></span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.2 Kolom tabel</h2>
+  <ul>
+    <li>"Date Created", "Dimension", "Keyword", "Description", "Personal In Charge".</li>
+    <li><strong>"Signals"</strong>: menampilkan "Direct" bila driving force diketik langsung, atau "N sinyal" bila lahir dari Signal Ingestion. Mengkliknya membuka panel "Originating Intelligence" yang memuat "Primary Origin Signal" dan "Supporting Evidence Signals", masing-masing dengan "Sumber:" dan "Catatan:".</li>
+    <li><strong>"Pipeline Stage"</strong>: badge yang menunjukkan posisi item dalam alur, misalnya "Step 2/5: Time Horizon", "Step 3/5: Urgency Rating", "Step 4/5: Status Action", "Step 5/5: Pending Approval", lalu "Approved", "Rejected", atau "Closed". Di sebelahnya ada tautan "Lanjut ke …" yang membawa pengguna langsung ke tahap berikutnya.</li>
+    <li>Menu ⋮ dengan "Sinyal Asal (N)", "Edit", dan "Delete".</li>
+  </ul>
+
+  <figure class="shot">
+    <img src="screenshots/10-df-table.png" alt="Tabel Driving Force dengan kolom Signals dan Pipeline Stage">
+    <figcaption>Gambar 13. Daftar driving force dengan penanda tahap pipeline.</figcaption>
+  </figure>
+
+  <h2>5.3 Menambah dan mengubah</h2>
+  <p>Tombol "Tambah Sinyal" membuka dialog "Create Signal Changes". Empat kolom wajib diisi: "Dimension", "Keyword", "Description", dan "Personal In Charge". Penanggung jawab hanya bisa dipilih dari pengguna berperan Admin. Agar daftar tetap ringkas, kata kunci dibatasi empat kata dan deskripsi dibatasi dua puluh kata saat dibuat (tiga puluh saat diubah). Driving force baru selalu berstatus PENDING. Penghapusan meminta konfirmasi dan ikut menghapus penilaiannya.</p>
+
+  <figure class="shot">
+    <img src="screenshots/11-df-create.png" alt="Dialog Create Signal Changes">
+    <figcaption>Gambar 14. Dialog "Create Signal Changes".</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/12-df-origin.png" alt="Panel Originating Intelligence">
+    <figcaption>Gambar 15. Panel "Originating Intelligence" menampilkan sinyal asal sebuah driving force.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Driving force adalah pusat seluruh alur. Semua tahap berikutnya, laporan, cross-impact, dan skenario merujuk padanya.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Developer, Super Admin, dan Admin dapat membuat. Mengubah dibatasi pada pembuatnya, penanggung jawabnya, atau peran Admin ke atas. Menghapus dibatasi pada pembuatnya atau peran Admin ke atas.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 6 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 6</span>Time Horizon</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Menjawab pertanyaan "kapan dampak ini akan terasa?" untuk setiap driving force.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Time Horizon" berbadge "Horizon Assessment" dengan tabel "Horizon per Driving Force". Tiga kolom bercorak, "SHORT TERM", "MID TERM", dan "LONG TERM", menampilkan tanda centang pada horizon yang dipilih.</dd>
+    <dt>Apa yang bisa dilakukan</dt>
+    <dd>Tombol "Set Horizon" membuka dialog "Set Time Horizon - {kata kunci}". Dialog menampilkan kata kunci, deskripsi, dan dimensi sebagai informasi, lalu tiga pilihan: Short Term, Mid Term, dan Long Term. Tombol "Set" menyimpan pilihan.</dd>
+  </dl>
+  <table>
+    <thead><tr><th>Horizon</th><th>Rentang waktu</th><th>Posisi di radar</th></tr></thead>
+    <tbody>
+      <tr><th>Short Term</th><td>kurang dari 1 tahun</td><td>cincin terdalam</td></tr>
+      <tr><th>Mid Term</th><td>1 sampai 3 tahun</td><td>cincin tengah</td></tr>
+      <tr><th>Long Term</th><td>lebih dari 3 tahun</td><td>cincin terluar</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot">
+    <img src="screenshots/13-th-table.png" alt="Tabel Time Horizon">
+    <figcaption>Gambar 16. Tabel "Horizon per Driving Force".</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/14-th-dialog.png" alt="Dialog Set Time Horizon">
+    <figcaption>Gambar 17. Dialog "Set Time Horizon".</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Menetapkan horizon adalah langkah yang membuka tahap berikutnya. Sebuah driving force baru tampil di Rating of Urgency setelah horizonnya ditetapkan. Horizon juga menentukan jarak titik dari pusat radar dan bobot kontribusi pada indeks Dashboard.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Developer, Super Admin, dan Admin.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 7 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 7</span>Rating of Urgency</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Mengukur dua hal yang paling menentukan prioritas: seberapa besar dampaknya (Impact) dan seberapa tidak pasti arah serta waktunya (Uncertainty).</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Rating Urgency" berbadge "Urgency Scoring" dengan tabel "Rating per Driving Force". Hanya item yang sudah punya horizon yang tampil. Setiap baris memiliki dua deret tombol 1–10 di bawah kolom "Uncertainty" dan "Impact"; nilai terpilih disorot.</dd>
+    <dt>Apa yang bisa dilakukan</dt>
+    <dd>Mengklik angka memunculkan konfirmasi "Are you sure to set rating {jenis} {nilai} for {kata kunci}?". Setelah kedua nilai terisi, prioritas dihitung otomatis.</dd>
+  </dl>
+
+  <h2>7.1 Aturan prioritas</h2>
+  <p>Aturannya sederhana dan terbuka. Angka enam adalah ambangnya.</p>
+  <div class="quad">
+    <div class="axis"></div><div class="axis">Impact 1–5</div><div class="axis">Impact 6–10</div>
+    <div class="axis">Uncertainty 6–10</div><div class="cell mid">Medium Priority</div><div class="cell hi">High Priority</div>
+    <div class="axis">Uncertainty 1–5</div><div class="cell lo">Low Priority</div><div class="cell mid">Medium Priority</div>
+  </div>
+  <ul>
+    <li><strong>High</strong>: dampak dan ketidakpastian keduanya enam atau lebih.</li>
+    <li><strong>Medium</strong>: hanya salah satu yang enam atau lebih.</li>
+    <li><strong>Low</strong>: keduanya lima atau kurang.</li>
+  </ul>
+  <p>Sebagai panduan skala, aplikasi memberi petunjuk: Impact 1 berarti dampak kecil dan lokal, 5 berarti penting di tingkat divisi, 10 berarti disrupsi industri. Uncertainty 1 berarti sudah terkonfirmasi, 5 berarti tren kuat tetapi jadwal belum pasti, 10 berarti masih spekulatif.</p>
+
+  <figure class="shot">
+    <img src="screenshots/15-rating.png" alt="Tabel Rating of Urgency dengan tombol 1 sampai 10">
+    <figcaption>Gambar 18. Tabel "Rating per Driving Force" dengan tombol skor 1–10.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Kedua skor menjadi koordinat pada matriks Prioritizing, warna pada radar, bahan indeks Dashboard, dan dasar usulan sumbu skenario. Setiap perubahan skor tercatat dalam riwayat yang dipakai grafik "Tren Skor dari Riwayat Rating".</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Developer, Super Admin, dan Admin.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 8 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 8</span>Status of Action</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Mencatat sikap organisasi terhadap setiap driving force, beserta alasannya, sehingga keputusan punya jejak audit.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Status Action" berbadge "Strategic Actions" dengan tabel "Status per Driving Force". Hanya item yang sudah punya skor Impact dan Uncertainty yang tampil. Dua kolom, "MONITORING" dan "DECIDED PLAN", menampilkan simbol ∆ (segitiga, kuning) atau O (lingkaran, hijau).</dd>
+  </dl>
+  <table>
+    <thead><tr><th>Status aksi</th><th>Simbol</th><th>Artinya</th></tr></thead>
+    <tbody>
+      <tr><th>Monitoring</th><td class="c">∆</td><td>Organisasi memantau, belum mengambil tindakan.</td></tr>
+      <tr><th>Decided Plan</th><td class="c">O</td><td>Organisasi sudah memutuskan rencana tindakan.</td></tr>
+    </tbody>
+  </table>
+  <p>Tombol "Set Status" membuka dialog lebar "Set Status Action - {kata kunci}". Sisi kiri adalah <strong>"Riwayat status"</strong>, garis waktu dari yang terbaru, dengan entri "Recording..." di puncak sebagai penanda catatan yang sedang dibuat. Sisi kanan menampilkan ringkasan item (kata kunci, dimensi, deskripsi, horizon, prioritas, kedua skor) lalu dua kolom wajib: "Status Action" dan "Reason". Setiap penyimpanan <strong>menambah</strong> satu entri riwayat, bukan menimpa yang lama. Dengan demikian halaman ini sekaligus menjadi buku catatan keputusan.</p>
+
+  <figure class="shot">
+    <img src="screenshots/16-sa-table.png" alt="Tabel Status of Action">
+    <figcaption>Gambar 19. Tabel "Status per Driving Force".</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/17-sa-dialog.png" alt="Dialog Set Status Action dengan riwayat">
+    <figcaption>Gambar 20. Dialog "Set Status Action" dengan "Riwayat status" di sisi kiri.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Status aksi adalah syarat agar item muncul di Approval Items. Simbolnya dipakai di Registered List dan radar. Status ini juga menjadi bahan utama indeks Dashboard: Decided Plan menaikkan indeks, Monitoring pada item berdampak tinggi menurunkannya.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Developer, Super Admin, dan Admin.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 9 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 9</span>Approval Items dan Closed Items</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Memberi gerbang persetujuan sebelum sebuah driving force tampil di radar dan laporan, serta menyediakan arsip bagi item yang sudah selesai.</dd>
+  </dl>
+
+  <h2>9.1 Siklus status</h2>
+  <figure class="diagram">
+    <svg viewBox="0 0 760 150" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif" font-size="12">
+      <defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0b8f8a"/></marker></defs>
+      <rect x="40" y="40" width="160" height="50" rx="25" fill="#c77a00"/>
+      <text x="120" y="70" fill="#fff" text-anchor="middle" font-weight="700">PENDING</text>
+      <rect x="300" y="40" width="160" height="50" rx="25" fill="#1f7a3a"/>
+      <text x="380" y="70" fill="#fff" text-anchor="middle" font-weight="700">APPROVED</text>
+      <rect x="560" y="40" width="160" height="50" rx="25" fill="#5b6577"/>
+      <text x="640" y="70" fill="#fff" text-anchor="middle" font-weight="700">CLOSED</text>
+      <line x1="200" y1="65" x2="298" y2="65" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr2)"/>
+      <text x="249" y="56" fill="#0b1b33" text-anchor="middle" font-size="11">"Show"</text>
+      <line x1="460" y1="65" x2="558" y2="65" stroke="#0b8f8a" stroke-width="2" marker-end="url(#arr2)"/>
+      <text x="509" y="56" fill="#0b1b33" text-anchor="middle" font-size="11">"Take out"</text>
+      <path d="M640,90 L640,120 L120,120 L120,92" fill="none" stroke="#0b8f8a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr2)"/>
+      <text x="380" y="136" fill="#0b1b33" text-anchor="middle" font-size="11">"Reopen" dengan justifikasi tertulis</text>
+      <text x="120" y="28" fill="#5b6577" text-anchor="middle" font-size="10">tahap penilaian</text>
+      <text x="380" y="28" fill="#5b6577" text-anchor="middle" font-size="10">tampil di radar &amp; laporan</text>
+      <text x="640" y="28" fill="#5b6577" text-anchor="middle" font-size="10">arsip</text>
+    </svg>
+    <figcaption>Diagram 2. Siklus status driving force.</figcaption>
+  </figure>
+
+  <h2>9.2 Approval Items</h2>
+  <p>Halaman "Approval Items" berbadge "Review &amp; Consensus" menampilkan "Daftar Persetujuan". Yang tampil adalah item berstatus PENDING atau APPROVED yang sudah memiliki status aksi. Kolomnya lengkap: tanggal, dimensi, kata kunci, deskripsi, penanggung jawab, horizon, prioritas, kedua skor, status, simbol status aksi, dan alasan terakhir.</p>
+  <p>Pengguna yang berwenang melihat tombol tindakan. <strong>"Show"</strong> pada item PENDING mengubah status menjadi APPROVED dan mencatat tanggal persetujuan; sejak saat itu item tampil di semua laporan. <strong>"Take out"</strong> pada item APPROVED mengubah status menjadi CLOSED dan mencatat tanggal penutupan; item berpindah ke arsip. Keduanya meminta konfirmasi. Aplikasi menolak menyetujui item yang belum memiliki status aksi, dan menolak perpindahan status yang tidak sesuai urutan.</p>
+
+  <figure class="shot">
+    <img src="screenshots/18-approval.png" alt="Tabel Approval Items">
+    <figcaption>Gambar 21. "Daftar Persetujuan" dengan tombol "Show" dan "Take out".</figcaption>
+  </figure>
+
+  <h2>9.3 Closed Items</h2>
+  <p>Halaman "Closed Items" berbadge "Archive Repository" menampilkan "Daftar Arsip" berisi item CLOSED dengan kolom yang sama. Tombol <strong>"Reopen"</strong> membuka dialog "Reopen Driving Force: {kata kunci}". Dialog menjelaskan bahwa pengaktifan kembali mengembalikan status ke PENDING pada tahap evaluasi dan mencatat justifikasi pada riwayat audit. Kolom "Alasan Pengaktifan Kembali (Justifikasi)" wajib diisi 5 sampai 1000 karakter. Tombol "Aktifkan Kembali" menyelesaikannya. Tanggal persetujuan dan penutupan dihapus, dan entri "Reopened: …" ditambahkan ke riwayat status.</p>
+
+  <figure class="shot">
+    <img src="screenshots/19-closed.png" alt="Tabel Closed Items">
+    <figcaption>Gambar 22. "Daftar Arsip" pada halaman Closed Items.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/20-closed-reopen.png" alt="Dialog Reopen Driving Force">
+    <figcaption>Gambar 23. Dialog "Reopen Driving Force" dengan kolom justifikasi.</figcaption>
+  </figure>
+
+  <div class="callout warn">
+    <span class="label">Catatan jujur</span>
+    <p>Sistem mengenal status REJECTED untuk driving force dan badge-nya sudah disiapkan. Namun saat ini <strong>belum ada tombol untuk menolak</strong> driving force di layar. Penolakan baru tersedia untuk sinyal di Signal Ingestion.</p>
+  </div>
+
+  <dl class="pattern">
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran dapat melihat kedua halaman. Tombol "Show", "Take out", dan "Reopen" tersedia bagi Developer, Super Admin, Admin, dan Board of Directors.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 10 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 10</span>Prioritizing</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Menjawab "mana yang harus diperhatikan lebih dulu?" dengan satu matriks yang memetakan dampak terhadap ketidakpastian.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Prioritizing" berbadge "Priority Matrix". Sisi kiri adalah tabel dengan kolom "No", "Keyword", "Impact", "Uncertainty". Sisi kanan adalah grafik "Matrix of Uncertainty and Impact Analysis" dengan sumbu mendatar "IMPACT ANALYSIS" dan sumbu tegak "UNCERTAINTY ANALYSIS", keduanya 1–10.</dd>
+  </dl>
+  <p>Setiap driving force menjadi satu gelembung berlabel nomor barisnya. Item dengan skor identik berbagi satu gelembung. Warna mengikuti aturan prioritas: merah untuk "High Priority" (keduanya ≥ 6), kuning untuk "Medium Priority" (salah satu ≥ 6), hijau untuk "Low Priority". Mengarahkan kursor menampilkan "Impact x · Uncertainty y" dan nama item.</p>
+  <p>Cara membacanya: kuadran kanan atas berisi faktor berdampak besar yang arahnya belum pasti; inilah kandidat sumbu skenario. Kuadran kanan bawah berisi faktor berdampak besar yang arahnya relatif jelas; ini biasanya membutuhkan rencana tindakan, bukan skenario. Kuadran kiri cukup dipantau.</p>
+
+  <figure class="shot">
+    <img src="screenshots/21-prioritizing.png" alt="Matriks Prioritizing">
+    <figcaption>Gambar 24. Halaman "Prioritizing" dengan matriks Impact × Uncertainty.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Hanya item APPROVED dengan status aksi yang tampil. Skor berasal dari Rating of Urgency. Komponen yang sama tersedia sebagai tab di Dashboard.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 11 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 11</span>Registered List</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Menjadi daftar resmi seluruh driving force yang disetujui, tersusun per dimensi, siap dibagikan atau diekspor.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Registered List" berbadge "Register &amp; Audit Log" dengan bagian "Status per Dimensi". Selain "Periode" dan "Dimensi", tersedia filter "Horizon", "Prioritas", dan "Status". Sakelar memilih tampilan "Overall" atau "Detail Info".</dd>
+  </dl>
+  <ul>
+    <li><strong>Tampilan "Overall"</strong>: kolom "DIMENSION" (sel digabung per dimensi), nomor, "DRIVING FORCE", lalu tiga kelompok kolom: "TIME HORIZON" (Short Term / Mid Term / Long Term), "PRIORITIZING" (High / Medium / Low), dan "STATUS OF ACTION" (Decided Plan / Monitor). Tanda centang dan simbol menunjukkan posisi setiap item. Mengarahkan kursor ke simbol status aksi menampilkan alasan terakhir.</li>
+    <li><strong>Tampilan "Detail Info"</strong>: kolom "DIMENSION", nomor, dan "Driving Force Detail" berisi deskripsi lengkap.</li>
+  </ul>
+  <p>Tombol <strong>"Export to Excel"</strong> mengunduh berkas bernama "{tanggal} - Registered List Data.xlsx" dengan lembar "Registered List". Berkas memuat dua belas kolom: nomor, dimensi, kata kunci, deskripsi, tiga kolom horizon, tiga kolom prioritas, dan dua kolom status aksi. Ekspor mencakup semua baris yang lolos filter, bukan hanya halaman yang sedang terlihat.</p>
+
+  <figure class="shot">
+    <img src="screenshots/22-registered-overall.png" alt="Registered List tampilan Overall">
+    <figcaption>Gambar 25. Tampilan "Overall" pada Registered List.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/23-registered-detail.png" alt="Registered List tampilan Detail Info">
+    <figcaption>Gambar 26. Tampilan "Detail Info" dengan deskripsi lengkap.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Daftar ini merangkum hasil empat tahap penilaian untuk item APPROVED. Ia cocok dijadikan lampiran rapat pimpinan.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran dapat melihat dan mengekspor.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 12 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 12</span>Foresight Radar</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Memberi gambaran 360° dalam satu pandangan: di dimensi mana perubahan datang, seberapa dekat waktunya, dan seberapa mendesak.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Foresight Radar" berbadge "360° Strategic Horizon". Kartu kiri, "Signal of Changes", mendaftar item dengan nomor berwarna prioritas, kata kunci, dimensi, simbol status aksi, dan prioritas. Kartu kanan, "Radar Visualization", adalah radar melingkar.</dd>
+  </dl>
+
+  <h2>12.1 Cara membaca radar</h2>
+  <ul>
+    <li><strong>Irisan</strong>: delapan dimensi menempati posisi tetap mengelilingi lingkaran. Economy di atas, Customer di kanan, Substitute di bawah, Regulation di kiri, dan empat dimensi lain di antaranya.</li>
+    <li><strong>Cincin</strong>: dari pusat ke luar, "Short Term (0 - 1 yr)", "Mid Term (1 - 3 yrs)", "Long Term (&gt; 3 yrs)". Semakin dekat ke pusat, semakin dekat waktunya.</li>
+    <li><strong>Posisi dalam cincin</strong>: dampak lebih tinggi ditempatkan lebih dekat ke pusat.</li>
+    <li><strong>Warna titik</strong>: merah High, kuning Medium, hijau Low.</li>
+    <li><strong>Nomor</strong>: mengacu ke baris pada tabel "Signal of Changes".</li>
+  </ul>
+  <p>Tombol <strong>"Cross-Impact"</strong> menggambar garis hubungan antar titik: garis utuh berarti "Memperkuat", garis putus-putus merah berarti "Menekan", dan garis lebih tebal berarti pengaruh lebih kuat. Tombol "Layar Penuh" menampilkan radar memenuhi layar dengan latar gelap, cocok untuk ruang rapat.</p>
+
+  <figure class="shot">
+    <img src="screenshots/24-radar.png" alt="Halaman Foresight Radar">
+    <figcaption>Gambar 27. Radar dengan delapan irisan dimensi dan tiga cincin horizon.</figcaption>
+  </figure>
+
+  <h2>12.2 Panel detail</h2>
+  <p>Mengklik titik atau baris membuka panel detail. Bagian atasnya menampilkan badge prioritas, dimensi, "Action: …", dan horizon, lalu "Description". Bagian <strong>"Governance &amp; Urgency Evaluation"</strong> memuat "PIC", "Approved At", "Impact Score", "Uncertainty Score", "Status of Action", dan "Action Justification". Bagian <strong>"Signal Provenance"</strong> menampilkan sinyal asal beserta "Sumber:" dan tautan "Buka Artikel", serta sinyal pendukung lainnya. Bila driving force diinput langsung, panel menjelaskan bahwa item ini tidak punya tautan sinyal mentah.</p>
+
+  <figure class="shot">
+    <img src="screenshots/25-radar-detail.png" alt="Panel detail pada Foresight Radar">
+    <figcaption>Gambar 28. Panel detail dengan evaluasi tata kelola dan asal-usul sinyal.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/26-radar-crossimpact.png" alt="Radar dengan lapisan Cross-Impact">
+    <figcaption>Gambar 29. Lapisan "Cross-Impact" di atas radar.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Radar adalah muara empat tahap penilaian. Ia hanya menampilkan item APPROVED dengan status aksi. Garis cross-impact diambil dari halaman Cross-Impact.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran. Halaman ini juga menjadi halaman pertama yang dibuka setelah masuk.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 13 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 13</span>Cross-Impact</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Menilai bagaimana satu driving force memengaruhi yang lain, lalu menemukan mana yang menjadi pendorong utama, mana yang paling terdampak, dan di mana ada lingkaran sebab-akibat.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Cross-Impact" berbadge "Pengaruh Antar Driving Force" dengan tiga panel: "Matriks &amp; Jejaring Cross-Impact", "Causal Loops", dan "Ringkasan Pengaruh per Driving Force".</dd>
+  </dl>
+
+  <h2>13.1 Matriks dan jejaring</h2>
+  <p>Panel pertama memiliki sakelar <strong>"Matriks"</strong> / <strong>"Network Graph"</strong> dan badge "{x} dari {y} pasangan dinilai". Hanya driving force APPROVED yang ikut serta.</p>
+  <p>Dalam tampilan <strong>Matriks</strong>, baris adalah force yang memengaruhi dan kolom adalah force yang dipengaruhi; sudut tabel bertuliskan "Memengaruhi ↓ / Dipengaruhi →". Diagonal diabu-abukan. Setiap sel menampung skor dari −3 hingga +3:</p>
+  <table>
+    <thead><tr><th class="c">Skor</th><th>Label</th><th class="c">Skor</th><th>Label</th></tr></thead>
+    <tbody>
+      <tr><td class="c">−3</td><td>"Sangat menekan"</td><td class="c">+1</td><td>"Sedikit memperkuat"</td></tr>
+      <tr><td class="c">−2</td><td>"Menekan"</td><td class="c">+2</td><td>"Memperkuat"</td></tr>
+      <tr><td class="c">−1</td><td>"Sedikit menekan"</td><td class="c">+3</td><td>"Sangat memperkuat"</td></tr>
+      <tr><td class="c">0</td><td>"Tidak berpengaruh"</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  <p>Sel merah berarti menekan, hijau berarti memperkuat, dan warna semakin pekat untuk skor yang lebih besar. Pengguna yang berwenang mengklik sel untuk membuka dialog "Pengaruh antar driving force" dengan pertanyaan "Seberapa kuat X memengaruhi Y?", tombol −3 sampai +3, dan "Catatan (opsional)". Menyimpan skor 0 tanpa catatan menghapus pasangan itu.</p>
+  <p>Dalam tampilan <strong>Network Graph</strong>, force APPROVED disusun melingkar dengan nomor di dalam dan kata kunci di luar. Panah hijau berarti memperkuat, panah merah berarti menekan, dan ketebalan mengikuti kekuatan. Filter "Semua", "Memperkuat + (n)", "Menekan − (n)", dan "Kuat |≥2| (n)" menyaring panah. Mengklik sebuah force mengunci sorotan koneksinya dan menampilkan kartu berisi peran Vester serta nilai Aktif, Pasif, dan Net; tombol "Lepas Fokus" membatalkannya. Mengarahkan kursor ke panah menampilkan "A → B", skor, labelnya, dan catatan.</p>
+
+  <figure class="shot">
+    <img src="screenshots/27-ci-matrix.png" alt="Matriks Cross-Impact">
+    <figcaption>Gambar 30. Tampilan "Matriks" pada Cross-Impact.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/28-ci-dialog.png" alt="Dialog Pengaruh antar driving force">
+    <figcaption>Gambar 31. Dialog "Pengaruh antar driving force".</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/38-ci-network.png" alt="Tampilan Network Graph Cross-Impact">
+    <figcaption>Gambar 32. Tampilan "Network Graph" dengan panah berwarna menurut arah pengaruh.</figcaption>
+  </figure>
+
+  <h2>13.2 Causal Loops</h2>
+  <p>Panel kedua mencari rantai pengaruh yang kembali ke force awal, misalnya A memengaruhi B dan B memengaruhi A, hingga lima force per rantai. Ada dua jenis loop, dapat disaring dengan tombol "Semua", "Penguat (R)", dan "Penyeimbang (B)":</p>
+  <ul>
+    <li><strong>Penguat (R)</strong>: jumlah hubungan negatifnya genap. Loop ini membuat perubahan terus membesar.</li>
+    <li><strong>Penyeimbang (B)</strong>: jumlah hubungan negatifnya ganjil. Loop ini meredam perubahan.</li>
+  </ul>
+  <p>Setiap baris menampilkan rantainya beserta skor, lalu "Kekuatan {x} · {n} force" dengan batang 0–1. Loop terkuat tampil lebih dulu. Mengklik loop menyorot sel atau panah yang terlibat dan meredupkan sisanya. Bila belum ada loop, panel menjelaskan kapan loop akan muncul.</p>
+
+  <figure class="shot">
+    <img src="screenshots/29-ci-loops.png" alt="Panel Causal Loops">
+    <figcaption>Gambar 33. Panel "Causal Loops" dengan jenis Penguat dan Penyeimbang.</figcaption>
+  </figure>
+
+  <h2>13.3 Ringkasan pengaruh (Metode Vester)</h2>
+  <p>Panel ketiga berbadge "Metode Vester" merangkum posisi setiap force. <strong>Aktif</strong> adalah jumlah kekuatan pengaruh yang diberikan ke force lain. <strong>Pasif</strong> adalah jumlah kekuatan pengaruh yang diterima. <strong>Net</strong> adalah selisih bertanda pada baris. Rata-rata matriks menjadi ambang, digambar sebagai garis putus-putus pada grafik sebar "Aktif (memengaruhi)" terhadap "Pasif". Dari posisi itu lahir empat peran:</p>
+  <table>
+    <thead><tr><th>Peran</th><th>Kondisi</th><th>Penjelasan di layar</th></tr></thead>
+    <tbody>
+      <tr><th>Pendorong</th><td>Aktif di atas rata-rata saja</td><td>"memengaruhi banyak, jarang dipengaruhi: tuas utama."</td></tr>
+      <tr><th>Kritis</th><td>Keduanya di atas rata-rata</td><td>"memengaruhi dan dipengaruhi kuat: perubahan cepat menjalar."</td></tr>
+      <tr><th>Indikator</th><td>Pasif di atas rata-rata saja</td><td>"banyak dipengaruhi: cocok dipantau sebagai sinyal."</td></tr>
+      <tr><th>Penyangga</th><td>Keduanya di bawah rata-rata</td><td>"pengaruh kecil ke dua arah."</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot">
+    <img src="screenshots/30-ci-vester.png" alt="Ringkasan Pengaruh per Driving Force">
+    <figcaption>Gambar 34. "Ringkasan Pengaruh per Driving Force" dengan peran Vester.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Skor cross-impact dipakai oleh lapisan "Cross-Impact" di radar, oleh propagasi pada Simulasi What-if, dan oleh usulan sumbu di Scenarios yang menghindari dua sumbu yang saling memengaruhi kuat.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran dapat melihat. Mengisi skor dan catatan tersedia bagi Developer, Super Admin, dan Admin.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 14 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 14</span>Knowledge Graph</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Menjawab "bukti dan dokumen apa yang menopang setiap driving force, dan mana yang topangannya kuat atau lemah?"</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Signal Knowledge Graph" berbadge "Topologi Jejaring Sinyal &amp; Driving Force". Kanvas interaktif menampilkan tiga jenis simpul yang terhubung garis.</dd>
+  </dl>
+  <table>
+    <thead><tr><th>Simpul</th><th>Tampilan</th><th>Arti</th></tr></thead>
+    <tbody>
+      <tr><th>"Driving Force (Hub Inti)"</th><td>Lingkaran besar berongga dengan cincin berwarna</td><td>Pusat jejaring; membesar sesuai jumlah koneksi.</td></tr>
+      <tr><th>"Sinyal (Satelit Bukti)"</th><td>Titik penuh berwarna dimensi</td><td>Bukti; ukurannya mengikuti tingkat keyakinan.</td></tr>
+      <tr><th>"Dokumen Sumber"</th><td>Lingkaran abu-abu</td><td>Dokumen asal tempat sinyal diekstrak.</td></tr>
+    </tbody>
+  </table>
+  <p>Garis dari dokumen ke sinyal berarti "Mengekstrak". Garis dari sinyal ke driving force berarti "Mendukung", yaitu sinyal yang ditautkan, yang melahirkan driving force itu, atau yang diusulkan sistem. Simpul yang berdekatan tampak berkelompok karena tarikan tata letak fisik ke arah hub yang terhubung. <strong>Pengelompokan ini bersifat visual, bukan hasil algoritma pengelompokan.</strong></p>
+  <p>Filter tersedia: kotak "Cari sinyal atau force…", pilihan dimensi, sakelar "Semua Status" / "Accepted" / "Pending", dan tombol "Sertakan Dokumen" / "Sembunyikan Dokumen". Penghitung menunjukkan "N Entitas (X Force, Y Sinyal) · Z Relasi". Pengguna dapat memperbesar dengan roda mouse atau tombol "Perbesar (Zoom In)", "Perkecil (Zoom Out)", "Reset Tampilan", menggeser latar, dan menarik simpul. Mengarahkan kursor menyorot simpul beserta tetangganya. Mengklik simpul membuka kartu inspeksi: untuk sinyal tampil kutipan, dimensi, keyakinan, skor, sumber, status, dan tautan "Review di Sinyal"; untuk driving force tampil deskripsi, dimensi, dan "N Koneksi"; untuk dokumen tampil penerbit dan "N Sinyal Diekstrak". Kanvas mengikuti mode terang atau gelap.</p>
+
+  <figure class="shot tall">
+    <img src="screenshots/37-knowledge-graph.png" alt="Signal Knowledge Graph">
+    <figcaption>Gambar 35. "Signal Knowledge Graph" dengan driving force sebagai hub dan sinyal sebagai satelit bukti.</figcaption>
+  </figure>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Grafik ini membaca hasil Signal Ingestion dan Driving Force tanpa mengubahnya. Ia melengkapi radar: radar menjawab "apa dan kapan", Knowledge Graph menjawab "atas dasar bukti apa".</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran yang dapat melihat Foresight Radar.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 15 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 15</span>Scenarios</h1>
+  <dl class="pattern">
+    <dt>Tujuan</dt>
+    <dd>Menyusun beberapa masa depan yang mungkin terjadi dari dua ketidakpastian terbesar, lalu menuliskan narasi, implikasi, dan indikator awal untuk masing-masing.</dd>
+    <dt>Apa yang dilihat pengguna</dt>
+    <dd>Halaman "Scenarios" berbadge "Matriks 2×2". Sisi kiri adalah "Daftar skenario" dengan tombol "Skenario baru". Sisi kanan menampilkan detail skenario yang dipilih.</dd>
+  </dl>
+
+  <h2>15.1 Membuat skenario</h2>
+  <p>Dialog "Skenario baru" meminta pengguna memilih dua driving force APPROVED sebagai sumbu, lalu memberi nama kedua kutubnya. Aplikasi menawarkan <strong>usulan sumbu</strong> dengan keterangan "Usulan sumbu: impact × uncertainty tertinggi, beda dimensi, dan tidak saling memengaruhi kuat". Usulan diambil dari force dengan hasil kali dampak dan ketidakpastian tertinggi, berbeda dimensi, dan skor cross-impact yang rendah di kedua arah. Kolom yang diisi: "Nama skenario", "Pertanyaan fokus", "Sumbu A (horizontal)", "Sumbu B (vertikal)", serta "Kutub rendah A", "Kutub tinggi A", "Kutub rendah B", dan "Kutub tinggi B". Bila kedua sumbu saling memengaruhi kuat, aplikasi memperingatkan karena sumbu skenario sebaiknya independen.</p>
+
+  <figure class="shot">
+    <img src="screenshots/31-sc-new.png" alt="Dialog Skenario baru">
+    <figcaption>Gambar 36. Dialog "Skenario baru" dengan usulan sumbu otomatis.</figcaption>
+  </figure>
+
+  <h2>15.2 Matriks dan narasi</h2>
+  <p>Detail skenario menampilkan nama, pertanyaan fokus, kedua sumbu beserta kutubnya, dan badge penulis narasi: nama mesin AI beserta modelnya, atau "Kerangka tanpa AI". Tombol <strong>"Buat narasi"</strong> (menjadi "Buat ulang narasi" setelah terisi) menyusun empat kuadran sekaligus. Dengan mesin AI aktif, narasi ditulis dari sinyal berstatus Accepted yang tertaut ke kedua sumbu; setiap sumbu harus memiliki minimal satu sinyal tersebut. Tanpa mesin AI, aplikasi membuat kerangka template yang dilengkapi tim secara manual. Proses berjalan di latar belakang dan halaman boleh ditinggalkan.</p>
+  <p>Bagian "Matriks skenario 2×2" menata empat kuadran menurut kutub rendah dan tinggi kedua sumbu. Setiap <strong>kartu kuadran</strong> memuat judul, narasi, "Implikasi", dan "Indikator awal". Kutipan bertanda [S1], [S2], dan seterusnya dapat diklik untuk membuka kutipan asli, judul sumber, penerbit, dan alamatnya. Tombol "Sunting" membuka panel "Sunting kuadran" dengan kolom "Judul", "Narasi", "Implikasi", dan "Indikator awal (satu per baris)". Kuadran yang sudah disunting ditandai "Diedit analis", dan pembuatan ulang akan meminta konfirmasi sebelum menimpanya. Panel "Bukti ({n} sinyal)" di bawah matriks mendaftar sinyal yang dirujuk narasi.</p>
+
+  <figure class="shot tall">
+    <img src="screenshots/32-sc-detail.png" alt="Detail skenario dengan matriks 2x2">
+    <figcaption>Gambar 37. Detail skenario dengan "Matriks skenario 2×2".</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/33-sc-edit.png" alt="Panel Sunting kuadran">
+    <figcaption>Gambar 38. Panel "Sunting kuadran".</figcaption>
+  </figure>
+
+  <h2>15.3 Aturan penjagaan</h2>
+  <ul>
+    <li>Narasi AI yang mengutip bukti di luar daftar akan dibersihkan; bila ada kuadran tanpa kutipan sah, seluruh hasil ditolak dan narasi lama dipertahankan.</li>
+    <li>Pembuatan narasi ganda dicegah dengan pesan "Narasi skenario ini sedang dibuat. Tunggu sampai selesai."</li>
+    <li>Skenario hanya dapat diubah, dihapus, atau dibuat ulang narasinya oleh pembuatnya atau oleh Admin, Super Admin, dan Developer.</li>
+    <li>Bila driving force yang menjadi sumbu dihapus, skenario tetap tersimpan dan sumbunya ditandai "(Dihapus)".</li>
+    <li>Tombol "Hapus" menghapus skenario beserta keempat kuadrannya setelah konfirmasi.</li>
+  </ul>
+  <div class="callout warn">
+    <span class="label">Catatan jujur</span>
+    <p>Sistem menyimpan status skenario sebagai Draft atau Final, tetapi status ini <strong>belum ditampilkan maupun dapat diubah di layar</strong>.</p>
+  </div>
+
+  <dl class="pattern">
+    <dt>Hubungan dengan tahap lain</dt>
+    <dd>Skenario memakai skor Rating of Urgency dan Cross-Impact untuk mengusulkan sumbu, dan memakai sinyal Accepted dari Signal Ingestion sebagai bukti narasi.</dd>
+    <dt>Siapa yang berwenang</dt>
+    <dd>Semua peran dapat membaca. Membuat dan menyunting tersedia bagi Developer, Super Admin, dan Admin, dengan aturan kepemilikan di atas.</dd>
+  </dl>
+</section>
+
+<!-- ===================== BAB 16 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 16</span>Mesin Penalaran dan Bantuan AI</h1>
+
+  <h2>16.1 Dua jenis kecerdasan yang berbeda</h2>
+  <p>Foresight Radar memisahkan dengan tegas dua hal yang sering dicampuradukkan.</p>
+  <div class="grid-2">
+    <div class="box">
+      <h4>Penalaran berbasis aturan</h4>
+      <p>Growth Index, Resilience Index, postur kesiapan, prioritas High/Medium/Low, peran Vester, jenis loop, dan Simulasi What-if semuanya dihitung dari aturan yang ditetapkan dan dapat dijelaskan baris per baris. Tidak ada model kecerdasan buatan di dalamnya, sehingga hasilnya stabil dan dapat diaudit.</p>
+    </div>
+    <div class="box">
+      <h4>Bantuan kecerdasan buatan</h4>
+      <p>AI hanya dipakai di dua titik: mengusulkan sinyal kandidat dari dokumen yang ditempel, dan menulis narasi empat kuadran skenario. Di kedua titik itu, hasil AI selalu diikat ke bukti dan selalu dapat ditinjau atau disunting manusia.</p>
+    </div>
+  </div>
+
+  <h2>16.2 Jaminan bukti</h2>
+  <ul>
+    <li><strong>Kutipan verbatim.</strong> Setiap sinyal usulan harus membawa kutipan yang ditemukan kata per kata di dokumen sumber. Kutipan yang tidak ditemukan dibuang, dan sinyal dengan kutipan bermasalah tidak dapat diterima.</li>
+    <li><strong>Sidik jari dokumen.</strong> Setiap dokumen diberi sidik jari digital sehingga perubahan isi di kemudian hari dapat dideteksi.</li>
+    <li><strong>Asal-usul tercatat.</strong> Setiap sinyal dan narasi menyimpan mesin yang menghasilkannya beserta modelnya. Badge seperti "Aturan" atau nama penyedia tampil di layar, dan "Asal tidak tercatat" menandai data lama.</li>
+    <li><strong>Peralihan aman.</strong> Bila mesin AI gagal, aplikasi beralih ke aturan kata kunci atau kerangka template dan menyampaikan alasannya, alih-alih berhenti.</li>
+  </ul>
+
+  <h2>16.3 Halaman "Mesin AI &amp; Reasoning"</h2>
+  <p>Melalui menu "Settings", setiap pengguna dapat memilih mesin AI yang dipakai untuk pekerjaannya. Panel pengantar menjelaskan bahwa mesin yang dipilih mengekstrak sinyal dari dokumen dan menulis narasi skenario, bahwa kredensial disimpan terenkripsi, dan menampilkan "Mesin aktif saat ini". Bila tidak ada yang diaktifkan, tampil "Default Sistem (.env)", yang berarti mesin bawaan server yang dipakai.</p>
+  <p>Bagian "Pilihan Penyedia Model AI" dengan catatan "Tepat 1 mesin aktif per pengguna" menampilkan empat kartu penyedia:</p>
+  <table>
+    <thead><tr><th>Kartu</th><th>Keterangan</th></tr></thead>
+    <tbody>
+      <tr><th>"Claude (Anthropic)"</th><td>Tanpa alamat tambahan.</td></tr>
+      <tr><th>"ChatGPT (OpenAI)"</th><td>Alamat tambahan opsional.</td></tr>
+      <tr><th>"Google Gemini"</th><td>Alamat tambahan opsional.</td></tr>
+      <tr><th>"OpenRouter / Custom Gateway"</th><td>Alamat tambahan wajib; cocok untuk gerbang khusus atau model lokal.</td></tr>
+    </tbody>
+  </table>
+  <p>Setiap kartu memiliki badge "Aktif", "Tersimpan", atau "Belum Diatur"; sakelar "Gunakan Sebagai Provider Utama"; pilihan "Model" termasuk "+ Custom Model Lainnya..."; kolom "API Key" yang disamarkan dengan tautan "Dapatkan Key"; serta tombol "Test Koneksi", "Reset", dan "Simpan". Hasil uji menampilkan "Koneksi Berhasil" atau "Koneksi Gagal" beserta "Latensi respons". Mengaktifkan satu penyedia otomatis menonaktifkan yang lain, dan kartu yang aktif selalu tampil paling atas.</p>
+
+  <figure class="shot tall">
+    <img src="screenshots/39-settings-ai.png" alt="Halaman Mesin AI dan Reasoning">
+    <figcaption>Gambar 39. Halaman "Mesin AI &amp; Reasoning" dengan empat kartu penyedia.</figcaption>
+  </figure>
+
+  <div class="callout">
+    <span class="label">Catatan</span>
+    <p>Pilihan mesin AI berlaku per pengguna, bukan per organisasi. Dua analis di organisasi yang sama boleh memakai mesin berbeda; badge pada Signal Ingestion dan Scenarios selalu menunjukkan mesin mana yang sedang dipakai.</p>
+  </div>
+</section>
+
+<!-- ===================== BAB 17 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 17</span>Ruang Kerja, Anggota, dan Peran</h1>
+
+  <h2>17.1 Satu organisasi, satu ruang kerja</h2>
+  <p>Setiap organisasi bekerja di ruang kerjanya sendiri. Dokumen sumber, sinyal, driving force, penilaian dan riwayatnya, skor cross-impact, skenario, pengaturan AI per pengguna, dan undangan anggota semuanya terpisah per organisasi. Daftar rujukan seperti dimensi, horizon, prioritas, dan jenis status aksi dipakai bersama oleh semua organisasi. Nama ruang kerja selalu tampil di header, di menu pengguna, dan di profil.</p>
+  <p>Kebijakan dasarnya adalah <strong>satu akun untuk satu organisasi</strong>. Akun yang sudah terdaftar di organisasi lain tidak dapat diundang. Akun tanpa organisasi tidak dapat masuk, kecuali akun pengelola sistem. Pendaftaran mandiri dari halaman masuk dimatikan secara bawaan; anggota baru masuk melalui undangan.</p>
+
+  <h2>17.2 "Organisasi &amp; Workspace"</h2>
+  <p>Halaman "Pengaturan Organisasi &amp; Workspace" menampilkan banner nama organisasi, badge paket, dan badge "Ruang Kerja Terverifikasi". Empat ubin statistik merangkum "Anggota Aktif" (terhadap kapasitas maksimal), "Sinyal Perubahan", "Driving Forces", dan "Skenario 2x2". Formulir "Informasi Profil Organisasi" berisi "Nama Organisasi / Perusahaan", "Domain Email Resmi (Opsional)", dan "URL Workspace Slug" yang dibuat otomatis dan tidak dapat diubah. Tombol "Simpan Perubahan" menyimpannya.</p>
+
+  <figure class="shot">
+    <img src="screenshots/40-settings-org.png" alt="Halaman Organisasi dan Workspace">
+    <figcaption>Gambar 40. Halaman "Organisasi &amp; Workspace".</figcaption>
+  </figure>
+
+  <h2>17.3 "Anggota &amp; Undangan Tim"</h2>
+  <p>Halaman "Kelola Anggota &amp; Undangan Tim" menampilkan "Daftar Anggota Aktif" dengan badge "Kapasitas: N / M", kotak "Cari nama atau email...", dan kolom "Pengguna", "Peran Akses", "Tanggal Bergabung". Baris milik sendiri ditandai "Anda" dan tidak memiliki tindakan. Menu tindakan pada anggota lain berisi "Ubah Peran" ("Jadikan Admin" atau "Jadikan BOD (Viewer)") dan "Keluarkan dari Tim".</p>
+  <p>Tombol "Undang Anggota Baru" membuka dialog "Undang Anggota Tim Baru" dengan "Alamat Surel (Email)", "Nama Lengkap (Opsional)", dan "Peran Akses" (Admin sebagai "Admin Workspace" atau Board of Directors sebagai "Read-Only &amp; Review"). Tombol "Kirim Undangan &amp; Buat Akun" membuat akun seketika dengan kata sandi sementara yang ditampilkan sekali kepada pengundang. <strong>Belum ada email undangan yang dikirim</strong>; pengundang menyampaikan kata sandi sementara secara langsung. Undangan ditolak bila kapasitas penuh atau alamat sudah terdaftar di organisasi lain.</p>
+
+  <figure class="shot">
+    <img src="screenshots/41-settings-members.png" alt="Halaman Anggota dan Undangan Tim">
+    <figcaption>Gambar 41. Halaman "Anggota &amp; Undangan Tim".</figcaption>
+  </figure>
+
+  <h2>17.4 "Profil &amp; Akun"</h2>
+  <p>Halaman profil menampilkan kartu ringkas dengan inisial, nama, badge "Peran: …", badge ruang kerja, dan alamat surel. Di bawahnya tersedia "Informasi Profil", "Perbarui Kata Sandi", dan "Hapus Akun Pengguna" yang meminta konfirmasi kata sandi.</p>
+
+  <figure class="shot">
+    <img src="screenshots/36-profile.png" alt="Halaman Profil dan Akun">
+    <figcaption>Gambar 42. Halaman "Profil &amp; Akun".</figcaption>
+  </figure>
+
+  <h2>17.5 Empat peran dan kewenangannya</h2>
+  <table>
+    <thead><tr><th>Kelompok fitur</th><th class="c">Developer</th><th class="c">Super Admin</th><th class="c">Admin</th><th class="c">Board of Directors</th></tr></thead>
+    <tbody>
+      <tr><th>Dashboard dan Simulasi What-if</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td></tr>
+      <tr><th>Signal Ingestion: memasukkan dan meninjau</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c view">lihat saja</td></tr>
+      <tr><th>Driving Force, Time Horizon, Rating, Status of Action</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c no">—</td></tr>
+      <tr><th>Approval: "Show", "Take out", "Reopen"</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td></tr>
+      <tr><th>Prioritizing, Registered List (termasuk ekspor), Foresight Radar, Knowledge Graph</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td></tr>
+      <tr><th>Cross-Impact: mengisi skor</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c view">lihat saja</td></tr>
+      <tr><th>Scenarios: membuat dan menyunting</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c view">lihat saja</td></tr>
+      <tr><th>Settings: Mesin AI, Organisasi, Anggota, Profil</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td><td class="c ok">✔</td></tr>
+      <tr><th>Halaman User Management lama (lewat alamat langsung)</th><td class="c ok">✔</td><td class="c ok">✔</td><td class="c no">—</td><td class="c no">—</td></tr>
+    </tbody>
+  </table>
+  <p>Developer dan Super Admin memiliki hak penuh. Perbedaannya, Super Admin tidak dapat mengelola akun Developer. Admin menjalankan seluruh alur kerja tetapi tidak mengelola pengguna lintas organisasi. Board of Directors membaca semua laporan dan memberi persetujuan, tetapi tidak mengisi tahap penilaian. Hanya pengguna berperan Admin yang dapat ditunjuk sebagai "Personal In Charge".</p>
+
+  <div class="callout warn">
+    <span class="label">Catatan jujur</span>
+    <p>Dua hal perlu diketahui pengelola. Pertama, halaman User Management lama tidak lagi ada di menu, tetapi masih dapat dibuka lewat alamat langsung oleh Developer dan Super Admin, dan halaman itu menampilkan pengguna dari semua organisasi. Kedua, halaman "Organisasi &amp; Workspace" dan "Anggota &amp; Undangan Tim" saat ini <strong>belum membatasi peran</strong>: setiap anggota yang sudah masuk, termasuk Board of Directors, dapat mengundang, mengubah peran, mengeluarkan anggota, dan mengubah profil organisasi. Keduanya tercatat sebagai pengembangan berikutnya di Bab 19.</p>
+  </div>
+</section>
+
+<!-- ===================== BAB 18 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 18</span>Alur Kerja Lengkap dalam Satu Contoh</h1>
+  <p>Bab ini merangkai seluruh fitur dalam satu cerita fiktif bertema industri otomotif, sejalan dengan data contoh di aplikasi. Semua nama dan angka hanyalah ilustrasi.</p>
+
+  <h3>Langkah 1 — Sebuah artikel masuk</h3>
+  <p>Seorang analis membaca artikel tentang rencana pemerintah menaikkan syarat kandungan lokal untuk baterai kendaraan listrik mulai 2028. Ia membuka "Signal Ingestion", memilih tab "Ingest Source Document / URL", mengisi judul dan penerbit, menempelkan teks artikel ke "Raw Content / Document Text", lalu menekan "Ingest &amp; Extract Signals". Widget "Ekstraksi Sinyal" menunjukkan "AI sedang membaca dokumen &amp; mengekstrak sinyal...". Dua menit kemudian lonceng "Notifikasi" mencatat "Ekstraksi Selesai" dengan tiga kandidat sinyal.</p>
+
+  <h3>Langkah 2 — Meninjau bukti</h3>
+  <p>Di "Candidate Review Queue", analis menekan "Inspect" pada sinyal pertama. Kutipan "syarat kandungan lokal sel baterai dinaikkan bertahap hingga 60 persen pada 2028" berstatus "Kutipan terverifikasi", keyakinan 88%, dimensi Regulation, horizon Mid Term. Analis menekan "Accept as New DF", menamainya "Battery TKDN Rule", menulis deskripsi singkat, dan menekan "Confirm Acceptance". Sinyal kedua yang membahas investasi pabrik sel ia tautkan ke driving force "Invest xEV Technology" lewat "Link to DF". Sinyal ketiga ia tolak dengan "Reject" karena hanya opini kolumnis.</p>
+
+  <h3>Langkah 3 — Driving force baru dan tahap penilaian</h3>
+  <p>Di "Driving Force", "Battery TKDN Rule" tampil dengan kolom "Signals" bertuliskan "1 sinyal" dan "Pipeline Stage" bertuliskan "Step 2/5: Time Horizon". Analis menekan "Lanjut ke Time Horizon", memilih Mid Term, lalu menekan "Set". Di "Rating of Urgency" ia memberi Impact 8 dan Uncertainty 7; prioritas otomatis menjadi High. Di "Status of Action" ia memilih Monitoring dengan alasan "Menunggu draf peraturan final, dampak ke pemasok sel perlu dipetakan". Entri ini masuk ke "Riwayat status".</p>
+
+  <h3>Langkah 4 — Persetujuan</h3>
+  <p>Seorang anggota Board of Directors membuka "Approval Items", membaca ringkasan, dan menekan "Show". Status berubah menjadi APPROVED dan tanggal persetujuan tercatat. Sejak saat itu "Battery TKDN Rule" muncul di "Prioritizing" sebagai gelembung merah di kuadran kanan atas, di "Registered List" pada baris dimensi Regulation, dan di "Foresight Radar" sebagai titik merah pada irisan Regulation di cincin Mid Term. Knowledge Graph menunjukkan hub baru dengan satu sinyal satelit dan satu dokumen sumber.</p>
+
+  <h3>Langkah 5 — Menilai saling pengaruh</h3>
+  <p>Di "Cross-Impact", analis menilai bahwa "Battery TKDN Rule" sangat memperkuat (+3) "Invest xEV Technology" dan menekan (−2) "A segment low prices". Panel "Ringkasan Pengaruh per Driving Force" menempatkannya sebagai Pendorong. Tampilan "Network Graph" memperlihatkan panah hijau tebal ke arah investasi dan panah merah ke arah harga murah. Di Dashboard, tab "Simulasi What-if" dengan "Propagasi Aktif" menunjukkan bahwa mengubah statusnya menjadi Decided Plan akan menurunkan ketidakpastian "Invest xEV Technology" dan menaikkan Resilience Index beberapa poin.</p>
+
+  <h3>Langkah 6 — Menyusun skenario</h3>
+  <p>Analis membuka "Scenarios" dan menekan "Skenario baru". Usulan sumbu menawarkan "Invest xEV Technology × Import Regulation". Ia menamai skenario "Rantai pasok EV 2030", menulis pertanyaan fokus "Bagaimana rantai pasok kendaraan listrik memengaruhi strategi kita hingga 2030?", dan menamai kutub-kutubnya: investasi lambat atau agresif, impor longgar atau ketat. Setelah "Buat narasi", empat kuadran terisi dengan kutipan [S1] dan [S2] yang merujuk sinyal yang diterima pada Langkah 2. Ia menyunting satu kuadran untuk menambah indikator awal, dan kuadran itu bertanda "Diedit analis".</p>
+
+  <h3>Langkah 7 — Siklus berikutnya</h3>
+  <p>Enam bulan kemudian peraturan terbit. Analis memperbarui "Status of Action" menjadi Decided Plan dengan alasan baru; riwayat menyimpan kedua entri. Dashboard menampilkan postur yang membaik di "Mengapa skor ini?". Setahun kemudian, setelah program selesai, pimpinan menekan "Take out" dan item berpindah ke "Closed Items". Bila kelak peraturan direvisi, tombol "Reopen" mengembalikannya ke tahap penilaian dengan justifikasi yang tercatat.</p>
+</section>
+
+<!-- ===================== BAB 19 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 19</span>Pengembangan Berikutnya</h1>
+  <p>Bab ini sengaja dipisahkan dari bab-bab sebelumnya. Semua yang tercantum di sini <strong>belum tersedia</strong> di aplikasi saat ini. Daftar disusun dari celah yang ditemukan saat dokumen ini ditulis dan dari arah pengembangan yang sudah direncanakan.</p>
+  <table>
+    <thead><tr><th style="width:32%">Pengembangan</th><th>Kondisi saat ini</th><th style="width:30%">Nilai yang diharapkan</th></tr></thead>
+    <tbody>
+      <tr><th>Tombol Reject untuk driving force</th><td>Status REJECTED dikenal sistem, tetapi belum ada tombolnya di Approval Items.</td><td>Alur persetujuan yang lengkap: setujui, tolak, atau tutup.</td></tr>
+      <tr><th>Status skenario di layar</th><td>Draft atau Final tersimpan tetapi tidak tampil dan tidak dapat diubah.</td><td>Pembaca tahu skenario mana yang sudah disepakati.</td></tr>
+      <tr><th>Penarikan isi URL dan unggah berkas</th><td>Teks harus ditempel; URL hanya rujukan.</td><td>Ingest lebih cepat untuk artikel daring dan dokumen PDF.</td></tr>
+      <tr><th>Email undangan dan tautan aktivasi</th><td>Akun dibuat langsung dengan kata sandi sementara yang ditampilkan sekali.</td><td>Onboarding anggota yang lebih aman dan rapi.</td></tr>
+      <tr><th>Pembatasan peran di halaman Organisasi dan Anggota</th><td>Setiap anggota yang masuk dapat mengubah organisasi dan anggota.</td><td>Hanya Admin ke atas yang mengelola ruang kerja.</td></tr>
+      <tr><th>Terjemahan isi halaman</th><td>Pilihan ID/EN hanya mengubah menu dan kerangka layar.</td><td>Pengalaman dwibahasa yang utuh.</td></tr>
+      <tr><th>Rubrik skor standar dan penilaian multi-asesor</th><td>Skor 1–10 diisi satu orang tanpa rubrik baku di layar.</td><td>Penilaian lebih konsisten antar analis dan dapat dirata-ratakan.</td></tr>
+      <tr><th>Halaman riwayat penilaian</th><td>Riwayat tersimpan dan hanya dipakai grafik Dashboard.</td><td>Menelusuri bagaimana penilaian satu item berubah dari waktu ke waktu.</td></tr>
+      <tr><th>Implikasi strategis dan keterlacakan aksi/OKR</th><td>Status aksi berhenti pada Monitoring atau Decided Plan.</td><td>Menghubungkan foresight ke inisiatif, pemilik, dan target terukur.</td></tr>
+      <tr><th>Propagasi What-if lebih dari satu langkah</th><td>Efek riak hanya menjalar ke force yang langsung terhubung.</td><td>Simulasi sistemik yang mengikuti seluruh rantai pengaruh.</td></tr>
+      <tr><th>Pengelompokan algoritmik</th><td>Tersedia hanya sebagai alat uji di baris perintah untuk pengembang, bukan di aplikasi.</td><td>Menemukan kelompok driving force serupa secara otomatis saat data sudah cukup banyak.</td></tr>
+      <tr><th>Notifikasi lintas perangkat</th><td>Riwayat notifikasi tersimpan per browser.</td><td>Notifikasi mengikuti akun, bukan perangkat.</td></tr>
+    </tbody>
+  </table>
+  <p>Urutan pengerjaan yang masuk akal adalah menutup celah tata kelola lebih dulu (pembatasan peran, email undangan, tombol Reject), lalu memperkaya ingest dan penilaian, dan terakhir memperdalam simulasi serta keterlacakan aksi.</p>
+</section>
+
+<!-- ===================== BAB 20 ===================== -->
+<section class="chapter">
+  <h1><span class="chap">Bab 20</span>Penutup dan Glosarium</h1>
+  <h2>20.1 Penutup</h2>
+  <p>Foresight Radar mengubah praktik foresight dari kumpulan slide menjadi alur kerja yang hidup. Setiap sinyal punya bukti, setiap driving force punya tahap, setiap keputusan punya riwayat, dan setiap angka di dashboard punya penjelasan. Bantuan kecerdasan buatan hadir di tempat yang tepat, selalu diikat ke bukti, dan selalu dapat ditinjau manusia. Ruang kerja per organisasi menjaga kerahasiaan sekaligus memungkinkan kolaborasi tim.</p>
+  <p>Dokumen ini akan diperbarui mengikuti perkembangan aplikasi. Bab 19 adalah tempat yang paling cepat berubah: setiap butir yang selesai akan berpindah ke bab fiturnya masing-masing.</p>
+
+  <h2>20.2 Glosarium</h2>
+  <dl class="gloss">
+    <dt>Sinyal (Signal)</dt><dd>Bukti kecil adanya perubahan, berupa kutipan dari dokumen sumber, yang menunggu keputusan analis.</dd>
+    <dt>Driving Force</dt><dd>Faktor pendorong perubahan yang sudah didefinisikan dan menjadi objek penilaian.</dd>
+    <dt>Dimensi</dt><dd>Kategori lingkungan tempat driving force berada: Economy, Ecology, Regulation, Technology (Macro) dan Substitute, Supplier, Customer, Competitor (Mezzo).</dd>
+    <dt>Time Horizon</dt><dd>Perkiraan kapan dampak terasa: Short Term (kurang dari satu tahun), Mid Term (satu sampai tiga tahun), Long Term (lebih dari tiga tahun).</dd>
+    <dt>Impact</dt><dd>Skor 1–10 untuk besarnya dampak terhadap organisasi.</dd>
+    <dt>Uncertainty</dt><dd>Skor 1–10 untuk ketidakpastian arah dan waktu perubahan.</dd>
+    <dt>Prioritas</dt><dd>High, Medium, atau Low; dihitung otomatis dari Impact dan Uncertainty dengan ambang enam.</dd>
+    <dt>Status of Action</dt><dd>Sikap organisasi terhadap driving force: Monitoring (∆) atau Decided Plan (O), selalu disertai alasan.</dd>
+    <dt>PENDING, APPROVED, CLOSED</dt><dd>Tiga status utama driving force: dalam penilaian, tampil di laporan, dan diarsipkan.</dd>
+    <dt>Cross-Impact</dt><dd>Penilaian seberapa kuat satu driving force memengaruhi yang lain, pada skala −3 sampai +3.</dd>
+    <dt>Causal Loop</dt><dd>Rantai pengaruh yang kembali ke titik awal; Penguat (R) membesarkan perubahan, Penyeimbang (B) meredamnya.</dd>
+    <dt>Peran Vester</dt><dd>Posisi driving force menurut pengaruh yang diberikan dan diterima: Pendorong, Kritis, Indikator, atau Penyangga.</dd>
+    <dt>Skenario 2×2</dt><dd>Empat gambaran masa depan yang dibentuk dari dua ketidakpastian terbesar sebagai sumbu.</dd>
+    <dt>Knowledge Graph</dt><dd>Peta hubungan antara dokumen sumber, sinyal, dan driving force.</dd>
+    <dt>Growth Index dan Resilience Index</dt><dd>Dua skor 0–100 berbasis aturan yang merangkum penangkapan peluang dan mitigasi risiko.</dd>
+    <dt>Postur Kesiapan Strategis</dt><dd>Kesimpulan dari kedua indeks: Agile &amp; Resilient, Defensive Prepared, Growth-Aggressive (Exposed), atau Vulnerable (Needs Attention).</dd>
+    <dt>Ruang kerja (Workspace)</dt><dd>Ruang data milik satu organisasi; satu akun hanya menjadi anggota satu ruang kerja.</dd>
+    <dt>Mesin AI</dt><dd>Penyedia kecerdasan buatan yang dipilih pengguna untuk ekstraksi sinyal dan narasi skenario; bila tidak dipilih, mesin bawaan server yang dipakai.</dd>
+  </dl>
+</section>
+
+</div>
+
+<script>
+(function () {
+  // Remove figures whose screenshot is missing, then renumber "Gambar N." captions in document order.
+  var figs = Array.prototype.slice.call(document.querySelectorAll('figure.shot'));
+  var pending = figs.length;
+  function renumber() {
+    var n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('figure.shot figcaption'), function (cap) {
+      n += 1;
+      cap.textContent = cap.textContent.replace(/^Gambar\s+\d+\./, 'Gambar ' + n + '.');
+    });
+  }
+  function done() { pending -= 1; if (pending <= 0) renumber(); }
+  if (!figs.length) return;
+  figs.forEach(function (fig) {
+    var img = fig.querySelector('img');
+    if (!img) { done(); return; }
+    var settle = function (ok) {
+      if (!ok) fig.parentNode.removeChild(fig);
+      done();
+    };
+    if (img.complete) {
+      settle(img.naturalWidth > 0);
+    } else {
+      img.addEventListener('load', function () { settle(true); });
+      img.addEventListener('error', function () { settle(false); });
+    }
+  });
+})();
+</script>
+</body>
+</html>

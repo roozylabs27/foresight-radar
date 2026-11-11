@@ -115,8 +115,8 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                         {project.unreviewed_narratives > 0 && (
                             <p role="status" className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">
                                 {project.unreviewed_narratives} narasi AI belum ditinjau.{" "}
-                                <Link href={route("scenarios.index")} className="font-medium underline">
-                                    Tinjau di halaman Scenarios
+                                <Link href={route("scenario-planning.narratives.index", project.id)} className="font-medium underline">
+                                    Tinjau di langkah 6
                                 </Link>
                             </p>
                         )}

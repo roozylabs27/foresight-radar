@@ -2,12 +2,32 @@
 
 ## 1. Project Purpose & Technology Stack
 
-Foresight Radar is an executive intelligence and strategic foresight platform designed to ingest signals of change, evaluate driving forces, detect systems-dynamics causal loops, and simulate 2x2 scenario planning matrices.
+Foresight Radar is a multi-tenant strategic foresight and decision intelligence platform. It helps an organisation collect evidence of change (signals), assess driving forces, and run scenario planning exercises along a nine-step method: from the key focal issue to strategic responses and early warning monitoring.
 
-- **Backend:** Laravel 11 (PHP 8.3), MySQL 8.0, Redis, Spatie Laravel Permission
-- **Frontend:** React 19, Inertia.js 2.0, TypeScript, Tailwind CSS v4 (`@tailwindcss/vite`), Radix UI (`radix-ui`), Lucide React
+- **Backend:** Laravel 11 (PHP 8.3), MySQL 8.0, Spatie Laravel Permission. The queue uses the `database` driver (worker container `laravel_queue`, scheduler container `laravel_scheduler`) and the cache uses `file`. Redis is configured in `.env.example` but has no service in `docker-compose.yml`.
+- **Frontend:** React 19, Inertia.js 2.0, **JavaScript/JSX** (`resources/js` is `.jsx`/`.js`; `jsconfig.json` provides the `@/*` alias; `tsconfig.json` only covers the one `.ts` file, so `npm run typecheck` checks almost nothing), Tailwind CSS v4 (`@tailwindcss/vite`), Radix UI (`radix-ui`), Lucide React, Ziggy (`route()`). There is no ESLint yet.
 - **Design System:** `shadcn/ui` patterns located in `resources/js/Components/ui/`
-- **LLM Gateway:** Multi-provider (`anthropic`, OpenAI-compatible) with background queues and deterministic offline fallbacks
+- **LLM Gateway:** Multi-provider (`anthropic`, OpenAI-compatible: OpenAI, Gemini, OpenRouter) with an organisation key and a personal key, background queues, and a run record per AI call (`AiGenerationRun`: purpose, provider, model, prompt version). AI output is always a proposal a person accepts. Signal extraction of external sources is AI-only. The keyword-rule extractor runs only with `SIGNAL_EXTRACTION_DRIVER=heuristic` (tests and offline work).
+
+### Domain concepts (read before changing code)
+
+- **Tenant / organisation:** every business table is tenant-owned through `App\Traits\BelongsToTenant` (global `TenantScope`). Validate related ids with `App\Support\TenantRule::exists()` (or `activeDimension()`), never a plain `exists:` rule. Queued jobs run through `RunInTenantContext`. A job's `failed()` handler runs outside that context, so it must not create rows.
+- **Dimensions / environments:** each organisation owns them (Settings → Dimensi & Lingkungan). The default taxonomy (`App\Support\DimensionTaxonomy`: Macro and Mezzo, 11 categories) is seeded per organisation. A `code` never changes because prompts and seeds use it. A dimension in use is archived, not deleted.
+- **Firm library vs exercise:** the firm library holds driving forces and their ratings (`DrivingForceRating`: horizon, impact, uncertainty, priority, status action), plus signals as evidence. An **exercise** (`ScenarioPlanningProject`, a Key Focal Issue) selects forces and scores them separately (`ForceAssessment` consensus).
+  - The reports (Dashboard, Radar, Prioritizing, Registered List) show **FIRM** by default, or one **Key Focal Issue** via `?scope=<exercise uuid>` (`App\Support\ReportScope`).
+- **Nine steps and gates:**
+  1. Focal issue (G1)
+  2. Driving forces (G2)
+  3. Scores (G3) and critical uncertainties (G4)
+  4. Framework (G5)
+  5. Conditions
+  6. Narratives (G6)
+  7. Challenges & opportunities
+  8. Strategic responses (G7)
+  9. Early warning indicators and observations
+
+  Gate decisions are logged in `project_decisions`. `StalenessService` flags downstream work with a reason when upstream changes; it never deletes.
+- **Signals vs driving forces:** a signal is an observation with a verbatim quote from a source; a driving force is the broader influence. Signals support forces; they are not interchangeable.
 
 > [!IMPORTANT]
 > **No Ant Design:** The codebase was migrated from Ant Design v5 to `shadcn/ui` + `radix-ui` + `Tailwind CSS v4`. Never introduce Ant Design (`antd`) components, imports, or tokens.
@@ -25,10 +45,18 @@ The repository enforces strict module separation:
   - `DrivingForceService`: 6-stage lifecycle, 1-to-1 ratings, priority classification
   - `CausalLoopService` & `CrossImpactService`: Cross-impact matrix and cycle detection (reinforcing vs balancing)
   - `ScenarioNarrativeService`: 2x2 matrix generation, pessimistic queue locking (`lockForUpdate`), citation veracity
-- **Persistence & Policies:** `app/Models/` (UUIDs, soft deletes), `app/Policies/` (`DrivingForcePolicy`, `ScenarioPolicy`, `UserPolicy`)
-- **Background Jobs:** `app/Jobs/` (`ExtractSignals`, `GenerateScenarioNarrative` with `ShouldBeUnique` contract)
+  - Scenario planning: `ScenarioPlanningProjectService` (steps, gates, decisions), `ProjectDrivingForceService`, `ProjectAssessmentService`, `CriticalUncertaintyService`, `ScenarioFrameworkService`, `ScenarioConditionService`, `ScenarioImplicationService`, `StrategicResponseService`, `EarlyWarningIndicatorService`, `ExternalIndicatorService`, `BackcastingService`, `StalenessService`
+  - Reporting: `ForesightReportingService` (FIRM and Key Focal Issue datasets), `ReasoningEngineService`, `ScenarioSimulationService`; taxonomy: `DimensionService`
+- **Persistence & Policies:** `app/Models/` (UUIDs, soft deletes), `app/Policies/` (`DrivingForcePolicy`, `ScenarioPlanningProjectPolicy`, `ScenarioPolicy`, `UserPolicy`)
+- **Background Jobs:** `app/Jobs/` (`ExtractSignals`, `GenerateScenarioNarrative`, the `Suggest*` AI jobs, `MatchSignals`, `FetchIndicatorSource`; all with `RunInTenantContext` and `ShouldBeUnique`)
 - **Frontend Views:** `resources/js/Pages/` (Inertia React pages), `resources/js/Components/ui/` (Radix UI / Tailwind primitives)
-- **Detailed Documentation:** In-depth architecture specs are located in `docs/audit/` and `docs/product/`.
+- **Detailed Documentation (tracked in git since 2026-11-11; decks, PDFs and screenshots stay local):**
+  - `docs/product/`: methodology, feature specification, development roadmap
+  - `docs/audit/`: audits
+  - `docs/architecture/`
+  - `docs/guidelines/`
+
+  The latest audit and the remediation backlog are in `docs/audit/2026-11-11/` (start with its `README.md`).
 
 ---
 
@@ -41,16 +69,22 @@ Standardized repository entry points for human developers and AI coding agents:
 ./init.sh                     # Verifies runtime dependencies, Docker, .env, and baseline smoke check
 
 # 2. Standard Quality Verification Engine
-./verify.sh                   # Runs Pint, Larastan Level 5, PHPUnit, Vite Build, NPM Audit
-./verify.sh --quick           # Runs Pint, Larastan, Vite Build, and NPM Audit (skips full PHPUnit suite)
-./verify.sh --e2e             # Runs standard suite + Playwright headless E2E smoke tests
+./verify.sh                   # Pint --test, Larastan level 5, PHPUnit (all in laravel_app), npm typecheck, Vite build, npm audit
+./verify.sh --quick           # Same without the full PHPUnit suite
+./verify.sh --e2e             # Adds the browser e2e smoke test
 
 # 3. Direct Docker / Host Verification Shortcuts
 docker exec laravel_app composer verify   # Unified contract (Pint, Larastan Level 5, PHPUnit)
 npm run build                             # Production frontend bundle
 npm audit --audit-level=critical          # Security quality gate
-npm run test:e2e:smoke                    # Headless E2E smoke test
+npm run test:e2e:smoke                    # Browser e2e smoke (login page)
 ```
+
+Notes from practice:
+- **Reload after PHP changes:** reload PHP-FPM after changing PHP (`docker exec laravel_app sh -c 'kill -USR2 1'`). Otherwise OPcache keeps serving old routes, and Ziggy reports "route not in the route list". Restart `laravel_queue` after changing job or service code.
+- **Run artisan in the container:** run artisan and tests inside `laravel_app`. Never run two PHPUnit processes at once, because they share the test database.
+- **Browser e2e runner:** `e2e` / `@e2e-dev/web` (`e2e.config.ts`) is an agentic runner that drives the browser through a model. Running it costs AI tokens and needs `ADMIN_PASSWORD` / `DEV_PASSWORD`. It is not Playwright.
+- **CI:** `.github/workflows/ci.yml` runs Pint, Larastan and PHPUnit on MySQL, then npm audit, typecheck and build, and only the e2e smoke test.
 
 ---
 
@@ -82,14 +116,14 @@ This repository uses workflow skills from `.agents/skills/` following a 3-phase 
 1. **Phase 1: Define & Plan**:
    - `spec-driven-development` & `planning-and-task-breakdown`: Define explicit acceptance criteria before modifying code.
    - `interview-me`: Clarify underspecified requirements rather than making silent assumptions.
-   - `source-driven-development`: Ground implementations in official documentation (Laravel 10, React 18, Radix UI, Tailwind v4).
+   - `source-driven-development`: Ground implementations in official documentation (Laravel 11, React 19, Inertia 2, Radix UI, Tailwind v4).
 2. **Phase 2: Build & Harden**:
    - `incremental-implementation`: Build in thin, vertical slices. Test each slice before proceeding.
    - `frontend-ui-engineering`: Maintain design system fidelity, WCAG 2.1 AA accessibility, and responsive layouts.
    - `security-and-hardening`: Enforce Spatie RBAC gates, sanitize inputs, parameterize queries, and guard against OWASP Top 10 risks.
    - `doubt-driven-development`: Adversarially review authorization checks and concurrency boundaries.
 3. **Phase 3: Verify & Review**:
-   - `test-driven-development`: Guard changes with regression tests (PHPUnit for domain logic, Playwright for E2E).
+   - `test-driven-development`: Guard changes with regression tests (PHPUnit for domain logic and HTTP flows; the agentic `e2e` runner for browser journeys).
    - `debugging-and-error-recovery`: Reproduce -> Localize -> Fix -> Guard.
    - `code-review-and-quality`: Validate changes against Pint and Larastan Level 5.
    - `code-simplification`: Remove dead code and unnecessary complexity without altering verified behavior.
@@ -125,7 +159,7 @@ A task is complete only when:
 All frontend development strictly adheres to the combined **Clean Architecture** and **Atomic Design** system documented in `docs/architecture/frontend-clean-atomic-architecture.md`:
 
 1. **Clean Architecture Separation:**
-   - **Domain & Types (`resources/js/types/`, `resources/js/domain/`):** Pure TypeScript types, interfaces, and business logic calculations (zero React/DOM/Inertia imports).
+   - **Domain (`resources/js/domain/`):** Pure JavaScript data and business calculations (zero React/DOM/Inertia imports).
    - **Application Hooks (`resources/js/hooks/`):** Custom workflow hooks managing user interactions and Inertia actions (`router.post`, `useForm`).
    - **Infrastructure Adapters (`resources/js/lib/`):** Utilities (`cn`, formatting, third-party adapters).
    - **Presentation (`resources/js/Components/`, `resources/js/Pages/`):** Murni presentasional.
@@ -135,7 +169,7 @@ All frontend development strictly adheres to the combined **Clean Architecture**
    - **Molecules (`Components/molecules/` or composite primitives):** 2+ atoms combined (`FormField`, `ThemeToggle`, `SearchInput`).
    - **Organisms (`Components/{Feature}/`):** Complex UI blocks (`RadarChart`, `ScenarioMatrix`, `DataTable`).
    - **Templates (`Layouts/`):** Shell layouts (`AuthenticatedLayout`, `AuthSplitLayout`).
-   - **Pages (`Pages/`):** Lean orchestrator components (< 150 lines). Dilarang menulis inline math/business logic di dalam Page.
+   - **Pages (`Pages/`):** Lean orchestrator components (< 150 lines). Dilarang menulis inline math/business logic di dalam Page. Several older pages are well above this limit (e.g. `Signals/Index.jsx`, `Visualization/KnowledgeGraph.jsx`). New pages must meet the rule, and an older page should be split when it is substantially changed (backlog AUD-24).
 
 ---
 
@@ -172,8 +206,8 @@ To ensure static analysis clarity (Larastan Level 5), deterministic IDE auto-com
 To ensure genuine browser rendering, real JavaScript runtime execution, DOM state verification, and console error detection:
 
 - **Strictly Prohibit `curl` for Web / UI Verification:** Never use `curl`, `Invoke-WebRequest`, or raw terminal HTTP scrapers to test web routes, user journeys, UI behavior, or page rendering.
-- **Enforce Chrome DevTools MCP:**
-  - Always use `chrome-devtools-mcp` tools (`list_pages`, `new_page`, `navigate_page`, `evaluate_script`, `take_screenshot`, `list_console_messages`, `list_network_requests`).
+- **Enforce a real browser:**
+  - Use Chrome DevTools MCP (`list_pages`, `new_page`, `navigate_page`, `evaluate_script`, `take_screenshot`, `list_console_messages`, `list_network_requests`), or the agent host's built-in browser tools with the same capabilities.
   - Verify live DOM elements, evaluate runtime state, ensure 0 console errors or warnings, inspect network responses, and capture visual screenshots for proof of work.
 - **Rule Scope:** All developer and AI coding agent workflows testing UI, layouts, interactive graphs, forms, settings, and web endpoints.
 

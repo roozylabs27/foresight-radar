@@ -1,0 +1,567 @@
+{
+  "metadata": {
+    "project": "Foresight Radar",
+    "repository": "https://github.com/roozylabs27/foresight-radar",
+    "audited_branch": "development",
+    "audited_commit": "83f532a",
+    "audit_date": "2026-10-23",
+    "stack": {
+      "backend": "Laravel 11.57.0 (PHP 8.3.36)",
+      "database": "MySQL 8.0 / Redis",
+      "frontend": "React 19.3.1, Inertia.js 2.3.29, TypeScript 5.8, Vite 6.4.2, Tailwind CSS 4.2.2",
+      "auth_rbac": "Spatie Laravel Permission 6.24"
+    },
+    "baseline_checks": {
+      "pint": { "status": "PASS", "files": 238, "issues": 0 },
+      "phpstan": { "status": "PASS", "level": 5, "files": 137, "errors": 0 },
+      "phpunit": { "status": "PASS", "tests": 244, "assertions": 2440, "duration_seconds": 421.83 },
+      "typecheck": { "status": "PASS", "errors": 0 },
+      "vite_build": { "status": "PASS", "modules": 4731, "duration_seconds": 107 },
+      "npm_audit_critical": { "status": "PASS", "critical": 0, "high": 4, "moderate": 3 },
+      "composer_audit": { "status": "WARN", "advisories": 4, "package": "laravel/framework (11.57.0 < 12.69.0)" },
+      "playwright_smoke": { "status": "PASS", "tests": 1, "duration_seconds": 16.66 }
+    },
+    "summary_counts": {
+      "total": 20,
+      "by_severity": {
+        "Critical": 0,
+        "High": 7,
+        "Medium": 9,
+        "Low": 4,
+        "Informational": 0
+      },
+      "by_domain": {
+        "Security": 7,
+        "Performance": 7,
+        "Robustness_Reliability": 6
+      }
+    }
+  },
+  "findings": [
+    {
+      "id": "SEC-001",
+      "category": "Security",
+      "subcategory": "Authorization & Business Logic",
+      "title": "Mass Assignment & Audit Attribution Spoofing on Driving Force Creation and Update Allows Approval Workflow Bypass",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "phase": "Phase 0",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/DrivingForceController.php:60-81",
+        "app/Http/Controllers/DrivingForceController.php:90-106",
+        "app/Models/DrivingForce.php:19-31",
+        "app/Http/Requests/DrivingForceRequest.php:24-41"
+      ],
+      "evidence": "DrivingForce::$fillable includes 'status', 'approved_at', 'closed_at', 'remark', 'created_by', and 'updated_by'. DrivingForceController::create() calls $request = $request->all() instead of $request->validated() and passes it directly into DrivingForce::create($request). DrivingForceController::update() sets $driving_force->updated_by = $request['updated_by'] ?? null from request input instead of auth()->id().",
+      "failure_or_attack_scenario": "An authenticated user with 'create-driving-force' (but without 'approve-approval-items') sends POST /driving-force/create with {\"status\": \"APPROVED\", \"approved_at\": \"2026-10-23 10:00:00\"}, bypassing the 5-stage governance pipeline. On PATCH /driving-force/{uuid}, an editor spoofs 'updated_by' to another user ID or null.",
+      "root_cause": "Using $request->all() instead of $request->validated(), exposing lifecycle/audit columns in $fillable, and trusting client input for updated_by.",
+      "impact": "High security and business integrity impact: unauthorized self-approval of driving forces and falsified audit attribution. Likelihood: High.",
+      "validation_method": "POST /driving-force/create with {\"status\": \"APPROVED\"} as an analyst user and check driving_forces.status in the database.",
+      "remediation": "Use $request->validated() in DrivingForceController::create() and update(), force status = 'PENDING', created_by = auth()->id(), and updated_by = auth()->id(), and remove lifecycle/audit columns from DrivingForce::$fillable.",
+      "required_tests": [
+        "Feature test asserting POST /driving-force/create with injected status='APPROVED' persists status='PENDING'.",
+        "Feature test asserting PATCH /driving-force/{uuid} with injected updated_by persists updated_by=auth()->id()."
+      ]
+    },
+    {
+      "id": "SEC-002",
+      "category": "Security",
+      "subcategory": "Supply Chain & Dependencies",
+      "title": "Known High-Severity Vulnerabilities in Client-Side SheetJS (xlsx) & Laravel 11 Framework Advisories",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "phase": "Phase 2",
+      "effort": "M",
+      "dependencies": ["PERF-005", "SEC-006"],
+      "affected_locations": [
+        "package.json:48",
+        "resources/js/Components/OverallStatus.jsx:5",
+        "composer.json:12"
+      ],
+      "evidence": "npm audit reports High-severity Prototype Pollution (GHSA-4r6h-8v6p-xvw6) and ReDoS (GHSA-5pgg-2g8v-p4x9) in xlsx@0.18.5 with no fix available on npm. composer audit reports 4 advisories on laravel/framework v11.57.0 (<12.69.0), including CVE-2026-48019 (CRLF injection in default email rule).",
+      "failure_or_attack_scenario": "Retention of unmaintained xlsx@0.18.5 exposes prototype pollution if parsing is ever called and blocks strict npm audit gates. Non-strict 'email' validation rules in UserRequest/LoginRequest allow CRLF characters unless filtered.",
+      "root_cause": "Unmaintained npm xlsx package and Laravel 11 security support cutoff relative to Laravel 12.69+.",
+      "impact": "Medium-to-High supply chain and email header injection risk. Likelihood: Medium.",
+      "validation_method": "Run 'npm audit' and 'docker exec laravel_app composer audit --format=json'.",
+      "remediation": "Replace xlsx with a maintained export library or server-side export, and harden all 'email' validation rules with 'not_regex:/[\\r\\n]/' (or upgrade to Laravel 12.69+).",
+      "required_tests": [
+        "Feature test asserting email inputs containing CR/LF characters are rejected with 422.",
+        "Build and audit check confirming 0 high production npm vulnerabilities."
+      ]
+    },
+    {
+      "id": "PERF-001",
+      "category": "Performance",
+      "subcategory": "API & Database Pagination",
+      "title": "Unbounded Pagination (pageSize) Across All 9 Paginated Endpoints Enables Memory & CPU Exhaustion",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "phase": "Phase 1",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Services/DrivingForceService.php:42-53",
+        "app/Http/Controllers/RegisteredListController.php:54-55",
+        "app/Http/Controllers/SignalIngestionController.php:109",
+        "app/Models/User.php:74",
+        "app/Models/User.php:124"
+      ],
+      "evidence": "DrivingForceService::resolvePageSize(), RegisteredListController::registered_list(), SignalIngestionController::fetch_signals(), and User::filter() pass client-supplied pageSize directly into paginate() without an upper bound.",
+      "failure_or_attack_scenario": "An authenticated client sends ?pagination[pageSize]=100000 or ?pageSize=100000, forcing Eloquent to hydrate and serialize up to 100,000 models and eager-loaded relationships in a single HTTP request.",
+      "root_cause": "Missing min(100, max(1, (int) $pageSize)) clamping on pagination parameters.",
+      "impact": "High system availability impact (PHP-FPM worker OOM and database load spikes). Likelihood: High.",
+      "validation_method": "Request GET /driving-force/fetch-data?pagination[pageSize]=5000 and verify meta.per_page is 5000.",
+      "remediation": "Clamp pageSize to [1, 100] across DrivingForceService::resolvePageSize(), RegisteredListController::registered_list(), SignalIngestionController::fetch_signals(), and User::filter().",
+      "required_tests": [
+        "Feature test asserting pageSize=99999 is clamped to 100 and pageSize=0/negative is clamped to 1 or default 10 across all paginated endpoints."
+      ]
+    },
+    {
+      "id": "PERF-002",
+      "category": "Performance",
+      "subcategory": "Database N+1 Queries",
+      "title": "Severe N+1 Query Waterfalls in ApprovalItemsResource, ClosedItemsResource, and StatusActionResource (Up to 5+ Queries Per Row)",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "phase": "Phase 1",
+      "effort": "S",
+      "dependencies": ["REL-002"],
+      "affected_locations": [
+        "app/Services/DrivingForceService.php:197-199",
+        "app/Services/DrivingForceService.php:258",
+        "app/Services/DrivingForceService.php:293",
+        "app/Http/Resources/ApprovalItemsResource.php:18-39",
+        "app/Http/Resources/ClosedItemsResource.php:18-39",
+        "app/Http/Resources/StatusActionResource.php:23-61"
+      ],
+      "evidence": "DrivingForceService::approvalItems() and closedItems() only eager-load ['rating.action_reasons']. ApprovalItemsResource and ClosedItemsResource then execute 5 queries per row: StatusAction::where('id', ...)->first(), $this->dimension->name, $this->pic_user->name, $this->rating->time_horizon->name, and $this->rating->priority->name. StatusActionResource also queries StatusAction::where('id', $data->status_action_id)->first() inside a map() loop over every action_reason.",
+      "failure_or_attack_scenario": "Loading a 10-row page on /approval-items or /closed-items executes 54 SQL queries; at pageSize=100, it executes 504 SQL queries.",
+      "root_cause": "Missing eager-load relations in DrivingForceService and direct Model::where()->first() calls inside JsonResource::toArray().",
+      "impact": "High database and latency impact on Approval Items, Closed Items, and Status of Action views. Likelihood: Confirmed on every request.",
+      "validation_method": "Enable DB::enableQueryLog() in a feature test for GET /approval-items/fetch-data with 10 rows and observe >50 queries.",
+      "remediation": "Eager-load ['dimension', 'pic_user', 'rating.time_horizon', 'rating.priority', 'rating.status_action', 'rating.action_reasons.status_action'] in DrivingForceService and use loaded relations instead of StatusAction::where() in resources.",
+      "required_tests": [
+        "Query-count regression test asserting <= 10 SQL queries for a 15-row page on /approval-items/fetch-data, /closed-items/fetch-data, and /status-action/fetch-data."
+      ]
+    },
+    {
+      "id": "PERF-003",
+      "category": "Performance",
+      "subcategory": "Database & Payload Bloat",
+      "title": "Eager-Loading Full sources.raw_content (LONGTEXT Up to 60 KB/Document) in Signal, Driving Force, Radar, and Prioritizing Endpoints",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "phase": "Phase 1",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/SignalIngestionController.php:88",
+        "app/Services/DrivingForceService.php:88-89",
+        "app/Services/ForesightReportingService.php:66-67",
+        "app/Services/ForesightReportingService.php:103-104"
+      ],
+      "evidence": "with(['source', ...]) and with(['source_signal.source', 'supporting_signals.source']) select all columns from sources, including raw_content (LONGTEXT up to 60,000 chars), and SignalIngestionController::fetch_signals serializes the full source object into every signal row.",
+      "failure_or_attack_scenario": "A 10-row page on /signals/fetch transfers up to 600 KB of unused raw document text in the JSON response, and radar/prioritizing endpoints hydrate megabytes of raw_content into PHP memory.",
+      "root_cause": "Unconstrained eager-loading of the Source model without column selection.",
+      "impact": "High memory and network payload bloat. Likelihood: Confirmed.",
+      "validation_method": "Call GET /signals/fetch after ingesting a source and inspect data[0].source.raw_content in the JSON response.",
+      "remediation": "Constrain eager-loaded source relations to 'source:id,uuid,title,url,publisher,published_at'.",
+      "required_tests": [
+        "Feature test asserting GET /signals/fetch returns source.title and source.url without source.raw_content."
+      ]
+    },
+    {
+      "id": "REL-001",
+      "category": "Reliability",
+      "subcategory": "CI/CD & Build Pipeline",
+      "title": "GitHub Actions CI PHP Version Mismatch (8.2 vs 8.3.36 Lockfile), Missing development Branch Trigger, and Missing TypeScript Check in CI",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "phase": "Phase 0",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        ".github/workflows/ci.yml:5-7",
+        ".github/workflows/ci.yml:34",
+        ".github/workflows/ci.yml:114",
+        "composer.json:10",
+        "composer.json:64"
+      ],
+      "evidence": ".github/workflows/ci.yml specifies php-version: '8.2' on lines 34 and 114 while composer.json requires php ^8.3 (locked at 8.3.36). The workflow triggers on 'develop' rather than 'development' and omits 'npm run typecheck'.",
+      "failure_or_attack_scenario": "GitHub Actions fails immediately on composer install due to PHP 8.2 < 8.3.0, and pushes to the 'development' branch do not trigger CI at all.",
+      "root_cause": "CI workflow configuration was not updated during the PHP 8.3 / Laravel 11 / TypeScript upgrade.",
+      "impact": "High operational reliability risk: 100% CI failure rate on GitHub Actions and unguarded TypeScript regressions. Likelihood: Confirmed.",
+      "validation_method": "Compare .github/workflows/ci.yml php-version ('8.2') with composer.json platform.php ('8.3.36').",
+      "remediation": "Update php-version to '8.3' in .github/workflows/ci.yml, add 'development' to trigger branches, and add 'npm run typecheck' to frontend-quality and verify.sh.",
+      "required_tests": [
+        "Verify ./verify.sh --quick passes including npm run typecheck."
+      ]
+    },
+    {
+      "id": "REL-002",
+      "category": "Robustness",
+      "subcategory": "Null-Safety & Exception Prevention",
+      "title": "Unhandled Null/Empty Array Dereferences in UserResource, UserController, ApprovalItemsResource, and ClosedItemsResource Cause HTTP 500 Crashes",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "phase": "Phase 0",
+      "effort": "S",
+      "dependencies": ["SEC-004"],
+      "affected_locations": [
+        "app/Http/Resources/UserResource.php:22-23",
+        "app/Http/Controllers/UserController.php:22-25",
+        "app/Http/Resources/ApprovalItemsResource.php:27-38",
+        "app/Http/Resources/ClosedItemsResource.php:27-38",
+        "app/Models/DrivingForce.php:53-66"
+      ],
+      "evidence": "UserResource accesses $this->roles[0]->display_name without checking if roles is empty. DrivingForce::pic_user() does not use withTrashed(), and ApprovalItemsResource/ClosedItemsResource access $this->pic_user->name without null-safe ?->.",
+      "failure_or_attack_scenario": "1. Any user created without a role (e.g. via /register) crashes GET /user-management/fetch-data (HTTP 500) for developer users. 2. Soft-deleting a user who is PIC on any driving force crashes GET /approval-items/fetch-data and GET /closed-items/fetch-data with HTTP 500.",
+      "root_cause": "Unchecked [0] index access and non-null-safe property chains on relations to soft-deletable models.",
+      "impact": "High availability impact: persistent HTTP 500 outage on core tables after normal user deletion or registration. Likelihood: High.",
+      "validation_method": "Soft-delete a user assigned as PIC to a driving force in Approval Items, then call GET /approval-items/fetch-data -> 500 Internal Server Error.",
+      "remediation": "Add ->withTrashed() to DrivingForce user relationships, use null-safe ?-> operators across all JsonResources, and use $this->roles->first()?->display_name in UserResource and $user->hasRole(...) in UserController.",
+      "required_tests": [
+        "Feature test asserting GET /approval-items/fetch-data and /closed-items/fetch-data return 200 OK when PIC user is soft-deleted.",
+        "Feature test asserting GET /user-management/fetch-data returns 200 OK for developer when a user has no roles."
+      ]
+    },
+    {
+      "id": "SEC-003",
+      "category": "Security",
+      "subcategory": "Broken Object Level Authorization (BOLA) & Workflow State",
+      "title": "Missing Object Ownership Check on Source Extraction Polling & Missing Lifecycle Stage Preconditions on Rating/Horizon/Status Controllers",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 1",
+      "effort": "S",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/SignalIngestionController.php:143-145",
+        "app/Http/Controllers/TimeHorizonController.php:55-80",
+        "app/Http/Controllers/RatingUrgencyController.php:48-75",
+        "app/Http/Controllers/StatusActionController.php:56-104"
+      ],
+      "evidence": "SignalIngestionController::extraction(Source $source) returns extraction status without checking $source->created_by === auth()->id(). TimeHorizonController::update, RatingUrgencyController::update, and StatusActionController::update mutate ratings without checking if $driving_force->status === 'CLOSED'.",
+      "failure_or_attack_scenario": "Users can poll extraction status of other analysts' sources and mutate time horizon, urgency ratings, or status actions on already-CLOSED driving forces.",
+      "root_cause": "Missing object ownership check in SignalIngestionController::extraction() and missing status precondition guards in stage controllers.",
+      "impact": "Medium authorization and workflow integrity risk. Likelihood: Medium.",
+      "validation_method": "Send PATCH /rating-urgency/{uuid} for a CLOSED driving force and observe 200 OK instead of 409/422.",
+      "remediation": "Enforce creator/admin check in SignalIngestionController::extraction() and reject mutations on CLOSED driving forces in TimeHorizonController, RatingUrgencyController, and StatusActionController.",
+      "required_tests": [
+        "Feature test asserting 403 when polling another user's source extraction status.",
+        "Feature test asserting 409/422 when updating rating/horizon/status-action of a CLOSED driving force."
+      ]
+    },
+    {
+      "id": "SEC-004",
+      "category": "Security",
+      "subcategory": "Authentication & Access Control",
+      "title": "Unrestricted Public Account Self-Registration Enabled by Default (GET/POST /register)",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 0",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "routes/auth.php:15-18",
+        "app/Http/Controllers/Auth/RegisteredUserController.php:31-51",
+        "app/Http/Middleware/HandleInertiaRequests.php:39"
+      ],
+      "evidence": "routes/auth.php exposes GET/POST /register to guests without rate limiting, and RegisteredUserController does not enforce config('auth.allow_registration', false).",
+      "failure_or_attack_scenario": "Anonymous users can register accounts in the executive intelligence platform, polluting the users table with roleless accounts that crash User Management (see REL-002).",
+      "root_cause": "Default Laravel Breeze registration routes left enabled without a server-side config gate.",
+      "impact": "Medium security and availability impact. Likelihood: High if internet-accessible.",
+      "validation_method": "POST /register as an unauthenticated guest user.",
+      "remediation": "Default auth.allow_registration to false, enforce abort_unless(config('auth.allow_registration'), 403) in RegisteredUserController, and add throttle:6,1 to POST /register.",
+      "required_tests": [
+        "Feature test asserting GET /register and POST /register return 403 when auth.allow_registration is false."
+      ]
+    },
+    {
+      "id": "SEC-005",
+      "category": "Security",
+      "subcategory": "RBAC Integrity",
+      "title": "Direct Role-to-User Permission Duplication (syncPermissions) Prevents Role-Based Permission Revocation",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 1",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/UserController.php:67-69",
+        "app/Http/Controllers/UserController.php:100-102",
+        "database/seeders/UserSeeder.php:109-113"
+      ],
+      "evidence": "UserController calls both $user->syncRoles($get_role->name) and $user->syncPermissions($get_role->permissions), copying all role permissions into model_has_permissions.",
+      "failure_or_attack_scenario": "When a permission is later revoked from a Role, existing users retain that permission permanently via direct assignment in model_has_permissions.",
+      "root_cause": "Redundant syncPermissions() call alongside syncRoles().",
+      "impact": "Medium privilege-persistence risk. Likelihood: Confirmed.",
+      "validation_method": "Inspect model_has_permissions after creating a user via POST /user-management/user.",
+      "remediation": "Remove $user->syncPermissions($get_role->permissions) in UserController and rely on Spatie role inheritance ($user->getAllPermissions()).",
+      "required_tests": [
+        "Feature test verifying user creation/update assigns roles without duplicating direct permissions."
+      ]
+    },
+    {
+      "id": "PERF-004",
+      "category": "Performance",
+      "subcategory": "Backend Query Deduplication",
+      "title": "Redundant Queries & Duplicate Rating/Dimension Hydrations in ReasoningEngineService::getExecutiveOverview",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 3",
+      "effort": "S",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Services/ReasoningEngineService.php:57-115",
+        "app/Services/ReasoningEngineService.php:363",
+        "app/Services/ReasoningEngineService.php:439",
+        "app/Services/ReasoningEngineService.php:477",
+        "app/Services/RatingHistoryAnalyticsService.php:38",
+        "app/Services/RatingHistoryAnalyticsService.php:66",
+        "app/Services/RatingHistoryAnalyticsService.php:97"
+      ],
+      "evidence": "A single call to getExecutiveOverview() queries Dimension::orderBy('id')->get() 3 times and queries driving_force_ratings / driving_forces 4 times for the same filter parameters.",
+      "failure_or_attack_scenario": "Every filter change or simulation request on /dashboard executes 5+ duplicate SQL queries.",
+      "root_cause": "Sub-methods re-query Dimension and DrivingForceRating instead of reusing already-loaded collections.",
+      "impact": "Medium backend latency overhead on Dashboard overview and simulation. Likelihood: Confirmed.",
+      "validation_method": "Run DB::enableQueryLog() around ReasoningEngineService::getExecutiveOverview() and count duplicate SELECT queries.",
+      "remediation": "Pass the pre-loaded $dimensions and $ratings collections into EDA and history analytics methods.",
+      "required_tests": [
+        "Unit test asserting ReasoningEngineService::getExecutiveOverview() query count reduction and output parity."
+      ]
+    },
+    {
+      "id": "PERF-005",
+      "category": "Performance",
+      "subcategory": "Frontend Bundle & Code Splitting",
+      "title": "Eager Top-Level Bundling of xlsx (288 kB) in OverallStatus.jsx and Static Tab Imports in Dashboard.jsx",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 2",
+      "effort": "S",
+      "dependencies": ["SEC-002"],
+      "affected_locations": [
+        "resources/js/Components/OverallStatus.jsx:5",
+        "resources/js/Pages/Dashboard.jsx:10-16",
+        "vite.config.js:16-29"
+      ],
+      "evidence": "Vite build output shows OverallStatus-DBtUkMVi.js is 288.26 kB (97.62 kB gzip) due to top-level 'import * as XLSX from \"xlsx\"', and Dashboard.jsx statically imports all 5 tab views.",
+      "failure_or_attack_scenario": "Users visiting /dashboard download and parse 288 kB of spreadsheet code and all chart tabs even when only viewing the Overview tab.",
+      "root_cause": "Static top-level import of xlsx and non-default Dashboard tab components.",
+      "impact": "Medium frontend initial load and parse overhead. Likelihood: Confirmed.",
+      "validation_method": "Inspect 'npm run build' chunk sizes.",
+      "remediation": "Lazy-load spreadsheet export on click (await import(...)) and wrap non-default Dashboard tabs in React.lazy + Suspense.",
+      "required_tests": [
+        "Build check confirming OverallStatus chunk is < 15 kB and Playwright smoke test passes."
+      ]
+    },
+    {
+      "id": "PERF-006",
+      "category": "Performance",
+      "subcategory": "Database Indexing & Search",
+      "title": "Unindexed Leading-Wildcard LIKE '%...%' and TEXT Column Scans on signals and driving_forces",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 3",
+      "effort": "M",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/SignalIngestionController.php:93-95",
+        "app/Services/DrivingForceService.php:94-95",
+        "app/Services/DrivingForceService.php:132-133",
+        "app/Services/DrivingForceService.php:165-166",
+        "app/Services/DrivingForceService.php:202-203",
+        "app/Services/DrivingForceService.php:261-262",
+        "app/Services/DrivingForceService.php:296-297"
+      ],
+      "evidence": "SignalIngestionController uses LIKE '%'.$search.'%' on title, summary (TEXT), and evidence_quote (TEXT). DrivingForceService uses orWhere('description', 'LIKE', $search.'%') on an unindexed TEXT column.",
+      "failure_or_attack_scenario": "Searching in any table forces MySQL to scan unindexed TEXT columns across all rows matching the date filter.",
+      "root_cause": "Lack of MySQL FULLTEXT indexes on multi-column text search predicates.",
+      "impact": "Medium database CPU/IO degradation as row counts grow. Likelihood: Medium.",
+      "validation_method": "Run EXPLAIN on DrivingForceService search query in MySQL 8.0.",
+      "remediation": "Add MySQL FULLTEXT indexes on driving_forces(keyword, description) and signals(title, summary, evidence_quote) with fallback for non-MySQL test drivers.",
+      "required_tests": [
+        "Feature tests verifying search filter accuracy on /driving-force/fetch-data and /signals/fetch."
+      ]
+    },
+    {
+      "id": "REL-003",
+      "category": "Reliability",
+      "subcategory": "Concurrency & Idempotency",
+      "title": "Race Condition in SignalIngestionController::review Due to Pre-Transaction Status Check Without Row Lock",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 1",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/SignalIngestionController.php:156-163"
+      ],
+      "evidence": "$signal->review_status !== 'PENDING' is checked on line 156 outside DB::transaction() without lockForUpdate().",
+      "failure_or_attack_scenario": "Concurrent 'accept_create' requests for the same pending signal both pass the check on line 156 and create duplicate DrivingForce records.",
+      "root_cause": "Status precondition check executed before transaction and without SELECT ... FOR UPDATE row lock.",
+      "impact": "Medium data integrity risk (duplicate driving forces). Likelihood: Medium.",
+      "validation_method": "Inspect SignalIngestionController.php:156-163.",
+      "remediation": "Lock the signal row inside DB::transaction() via Signal::whereKey($signal->id)->lockForUpdate()->firstOrFail() before checking review_status.",
+      "required_tests": [
+        "Feature test verifying signal review locks the row and rejects duplicate review attempts with 422."
+      ]
+    },
+    {
+      "id": "REL-004",
+      "category": "Reliability",
+      "subcategory": "Concurrency & Background Jobs",
+      "title": "Non-Atomic firstOrNew + save in CrossImpactService::score and Double failed() Invocation in ExtractSignals Queue Job",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 1",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Services/CrossImpactService.php:80-107",
+        "app/Jobs/ExtractSignals.php:53-69"
+      ],
+      "evidence": "CrossImpactService::score() uses CrossImpact::firstOrNew($keys) and $impact->save() without a transaction or updateOrCreate. ExtractSignals::handle() catches Throwable $e, calls $this->failed($e), and re-throws $e (causing the queue worker to invoke failed($e) a second time).",
+      "failure_or_attack_scenario": "Concurrent scoring of a new cross-impact cell throws a unique constraint violation (HTTP 500), and failed ExtractSignals jobs log duplicate errors and write status updates twice.",
+      "root_cause": "Non-atomic upsert pattern and redundant manual call to $this->failed($e) before re-throwing.",
+      "impact": "Medium reliability and logging accuracy impact. Likelihood: Medium.",
+      "validation_method": "Inspect CrossImpactService.php:95-104 and ExtractSignals.php:53-58.",
+      "remediation": "Wrap CrossImpactService::score() in DB::transaction() and implement ShouldBeUnique on ExtractSignals without double-invoking failed().",
+      "required_tests": [
+        "Unit tests for CrossImpactService::score() and ExtractSignals failure handling."
+      ]
+    },
+    {
+      "id": "REL-005",
+      "category": "Robustness",
+      "subcategory": "Data Export & Streaming",
+      "title": "RegisteredListController::export_data Breaks Dimension Sorting/Row-Merging via lazy(100) and Cannot Catch Mid-Stream Exceptions",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "phase": "Phase 2",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/RegisteredListController.php:68-96",
+        "app/Services/ForesightReportingService.php:167-174",
+        "resources/js/Components/OverallStatus.jsx:91-102"
+      ],
+      "evidence": "RegisteredListController::export_data() iterates over $query->lazy(100), which uses chunkById() and overrides the query's custom ORDER BY Dimension.name with ORDER BY driving_force_ratings.id ASC.",
+      "failure_or_attack_scenario": "Exported Registered List Excel workbooks fail to group rows by Dimension, breaking vertical Dimension cell merges in OverallStatus.jsx.",
+      "root_cause": "Using Eloquent lazy(100) (chunkById) on a query requiring custom non-ID ordering.",
+      "impact": "Medium functional correctness bug in Excel exports. Likelihood: Confirmed.",
+      "validation_method": "Call GET /visualization/registered-list/export-data with out-of-order dimensions and observe rows ordered by ID instead of Dimension name.",
+      "remediation": "Replace $query->lazy(100) with $query->limit(2000)->get() (or cursor()) before building the response.",
+      "required_tests": [
+        "Feature test asserting GET /visualization/registered-list/export-data returns rows sorted by dimension name."
+      ]
+    },
+    {
+      "id": "SEC-006",
+      "category": "Security",
+      "subcategory": "Input Sanitization & Export",
+      "title": "Spreadsheet Formula Injection (CSV/XLSX DDE) Risk in Client-Side Registered List Export",
+      "severity": "Low",
+      "confidence": "Confirmed",
+      "phase": "Phase 2",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "resources/js/Components/OverallStatus.jsx:74-107"
+      ],
+      "evidence": "exportWorkbook() passes record.keyword and record.description directly to XLSX.utils.json_to_sheet() without escaping leading '=', '+', '-', or '@' characters.",
+      "failure_or_attack_scenario": "A driving force created from an external signal starting with '=HYPERLINK(...)' or '=CMD|...' is written as an active formula in the exported .xlsx file.",
+      "root_cause": "Missing spreadsheet formula character neutralization on exported text fields.",
+      "impact": "Low client-side spreadsheet formula injection risk. Likelihood: Low.",
+      "validation_method": "Inspect OverallStatus.jsx:74-90.",
+      "remediation": "Prefix string values matching /^[=+\\-@\\t\\r]/ with a leading single quote (') before generating worksheet rows.",
+      "required_tests": [
+        "Unit test verifying formula-prefixed strings are escaped during export row formatting."
+      ]
+    },
+    {
+      "id": "SEC-007",
+      "category": "Security",
+      "subcategory": "API Rate Limiting & Data Minimization",
+      "title": "Missing Rate Limiting on Core CRUD/Fetch Endpoints & Over-Serialization of auth.user in Inertia Shared Props",
+      "severity": "Low",
+      "confidence": "Confirmed",
+      "phase": "Phase 3",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "routes/web.php:73-155",
+        "app/Http/Middleware/HandleInertiaRequests.php:35-53"
+      ],
+      "evidence": "routes/web.php omits throttle middleware on /driving-force/*, /signals/fetch, /approval-items/*, and /user-management/*. HandleInertiaRequests serializes the entire $user model with loaded roles and permissions relations into props.auth.user.",
+      "failure_or_attack_scenario": "Unthrottled polling/scraping on CRUD endpoints and unnecessary exposure of internal user primary keys and Spatie pivot metadata in Inertia page props.",
+      "root_cause": "Selective route throttling and passing raw $user model to Inertia share().",
+      "impact": "Low security hardening gap. Likelihood: Low.",
+      "validation_method": "Inspect routes/web.php and HandleInertiaRequests.php.",
+      "remediation": "Add baseline throttle:120,1 to authenticated routes and serialize only $user->only(['id', 'uuid', 'name', 'email']) in HandleInertiaRequests.",
+      "required_tests": [
+        "Feature test verifying Inertia shared auth.user payload minimization."
+      ]
+    },
+    {
+      "id": "PERF-007",
+      "category": "Performance",
+      "subcategory": "Reference Data Caching",
+      "title": "Uncached Static Reference Tables (dimensions, priorities, time_horizons, status_actions) Queried Repeatedly on Every Page & API Request",
+      "severity": "Low",
+      "confidence": "Confirmed",
+      "phase": "Phase 3",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/RegisteredListController.php:22-45",
+        "app/Http/Controllers/DrivingForceController.php:24-38",
+        "app/Http/Controllers/SignalIngestionController.php:40-66",
+        "app/Services/Extraction/LlmSignalExtractor.php:35-36"
+      ],
+      "evidence": "Static lookup tables (14 rows total) are queried via Model::all() on every Inertia page load and LLM extraction call without caching.",
+      "failure_or_attack_scenario": "Up to 4 repetitive SQL queries executed on every page navigation.",
+      "root_cause": "Lack of Cache::remember() wrapper for immutable seed tables.",
+      "impact": "Low database query overhead. Likelihood: Confirmed.",
+      "validation_method": "Inspect RegisteredListController::index().",
+      "remediation": "Cache static lookup tables via Cache::remember('lookup.*', 3600, ...).",
+      "required_tests": [
+        "Unit test verifying cached lookup data matches database rows."
+      ]
+    },
+    {
+      "id": "REL-006",
+      "category": "Maintainability",
+      "subcategory": "API Error Contract Consistency",
+      "title": "Split API Error Response Envelopes Across Controllers ({\"errors\": \"...\"} vs {\"statusCode\": 500, \"message\": \"...\"})",
+      "severity": "Low",
+      "confidence": "Confirmed",
+      "phase": "Phase 3",
+      "effort": "XS",
+      "dependencies": [],
+      "affected_locations": [
+        "app/Http/Controllers/Concerns/HandlesApiErrors.php:14-56",
+        "app/Http/Controllers/ApprovalController.php:44",
+        "app/Http/Controllers/ClosedItemsController.php:47",
+        "app/Http/Controllers/DrivingForceController.php:55",
+        "app/Http/Controllers/RatingUrgencyController.php:43",
+        "app/Http/Controllers/SignalIngestionController.php:115",
+        "app/Http/Controllers/StatusActionController.php:51",
+        "app/Http/Controllers/TimeHorizonController.php:50",
+        "app/Http/Controllers/UserController.php:49"
+      ],
+      "evidence": "8 controller endpoints return response()->json(['errors' => $error['message']], 500), while 6 controllers call $this->errorJsonResponse(...) returning {'statusCode': 500, 'message': '...'}.",
+      "failure_or_attack_scenario": "Frontend hooks reading error.response?.data?.message fail to display the server error message when one of the 8 legacy endpoints returns {'errors': '...'}.",
+      "root_cause": "Partial migration to HandlesApiErrors::errorJsonResponse().",
+      "impact": "Low maintainability and UX error-reporting inconsistency. Likelihood: Confirmed on 500 errors.",
+      "validation_method": "Compare ApprovalController::fetch_data() catch block with RegisteredListController::registered_list().",
+      "remediation": "Standardize all controllers on $this->errorJsonResponse() and include both 'message' and 'errors' keys in HandlesApiErrors::errorJsonResponse() for full backward compatibility.",
+      "required_tests": [
+        "Feature test verifying 500 error responses include statusCode, message, and errors keys."
+      ]
+    }
+  ]
+}

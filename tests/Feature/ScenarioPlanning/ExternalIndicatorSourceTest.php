@@ -324,6 +324,50 @@ class ExternalIndicatorSourceTest extends TestCase
         $this->assertSame(1, IndicatorObservation::count());
     }
 
+    private function pendingFetch(EarlyWarningIndicator $indicator, string $status, \DateTimeInterface $since): void
+    {
+        $indicator->forceFill(['fetch_status' => $status, 'updated_at' => $since])->saveQuietly();
+    }
+
+    public function test_a_fetch_left_pending_by_a_lost_job_can_be_requested_again(): void
+    {
+        Http::fake(['api.worldbank.org/*' => Http::response($this->worldBank([2024 => 2.3]))]);
+        $this->readyFramework();
+        $this->storeIndicator($this->external())->assertSessionHasNoErrors();
+        $indicator = EarlyWarningIndicator::sole();
+
+        foreach (['queued' => now()->subMinutes(20), 'processing' => now()->subMinutes(5)] as $status => $since) {
+            $this->pendingFetch($indicator, $status, $since);
+
+            // The page reports the lost fetch as failed, with a reason, so the button comes back.
+            $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+                ->assertInertia(fn ($page) => $page
+                    ->where('indicators.0.fetch_status', 'failed')
+                    ->where('indicators.0.fetch_error', fn ($error) => str_contains((string) $error, 'Coba lagi')));
+
+            $this->pendingFetch($indicator, $status, $since);
+            $this->fetch($indicator)->assertSessionHasNoErrors();
+            $this->assertSame('completed', $indicator->fresh()->fetch_status, $status);
+        }
+        $this->assertSame(1, IndicatorObservation::count());
+    }
+
+    public function test_a_fetch_that_is_still_pending_is_not_queued_twice(): void
+    {
+        Http::fake();
+        $this->readyFramework();
+        $this->storeIndicator($this->external())->assertSessionHasNoErrors();
+        $indicator = EarlyWarningIndicator::sole();
+        $this->pendingFetch($indicator, 'queued', now()->subMinute());
+
+        $this->fetch($indicator)->assertSessionHasNoErrors();
+
+        $this->assertSame('queued', $indicator->fresh()->fetch_status);
+        Http::assertNothingSent();
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+            ->assertInertia(fn ($page) => $page->where('indicators.0.fetch_status', 'queued'));
+    }
+
     public function test_the_daily_command_fetches_every_active_external_indicator(): void
     {
         Http::fake(['api.worldbank.org/*' => Http::response($this->worldBank([2024 => 2.3]))]);

@@ -82,8 +82,8 @@ export default function Conditions({ auth, title, project, steps, framework, qua
                             Kerangka skenario
                         </Link>
                         {ready && (
-                            <Link href={route("scenario-planning.implications.index", project.id)} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                                Peluang dan tantangan
+                            <Link href={route("scenario-planning.narratives.index", project.id)} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                                Narasi skenario
                                 <ArrowRightIcon aria-hidden="true" className="size-4" />
                             </Link>
                         )}

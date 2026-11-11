@@ -1,16 +1,38 @@
 # Project Progress — Foresight Radar
 
-## Current Verified State
+## Current Verified State (updated 2026-11-11)
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
-- **Current branch:** `development` (audit run on `claude/tenant-isolation-audit-791e36` @ `3d25019`, tree identical to `ff8502d`)
-- **Last reviewed commit:** `3d25019`
-- **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
-- **Current objective:** Tenant isolation & invitation audit remediation complete (2026-10-30); next: scenario planning roadmap. The audit's original verdict (NOT READY, 2026-10-26) is superseded by the remediation table in `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`.
-- **Current blocker:** None. Every numbered tenant/invitation finding is fixed and covered by tests (TENANT-001..010, INVITE-001..009, UX-001), all uncommitted. Not done: Playwright smoke for the members page (UX-001 checklist), audit log for membership changes (P3), MySQL row-lock behaviour (tests run on SQLite).
-- **Highest-priority next task:** User review and commit of R1.12, R0.6 and R3.3 plus the session 38–41 records; all P0/P1 roadmap items are done. Next small items: R2.9 (response assumptions linked to conditions), R3.4 (mark superseded product docs). Step 6 still lives on `/scenarios`. R0.4 uses the default answers to Pak Jaka's questions 3–5.
-- **Scenario planning blueprint (2026-10-30):** Methodology alignment audit against `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` complete (docs only). Overall alignment partial: steps 2, 3, 4, 6 usable; 1, 5, 8 missing; 7, 9 minimal. First product slice after tenant work: roadmap R0.3 (taxonomy), then R0.1 → R0.2 → R0.4 → R0.5 (`docs/product/SCENARIO_PLANNING_DEVELOPMENT_ROADMAP.md`).
+- **Current branch:** `development`
+- **Last reviewed commit:** `1a89e0c` (per-organisation dimensions, FIRM / Key Focal Issue report scope, AI-only ingestion). PR #16 appears merged into `main` (`ea80d76`).
+- **Baseline verification on `1a89e0c` (2026-11-11):**
+  - Pint PASS (463 files).
+  - Larastan L5: no errors.
+  - PHPUnit 583 passed (6,678 assertions, 823.60s).
+  - `npm run build` PASS.
+  - Dev DB has 38 users.
+  - `npm audit` not re-run today.
+  - Browser e2e not run (agentic runner).
+- **Current objective:** the staged audit and remediation toward one connected Step 1→9 exercise. The audit is in `docs/audit/2026-11-11/`, starting with `README.md`; the units are in `remediation-backlog.md`.
+- **Done:**
+  - U1: docs tracked in git, audit written, AGENTS.md corrected, broken `/register` e2e specs rewritten.
+  - U2: lost QUEUED/PROCESSING sources and indicator fetches become retryable; atomic job claims; dimension migration hardened (`down()` refuses lossy merges); dimension delete locks the row.
+- **Remaining units:**
+  - U3: Step 6 inside the exercise.
+  - U4: threshold engine.
+  - U5: explainable relevance.
+  - U6: propagation into Steps 7–9.
+  - U7: end-to-end journeys.
+- **Current blocker:** none. The user reviews and commits each unit.
+- **Known issues:**
+  - Step 6 still lives on `/scenarios`.
+  - The client asserts threshold crossings.
+  - Relevance is a raw count.
+  - Upstream changes do not reach Steps 7–9.
+  - typecheck covers no JSX and there is no ESLint.
+  - There is no Step 1→9 test.
+- **Production:** an AI provider must be configured per organisation before ingest works there. Deploy the dimension migration only with the procedure in `docs/audit/2026-11-11/tenant-isolation-data-integrity.md` (backup, staging run, cross-tenant checks).
+- **Highest-priority next task:** U3 (Step 6 Narrative Studio inside the exercise).
 
 ---
 
@@ -423,6 +445,9 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-11 (uncommitted) | Audit U2: stale job states, atomic claims, migration safety, dimension delete lock | **PASS (targeted)** | 8 new extraction tests run red first (7 failed), then `SignalExtractionRecoveryTest` + `LlmSignalExtractionTest` + `tests/Feature/Taxonomy` (incl. new `DimensionMigrationSafetyTest`, 5) + `ExternalIndicatorSourceTest` (2 new) + `DimensionSettingsTest`: **62 passed (538 assertions, 169.45s)**. The indicator and migration tests were written together with the fix and not seen red. Pint PASS (107 files); Larastan on the changed files: 1 finding fixed, rerun no errors; affected tests rerun after that fix: 22 passed. Dev DB 38 users, no pending sources or fetches. Browser: `/signals` and an exercise's indicator page load (Inertia props carry the fetch state; `/signals/extractions/active` 200). Not run: full PHPUnit suite, `npm run build` (no frontend change), a full `down()` with schema changes, MySQL row-lock behaviour |
+| 2026-11-11 (uncommitted) | Audit U1: docs tracked, audit deliverables, harness corrections | **PASS (docs only)** | No PHP/JSX changed, so PHPUnit and build not re-run for U1. `git check-ignore` confirms the deck, PDFs and screenshots under `docs/` stay ignored; 74 Markdown/JSON + 1 HTML + 1 CSS become trackable; secret pattern scan of `docs/**/*.md\|json` found nothing. `tests/e2e/auth.e2e.ts` and `accessibility-labels.e2e.ts` rewritten from the missing `/register` to `/forgot-password`, **not executed** (agentic e2e runner) |
+| 2026-11-11 (`1a89e0c`) | Audit baseline before U1 | **PASS** | Pint 463 files PASS; Larastan L5 full analysis no errors; PHPUnit 583 passed (6,678 assertions, 823.60s); dev DB 38 users |
 | 2026-11-11 (uncommitted) | Report scope: FIRM or Key Focal Issue (plan Part A) | **PASS** | `ReportScopeTest` red first (6 failed), then 7 passed (138 assertions); Pint PASS on 8 files; Larastan L5 `[OK] No errors` on the 7 changed PHP files; `ReportScopeTest` + `ForesightReportingServiceTest` + `RatingDataChainTest` + `VisualizationAuthorizationTest` + `DateRangeValidationTest` + `InformationDisclosureTest` + `PhaseOneRemediationTest` + `PhaseTwoThreeRemediationTest` + `WorkspaceTest` 32 passed (437 assertions); dev DB still 38 users; `npm run build` PASS (2m 57s, then rebuilt after the tracker fix); full suite not run; local browser check done |
 | 2026-11-11 (uncommitted) | AI-only ingestion of external sources | **PASS** | New tests red first (4 failed), then green; Pint PASS; Larastan L5 `[OK] No errors` on `SignalExtractionService`, `SignalIngestionController`, `ExtractSignals`; `LlmSignalExtractionTest` + `SignalIngestionTest` + `SignalExtractionRecoveryTest` + `OpenAiCompatibleClientTest` + `RateLimitingTest` + `SignalClassificationTest` + `PromptComplianceTest` + `SignalExtractionBenchmarkTest`: 75 passed, 1 failed (the benchmark test asserting the old keyword fallback), updated, then `SignalExtractionBenchmarkTest` 4 passed; dev DB still 38 users; `npm run build` PASS (3m 46s); full suite not run; local browser check done (retry not clicked) |
 | 2026-11-11 (uncommitted) | Matrix row 4.7 pole validation and AI pole critique | **PASS** | New tests red first (3 failed), then 3 passed (68 assertions); Pint PASS on 8 files (import order fixed in the test); Larastan L5 `[OK] No errors` on the 7 changed PHP files; `ScenarioFrameworkTest` + `CriticalUncertaintyTest` + `Llm/ScenarioTest` + `ScenarioHarnessTest` + `PromptComplianceTest` 70 passed (653 assertions, 718.28s); dev DB still 38 users; `npm run build` PASS (2m 3s); full PHPUnit 563 passed (6,356 assertions, 980.92s), dev DB still 38 users; local browser: page renders, critique and warning not seen (local framework is approved) |
@@ -479,6 +504,62 @@
 ---
 
 ## Session Log
+
+### 2026-11-11 — Session 75 (audit unit U2: stale job states and migration safety)
+
+- **Scope:** AUD-09, AUD-10, AUD-11, AUD-12 from `docs/audit/2026-11-11/technical-audit.md`.
+- **Stale job states (AUD-09):** new `App\Support\StaleJob`. QUEUED is lost after `queue.stale_queued_after` (900 s, env `QUEUE_STALE_QUEUED_AFTER`); PROCESSING only after the job timeout + 60 s, so a job still allowed to run is never shown failed.
+  - `SignalExtractionService::progress()` marks a lost source FAILED with a reason, by a conditional update (a job that claimed it meanwhile wins). `retry()` accepts FAILED or lost and releases the old job's unique lock before dispatching.
+  - `ExternalIndicatorService::fetchState()` (used by the indicator register) shows a lost fetch as failed; `queue()` re-queues it.
+- **Atomic claims (AUD-10):** `extract()` and `FetchIndicatorSource` move QUEUED→PROCESSING with a conditional update; a duplicate job, or one for a failed or completed row, does nothing. Both jobs set `uniqueFor`. Completion clears `extraction_error` by query (Eloquent skipped the null because it was already null in memory: found by the new test). The `failed()` handlers update by key and only while pending.
+- **Migration (AUD-11):** owner = lowest organisation not deleted; the FK swap checks the current delete rule first, so a rerun does nothing; `down()` runs `downBlockers()` first and stops before any change unless every organisation's taxonomy equals the owner's.
+- **Dimension delete (AUD-12):** transaction + `lockForUpdate` on the dimension row before counting usage.
+- **Changed wording:** the extraction failure messages now say "coba lagi dari halaman Sinyal" (retry exists since Session 71); one assertion in `LlmSignalExtractionTest` updated.
+- **Verified after the Larastan fix:** Larastan on `SignalExtractionService` and `DimensionService`: no errors; `SignalExtractionRecoveryTest` + `DimensionMigrationSafetyTest` + `DimensionSettingsTest`: 22 passed (124 assertions, 125.15s).
+- **Not done / not verified:** full PHPUnit suite; a full `down()` that changes the schema; row-lock behaviour on MySQL (the tests use SQLite).
+
+### 2026-11-11 — Session 74 (comprehensive audit, unit U1: audit deliverables and harness truth)
+
+- **Request:** a comprehensive product, methodology, architecture and engineering audit with remediation. The work is staged: no large refactors. The goal is one organisation completing one exercise from Step 1 to Step 9 with connected data, evidence, approval and monitoring.
+- **User decisions:**
+  - Track `docs/` in git (binaries stay local).
+  - Keep `/scenarios` but hide it from the sidebar after Step 6 moves into the exercise.
+  - Thresholds as a structured operator + value, evaluated server-side.
+  - Stop after each unit for review and commit.
+- **Phase 0 discovery:**
+  - Branch `development` is clean at `1a89e0c`; PR #16 appears merged into `main` (`ea80d76`).
+  - Baseline: Pint, Larastan and PHPUnit 583 passed.
+  - Three read-only reviews: methodology Findings A–E; tenant isolation and data integrity; product gaps and the harness.
+- **Findings:**
+  - A (Step 6) not resolved.
+  - B (threshold) not resolved.
+  - C (relevance) partial.
+  - D (harness) resolved in this unit, except typecheck and lint.
+  - E (chain) partial.
+  - No P0 in tenant isolation.
+  - P1: QUEUED states can stick; the dimension migration's `down()` is unsafe.
+  - The full list with evidence is in `docs/audit/2026-11-11/technical-audit.md` (AUD-01..26).
+- **U1 changes (documentation and harness only):**
+  - `.gitignore` tracks `docs/` but ignores `*.pdf`, `*.pptx` and `*.png` under it.
+  - New `docs/audit/2026-11-11/`:
+    - `README` (executive summary)
+    - `technical-audit`
+    - `methodology-alignment`
+    - `tenant-isolation-data-integrity` (with the migration risk assessment and safe deployment procedure)
+    - `feature-gap-matrix`
+    - `remediation-backlog` (U1–U7 and the P2/P3 backlog)
+    - `test-verification-report`
+  - AGENTS.md corrected:
+    - JavaScript/JSX, not TypeScript; the agentic `e2e` runner, not Playwright; Laravel 11 / React 19.
+    - Queue and cache drivers; the service and job inventory; domain concepts (tenancy, dimensions, firm vs exercise, gates, staleness, signals vs forces).
+    - What `verify.sh` runs; reload and testing practice; the 150-line rule stated honestly.
+  - PROGRESS header refreshed.
+  - `feature_list.json` 1.2.0 with `last_updated` 2026-11-11 and a note on what "passing" means.
+  - Two e2e specs moved from the missing `/register` (accounts are by invitation) to `/forgot-password`.
+- **Not run:**
+  - Browser e2e (agentic runner, needs a model and credentials).
+  - `npm audit`.
+- **Next recommended action:** U2 (stale QUEUED states, atomic extraction claim, migration safety, dimension delete race).
 
 ### 2026-11-11 — Session 73 (plan Part B: per-organisation dimensions; Dashboard scope)
 

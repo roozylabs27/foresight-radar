@@ -1,19 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": "Foresight Radar",
-  "version": "1.1.0",
-  "last_updated": "2026-10-26",
+  "version": "1.2.0",
+  "last_updated": "2026-11-11",
   "status_vocabulary": [
     "not_started",
     "in_progress",
     "blocked",
     "passing"
   ],
+  "status_note": "'passing' means implemented and covered by the recorded automated tests (PHPUnit) plus, where stated, a local browser check. It does not mean browser e2e coverage (none of the scenario planning features have it) or production verification. Known gaps per feature are in docs/audit/2026-11-11/feature-gap-matrix.md; open work is in docs/audit/2026-11-11/remediation-backlog.md.",
   "features": [
     {
       "id": "FEAT-001",
       "name": "Authentication & RBAC Gatekeeper",
-      "description": "User registration, password authentication, session lifecycle, authorization policies, and Spatie permission resolution across all routes.",
+      "description": "Invitation-based accounts (no self-registration), password authentication, session lifecycle, authorization policies, and Spatie permission resolution across all routes.",
       "priority": "P0",
       "status": "passing",
       "acceptance_criteria": [
@@ -205,7 +206,7 @@
         "Analyst can accept signal and convert to new or existing driving force",
         "Offline LLM benchmark harness verifies extraction quality without paid API dependencies"
       ],
-      "verification_evidence": "Tests/Feature/SignalIngestionTest and Tests/Feature/Llm/SignalExtractionBenchmarkTest pass (20 assertions)"
+      "verification_evidence": "Tests/Feature/SignalIngestionTest and Tests/Feature/Llm/SignalExtractionBenchmarkTest pass (20 assertions) U2 2026-11-11: a source lost in QUEUED/PROCESSING becomes FAILED with a reason and retryable; atomic claim; completion clears the error; failed() never overwrites a completed source; SignalExtractionRecoveryTest 12 tests (8 new, 7 seen red) and LlmSignalExtractionTest pass."
     },
     {
       "id": "FEAT-016",
@@ -874,7 +875,7 @@
         "Each new period becomes one proposed observation with source, series reference, period and fetch time; repeated fetches add no duplicates",
         "Fetched values count only after a person confirms them; a failed fetch is recorded on the indicator"
       ],
-      "verification_evidence": "2026-11-10: ExternalIndicatorSourceTest 4 tests (Http::fake, no real API call); with EarlyWarningIndicatorTest 20 passed (476 assertions). Full PHPUnit 552 passed (6,102 assertions). Local browser check against the real World Bank API: found and fixed 502/503 on the mrv parameter (now per_page only, one retry); 20 values stored as proposals, one confirmed, a second fetch added no duplicates. ExternalIndicatorSourceTest 4 passed (98 assertions) after the fix."
+      "verification_evidence": "2026-11-10: ExternalIndicatorSourceTest 4 tests (Http::fake, no real API call); with EarlyWarningIndicatorTest 20 passed (476 assertions). Full PHPUnit 552 passed (6,102 assertions). Local browser check against the real World Bank API: found and fixed 502/503 on the mrv parameter (now per_page only, one retry); 20 values stored as proposals, one confirmed, a second fetch added no duplicates. ExternalIndicatorSourceTest 4 passed (98 assertions) after the fix. U2 2026-11-11: a fetch lost in QUEUED/PROCESSING is shown failed and can be fetched again; atomic claim; uniqueFor; 2 new tests (written with the fix, not seen red), ExternalIndicatorSourceTest 6 passed."
     },
     {
       "id": "FEAT-063",
@@ -961,7 +962,7 @@
         "Codes are generated once and never change; names are unique per organisation; a dimension or environment in use cannot be deleted (the database refuses it too)",
         "Display order follows environment order, then position; the radar draws one spoke per dimension and colours come from the chosen palette key or a stable default"
       ],
-      "verification_evidence": "2026-11-11: TenantDimensionsTest 5 tests red first (5 failed), then 5 passed; DimensionSettingsTest 5 passed (not run red: the full suite held the test database); the two tenant-security fixtures updated to use the organisation's own dimension; dev DB migrated (11 dimensions and 2 environments per organisation, no cross-organisation references, 38 users) after fixing a migration ordering bug that only appears with several organisations. Local browser: settings page lists Macro / Mezzo with usage, delete disabled when in use, added AI Policy appeared as a 12th radar spoke, then deleted again."
+      "verification_evidence": "2026-11-11: TenantDimensionsTest 5 tests red first (5 failed), then 5 passed; DimensionSettingsTest 5 passed (not run red: the full suite held the test database); the two tenant-security fixtures updated to use the organisation's own dimension; dev DB migrated (11 dimensions and 2 environments per organisation, no cross-organisation references, 38 users) after fixing a migration ordering bug that only appears with several organisations. Local browser: settings page lists Macro / Mezzo with usage, delete disabled when in use, added AI Policy appeared as a 12th radar spoke, then deleted again. U2 2026-11-11: migration owner = lowest non-deleted organisation, guarded FK swap, down() refuses lossy merges before any change; DimensionMigrationSafetyTest 5 tests (written with the fix, not seen red); delete locks the row before counting (not testable on SQLite)."
     }
   ]
 }

@@ -407,7 +407,7 @@ class LlmSignalExtractionTest extends TestCase
         $this->actingAs($this->analyst)->getJson("/signals/sources/{$source->uuid}/extraction")
             ->assertJsonPath('status', 'failed')
             ->assertJsonPath('extraction', null)
-            ->assertJsonPath('error', 'Ekstraksi sinyal gagal karena kesalahan server. Sumber tersimpan tanpa sinyal; coba ingest ulang dokumen ini.');
+            ->assertJsonPath('error', 'Ekstraksi sinyal gagal karena kesalahan server. Sumber tersimpan tanpa sinyal; coba lagi dari halaman Sinyal.');
         $this->assertSame(0, Signal::count());
     }
 

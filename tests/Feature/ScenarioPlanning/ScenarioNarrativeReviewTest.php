@@ -324,4 +324,130 @@ class ScenarioNarrativeReviewTest extends TestCase
 
         $this->actingAs($this->viewer)->postJson("/scenarios/{$this->framework()->uuid}/quadrants/{$this->quadrant('HH')->uuid}/review", ['status' => 'approved'])->assertForbidden();
     }
+
+    /* Audit 2026-11-11 U3 (AUD-01..03): Step 6 inside the exercise. */
+
+    private function studio(string $name, array $parameters = []): string
+    {
+        return route("scenario-planning.narratives.{$name}", [$this->project, ...$parameters]);
+    }
+
+    private function editQuadrant(string $position, string $narrative, ?User $user = null)
+    {
+        return $this->actingAs($user ?? $this->manager)->putJson($this->studio('quadrant', [$this->quadrant($position)]), [
+            'title' => $this->quadrant($position)->title, 'narrative' => $narrative,
+        ]);
+    }
+
+    public function test_step_six_opens_the_exercise_narrative_studio(): void
+    {
+        $this->aiNarratives();
+
+        $this->actingAs($this->manager)->get(route('scenario-planning.show', $this->project))
+            ->assertInertia(fn ($page) => $page->where('steps.5.href', $this->studio('index'))->where('steps.5.scoped', true));
+
+        $this->actingAs($this->viewer)->get($this->studio('index'))->assertOk()
+            ->assertInertia(fn ($page) => $page->component('ScenarioPlanning/Narratives')
+                ->where('canManage', false)
+                ->where('framework.id', $this->framework()->uuid)
+                ->where('framework.framework_status', 'approved')
+                ->has('framework.quadrants', 4)
+                ->where('steps.5.status', 'in_progress'));
+        $this->actingAs($this->manager)->get($this->studio('index'))->assertInertia(fn ($page) => $page->where('canManage', true));
+        $this->actingAs($this->manager)->getJson($this->studio('state'))->assertOk()->assertJsonPath('id', $this->framework()->uuid);
+    }
+
+    public function test_narratives_are_generated_edited_and_approved_inside_the_exercise(): void
+    {
+        $llm = $this->fakeLlm();
+        $this->readyFramework();
+        $this->acceptedSignal('Politic', 'Insentif TKDN diperluas');
+        $this->acceptedSignal('Technology', 'Harga baterai LFP turun');
+        $llm->respond($this->narrative());
+
+        $this->actingAs($this->manager)->postJson($this->studio('generate'))->assertStatus(202);
+        $this->assertSame('ai', $this->quadrant('HH')->origin);
+
+        $this->editQuadrant('HH', 'Narasi HH disunting tim [S1].')->assertOk()->assertJsonPath('scenario.quadrants.0.narrative', 'Narasi HH disunting tim [S1].');
+        foreach (Scenario::POSITIONS as $position) {
+            $this->actingAs($this->manager)->postJson($this->studio('review', [$this->quadrant($position)]), ['status' => 'approved'])->assertOk();
+        }
+
+        $this->actingAs($this->manager)->get(route('scenario-planning.show', $this->project))->assertInertia(fn ($page) => $page->where('steps.5.status', 'done'));
+        $this->assertSame(4, $this->project->decisions()->where('gate', 'G6')->where('action', 'approved')->count());
+    }
+
+    public function test_the_exercise_coordinator_manages_narratives_and_viewers_cannot(): void
+    {
+        $this->aiNarratives();
+        $owner = User::factory()->create();
+        $owner->givePermissionTo(['view-scenario', 'manage-scenario']);
+        $this->project->update(['owner_user_id' => $owner->id]);
+        $outsider = User::factory()->create();
+        $outsider->givePermissionTo(['view-scenario', 'manage-scenario']);
+
+        // The owner did not create the framework, yet coordinates the exercise.
+        $this->editQuadrant('HH', 'Narasi pemilik latihan.', $owner)->assertOk();
+        $this->actingAs($owner)->postJson($this->studio('review', [$this->quadrant('HH')]), ['status' => 'reviewed'])->assertOk();
+        // The same rule holds on the old page for an exercise framework.
+        $this->actingAs($owner)->postJson("/scenarios/{$this->framework()->uuid}/quadrants/{$this->quadrant('HH')->uuid}/review", ['status' => 'draft'])->assertOk();
+
+        $this->editQuadrant('HH', 'Bukan koordinator.', $outsider)->assertForbidden();
+        $this->actingAs($outsider)->postJson($this->studio('generate'))->assertForbidden();
+        $this->actingAs($this->viewer)->postJson($this->studio('review', [$this->quadrant('HH')]), ['status' => 'approved'])->assertForbidden();
+        $this->actingAs($this->viewer)->postJson($this->studio('generate'))->assertForbidden();
+        $this->assertSame('Narasi pemilik latihan.', $this->quadrant('HH')->narrative);
+    }
+
+    public function test_a_quadrant_of_another_framework_is_not_found(): void
+    {
+        $this->aiNarratives();
+        $other = $this->framework()->replicate(['uuid']);
+        $other->forceFill(['uuid' => (string) Uuid::uuid4(), 'project_id' => null])->save();
+        $foreign = $this->quadrant('HH')->replicate(['uuid']);
+        $foreign->forceFill(['uuid' => (string) Uuid::uuid4(), 'scenario_id' => $other->id])->save();
+
+        $this->actingAs($this->manager)->putJson($this->studio('quadrant', [$foreign]), ['title' => $foreign->title, 'narrative' => 'x'])->assertNotFound();
+        $this->actingAs($this->manager)->postJson($this->studio('review', [$foreign]), ['status' => 'reviewed'])->assertNotFound();
+    }
+
+    public function test_the_studio_needs_an_approved_framework(): void
+    {
+        $this->approveAxes();
+        $this->createFramework();
+
+        $this->actingAs($this->manager)->get($this->studio('index'))->assertOk()
+            ->assertInertia(fn ($page) => $page->where('framework.framework_status', 'draft'));
+        $this->actingAs($this->manager)->postJson($this->studio('generate'))->assertStatus(422);
+    }
+
+    public function test_revisions_keep_the_text_an_edit_or_regeneration_replaces(): void
+    {
+        $this->aiNarratives();
+        $original = $this->quadrant('HH')->narrative;
+        $cited = $this->quadrant('HH')->cited_signal_ids;
+
+        $this->editQuadrant('HH', 'Narasi HH versi tim.')->assertOk();
+        // Saving the same text again keeps no copy.
+        $this->editQuadrant('HH', 'Narasi HH versi tim.')->assertOk();
+
+        $revisions = $this->quadrant('HH')->revisions()->get();
+        $this->assertCount(1, $revisions);
+        $this->assertSame([$original, 'edit', 'ai', $this->manager->id], [$revisions[0]->narrative, $revisions[0]->reason, $revisions[0]->origin, $revisions[0]->user_id]);
+        $this->assertSame($cited, $revisions[0]->cited_signal_ids);
+
+        $llm = $this->fakeLlm();
+        $llm->respond($this->narrative());
+        $this->actingAs($this->manager)->postJson($this->studio('generate'), ['overwrite_edited' => true])->assertStatus(202);
+
+        $this->assertSame(['edit', 'regenerate'], $this->quadrant('HH')->revisions()->oldest('id')->pluck('reason')->all());
+        $this->assertSame('Narasi HH versi tim.', $this->quadrant('HH')->revisions()->latest('id')->value('narrative'));
+        $this->assertSame(1, $this->quadrant('LL')->revisions()->count());
+
+        $this->actingAs($this->viewer)->get($this->studio('index'))
+            ->assertInertia(fn ($page) => $page->has('revisions.'.$this->quadrant('HH')->uuid, 2)
+                ->where('revisions.'.$this->quadrant('HH')->uuid.'.0.reason', 'regenerate')
+                ->where('revisions.'.$this->quadrant('HH')->uuid.'.0.narrative', 'Narasi HH versi tim.')
+                ->where('revisions.'.$this->quadrant('HH')->uuid.'.0.user', $this->manager->name));
+    }
 }

@@ -92,11 +92,18 @@ class DimensionService
     /** @throws ValidationException while forces, signals or candidates still use it */
     public function delete(Dimension $dimension): void
     {
-        $inUse = $this->usage([$dimension->id])[$dimension->id] ?? 0;
-        if ($inUse > 0) {
-            throw ValidationException::withMessages(['dimension' => "Dimensi {$dimension->name} masih dipakai {$inUse} driving force, sinyal atau kandidat. Arsipkan saja agar tidak dipakai untuk data baru."]);
-        }
-        $dimension->delete();
+        DB::transaction(function () use ($dimension) {
+            // Lock the row before counting: a new force, signal or candidate pointing at it waits for
+            // this transaction (its foreign key needs the row), so the count cannot go stale before
+            // the delete. Signals and candidates would otherwise lose their dimension silently
+            // (null on delete); driving forces keep RESTRICT as the last guard.
+            Dimension::whereKey($dimension->id)->lockForUpdate()->first();
+            $inUse = $this->usage([$dimension->id])[$dimension->id] ?? 0;
+            if ($inUse > 0) {
+                throw ValidationException::withMessages(['dimension' => "Dimensi {$dimension->name} masih dipakai {$inUse} driving force, sinyal atau kandidat. Arsipkan saja agar tidak dipakai untuk data baru."]);
+            }
+            $dimension->delete();
+        });
     }
 
     public function createEnvironment(string $name): Environment
