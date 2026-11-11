@@ -9,13 +9,14 @@ import IndicatorCard from "@/Components/ScenarioPlanning/IndicatorCard";
 import IndicatorDialog from "@/Components/ScenarioPlanning/IndicatorDialog";
 import ObservationDialog from "@/Components/ScenarioPlanning/ObservationDialog";
 import RelevancePanel from "@/Components/ScenarioPlanning/RelevancePanel";
+import SensingPanel from "@/Components/ScenarioPlanning/SensingPanel";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { useEarlyWarningIndicators } from "@/hooks/use-early-warning-indicators";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 9: early warning indicator register with expected direction per scenario (roadmap R1.9), observations and relevance (R2.3). */
-export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, signals, canRecord, relevance, indicatorStatus, indicatorError, matchStatus, matchError, errors = {} }) {
+export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, signals, canRecord, relevance, indicatorStatus, indicatorError, matchStatus, matchError, sensing = [], errors = {} }) {
     const actions = useEarlyWarningIndicators(project.id);
     const [target, setTarget] = useState(null);
     const [observing, setObserving] = useState(null);
@@ -98,6 +99,7 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                     </Link>
                 </Panel>
 
+                <div className="flex flex-col gap-4">
                 <Panel title="Indikator dari narasi" description="Indikator awal yang ditulis di narasi tiap skenario (langkah 6).">
                     {narrative.length === 0 ? (
                         <p className="m-0 text-xs text-muted-foreground">Belum ada narasi dengan indikator awal.</p>
@@ -121,6 +123,8 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                         ))
                     )}
                 </Panel>
+                <SensingPanel signals={sensing} />
+                </div>
             </main>
 
             <IndicatorDialog

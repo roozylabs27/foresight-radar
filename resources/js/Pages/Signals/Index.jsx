@@ -15,6 +15,7 @@ import {
     ShieldAlertIcon,
     ShieldCheckIcon,
     SlidersHorizontalIcon,
+    TagIcon,
     ZapIcon,
 } from "lucide-react";
 
@@ -48,6 +49,8 @@ import { cn } from "@/lib/utils";
 import IngestForm from "./IngestForm";
 import ReviewForm, { REVIEW_ACTIONS } from "./ReviewForm";
 import SignalCitations from "@/Components/Signals/SignalCitations";
+import ClassifyDialog, { SensingBadges } from "@/Components/Signals/SignalClassification";
+import { SENSING_FILTERS } from "@/domain/signals";
 
 const REVIEW_FORM_ID = "signal-review-form";
 
@@ -203,6 +206,7 @@ function SignalCell({ signal }) {
     return (
         <div className="flex min-w-[260px] flex-col gap-1.5">
             <span className="text-sm font-semibold text-foreground">{signal.title}</span>
+            <SensingBadges signal={signal} />
             {signal.summary && <p className="m-0 line-clamp-2 text-xs text-muted-foreground">{signal.summary}</p>}
             {signal.evidence_quote && (
                 <blockquote className="m-0 border-0 border-l-[3px] border-solid border-primary bg-muted/60 px-2.5 py-1.5 text-xs text-foreground italic">
@@ -219,13 +223,19 @@ function SignalCell({ signal }) {
     );
 }
 
-function ActionButtons({ signal, onInspect, onAction }) {
+function ActionButtons({ signal, onInspect, onAction, onClassify }) {
     return (
         <div className="flex min-w-[150px] flex-col gap-1.5">
             <Button size="sm" variant="outline" className="justify-start border-input" onClick={() => onInspect(signal)}>
                 <EyeIcon aria-hidden="true" />
                 Inspect
             </Button>
+            {signal.review_status !== "REJECTED" && (
+                <Button size="sm" variant="outline" className="justify-start border-input" onClick={() => onClassify(signal)}>
+                    <TagIcon aria-hidden="true" />
+                    Klasifikasi
+                </Button>
+            )}
             {signal.review_status === "PENDING" && (
                 <>
                     <Button size="sm" className="justify-start" onClick={() => onAction("accept_link", signal)}>
@@ -428,10 +438,12 @@ export default function SignalIndex({
     const [status, setStatus] = useState("PENDING");
     const [dimension, setDimension] = useState("all");
     const [search, setSearch] = useState("");
+    // Roadmap R4.2: horizon and wild card filter.
+    const [sensing, setSensing] = useState("all");
 
     const table = useServerTable({
         url: route("signals.fetch"),
-        params: { status, dimension: filterParam(dimension), search: search || undefined },
+        params: { status, dimension: filterParam(dimension), sensing: filterParam(sensing), search: search || undefined },
         select: fromPaginator,
         pageSizeParam: "pageSize",
     });
@@ -472,6 +484,24 @@ export default function SignalIndex({
             toast.error("Action failed to execute.", { description: errorMessage(error, error.message) });
         } finally {
             setReviewing(false);
+        }
+    };
+
+    // Classify (roadmap R4.2)
+    const [classifying, setClassifying] = useState(null);
+    const [classifyBusy, setClassifyBusy] = useState(false);
+    const handleClassify = async (values) => {
+        setClassifyBusy(true);
+        try {
+            const response = await axios.post(route("signals.classify", classifying.uuid), values);
+            toast.success(response.data.message);
+            table.reload();
+        } catch (error) {
+            if (error.response?.status === 422) return error.response.data.errors;
+            toast.error("Klasifikasi gagal disimpan.", { description: errorMessage(error, error.message) });
+            return { horizon: [errorMessage(error, error.message)] };
+        } finally {
+            setClassifyBusy(false);
         }
     };
 
@@ -689,7 +719,7 @@ export default function SignalIndex({
                         tooltip="Tindakan analisis: Inspect (rincian lengkap & SHA-256), Accept as New DF (luluskan jadi Driving Force), Link to DF, atau Reject."
                     />
                 ),
-                cell: ({ row }) => <ActionButtons signal={row.original} onInspect={openInspect} onAction={openReview} />,
+                cell: ({ row }) => <ActionButtons signal={row.original} onInspect={openInspect} onAction={openReview} onClassify={setClassifying} />,
             },
         ],
         []
@@ -800,6 +830,7 @@ export default function SignalIndex({
                                 onChange={setDimension}
                                 options={dimensions}
                             />
+                            <FilterSelect label="Horizon" allLabel="Semua horizon" value={sensing} onChange={setSensing} options={SENSING_FILTERS} />
                             <FilterField label="Cari" className="w-full sm:w-auto">
                                 <SearchInput
                                     value={search}
@@ -833,6 +864,7 @@ export default function SignalIndex({
             </main>
 
             <InspectDialog signal={inspected} open={inspectOpen} onOpenChange={setInspectOpen} />
+            <ClassifyDialog signal={classifying} loading={classifyBusy} onOpenChange={(open) => !open && setClassifying(null)} onSave={handleClassify} />
 
             <FormDialog
                 title={reviewConfig?.title ?? ""}

@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -102,6 +103,8 @@ class SignalIngestionController extends Controller
             $status = $request->query('status', 'PENDING');
             $dimension = $request->query('dimension');
             $search = $request->query('search');
+            // Roadmap R4.2: likely / could / might / wild_card / none (unclassified); anything else is all.
+            $sensing = $request->query('sensing');
 
             $rawPageSize = (int) $request->query('pageSize', $request->input('pagination.pageSize', 10));
             $pageSize = min(100, max(1, $rawPageSize > 0 ? $rawPageSize : 10));
@@ -109,6 +112,9 @@ class SignalIngestionController extends Controller
             $signals = Signal::with(['source:id,uuid,title,url,publisher,published_at,content_hash', 'dimension', 'suggested_time_horizon', 'reviewer', 'created_driving_force', 'suggested_driving_force:id,uuid,keyword'])
                 ->when($status && $status !== 'ALL', fn ($q) => $q->where('review_status', $status))
                 ->when($dimension, fn ($q) => $q->where('dimension_id', $dimension))
+                ->when(in_array($sensing, Signal::HORIZONS, true), fn ($q) => $q->where('horizon', $sensing))
+                ->when($sensing === 'wild_card', fn ($q) => $q->where('wild_card', true))
+                ->when($sensing === 'none', fn ($q) => $q->whereNull('horizon')->where('wild_card', false))
                 ->when($search, function ($q) use ($search) {
                     $q->where(function ($sub) use ($search) {
                         $sub->where('title', 'LIKE', '%'.$search.'%')
@@ -241,6 +247,24 @@ class SignalIngestionController extends Controller
      * Review, edit, accept, or reject candidate signal.
      */
     /** Roadmap R2.7: scenario quadrants that cite this signal, with the kind of the citing statement. */
+    /** Roadmap R4.2: set or clear the horizon and wild card flag; allowed at any review status. */
+    public function classify(Request $request, Signal $signal): JsonResponse
+    {
+        $validated = $request->validate([
+            'horizon' => ['nullable', Rule::in(Signal::HORIZONS)],
+            'wild_card' => ['boolean'],
+        ], [], ['horizon' => 'horizon', 'wild_card' => 'wild card']);
+
+        $signal->forceFill([
+            'horizon' => $validated['horizon'] ?? null,
+            'wild_card' => (bool) ($validated['wild_card'] ?? false),
+            'classified_by' => $request->user()->id,
+            'classified_at' => now(),
+        ])->save();
+
+        return response()->json(['message' => 'Klasifikasi sinyal disimpan.', 'signal' => $signal->only(['uuid', 'horizon', 'wild_card'])]);
+    }
+
     public function citations(Signal $signal): JsonResponse
     {
         $rows = ScenarioCitation::where('signal_id', $signal->id)->with('quadrant.scenario:id,uuid,name,project_id')->orderBy('id')->get();

@@ -79,6 +79,30 @@ class EarlyWarningIndicatorService
             ->all();
     }
 
+    /**
+     * Roadmap R4.2 (deck slide 26, sensing): the latest accepted weak signals (horizon `might`) and
+     * wild cards, which may point at a scenario before any indicator moves.
+     */
+    public function sensing(int $limit = 10): array
+    {
+        return Signal::where('review_status', 'ACCEPTED')
+            ->where(fn ($q) => $q->where('horizon', 'might')->orWhere('wild_card', true))
+            ->latest('id')
+            ->limit($limit)
+            ->get(['uuid', 'title', 'summary', 'horizon', 'wild_card', 'classified_by', 'created_at'])
+            ->map(fn (Signal $signal) => [
+                'id' => $signal->uuid,
+                'title' => $signal->title,
+                'summary' => $signal->summary,
+                'horizon' => $signal->horizon,
+                'wild_card' => $signal->wild_card,
+                // Proposed by the AI at extraction and not yet saved by a reviewer.
+                'proposed' => $signal->classified_by === null,
+                'created_at' => $signal->created_at?->toISOString(),
+            ])
+            ->all();
+    }
+
     /** The register, alphabetical, with directions keyed by quadrant position. */
     public function list(ScenarioPlanningProject $project): array
     {

@@ -276,6 +276,9 @@ class TenantMemberAuthorizationTest extends TestCase
     /** INVITE-008: invites are rate limited per inviter. */
     public function test_invites_are_throttled_per_inviter(): void
     {
+        // The limit is per minute: a slow host must not let the window reset between requests.
+        $this->freezeTime();
+
         foreach (range(1, 10) as $i) {
             $this->actingAs($this->admin)
                 ->post(route('settings.members.invite'), ['email' => "bulk{$i}@acme.test", 'role' => 'bod'])

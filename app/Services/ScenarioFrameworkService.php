@@ -7,6 +7,7 @@ use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\User;
+use App\Rules\DifferentPole;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -160,10 +161,32 @@ class ScenarioFrameworkService
                 'summary' => $quadrant->summary,
                 'has_narrative' => filled($quadrant->narrative),
             ])->values()->all(),
+            'poleChecks' => $this->poleChecks($scenario),
             'suggestion' => $scenario->framework_suggestion,
             'suggestionStatus' => $project->framework_suggestion_status,
             'suggestionError' => $project->framework_suggestion_error,
         ];
+    }
+
+    /**
+     * Matrix row 4.7: rule checks of the current poles that warn without blocking. A pole label used
+     * on both axes makes quadrant names such as "Favorable · Favorable" ambiguous.
+     *
+     * @return array<int, array{issue: string, message: string}>
+     */
+    public function poleChecks(Scenario $scenario): array
+    {
+        $axisA = [$scenario->axis_a_low_label, $scenario->axis_a_high_label];
+        $axisB = collect([$scenario->axis_b_low_label, $scenario->axis_b_high_label])->map(fn ($label) => DifferentPole::normalize((string) $label));
+
+        return collect($axisA)
+            ->filter(fn ($label) => $axisB->contains(DifferentPole::normalize((string) $label)))
+            ->map(fn ($label) => [
+                'issue' => 'shared',
+                'message' => "Kutub \"{$label}\" dipakai di kedua sumbu, sehingga nama kuadran sulit dibedakan. Beri kutub tiap sumbu keadaan yang khas.",
+            ])
+            ->values()
+            ->all();
     }
 
     /**

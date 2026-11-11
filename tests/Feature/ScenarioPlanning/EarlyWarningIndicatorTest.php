@@ -176,7 +176,11 @@ class EarlyWarningIndicatorTest extends TestCase
         return $this->framework();
     }
 
-    /** Deck slide 25: rising in FAVOUR (HH) and DICHOTOMY (HL), falling in STAGNATION (LL) and CHALLENGING (LH). */
+    /**
+     * Deck slide 25 ("xEV technology adoption grows steadily"): adoption rises where technology is fast.
+     * Axis A is Government Regulation and axis B Technology Development, so FAVOUR is HH (favourable · fast),
+     * DICHOTOMY LH (unfavourable · fast), STAGNATION HL (favourable · slow) and CHALLENGING LL (unfavourable · slow).
+     */
     private function indicatorPayload(array $overrides = []): array
     {
         return $overrides + [
@@ -186,8 +190,8 @@ class EarlyWarningIndicatorTest extends TestCase
             'metric' => 'Pangsa penjualan xEV', 'unit' => '%', 'baseline_value' => 3.5, 'baseline_date' => '2026-06-30',
             'frequency' => 'quarterly', 'source_type' => 'manual', 'threshold_rule' => 'Di atas 10% sebelum 2028',
             'directions' => [
-                'HH' => ['direction' => 'rising'], 'HL' => ['direction' => 'rising'],
-                'LL' => ['direction' => 'falling', 'note' => 'Lambat'], 'LH' => ['direction' => 'falling'],
+                'HH' => ['direction' => 'rising'], 'LH' => ['direction' => 'rising'],
+                'HL' => ['direction' => 'falling'], 'LL' => ['direction' => 'falling', 'note' => 'Lambat'],
             ],
         ];
     }
@@ -217,7 +221,7 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->assertSame(CriticalUncertainty::where('name', 'Technology Development')->value('id'), $indicator->critical_uncertainty_id);
         $this->assertSame([$this->manager->id, '%', '2026-06-30'], [$indicator->owner_id, $indicator->unit, $indicator->baseline_date->toDateString()]);
         $directions = $indicator->directions()->with('quadrant')->get()->mapWithKeys(fn ($row) => [$row->quadrant->position => $row->expected_direction])->all();
-        $this->assertEqualsCanonicalizing(['HH' => 'rising', 'HL' => 'rising', 'LL' => 'falling', 'LH' => 'falling'], $directions);
+        $this->assertEqualsCanonicalizing(['HH' => 'rising', 'LH' => 'rising', 'HL' => 'falling', 'LL' => 'falling'], $directions);
     }
 
     public function test_validation_rules(): void
@@ -387,10 +391,10 @@ class EarlyWarningIndicatorTest extends TestCase
     public function test_observations_show_which_scenario_is_becoming_relevant(): void
     {
         $this->readyFramework();
-        $this->storeIndicator(); // HH, HL rising; LL, LH falling
+        $this->storeIndicator(); // HH, LH rising; HL, LL falling
         $adoption = EarlyWarningIndicator::sole();
         $this->storeIndicator(['name' => 'Charging stations', 'directions' => [
-            'HH' => ['direction' => 'qualitative'], 'HL' => ['direction' => 'rising'], 'LL' => ['direction' => 'falling'],
+            'HH' => ['direction' => 'qualitative'], 'LH' => ['direction' => 'rising'], 'LL' => ['direction' => 'falling'],
         ]]);
         $charging = EarlyWarningIndicator::where('name', 'Charging stations')->sole();
         $this->storeIndicator(['name' => 'Retired one', 'status' => 'retired']);
@@ -407,15 +411,15 @@ class EarlyWarningIndicatorTest extends TestCase
                 ->where('relevance.quadrants.0.supporting', 2)
                 ->where('relevance.quadrants.0.contradicting', 1)
                 ->where('relevance.quadrants.1.position', 'HL')
-                ->where('relevance.quadrants.1.supporting', 3)
-                ->where('relevance.quadrants.1.contradicting', 1)
+                ->where('relevance.quadrants.1.supporting', 1)
+                ->where('relevance.quadrants.1.contradicting', 2)
                 ->where('relevance.quadrants.2.position', 'LH')
-                ->where('relevance.quadrants.2.supporting', 1)
-                ->where('relevance.quadrants.2.contradicting', 2)
+                ->where('relevance.quadrants.2.supporting', 3)
+                ->where('relevance.quadrants.2.contradicting', 1)
                 ->where('relevance.quadrants.3.position', 'LL')
                 ->where('relevance.quadrants.3.supporting', 1)
                 ->where('relevance.quadrants.3.contradicting', 3)
-                ->where('relevance.leading', 'HL'));
+                ->where('relevance.leading', 'LH'));
     }
 
     public function test_no_relevance_lead_without_directional_observations(): void

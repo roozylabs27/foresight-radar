@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\DifferentPole;
 use App\Support\TenantRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -23,9 +24,9 @@ class ScenarioRequest extends FormRequest
             'axis_a' => ['required', 'uuid', TenantRule::exists('driving_forces', 'uuid')],
             'axis_b' => ['required', 'uuid', 'different:axis_a', TenantRule::exists('driving_forces', 'uuid')],
             'axis_a_low_label' => $label,
-            'axis_a_high_label' => $label,
+            'axis_a_high_label' => [...$label, new DifferentPole('axis_a_low_label')],
             'axis_b_low_label' => $label,
-            'axis_b_high_label' => $label,
+            'axis_b_high_label' => [...$label, new DifferentPole('axis_b_low_label')],
             'status' => ['sometimes', Rule::in(['DRAFT', 'FINAL'])],
         ];
     }

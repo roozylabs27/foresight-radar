@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Http\Requests\ScenarioRequest;
 use App\Models\AiGenerationRun;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
@@ -13,8 +14,10 @@ use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\TimeHorizon;
 use App\Models\User;
+use App\Services\Llm\Prompts\ScenarioFrameworkPrompt;
 use App\Support\DimensionTaxonomy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
@@ -375,6 +378,7 @@ class ScenarioFrameworkTest extends TestCase
                 ['position' => 'LL', 'title' => 'Transisi Tertahan', 'summary' => 'Keduanya lambat.'],
             ],
             'rationale' => 'Kutub menggambarkan ujung masing-masing ketidakpastian.',
+            'critique' => [],
         ];
     }
 
@@ -411,6 +415,73 @@ class ScenarioFrameworkTest extends TestCase
         $this->actingAs($this->manager)->delete(route('scenario-planning.framework.suggestion.reject', $this->project))->assertSessionHasNoErrors();
         $this->assertNull($this->framework()->framework_suggestion);
         $this->assertSame('Regulasi Progresif', $this->framework()->axis_a_high_label);
+    }
+
+    /** Matrix row 4.7: the two poles of an axis differ even when only case or spaces differ. */
+    public function test_the_poles_of_an_axis_must_differ_ignoring_case_and_spaces(): void
+    {
+        $this->propose(['Politic'], ['low_pole_label' => 'Favorable', 'high_pole_label' => ' FAVORABLE '])->assertSessionHasErrors('high_pole_label');
+        $this->assertSame(0, CriticalUncertainty::count());
+
+        $this->approveAxes();
+        $this->createFramework();
+        $this->actingAs($this->manager)->put(route('scenario-planning.framework.update', $this->project), $this->poles(['axis_b_high_label' => 'slow']))
+            ->assertSessionHasErrors('axis_b_high_label');
+        $this->assertSame('Fast', $this->framework()->axis_b_high_label);
+
+        $legacy = Validator::make($this->poles(['axis_a_high_label' => 'unfavorable']), (new ScenarioRequest)->rules());
+        $this->assertArrayHasKey('axis_a_high_label', $legacy->errors()->toArray());
+    }
+
+    /** Matrix row 4.7: a pole used on both axes makes the quadrant names ambiguous; the page warns, it does not block. */
+    public function test_the_page_warns_when_both_axes_share_a_pole(): void
+    {
+        $this->approveAxes();
+        $this->createFramework();
+        $page = fn () => $this->actingAs($this->viewer)->get(route('scenario-planning.framework.index', $this->project));
+
+        $page()->assertInertia(fn ($page) => $page->where('framework.poleChecks', []));
+
+        $this->actingAs($this->manager)->put(route('scenario-planning.framework.update', $this->project), $this->poles(['axis_b_high_label' => ' favorable']))
+            ->assertSessionHasNoErrors();
+        $page()->assertInertia(fn ($page) => $page
+            ->has('framework.poleChecks', 1)
+            ->where('framework.poleChecks.0.issue', 'shared')
+            ->where('framework.poleChecks.0.message', fn ($message) => str_contains($message, 'Favorable')));
+        $this->approveFramework()->assertSessionHasNoErrors();
+    }
+
+    /** Matrix row 4.7 (framework-v2): the AI also critiques the current poles; the critique is advice shown with the suggestion. */
+    public function test_ai_critiques_the_current_poles(): void
+    {
+        $this->approveAxes();
+        $this->createFramework();
+        $fake = $this->fakeLlm();
+        $fake->respond($this->frameworkSuggestion(['critique' => [
+            ['axis' => 'A', 'issue' => 'value_laden', 'comment' => 'Favorable/Unfavorable menilai, bukan menggambarkan keadaan.'],
+            ['axis' => 'both', 'issue' => 'invented', 'comment' => 'Kedua sumbu sama-sama soal kecepatan transisi.'],
+            ['axis' => 'Z', 'issue' => 'vague', 'comment' => '   '],
+        ]]));
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggest', $this->project))->assertSessionHasNoErrors();
+
+        $request = $fake->lastRequest();
+        $this->assertStringContainsString('critique', ScenarioFrameworkPrompt::SYSTEM);
+        $this->assertContains('critique', $request->schema['required']);
+        $this->assertSame(ScenarioFrameworkPrompt::ISSUES, $request->schema['properties']['critique']['items']['properties']['issue']['enum']);
+        $this->assertStringContainsString('Current poles: L = Unfavorable, H = Favorable', $request->user);
+        $this->assertSame('framework-v2', AiGenerationRun::sole()->prompt_version);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.framework.index', $this->project))
+            ->assertInertia(fn ($page) => $page
+                ->has('framework.suggestion.critique', 2)
+                ->where('framework.suggestion.critique.0', ['axis' => 'A', 'issue' => 'value_laden', 'comment' => 'Favorable/Unfavorable menilai, bukan menggambarkan keadaan.'])
+                ->where('framework.suggestion.critique.1.axis', 'both')
+                ->where('framework.suggestion.critique.1.issue', 'other'));
+
+        $fake->respond($this->frameworkSuggestion(['critique' => array_fill(0, 7, ['axis' => 'A', 'issue' => 'vague', 'comment' => 'Kabur.'])]));
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.suggest', $this->project));
+        $this->assertSame('rejected', AiGenerationRun::latest('id')->first()->status);
     }
 
     public function test_framework_suggestions_are_checked_and_need_a_draft_framework(): void

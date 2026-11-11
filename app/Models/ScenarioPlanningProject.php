@@ -28,6 +28,10 @@ use Ramsey\Uuid\Uuid;
  * @property int|null $confirmed_by
  * @property Carbon|null $confirmed_at
  * @property int|null $created_by
+ * @property int|null $preferred_quadrant_id
+ * @property string|null $preferred_rationale
+ * @property int|null $preferred_by
+ * @property Carbon|null $preferred_at
  */
 class ScenarioPlanningProject extends Model
 {
@@ -87,6 +91,7 @@ class ScenarioPlanningProject extends Model
         'forces_confirmed_at' => 'datetime',
         'scores_confirmed_at' => 'datetime',
         'focal_suggestion' => 'array',
+        'preferred_at' => 'datetime',
     ];
 
     protected static function booted()
@@ -210,6 +215,18 @@ class ScenarioPlanningProject extends Model
         }
 
         return $this->participants()->where('user_id', $user->id)->whereIn('role', ProjectParticipant::CONTRIBUTING)->exists();
+    }
+
+    /** Roadmap R4.1: the quadrant chosen as the preferred future. */
+    public function preferredQuadrant(): BelongsTo
+    {
+        return $this->belongsTo(ScenarioQuadrant::class, 'preferred_quadrant_id');
+    }
+
+    /** Roadmap R4.1: the path back from the preferred future; also the scoped binding of `{milestone}`. */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(BackcastingMilestone::class, 'project_id');
     }
 
     /** Step 8 strategic responses (roadmap R1.8). */

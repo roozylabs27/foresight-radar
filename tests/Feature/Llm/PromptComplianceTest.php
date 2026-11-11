@@ -112,10 +112,13 @@ class PromptComplianceTest extends TestCase
             $this->candidate('The Ministry of Industry enacted a regulation requiring 40 percent local content for electric vehicles sold after 2027.', [
                 'tenant_id' => 999, 'review_status' => 'ACCEPTED', 'reviewed_by' => $this->analyst->id,
                 'created_driving_force_id' => 1, 'is_ai_generated' => false, 'uuid' => 'attacker-chosen',
+                'classified_by' => $this->analyst->id, 'classified_at' => '2026-01-01',
             ]),
         ]]);
 
         $signal = $source->signals()->sole();
+        $this->assertNull($signal->classified_by);
+        $this->assertNull($signal->classified_at);
         $this->assertSame($source->tenant_id, $signal->tenant_id);
         $this->assertSame('PENDING', $signal->review_status);
         $this->assertNull($signal->reviewed_by);

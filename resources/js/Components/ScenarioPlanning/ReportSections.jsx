@@ -1,4 +1,4 @@
-import { CONDITION_KINDS, INDICATOR_DIRECTIONS, RESPONSE_FITS, ROBUSTNESS } from "@/domain/scenarioPlanning";
+import { CONDITION_KINDS, INDICATOR_DIRECTIONS, MILESTONE_STATUSES, RESPONSE_FITS, ROBUSTNESS } from "@/domain/scenarioPlanning";
 import { cn } from "@/lib/utils";
 
 /**
@@ -138,6 +138,31 @@ export function IndicatorTable({ indicators, quadrants }) {
                 ...quadrants.map((q) => { const d = INDICATOR_DIRECTIONS[row.directions[q.position]]; return d ? `${d.short} ${d.label}` : "–"; }),
             ])}
         />
+    );
+}
+
+/** Roadmap R4.1: the preferred future and the milestones back from the target year to now. */
+export function BackcastingSummary({ backcasting }) {
+    const { preferred, milestones } = backcasting;
+    if (!preferred) return <Empty>Masa depan pilihan belum dipilih.</Empty>;
+    return (
+        <>
+            <p className="m-0 text-sm">
+                <span className="font-semibold">{preferred.title}</span>
+                {preferred.rationale && ` — ${preferred.rationale}`}
+            </p>
+            {milestones.length === 0 ? <Empty>Belum ada milestone.</Empty> : (
+                <Table
+                    head={["Tahun", "Milestone", "Status", "Respons / indikator"]}
+                    rows={milestones.map((row) => [
+                        row.year,
+                        <><span className="font-medium">{row.title}</span>{row.description && <span className="block text-xs text-muted-foreground">{row.description}</span>}</>,
+                        MILESTONE_STATUSES[row.status]?.label ?? row.status,
+                        [row.response?.title, row.indicator?.name].filter(Boolean).join(" · ") || "–",
+                    ])}
+                />
+            )}
+        </>
     );
 }
 

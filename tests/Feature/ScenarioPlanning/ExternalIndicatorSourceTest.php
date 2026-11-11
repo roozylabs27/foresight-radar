@@ -172,7 +172,11 @@ class ExternalIndicatorSourceTest extends TestCase
         return $this->framework();
     }
 
-    /** Deck slide 25: rising in FAVOUR (HH) and DICHOTOMY (HL), falling in STAGNATION (LL) and CHALLENGING (LH). */
+    /**
+     * Deck slide 25 ("xEV technology adoption grows steadily"): adoption rises where technology is fast.
+     * Axis A is Government Regulation and axis B Technology Development, so FAVOUR is HH (favourable · fast),
+     * DICHOTOMY LH (unfavourable · fast), STAGNATION HL (favourable · slow) and CHALLENGING LL (unfavourable · slow).
+     */
     private function indicatorPayload(array $overrides = []): array
     {
         return $overrides + [
@@ -182,8 +186,8 @@ class ExternalIndicatorSourceTest extends TestCase
             'metric' => 'Pangsa penjualan xEV', 'unit' => '%', 'baseline_value' => 3.5, 'baseline_date' => '2026-06-30',
             'frequency' => 'quarterly', 'source_type' => 'manual', 'threshold_rule' => 'Di atas 10% sebelum 2028',
             'directions' => [
-                'HH' => ['direction' => 'rising'], 'HL' => ['direction' => 'rising'],
-                'LL' => ['direction' => 'falling', 'note' => 'Lambat'], 'LH' => ['direction' => 'falling'],
+                'HH' => ['direction' => 'rising'], 'LH' => ['direction' => 'rising'],
+                'HL' => ['direction' => 'falling'], 'LL' => ['direction' => 'falling', 'note' => 'Lambat'],
             ],
         ];
     }

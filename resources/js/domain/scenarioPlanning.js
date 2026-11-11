@@ -133,6 +133,25 @@ export function targetYearBounds(today = new Date()) {
     return { min: today.getFullYear() + 1, max: 2100 };
 }
 
+/** Roadmap R4.1: progress of a backcasting milestone, mirroring BackcastingMilestone::STATUSES. */
+export const MILESTONE_STATUSES = {
+    planned: { label: "Direncanakan", tone: "neutral" },
+    in_progress: { label: "Berjalan", tone: "pending" },
+    done: { label: "Selesai", tone: "approved" },
+};
+
+/**
+ * Scenario planning is for medium to long horizons (deck slides 1 and 6–7): around one year ahead a
+ * trend extrapolation usually does. Below this the form warns but still accepts the year.
+ */
+export const MIN_RECOMMENDED_HORIZON_YEARS = 3;
+
+/** True for a valid target year closer than the recommended horizon. */
+export function isShortHorizon(targetYear, today = new Date()) {
+    const years = Number(targetYear) - today.getFullYear();
+    return Number.isInteger(years) && years >= 1 && years < MIN_RECOMMENDED_HORIZON_YEARS;
+}
+
 /** Years left until the target year, never negative. */
 export function yearsAhead(targetYear, today = new Date()) {
     return Math.max(0, Number(targetYear) - today.getFullYear());
@@ -184,6 +203,17 @@ export const FOCAL_ISSUES = {
     too_narrow: "Terlalu sempit",
     assumes_answer: "Mengandaikan jawaban",
     unclear_scope: "Cakupan tidak jelas",
+    other: "Lainnya",
+};
+
+/** Pole weaknesses named by the AI critique (App\Services\Llm\Prompts\ScenarioFrameworkPrompt, matrix row 4.7). */
+export const POLE_ISSUES = {
+    not_opposite: "Bukan kebalikan",
+    different_variable: "Beda variabel",
+    value_laden: "Bernilai baik/buruk",
+    vague: "Kabur",
+    implausible: "Tak tercapai sebelum tahun target",
+    axes_overlap: "Sumbu tumpang-tindih",
     other: "Lainnya",
 };
 

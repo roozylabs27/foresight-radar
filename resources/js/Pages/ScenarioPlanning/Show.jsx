@@ -123,6 +123,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                         <StepList steps={steps} />
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium">
                             {project.forces_confirmed_at && <Link href={route("scenario-planning.compare", project.id)} className="text-primary hover:underline">Bandingkan empat skenario</Link>}
+                            {project.forces_confirmed_at && <Link href={route("scenario-planning.backcasting.index", project.id)} className="text-primary hover:underline">Masa depan pilihan & backcasting</Link>}
                             <Link href={route("scenario-planning.report", project.id)} className="text-primary hover:underline">Laporan (cetak / PDF)</Link>
                         </div>
                     </Panel>

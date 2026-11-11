@@ -139,7 +139,7 @@ class LlmSignalExtractionTest extends TestCase
         $this->assertSame($this->approved->id, $mandate->suggested_driving_force_id);
         $this->assertSame('claude', $mandate->extraction_provider);
         $this->assertSame('claude-fake', $mandate->extraction_model);
-        $this->assertSame('extract-v2', $mandate->prompt_version);
+        $this->assertSame('extract-v3', $mandate->prompt_version);
         $this->assertTrue($mandate->quote_verified);
         $this->assertSame('PENDING', $mandate->review_status);
 
@@ -157,6 +157,54 @@ class LlmSignalExtractionTest extends TestCase
         $this->assertSame('claude', $meta['provider']);
         $this->assertSame(3, $meta['returned']);
         $this->assertSame(1, $meta['discarded_unverified']);
+    }
+
+    /** Roadmap R4.2: the model proposes the class; the reviewer confirms it later. */
+    public function test_ai_proposes_the_signal_class_without_confirming_it(): void
+    {
+        $this->llm->respond(['signals' => [
+            $this->candidate(['signal_class' => 'MIGHT', 'wild_card' => true]),
+            $this->candidate([
+                'title' => 'Solid-State Battery Pilot',
+                'evidence_quote' => 'Battery makers announced a solid-state pilot line, but costs remain unclear according to analysts.',
+                'signal_class' => 'sometimes',
+                'wild_card' => 'yes',
+            ]),
+        ]]);
+
+        $this->ingest()->assertStatus(202);
+
+        $item = $this->llm->lastRequest()->schema['properties']['signals']['items'];
+        $this->assertSame(['likely', 'could', 'might'], $item['properties']['signal_class']['enum']);
+        $this->assertSame('boolean', $item['properties']['wild_card']['type']);
+        $this->assertContains('signal_class', $item['required']);
+        $this->assertContains('wild_card', $item['required']);
+        $this->assertStringContainsString('weak signal', SignalExtractionPrompt::SYSTEM);
+
+        [$mandate, $battery] = Signal::orderBy('id')->get();
+        $this->assertSame('might', $mandate->horizon);
+        $this->assertTrue($mandate->wild_card);
+        $this->assertNull($mandate->classified_by);
+        $this->assertNull($mandate->classified_at);
+        // Unknown classes and non-boolean flags are dropped, not guessed.
+        $this->assertNull($battery->horizon);
+        $this->assertFalse($battery->wild_card);
+
+        // The reviewer confirms the proposal by saving it.
+        $this->actingAs($this->analyst)
+            ->postJson(route('signals.classify', $mandate->uuid), ['horizon' => 'might', 'wild_card' => true])
+            ->assertOk();
+        $this->assertSame($this->analyst->id, $mandate->fresh()->classified_by);
+    }
+
+    public function test_keyword_rules_propose_no_signal_class(): void
+    {
+        config(['services.signal_extraction.driver' => 'heuristic']);
+
+        $this->ingest()->assertStatus(202);
+
+        $this->assertGreaterThan(0, Signal::count());
+        $this->assertSame(0, Signal::whereNotNull('horizon')->orWhere('wild_card', true)->count());
     }
 
     public function test_model_only_sees_references_to_approved_forces_and_taxonomy_names(): void
@@ -366,7 +414,7 @@ class LlmSignalExtractionTest extends TestCase
         $this->ingest()->assertStatus(202)->assertJsonPath('source.extraction.irrelevant', false);
 
         $this->assertSame(1, Signal::count());
-        $this->assertSame('extract-v2', Signal::first()->prompt_version);
+        $this->assertSame('extract-v3', Signal::first()->prompt_version);
     }
 
     /** R1.14: the model is asked for the verdict before any signal. */

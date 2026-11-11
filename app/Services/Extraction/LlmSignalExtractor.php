@@ -4,6 +4,7 @@ namespace App\Services\Extraction;
 
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\Signal;
 use App\Models\TimeHorizon;
 use App\Services\Llm\LlmException;
 use App\Services\Llm\LlmResponse;
@@ -108,6 +109,9 @@ class LlmSignalExtractor
                 'confidence_rationale' => trim((string) ($item['confidence_rationale'] ?? '')) ?: null,
                 'suggested_driving_force_id' => $refs[$ref] ?? null,
                 'quote_verified' => true,
+                // Roadmap R4.2: a proposal only; classified_by stays empty until a reviewer saves it.
+                'horizon' => $this->signalClass($item['signal_class'] ?? null),
+                'wild_card' => ($item['wild_card'] ?? false) === true,
             ];
         }
 
@@ -132,6 +136,13 @@ class LlmSignalExtractor
                 'discarded_over_limit' => $capped,
             ],
         ];
+    }
+
+    protected function signalClass(mixed $value): ?string
+    {
+        $class = is_string($value) ? Str::lower(trim($value)) : null;
+
+        return in_array($class, Signal::HORIZONS, true) ? $class : null;
     }
 
     protected function score(mixed $value): ?int
