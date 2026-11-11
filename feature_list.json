@@ -904,6 +904,20 @@
         "AI extraction proposes the class and the wild card flag; the proposal stays unconfirmed (no classified_by) and is labelled until a reviewer saves it"
       ],
       "verification_evidence": "2026-11-10: SignalClassificationTest 3 passed (36 assertions); SignalClassificationTest + EarlyWarningIndicatorTest + LlmSignalExtractionTest 38 passed (567 assertions); Pint PASS; Larastan L5 clean on the changed PHP files; npm run build PASS. Local browser: a pending signal classified Might + wild card, badges shown, Horizon filter Might returns that row, step 9 panel renders its empty state. 2026-11-11 AI proposal at extraction (prompt extract-v3): new extraction tests red first (1 failed), then Pint PASS, Larastan L5 no errors on the changed services, LlmSignalExtractionTest + PromptComplianceTest + OpenAiCompatibleClientTest + SignalClassificationTest + SignalIngestionTest 63 passed (447 assertions), npm run build PASS. Local browser: the proposal shows the Usulan AI label and dialog note, saving it removes the label. Full PHPUnit 560 passed (6,288 assertions)."
+    },
+    {
+      "id": "FEAT-065",
+      "name": "Pole Validation and AI Pole Critique",
+      "description": "The poles of each axis are checked by rules and, on request, critiqued by the AI before new poles are suggested (matrix row 4.7, step 4).",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "The two poles of an axis must differ ignoring case and spaces, for critical uncertainties, the framework and the legacy Scenarios page",
+        "The framework page warns, without blocking approval, when the same pole is used on both axes",
+        "The framework-v2 suggestion includes up to five critique points (axis, issue, comment) on the current poles; more is rejected, unknown values fall back",
+        "The critique is advice shown with the suggestion; nothing changes until the suggestion is applied"
+      ],
+      "verification_evidence": "2026-11-11: three new ScenarioFrameworkTest tests red first (3 failed), then green (68 assertions); Pint PASS (import order fixed); Larastan L5 no errors on the 7 changed PHP files; ScenarioFrameworkTest + CriticalUncertaintyTest + Llm/ScenarioTest + ScenarioHarnessTest + PromptComplianceTest 70 passed (653 assertions); npm run build PASS. Local browser: approved framework page renders with the new rule line and no warning, no console errors; the critique box and warning only show on a draft framework and were not seen in the browser. Full PHPUnit 563 passed (6,356 assertions)."
     }
   ]
 }
