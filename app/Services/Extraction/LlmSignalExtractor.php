@@ -34,7 +34,8 @@ class LlmSignalExtractor
      */
     public function extract(string $title, string $content): array
     {
-        $dimensions = Dimension::ordered()->get(['id', 'name']);
+        // Archived dimensions take no new signals.
+        $dimensions = Dimension::active()->ordered()->get(['id', 'name']);
         $horizons = TimeHorizon::orderBy('id')->get(['id', 'name']);
         $forces = DrivingForce::where('status', 'APPROVED')
             ->with('dimension:id,name')

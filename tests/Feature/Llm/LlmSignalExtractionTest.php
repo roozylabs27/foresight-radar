@@ -255,20 +255,74 @@ class LlmSignalExtractionTest extends TestCase
         $this->assertSame(1, $meta['discarded_over_limit']);
     }
 
-    public function test_falls_back_to_keyword_rules_when_the_llm_fails(): void
+    /** External sources are extracted by AI only: a failed call fails the source, with no keyword-rule signals. */
+    public function test_a_failed_ai_call_fails_the_source_without_keyword_signals(): void
     {
         $this->llm->respond(new LlmException('rate_limited'));
 
-        $response = $this->ingest()->assertStatus(202);
+        $response = $this->ingest()->assertStatus(202)->assertJsonPath('source.status', 'failed');
 
-        $response->assertJsonPath('source.extraction.mode', 'heuristic')->assertJsonPath('source.extraction.fallback', true);
-        $this->assertStringContainsString('Kuota layanan AI', $response->json('source.extraction.notice'));
-        $this->assertStringContainsString('aturan kata kunci (tanpa AI)', $response->json('source.message'));
-        $signal = Signal::first();
-        $this->assertSame('heuristic', $signal->extraction_provider);
-        $this->assertNull($signal->extraction_model);
-        $this->assertTrue($signal->quote_verified);
-        $this->assertSame('rate_limited', Source::first()->extraction_meta['fallback_reason']);
+        $this->assertStringContainsString('Kuota layanan AI', (string) $response->json('source.error'));
+        $this->assertStringContainsString('Coba lagi', (string) $response->json('source.error'));
+        $this->assertSame(0, Signal::count());
+        $this->assertSame(LlmJobStatus::FAILED, Source::sole()->extraction_status);
+        $run = AiGenerationRun::sole();
+        $this->assertSame(['failed', 'rate_limited'], [$run->status, $run->error]);
+
+        $this->actingAs($this->analyst)->get('/signals')
+            ->assertInertia(fn ($page) => $page->where('failedExtractions.0.id', Source::sole()->uuid)->where('failedExtractions.0.status', 'failed'));
+    }
+
+    public function test_ingest_is_refused_without_an_active_ai_provider(): void
+    {
+        $this->fakeLlm(available: false);
+
+        $this->ingest()->assertStatus(422)->assertJsonPath('errors.ai.0', 'Layanan AI belum diatur. Atur provider AI di Pengaturan.');
+
+        $this->assertSame(0, Source::count());
+        $this->actingAs($this->analyst)->get('/signals')->assertInertia(fn ($page) => $page->where('aiMissing', true));
+    }
+
+    public function test_a_failed_extraction_can_be_retried_by_its_analyst(): void
+    {
+        $this->llm->respond(new LlmException('timeout'));
+        $this->ingest()->assertStatus(202)->assertJsonPath('source.status', 'failed');
+        $source = Source::sole();
+
+        $outsider = User::factory()->create();
+        $outsider->givePermissionTo(['view-signal', 'create-signal']);
+        $this->actingAs($outsider)->postJson(route('signals.extraction.retry', $source->uuid))->assertForbidden();
+
+        $this->llm->setAvailable(false);
+        $this->actingAs($this->analyst)->postJson(route('signals.extraction.retry', $source->uuid))
+            ->assertStatus(422)->assertJsonPath('errors.ai.0', 'Layanan AI belum diatur. Atur provider AI di Pengaturan.');
+        $this->assertSame(LlmJobStatus::FAILED, $source->fresh()->extraction_status);
+
+        $this->llm->setAvailable(true)->respond(['signals' => [$this->candidate()]]);
+        $this->actingAs($this->analyst)->postJson(route('signals.extraction.retry', $source->uuid))
+            ->assertStatus(202)
+            ->assertJsonPath('source.status', 'completed')
+            ->assertJsonPath('source.extraction.signals', 1);
+        $this->assertSame(1, Signal::count());
+
+        $this->actingAs($this->analyst)->postJson(route('signals.extraction.retry', $source->uuid))->assertStatus(422)->assertJsonValidationErrors('source');
+        // One failed call, one successful retry; the refused retries called nothing.
+        $this->assertCount(2, $this->llm->calls);
+    }
+
+    public function test_a_provider_removed_after_queueing_fails_the_source(): void
+    {
+        Queue::fake();
+        $this->ingest()->assertStatus(202);
+        $job = Queue::pushed(ExtractSignals::class)->first();
+
+        $this->llm->setAvailable(false);
+        app()->call([$job, 'handle']);
+
+        $source = Source::sole();
+        $this->assertSame(LlmJobStatus::FAILED, $source->extraction_status);
+        $this->assertStringContainsString('Layanan AI belum diatur', (string) $source->extraction_error);
+        $this->assertSame(0, Signal::count());
     }
 
     public function test_documents_over_the_limit_are_rejected_before_any_llm_call(): void
@@ -462,17 +516,6 @@ class LlmSignalExtractionTest extends TestCase
         $this->assertSame(['input_tokens' => 0, 'output_tokens' => 0], $run->usage);
         $this->assertSame($this->analyst->id, $run->created_by);
         $this->assertSame([$run->id], Signal::pluck('generation_run_id')->unique()->values()->all());
-    }
-
-    public function test_a_failed_ai_extraction_is_recorded_and_the_keyword_fallback_links_no_run(): void
-    {
-        $this->llm->respond(new LlmException('rate_limited'));
-
-        $this->ingest()->assertStatus(202);
-
-        $run = AiGenerationRun::sole();
-        $this->assertSame(['failed', 'rate_limited'], [$run->status, $run->error]);
-        $this->assertSame([null], Signal::pluck('generation_run_id')->unique()->values()->all());
     }
 
     public function test_extraction_without_ai_records_no_run(): void

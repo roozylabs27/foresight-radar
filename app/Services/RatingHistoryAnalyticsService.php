@@ -63,7 +63,7 @@ class RatingHistoryAnalyticsService
             }
         }
 
-        $dimensionNames = ($dimensions ?? Dimension::orderBy('id')->get(['id', 'name']))->pluck('name');
+        $dimensionNames = ($dimensions ?? Dimension::ordered()->get(['id', 'name']))->pluck('name');
         $dimensionSeries = $dimensionNames
             ->filter(fn ($name) => isset($byDimension[$name]))
             ->map(fn ($name) => $this->series($name, $months, $byDimension[$name]))

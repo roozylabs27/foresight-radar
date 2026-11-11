@@ -250,8 +250,12 @@ export function IngestionProvider({ children }) {
                             setActiveExtractions((prev) => prev.filter((e) => e.id !== item.id));
                         }, 12000);
                     }
-                } catch {
-                    // Ignore network polling glitches; will retry next interval
+                } catch (error) {
+                    // A source that is gone (404) or not ours to see (403) will never finish: stop tracking it.
+                    // Anything else is a network glitch; the next interval retries.
+                    if ([403, 404].includes(error?.response?.status)) {
+                        setActiveExtractions((prev) => prev.filter((e) => e.id !== item.id));
+                    }
                 }
             }
         }, 3000);

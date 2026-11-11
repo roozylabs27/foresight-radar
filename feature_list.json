@@ -918,6 +918,50 @@
         "The critique is advice shown with the suggestion; nothing changes until the suggestion is applied"
       ],
       "verification_evidence": "2026-11-11: three new ScenarioFrameworkTest tests red first (3 failed), then green (68 assertions); Pint PASS (import order fixed); Larastan L5 no errors on the 7 changed PHP files; ScenarioFrameworkTest + CriticalUncertaintyTest + Llm/ScenarioTest + ScenarioHarnessTest + PromptComplianceTest 70 passed (653 assertions); npm run build PASS. Local browser: approved framework page renders with the new rule line and no warning, no console errors; the critique box and warning only show on a draft framework and were not seen in the browser. Full PHPUnit 563 passed (6,356 assertions)."
+    },
+    {
+      "id": "FEAT-066",
+      "name": "AI-Only Ingestion of External Sources",
+      "description": "Signals from external sources are extracted by AI only: without an active provider the ingest is refused, a failed AI call fails the source with the reason and a retry, and keyword rules run only with the heuristic driver (tests, offline).",
+      "priority": "P1",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Without an active AI provider the ingest is refused with 'Layanan AI belum diatur. Atur provider AI di Pengaturan.' and the ingest form is closed with a link to the settings",
+        "A failed AI call (or a provider removed after queueing) marks the source FAILED with the reason; no keyword-rule signals are stored",
+        "The analyst (or an admin) retries a failed extraction from the Signals page; retrying a non-failed source or without AI is refused",
+        "Keyword-rule extraction remains only when SIGNAL_EXTRACTION_DRIVER=heuristic"
+      ],
+      "verification_evidence": "2026-11-11: four new LlmSignalExtractionTest tests red first (4 failed), then green; Pint PASS; Larastan L5 no errors on SignalExtractionService, SignalIngestionController, ExtractSignals; eight signal-related test files 75 passed, the benchmark test that expected the keyword fallback was updated to the new behaviour and passes (4 passed); npm run build PASS. Local browser: badge shows the active AI engine, a failed source shows in the retry list with its reason; retry itself was not clicked (it would call Gemini)."
+    },
+    {
+      "id": "FEAT-067",
+      "name": "Report Scope: FIRM or Key Focal Issue",
+      "description": "Foresight Radar, Prioritizing and Registered List show the whole firm by default and can be narrowed to one Key Focal Issue (scenario planning exercise), plotting that exercise's consensus scores.",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "FIRM is the default and unchanged; ?scope=<exercise uuid> selects a Key Focal Issue and survives a reload",
+        "A Key Focal Issue shows its included forces with a consensus; impact and uncertainty are the consensus, priority is recalculated, horizon and status action come from the firm rating",
+        "The period filter is hidden and ignored for a Key Focal Issue; the dimension filter applies",
+        "Forces without a consensus (and, on the radar, without a horizon) are left out and counted in a note",
+        "Only users with view-scenario see and may use the scope; another tenant's exercise is not found"
+      ],
+      "verification_evidence": "2026-11-11: ReportScopeTest 7 tests red first (6 failed), then 7 passed (138 assertions). Local browser: scope select on all three reports, URL ?scope= kept, Periode hidden, Prioritizing 5 consensus items, radar 3 points with a note for 2 left out, Registered List and export follow the scope. 2026-11-11 Dashboard: the same scope on all tabs; Overview indices and the what-if simulation use the exercise ratings, month trends and score history stay firm-only (test_the_dashboard_overview_and_simulation_follow_the_scope). Local browser: FIRM 26 forces (growth 57.9, resilience 62.4), Key Focal Issue 5 forces (53.3, 60.1) with the firm-only note."
+    },
+    {
+      "id": "FEAT-068",
+      "name": "Per-Organisation Dimensions",
+      "description": "Each organisation owns its dimensions and environments, starts from the default taxonomy, and customises them in Settings → Dimensi & Lingkungan: rename, add, reorder, colour, archive; environments too.",
+      "priority": "P2",
+      "status": "passing",
+      "acceptance_criteria": [
+        "A new organisation starts from its own copy of the default taxonomy; existing organisations got a copy with their data remapped by the migration",
+        "An organisation sees and uses only its own dimensions; another organisation's id is refused",
+        "Archived dimensions take no new forces or signals (edits may keep the current one) and stay on old data and in filters",
+        "Codes are generated once and never change; names are unique per organisation; a dimension or environment in use cannot be deleted (the database refuses it too)",
+        "Display order follows environment order, then position; the radar draws one spoke per dimension and colours come from the chosen palette key or a stable default"
+      ],
+      "verification_evidence": "2026-11-11: TenantDimensionsTest 5 tests red first (5 failed), then 5 passed; DimensionSettingsTest 5 passed (not run red: the full suite held the test database); the two tenant-security fixtures updated to use the organisation's own dimension; dev DB migrated (11 dimensions and 2 environments per organisation, no cross-organisation references, 38 users) after fixing a migration ordering bug that only appears with several organisations. Local browser: settings page lists Macro / Mezzo with usage, delete disabled when in use, added AI Policy appeared as a 12th radar spoke, then deleted again."
     }
   ]
 }

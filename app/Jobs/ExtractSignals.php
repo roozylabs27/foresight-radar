@@ -17,8 +17,9 @@ use Throwable;
 
 /**
  * Extracts candidate signals from an ingested source. Runs once: an LLM
- * failure already falls back to keyword rules inside the service, so a
- * failure here is a server error, and a retry would repeat a paid call.
+ * failure already marks the source failed inside the service (the analyst
+ * retries it from the Signals page), so a failure here is a server error, and
+ * an automatic retry would repeat a paid call.
  */
 class ExtractSignals implements ShouldBeUnique, ShouldQueue
 {

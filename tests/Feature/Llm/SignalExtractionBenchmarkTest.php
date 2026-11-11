@@ -127,7 +127,8 @@ class SignalExtractionBenchmarkTest extends TestCase
         }
     }
 
-    public function test_benchmark_heuristic_fallback_resilience(): void
+    /** External sources go through AI only: an outage fails the source with a reason instead of keyword-rule signals. */
+    public function test_benchmark_gateway_outage_fails_the_source_without_keyword_signals(): void
     {
         $benchmark = $this->benchmarkData[0];
 
@@ -149,17 +150,8 @@ class SignalExtractionBenchmarkTest extends TestCase
         $service->extract($source);
 
         $source->refresh();
-        $this->assertSame(LlmJobStatus::COMPLETED, $source->extraction_status);
-        $this->assertNotEmpty($source->signals);
-        $notice = $source->extraction_meta['notice'] ?? null;
-        $this->assertNotNull($notice);
-        $this->assertStringContainsString('tanpa AI', $notice);
-
-        foreach ($source->signals as $fallbackSignal) {
-            $this->assertTrue(
-                EvidenceVerifier::verify($fallbackSignal->evidence_quote, $benchmark['content']),
-                'Heuristic fallback quotes must also be verbatim excerpts from the source document.'
-            );
-        }
+        $this->assertSame(LlmJobStatus::FAILED, $source->extraction_status);
+        $this->assertCount(0, $source->signals);
+        $this->assertStringContainsString('Coba lagi', (string) $source->extraction_error);
     }
 }

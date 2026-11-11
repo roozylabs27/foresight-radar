@@ -5,10 +5,12 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import AnalysisFilterBar, { filterParam, useAnalysisFilters } from "@/Components/AnalysisFilters";
 import PrioritizingChart from "@/Components/PrioritizingChart";
 import { statusBadge } from "@/Components/StatusBadge";
+import { FIRM } from "@/domain/reportScope";
 import { cn } from "@/lib/utils";
 
-export default function Prioritizing({ auth, dimensions = [], title }) {
-    const filters = useAnalysisFilters(dimensions);
+/** Priority matrix of the whole firm (default) or of one Key Focal Issue (`scopes`, `scope`). */
+export default function Prioritizing({ auth, dimensions = [], title, scopes = [], scope = FIRM }) {
+    const filters = useAnalysisFilters(dimensions, { scopes, scope });
 
     return (
         <AuthenticatedLayout
@@ -29,8 +31,9 @@ export default function Prioritizing({ auth, dimensions = [], title }) {
                 <AnalysisFilterBar filters={filters} dimensions={dimensions} />
                 <PrioritizingChart
                     date={{ date: filters.period }}
-                    selectData={{ dimension: filterParam(filters.dimension) ?? null }}
+                    selectData={{ dimension: filterParam(filters.dimension) ?? null, scope: filters.params.scope ?? null }}
                     dimensions={dimensions}
+                    scopeLabel={filters.scopeLabel}
                 />
             </main>
         </AuthenticatedLayout>

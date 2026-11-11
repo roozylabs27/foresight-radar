@@ -18,6 +18,7 @@ class SimulationRequest extends FormRequest
             'date' => ['nullable', 'string'],
             'dimension' => ['nullable'],
             'propagate' => ['nullable', 'boolean'],
+            'scope' => ['nullable', 'string', 'max:64'],
             'overrides' => ['required', 'array', 'max:50'],
             'overrides.*.force' => ['required', 'string', TenantRule::exists('driving_forces', 'uuid')],
             'overrides.*.status_action' => ['nullable', 'string', 'in:monitoring,decided_plan'],

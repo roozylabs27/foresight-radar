@@ -2,7 +2,7 @@ import { useId, useMemo } from "react";
 import { Link } from "@inertiajs/react";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
-import { InfoIcon, LoaderCircleIcon, SlidersHorizontalIcon, ZapIcon } from "lucide-react";
+import { AlertCircleIcon, InfoIcon, LoaderCircleIcon, SlidersHorizontalIcon, ZapIcon } from "lucide-react";
 
 import FormField, { fieldControlProps } from "@/Components/FormField";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -106,13 +106,32 @@ function ProvenanceNote({ mode, model, label }) {
     );
 }
 
+/** External sources are extracted by AI only; without a provider the form is closed and says where to set one. */
+function AiMissingNote() {
+    return (
+        <div className="flex gap-3 rounded-lg border border-solid border-warning/40 bg-warning-soft p-4" role="alert">
+            <AlertCircleIcon aria-hidden="true" className="mt-0.5 shrink-0 text-warning" />
+            <div className="flex flex-col gap-1">
+                <p className="m-0 text-sm font-semibold text-foreground">Ingest memerlukan AI</p>
+                <p className="m-0 text-[13px] text-muted-foreground">
+                    Sinyal dari sumber eksternal hanya diekstrak oleh AI. Layanan AI belum diatur untuk akun atau organisasi Anda.
+                </p>
+                <Link href={route("settings.llm.index")} className="inline-flex items-center gap-1 self-start text-xs font-medium text-primary hover:underline">
+                    <SlidersHorizontalIcon aria-hidden="true" className="size-3" />
+                    Atur provider AI di Pengaturan
+                </Link>
+            </div>
+        </div>
+    );
+}
+
 /**
  * Source document ingestion. `onSubmit(payload)` sends it and may resolve to
  * the 422 `errors` bag; resolve `true` on success to clear the form.
  * `mode` is the LLM provider id or "heuristic", with `label` and `model` naming
- * it; content longer than `maxChars` is refused.
+ * it; content longer than `maxChars` is refused. `aiMissing` closes the form.
  */
-export default function IngestForm({ loading, onSubmit, mode = "heuristic", model = null, label = "Aturan", maxChars = 60000 }) {
+export default function IngestForm({ loading, onSubmit, mode = "heuristic", model = null, label = "Aturan", maxChars = 60000, aiMissing = false }) {
     const idPrefix = useId();
     const ids = Object.fromEntries(FIELDS.map((name) => [name, `${idPrefix}-${name}`]));
     const schema = useMemo(() => makeSchema(maxChars), [maxChars]);
@@ -162,10 +181,10 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
 
     return (
         <div className="mx-auto flex w-full max-w-[840px] flex-col gap-6 py-2">
-            <ProvenanceNote mode={mode} model={model} label={label} />
+            {aiMissing ? <AiMissingNote /> : <ProvenanceNote mode={mode} model={model} label={label} />}
 
             <form noValidate onSubmit={submit}>
-                <fieldset disabled={loading} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+                <fieldset disabled={loading || aiMissing} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
                     <div className="grid gap-5 sm:grid-cols-[2fr_1fr]">
                         {field(
                             "title",

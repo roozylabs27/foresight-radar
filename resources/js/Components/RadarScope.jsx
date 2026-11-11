@@ -236,7 +236,7 @@ function CrossImpactLinks({ points, links }) {
     );
 }
 
-export default function RadarScope({ points, links = [], activeNo, onActivate, onSelect, className, style }) {
+export default function RadarScope({ points, sectors = DIMENSION_CONFIGS, links = [], activeNo, onActivate, onSelect, className, style }) {
     const active = points.find((item) => item.no === activeNo);
     // Draw the active marker last so it sits on top.
     const ordered = active ? [...points.filter((item) => item !== active), active] : points;
@@ -260,7 +260,7 @@ export default function RadarScope({ points, links = [], activeNo, onActivate, o
                             strokeWidth={HORIZON_BANDS.some((band) => band.to === radius) ? 1.5 : 1}
                         />
                     ))}
-                    {DIMENSION_CONFIGS.map((dimension) => {
+                    {sectors.map((dimension) => {
                         const end = point(RADAR_MAX_RADIUS, dimension.angle);
                         return (
                             <line
@@ -289,7 +289,7 @@ export default function RadarScope({ points, links = [], activeNo, onActivate, o
                     >
                         FIRM
                     </text>
-                    {DIMENSION_CONFIGS.map((dimension) => (
+                    {sectors.map((dimension) => (
                         <DimensionLabel key={dimension.name} name={dimension.name} angle={dimension.angle} />
                     ))}
                 </g>

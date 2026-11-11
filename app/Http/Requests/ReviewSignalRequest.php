@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Signal;
 use App\Rules\WordCountRule;
 use App\Support\TenantRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,7 +22,7 @@ class ReviewSignalRequest extends FormRequest
             'title' => ['nullable', 'string', 'max:255'],
             'summary' => ['nullable', 'string'],
             'evidence_quote' => ['nullable', 'string'],
-            'dimension_id' => ['nullable', 'exists:dimensions,id'],
+            'dimension_id' => ['nullable', TenantRule::activeDimension($this->currentDimensionId())],
             'suggested_time_horizon_id' => ['nullable', 'exists:time_horizons,id'],
             'preliminary_impact' => ['nullable', 'integer', 'between:1,10'],
             'preliminary_uncertainty' => ['nullable', 'integer', 'between:1,10'],
@@ -35,5 +36,13 @@ class ReviewSignalRequest extends FormRequest
             'attach_signals' => ['nullable', 'array', 'max:50'],
             'attach_signals.*' => ['uuid'],
         ];
+    }
+
+    /** The dimension the reviewed signal sits on, which it may keep even when archived. */
+    private function currentDimensionId(): ?int
+    {
+        $signal = $this->route('signal');
+
+        return $signal instanceof Signal ? $signal->dimension_id : null;
     }
 }

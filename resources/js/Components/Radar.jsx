@@ -14,7 +14,8 @@ import RadarSignalSheet from "@/Components/RadarSignalSheet";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { Skeleton } from "@/Components/ui/skeleton";
-import { computeAntiCollisionPoints, HORIZON_BANDS } from "@/lib/radarLayout";
+import { skippedNote } from "@/domain/reportScope";
+import { computeAntiCollisionPoints, dimensionSectors, HORIZON_BANDS } from "@/lib/radarLayout";
 import { cn } from "@/lib/utils";
 
 const BAND_SWATCHES = { 1: "var(--horizon-short)", 2: "var(--horizon-mid)", 3: "var(--horizon-long)" };
@@ -130,7 +131,7 @@ function Legends() {
  * the last 12 months) and `selectData` may hold a `dimension` id. `setLoading` mirrors
  * the loading state for a parent with its own indicator.
  */
-export default function Radar({ date, selectData, setLoading }) {
+export default function Radar({ date, selectData, dimensions = [], setLoading }) {
     const [items, setItems] = useState([]);
     const [loading, setLocalLoading] = useState(true);
     const [activeNo, setActiveNo] = useState(null);
@@ -142,7 +143,10 @@ export default function Radar({ date, selectData, setLoading }) {
     const links = useCrossImpactLinks(showLinks, items);
 
     const dimension = selectData?.dimension ?? null;
-    const queryKey = qs.stringify({ date: date?.date ?? defaultPeriod(), dimension: dimension ?? undefined });
+    // A Key Focal Issue (scope) has no period: it is one snapshot of the exercise.
+    const scope = selectData?.scope ?? null;
+    const queryKey = qs.stringify({ date: scope ? undefined : (date?.date ?? defaultPeriod()), dimension: dimension ?? undefined, scope: scope ?? undefined });
+    const [skipped, setSkipped] = useState(0);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -152,6 +156,7 @@ export default function Radar({ date, selectData, setLoading }) {
             .then((response) => {
                 const rows = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
                 setItems(rows.map((row, index) => ({ ...row, no: index + 1 })));
+                setSkipped(Number(response.headers?.["x-report-skipped"] ?? 0));
                 setLocalLoading(false);
             })
             .catch((error) => {
@@ -176,7 +181,13 @@ export default function Radar({ date, selectData, setLoading }) {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [fullscreen, sheetOpen]);
 
-    const points = useMemo(() => computeAntiCollisionPoints(items), [items]);
+    // One spoke per dimension of the organisation, in its order; an archived one only while it still has items.
+    const sectors = useMemo(() => {
+        const shown = new Set(items.map((item) => item.dimension));
+        const names = dimensions.filter((dimension) => !dimension.archived || shown.has(dimension.label)).map((dimension) => dimension.label);
+        return dimensionSectors(names.length > 0 ? names : undefined);
+    }, [dimensions, items]);
+    const points = useMemo(() => computeAntiCollisionPoints(items, sectors), [items, sectors]);
 
     const openDetail = (item) => {
         setSelected(item);
@@ -288,6 +299,7 @@ export default function Radar({ date, selectData, setLoading }) {
                     title={
                         <>
                             <h2 className="m-0 text-sm font-semibold text-foreground">Radar Visualization</h2>
+                            {scope && <span className={cn(statusBadge(), "bg-accent text-primary")}>Key Focal Issue</span>}
                             {dimension && (
                                 <span className={cn(statusBadge(), "bg-accent text-primary")}>Filtered by Dimension</span>
                             )}
@@ -322,12 +334,16 @@ export default function Radar({ date, selectData, setLoading }) {
                     ) : (
                         <RadarScope
                             points={points}
+                            sectors={sectors}
                             links={links}
                             activeNo={activeNo}
                             onActivate={setActiveNo}
                             onSelect={openDetail}
                             style={fullscreen ? { maxWidth: "min(100%, calc((100vh - 220px) * 1.07))" } : undefined}
                         />
+                    )}
+                    {scope && !loading && skipped > 0 && (
+                        <p role="note" className="m-0 text-xs text-muted-foreground">{skippedNote(skipped, { radar: true })}</p>
                     )}
                     <Legends />
                     {showLinks && <LinkLegend count={links.length} />}

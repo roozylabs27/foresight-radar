@@ -167,7 +167,8 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
                                             <SelectValue placeholder="Select a dimension" />
                                         </SelectTrigger>
                                         <SelectContent position="popper">
-                                            {dimensions.map((dimension) => (
+                                            {/* Archived dimensions take no new signals; the signal may keep its own. */}
+                                            {dimensions.filter((dimension) => !dimension.archived || dimension.value === signal?.dimension_id).map((dimension) => (
                                                 <SelectItem key={dimension.value} value={toFieldValue(dimension.value)}>
                                                     {dimension.label}
                                                 </SelectItem>

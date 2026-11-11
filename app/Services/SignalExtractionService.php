@@ -24,11 +24,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Ramsey\Uuid\Uuid;
 
 class SignalExtractionService
 {
     public const PROVIDER_HEURISTIC = 'heuristic';
+
+    public const AI_MISSING = 'Layanan AI belum diatur. Atur provider AI di Pengaturan.';
 
     /**
      * Both dependencies are optional so subclasses (and tests) can construct
@@ -89,11 +92,24 @@ class SignalExtractionService
     }
 
     /**
+     * True when external sources must go through AI but no provider is active for the user (or their
+     * organisation). Keyword rules run only when the driver is explicitly "heuristic" (tests, offline).
+     */
+    public function aiMissing(int|User|null $user = null): bool
+    {
+        return config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC
+            && ! $this->clientForUser($user ?? Auth::user())->isAvailable();
+    }
+
+    /**
      * Save the source and queue its extraction. The LLM call runs in the
      * ExtractSignals job, so the request returns before the model answers.
+     *
+     * @throws ValidationException when no AI provider is active
      */
     public function ingest(array $data, int $userId): Source
     {
+        $this->requireAi($userId);
         $content = trim($data['content'] ?? '');
 
         $source = Source::create([
@@ -114,12 +130,46 @@ class SignalExtractionService
     }
 
     /**
+     * Queue the extraction of a failed source again, through AI.
+     *
+     * @throws ValidationException when the source did not fail or no AI provider is active
+     */
+    public function retry(Source $source): Source
+    {
+        if ($source->extraction_status !== LlmJobStatus::FAILED) {
+            throw ValidationException::withMessages(['source' => 'Hanya ekstraksi yang gagal yang bisa dicoba lagi.']);
+        }
+        $this->requireAi($source->created_by ? (int) $source->created_by : null);
+
+        $source->update(['extraction_status' => LlmJobStatus::QUEUED, 'extraction_error' => null]);
+        ExtractSignals::dispatch($source);
+
+        return $source->refresh();
+    }
+
+    /** @throws ValidationException */
+    private function requireAi(?int $userId): void
+    {
+        if ($this->aiMissing($userId)) {
+            throw ValidationException::withMessages(['ai' => self::AI_MISSING]);
+        }
+    }
+
+    /** Mark the source failed with a reason the analyst sees, keeping no signals. */
+    private function failSource(Source $source, string $message): void
+    {
+        $source->update(['extraction_status' => LlmJobStatus::FAILED, 'extraction_error' => Str::limit($message, 500, '')]);
+    }
+
+    /**
      * Extract candidate signals from a saved source and mark it completed.
      *
      * The LLM is called before the transaction opens, so a slow call holds no
-     * database locks. When it fails, extraction falls back to keyword rules and
-     * the stored `notice` says why; when it succeeds with no verifiable signal,
-     * the source is completed without signals.
+     * database locks. External sources go through AI only: when no provider is
+     * active or the call fails, the source is marked failed with the reason and
+     * can be retried; keyword rules run only with the "heuristic" driver (tests,
+     * offline). When the AI finds no verifiable signal, the source is completed
+     * without signals.
      */
     public function extract(Source $source): void
     {
@@ -133,13 +183,18 @@ class SignalExtractionService
         $title = (string) $source->title;
         $userLlm = $source->created_by ? app(LlmClientResolver::class)->resolveForUserId((int) $source->created_by, false) : null;
         $llm = $userLlm ?? ($this->llm ?? $this->llm());
-        $isLlmAvailable = config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC && $llm->isAvailable();
-        $mode = $isLlmAvailable ? $llm->provider() : self::PROVIDER_HEURISTIC;
+        $useAi = config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC;
         $notice = null;
         $candidates = null;
         $meta = [];
 
-        if ($mode !== self::PROVIDER_HEURISTIC) {
+        if ($useAi && ! $llm->isAvailable()) {
+            $this->failSource($source, self::AI_MISSING.' Lalu coba lagi dari halaman Sinyal.');
+
+            return;
+        }
+
+        if ($useAi) {
             // Every AI call is recorded (roadmap R1.12); signals written by keyword rules link no run.
             $refs = ['source' => $source->uuid];
             try {
@@ -159,9 +214,10 @@ class SignalExtractionService
                 }
             } catch (LlmException $e) {
                 app(AiGenerationRecorder::class)->unsuccessful(AiGenerationRun::FAILED, 'signal_extraction', $llm, SignalExtractionPrompt::VERSION, $refs, $e->reason, $source->created_by);
-                Log::warning('Signal extraction fell back to keyword rules', ['reason' => $e->reason]);
-                $notice = $e->userMessage().' Sinyal diekstrak dengan aturan kata kunci (tanpa AI).';
-                $meta = ['provider' => self::PROVIDER_HEURISTIC, 'fallback_reason' => $e->reason];
+                Log::warning('Signal extraction failed', ['reason' => $e->reason]);
+                $this->failSource($source, $e->userMessage().' Sumber tersimpan tanpa sinyal. Coba lagi dari halaman Sinyal.');
+
+                return;
             }
         }
 
@@ -290,7 +346,7 @@ class SignalExtractionService
      */
     protected function extractCandidatesFromText(string $text, string $sourceTitle): array
     {
-        $dimensions = Dimension::all();
+        $dimensions = Dimension::active()->ordered()->get();
         $timeHorizons = TimeHorizon::all();
 
         // Split by double newlines or headers to identify distinct paragraphs/sections
@@ -352,24 +408,25 @@ class SignalExtractionService
         $textLower = strtolower($text);
 
         $dimensionKeywords = [
-            'Political' => ['government', 'minister', 'election', 'geopolit', 'sanction', 'political', 'national agenda', 'energy security'],
-            'Economic' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance', 'exchange rate'],
-            'Social' => ['society', 'social', 'demographic', 'generation', 'gen z', 'millennial', 'lifestyle', 'culture', 'urban'],
-            'Technology' => ['tech', 'ai', 'algorithm', 'software', 'digital', 'cyber', 'quantum', 'cloud', 'compute', 'data'],
-            'Ecology' => ['climate', 'carbon', 'emission', 'green', 'environment', 'sustainable', 'waste', 'energy', 'biodiversity'],
-            'Legislative' => ['law', 'regulat', 'directive', 'act', 'legal', 'compliance', 'standard', 'decree', 'tkdn'],
-            'Consumer' => ['consumer', 'customer', 'demand', 'preference', 'behavior', 'user', 'habit', 'adoption', 'purchasing power'],
-            'Supply Chain' => ['supply chain', 'logistics', 'vendor', 'supplier', 'raw material', 'shipping', 'manufacturing', 'shortage'],
-            'Competitor' => ['rival', 'compet', 'patent', 'acquisition', 'market share', 'price war'],
-            'New Entrant' => ['new entrant', 'newcomer', 'market entry', 'new player', 'entering the market', 'enters the market', 'startup'],
-            'Substitute' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog', 'car sharing', 'ride-hailing'],
+            'POLITICAL' => ['government', 'minister', 'election', 'geopolit', 'sanction', 'political', 'national agenda', 'energy security'],
+            'ECONOMIC' => ['market', 'inflation', 'gdp', 'economic', 'capital', 'revenue', 'cost', 'trade', 'interest rate', 'finance', 'exchange rate'],
+            'SOCIAL' => ['society', 'social', 'demographic', 'generation', 'gen z', 'millennial', 'lifestyle', 'culture', 'urban'],
+            'TECHNOLOGY' => ['tech', 'ai', 'algorithm', 'software', 'digital', 'cyber', 'quantum', 'cloud', 'compute', 'data'],
+            'ECOLOGY' => ['climate', 'carbon', 'emission', 'green', 'environment', 'sustainable', 'waste', 'energy', 'biodiversity'],
+            'LEGISLATIVE' => ['law', 'regulat', 'directive', 'act', 'legal', 'compliance', 'standard', 'decree', 'tkdn'],
+            'CONSUMER' => ['consumer', 'customer', 'demand', 'preference', 'behavior', 'user', 'habit', 'adoption', 'purchasing power'],
+            'SUPPLY_CHAIN' => ['supply chain', 'logistics', 'vendor', 'supplier', 'raw material', 'shipping', 'manufacturing', 'shortage'],
+            'COMPETITOR' => ['rival', 'compet', 'patent', 'acquisition', 'market share', 'price war'],
+            'NEW_ENTRANT' => ['new entrant', 'newcomer', 'market entry', 'new player', 'entering the market', 'enters the market', 'startup'],
+            'SUBSTITUTE' => ['alternative', 'replacement', 'substitute', 'transition from', 'leapfrog', 'car sharing', 'ride-hailing'],
         ];
 
         $highestCount = 0;
         $bestMatch = null;
 
         foreach ($dimensions as $dimension) {
-            $keywords = $dimensionKeywords[$dimension->name] ?? [strtolower($dimension->name)];
+            // Keyed by code, so a renamed default keeps its keywords; a custom dimension matches its own name.
+            $keywords = $dimensionKeywords[$dimension->code ?? ''] ?? [strtolower($dimension->name)];
             $count = 0;
             foreach ($keywords as $kw) {
                 if (str_contains($textLower, $kw)) {

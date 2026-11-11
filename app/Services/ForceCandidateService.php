@@ -69,7 +69,7 @@ class ForceCandidateService
             $refs[$ref] = $signal->id;
             $offered[] = ['ref' => $ref, 'title' => $signal->title, 'summary' => $signal->summary, 'category' => $signal->dimension?->name];
         }
-        $dimensions = Dimension::ordered()->whereNotNull('code')->get(['id', 'code', 'name']);
+        $dimensions = Dimension::active()->ordered()->whereNotNull('code')->get(['id', 'code', 'name']);
         $categories = $dimensions->map(fn ($dimension) => ['code' => $dimension->code, 'name' => $dimension->name])->values()->all();
         $inputRefs = ['project' => $project->uuid, 'signals' => array_values($refs)];
 

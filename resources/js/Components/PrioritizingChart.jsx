@@ -17,6 +17,7 @@ import DataTable from "@/Components/DataTable";
 import DimensionChip from "@/Components/DimensionChip";
 import { Skeleton } from "@/Components/ui/skeleton";
 import { statusBadge } from "@/Components/StatusBadge";
+import { skippedNote } from "@/domain/reportScope";
 
 const SCALE = Array.from({ length: 10 }, (_, index) => index + 1);
 
@@ -123,16 +124,19 @@ const columns = [
 /**
  * Uncertainty × impact matrix of approved driving forces, with the numbered
  * item list beside it. `date` is `{ date: [start, end] }` (defaults to this
- * month) and `selectData` may hold a `dimension` id. `setLoading` mirrors the
- * loading state for a parent with its own indicator.
+ * month) and `selectData` may hold a `dimension` id and a Key Focal Issue `scope` (an exercise id;
+ * no period then), named by `scopeLabel`. `setLoading` mirrors the loading state for a parent with
+ * its own indicator.
  */
-export default function PrioritizingChart({ date, selectData, dimensions = [], setLoading }) {
+export default function PrioritizingChart({ date, selectData, dimensions = [], scopeLabel = "FIRM", setLoading }) {
     const [items, setItems] = useState([]);
     const [loading, setLocalLoading] = useState(true);
+    const [skipped, setSkipped] = useState(0);
 
     const dimension = selectData?.dimension ?? null;
+    const exercise = selectData?.scope ?? null;
     const range = date?.date ?? defaultPeriod();
-    const queryKey = qs.stringify({ date: range, dimension: dimension ?? undefined });
+    const queryKey = qs.stringify({ date: exercise ? undefined : range, dimension: dimension ?? undefined, scope: exercise ?? undefined });
 
     useEffect(() => {
         const controller = new AbortController();
@@ -142,6 +146,7 @@ export default function PrioritizingChart({ date, selectData, dimensions = [], s
             .then((response) => {
                 const rows = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
                 setItems(rows.map((row, index) => ({ ...row, no: index + 1 })));
+                setSkipped(Number(response.headers?.["x-report-skipped"] ?? 0));
                 setLocalLoading(false);
             })
             .catch((error) => {
@@ -164,8 +169,9 @@ export default function PrioritizingChart({ date, selectData, dimensions = [], s
     return (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <section aria-label="Daftar item prioritas" className="flex min-w-0 flex-col gap-2">
-                <div className="flex items-center gap-2">
-                    {scope ? <DimensionChip name={scope} /> : <span className={statusBadge()}>OVERALL</span>}
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className={statusBadge()}>{scopeLabel}</span>
+                    {scope && <DimensionChip name={scope} />}
                     <span className="text-xs text-muted-foreground">{items.length} item</span>
                 </div>
                 <DataTable
@@ -176,6 +182,7 @@ export default function PrioritizingChart({ date, selectData, dimensions = [], s
                     caption="Daftar item pada matriks prioritas"
                     className="max-h-[480px] overflow-y-auto"
                 />
+                {exercise && !loading && skipped > 0 && <p role="note" className="m-0 text-xs text-muted-foreground">{skippedNote(skipped)}</p>}
             </section>
 
             <section
