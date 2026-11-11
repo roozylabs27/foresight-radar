@@ -89,13 +89,15 @@ class EarlyWarningIndicatorService
             ->where(fn ($q) => $q->where('horizon', 'might')->orWhere('wild_card', true))
             ->latest('id')
             ->limit($limit)
-            ->get(['uuid', 'title', 'summary', 'horizon', 'wild_card', 'created_at'])
+            ->get(['uuid', 'title', 'summary', 'horizon', 'wild_card', 'classified_by', 'created_at'])
             ->map(fn (Signal $signal) => [
                 'id' => $signal->uuid,
                 'title' => $signal->title,
                 'summary' => $signal->summary,
                 'horizon' => $signal->horizon,
                 'wild_card' => $signal->wild_card,
+                // Proposed by the AI at extraction and not yet saved by a reviewer.
+                'proposed' => $signal->classified_by === null,
                 'created_at' => $signal->created_at?->toISOString(),
             ])
             ->all();

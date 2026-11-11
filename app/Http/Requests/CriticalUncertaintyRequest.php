@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\DifferentPole;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -23,7 +24,7 @@ class CriticalUncertaintyRequest extends FormRequest
             'forces' => ['required', 'array', 'min:1', 'max:20'],
             'forces.*' => ['required', 'uuid'],
             'low_pole_label' => ['required', 'string', 'max:120'],
-            'high_pole_label' => ['required', 'string', 'max:120', 'different:low_pole_label'],
+            'high_pole_label' => ['required', 'string', 'max:120', new DifferentPole('low_pole_label')],
             'selection_rationale' => ['required', 'string', 'max:2000'],
         ];
     }

@@ -269,7 +269,9 @@ class SignalClassificationTest extends TestCase
     public function test_step_nine_lists_accepted_weak_signals_and_wild_cards_apart(): void
     {
         $this->readyFramework();
-        $this->signal('Sodium-ion breakthrough', 'ACCEPTED', ['horizon' => 'might']);
+        $this->signal('Sodium-ion breakthrough', 'ACCEPTED', ['horizon' => 'might'])
+            ->forceFill(['classified_by' => $this->manager->id, 'classified_at' => now()])->save();
+        // Not saved by a reviewer: an AI proposal from extraction, shown as such.
         $this->signal('Nickel export ban reversed', 'ACCEPTED', ['horizon' => 'could', 'wild_card' => true]);
         $this->signal('EV sales keep rising', 'ACCEPTED', ['horizon' => 'likely']);
         $this->signal('Pending weak signal', 'PENDING', ['horizon' => 'might']);
@@ -279,6 +281,7 @@ class SignalClassificationTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->count('sensing', 2)
                 ->where('sensing', fn ($rows) => collect($rows)->pluck('title')->sort()->values()->all() === ['Nickel export ban reversed', 'Sodium-ion breakthrough'])
-                ->where('sensing.0.horizon', fn ($value) => in_array($value, ['might', 'could'], true)));
+                ->where('sensing.0.horizon', fn ($value) => in_array($value, ['might', 'could'], true))
+                ->where('sensing', fn ($rows) => collect($rows)->pluck('proposed', 'title')->all() === ['Nickel export ban reversed' => true, 'Sodium-ion breakthrough' => false]));
     }
 }

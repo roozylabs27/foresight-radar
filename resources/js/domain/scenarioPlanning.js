@@ -206,6 +206,17 @@ export const FOCAL_ISSUES = {
     other: "Lainnya",
 };
 
+/** Pole weaknesses named by the AI critique (App\Services\Llm\Prompts\ScenarioFrameworkPrompt, matrix row 4.7). */
+export const POLE_ISSUES = {
+    not_opposite: "Bukan kebalikan",
+    different_variable: "Beda variabel",
+    value_laden: "Bernilai baik/buruk",
+    vague: "Kabur",
+    implausible: "Tak tercapai sebelum tahun target",
+    axes_overlap: "Sumbu tumpang-tindih",
+    other: "Lainnya",
+};
+
 /** Quadrant consistency review (App\Services\ScenarioConsistencyService, roadmap R2.8). */
 export const CONSISTENCY_STATUSES = {
     consistent: { label: "Konsisten", tone: "approved" },

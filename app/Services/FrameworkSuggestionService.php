@@ -8,6 +8,7 @@ use App\Models\AiGenerationRun;
 use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
+use App\Rules\DifferentPole;
 use App\Services\Llm\AiGenerationRecorder;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
@@ -29,6 +30,8 @@ class FrameworkSuggestionService
     public const TITLE_LIMIT = 120;
 
     public const SUMMARY_LIMIT = 200;
+
+    public const MAX_CRITIQUE = 5;
 
     public function __construct(
         protected StructuredLlmClient $llm,
@@ -81,6 +84,12 @@ class FrameworkSuggestionService
                 'axis_b_high_label' => trim($data['axis_b_high_label']),
                 'quadrants' => collect($data['quadrants'])->mapWithKeys(fn ($row) => [$row['position'] => ['title' => trim($row['title']), 'summary' => trim((string) $row['summary'])]])->all(),
                 'rationale' => Str::limit((string) ($data['rationale'] ?? ''), 1000, ''),
+                // Matrix row 4.7: advice on the current poles; unknown values fall back, empty comments are dropped.
+                'critique' => collect($data['critique'] ?? [])->map(fn ($row) => [
+                    'axis' => in_array($row['axis'] ?? null, ScenarioFrameworkPrompt::CRITIQUE_AXES, true) ? $row['axis'] : 'both',
+                    'issue' => in_array($row['issue'] ?? null, ScenarioFrameworkPrompt::ISSUES, true) ? $row['issue'] : 'other',
+                    'comment' => Str::limit(trim((string) ($row['comment'] ?? '')), 500, ''),
+                ])->filter(fn ($row) => $row['comment'] !== '')->values()->all(),
             ]]);
             $project->update(['framework_suggestion_status' => LlmJobStatus::COMPLETED->value, 'framework_suggestion_error' => null]);
         });
@@ -120,13 +129,17 @@ class FrameworkSuggestionService
     /** Why the suggestion cannot be used, or null: four distinct-pole labels and four distinct, named quadrants. */
     private function problem(array $data): ?string
     {
+        if (count($data['critique'] ?? []) > self::MAX_CRITIQUE) {
+            return 'terlalu banyak poin kritik kutub.';
+        }
+
         foreach (['a', 'b'] as $axis) {
             $low = trim((string) ($data["axis_{$axis}_low_label"] ?? ''));
             $high = trim((string) ($data["axis_{$axis}_high_label"] ?? ''));
             if ($low === '' || $high === '' || mb_strlen($low) > self::POLE_LIMIT || mb_strlen($high) > self::POLE_LIMIT) {
                 return 'label kutub sumbu '.strtoupper($axis).' kosong atau terlalu panjang.';
             }
-            if (mb_strtolower($low) === mb_strtolower($high)) {
+            if (DifferentPole::normalize($low) === DifferentPole::normalize($high)) {
                 return 'kedua kutub sumbu '.strtoupper($axis).' sama.';
             }
         }

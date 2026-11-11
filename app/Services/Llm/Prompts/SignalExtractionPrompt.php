@@ -3,6 +3,7 @@
 namespace App\Services\Llm\Prompts;
 
 use App\Models\Dimension;
+use App\Models\Signal;
 use App\Models\TimeHorizon;
 use App\Services\Llm\LlmRequest;
 use Illuminate\Support\Collection;
@@ -15,8 +16,11 @@ use Illuminate\Support\Collection;
  */
 final class SignalExtractionPrompt
 {
-    /** v2: top-level relevance verdict (is_relevant, relevance_reason) before any signal. */
-    public const VERSION = 'extract-v2';
+    /**
+     * v2: top-level relevance verdict (is_relevant, relevance_reason) before any signal.
+     * v3: per signal a proposed class (likely / could / might) and a wild card flag (roadmap R4.2).
+     */
+    public const VERSION = 'extract-v3';
 
     public const NO_FORCE = 'none';
 
@@ -35,6 +39,8 @@ For each signal:
 - impact and uncertainty: integers from 1 to 10. Impact 1-3 is minor or local, 4-6 notable for part of the business, 7-8 major for the whole business, 9-10 could reshape the industry. Uncertainty 1-3 means already enacted or confirmed, 4-6 likely but timing or scale open, 7-8 contested or early-stage, 9-10 speculative.
 - confidence: from 0 to 0.95, how well the quoted evidence supports the signal as you described it, with confidence_rationale explaining it in one sentence. Lower it when the document is an opinion, a forecast or a single unverified claim.
 - related_force_ref: the reference (F1, F2, ...) of an existing driving force that this signal clearly supports, or "none".
+- signal_class: "likely" when the development continues a trend that is already visible, "could" when current knowledge says it may happen, "might" when it is a weak signal: an early, faint or isolated hint whose meaning is still unclear. An analyst reviews this proposal.
+- wild_card: true only for an event with low probability and very high impact that could change the scenario abruptly, such as a sudden ban, a breakthrough or a collapse; otherwise false.
 
 Return at most eight signals, the most decision-relevant first. Return fewer when the document describes fewer real developments, and an empty list when it describes none. Do not add facts that are not in the document.
 PROMPT;
@@ -93,10 +99,13 @@ PROMPT;
                 'confidence' => ['type' => 'number'],
                 'confidence_rationale' => $text,
                 'related_force_ref' => self::choice([...$forceRefs, self::NO_FORCE]),
+                'signal_class' => self::choice(Signal::HORIZONS),
+                'wild_card' => ['type' => 'boolean'],
             ],
             'required' => [
                 'title', 'summary', 'significance', 'evidence_quote', 'dimension', 'time_horizon',
                 'impact', 'uncertainty', 'confidence', 'confidence_rationale', 'related_force_ref',
+                'signal_class', 'wild_card',
             ],
             'additionalProperties' => false,
         ];

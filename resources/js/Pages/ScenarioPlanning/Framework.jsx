@@ -60,6 +60,9 @@ export default function Framework({ auth, title, project, steps, framework, axes
                             onReject={actions.rejectSuggestion}
                         />
                     )}
+                    {framework?.poleChecks?.map((check) => (
+                        <p key={check.message} role="status" className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">{check.message}</p>
+                    ))}
                     {framework ? (
                         <FrameworkMatrix axes={framework.axes} quadrants={framework.quadrants} onEdit={editable ? setQuadrant : undefined} />
                     ) : !axesApproved ? (
@@ -125,6 +128,7 @@ export default function Framework({ auth, title, project, steps, framework, axes
                         <ul className="m-0 flex list-disc flex-col gap-1 pl-4 text-xs text-muted-foreground">
                             <li>Sumbu A dan B adalah dua critical uncertainty yang disetujui.</li>
                             <li>Kuadran bernama "{"{kutub A} · {kutub B}"}" sampai tim menggantinya; nama harus berbeda.</li>
+                            <li>Kedua kutub satu sumbu harus berbeda; kutub yang sama di dua sumbu diberi peringatan.</li>
                             <li>Membatalkan persetujuan sumbu mengembalikan kerangka ke draf.</li>
                         </ul>
                     </Panel>

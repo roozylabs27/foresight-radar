@@ -11,6 +11,15 @@ export const SIGNAL_HORIZONS = {
 /** A low-probability, high-impact event that could reshape the scenarios. */
 export const WILD_CARD = { label: "Wild card", hint: "Peluang kecil, dampak besar" };
 
+/**
+ * True when the class came from the AI at extraction and no reviewer has saved it yet. Rows of
+ * the signal list carry `classified_by`; rows of step 9 carry `proposed`.
+ */
+export function isProposedClass(signal) {
+    if (!signal.horizon && !signal.wild_card) return false;
+    return signal.proposed ?? signal.classified_by == null;
+}
+
 /** Values of the `sensing` filter of the signal list. */
 export const SENSING_FILTERS = [
     ...Object.entries(SIGNAL_HORIZONS).map(([value, horizon]) => ({ value, label: horizon.label })),

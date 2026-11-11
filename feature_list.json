@@ -889,6 +889,21 @@
         "The page and the report list the path from the target year back to now"
       ],
       "verification_evidence": "2026-11-10: BackcastingTest 3 tests (written before the code, first run green, 125 assertions); ScenarioReportTest + WorkspaceTest 6 passed (289 assertions). Full PHPUnit 555 passed (6,231 assertions). Local browser: preferred future Fast · Favorable saved with rationale, milestone 2028 linked to the World Bank indicator, report section and PF decision row shown."
+    },
+    {
+      "id": "FEAT-064",
+      "name": "Signal Horizon and Wild Card",
+      "description": "Reviewers classify a signal as likely, could or might (weak signal) and flag wild cards; the signal list filters by class and step 9 lists accepted weak signals and wild cards apart (roadmap R4.2, deck slide 26).",
+      "priority": "P3",
+      "status": "passing",
+      "acceptance_criteria": [
+        "Only users with review-signal classify; the horizon is likely, could, might or empty, and the wild card flag is separate",
+        "Who classified and when is recorded",
+        "The signal list shows badges and filters by horizon, wild card or unclassified",
+        "Step 9 lists accepted signals classified as might or wild card, latest first",
+        "AI extraction proposes the class and the wild card flag; the proposal stays unconfirmed (no classified_by) and is labelled until a reviewer saves it"
+      ],
+      "verification_evidence": "2026-11-10: SignalClassificationTest 3 passed (36 assertions); SignalClassificationTest + EarlyWarningIndicatorTest + LlmSignalExtractionTest 38 passed (567 assertions); Pint PASS; Larastan L5 clean on the changed PHP files; npm run build PASS. Local browser: a pending signal classified Might + wild card, badges shown, Horizon filter Might returns that row, step 9 panel renders its empty state. 2026-11-11 AI proposal at extraction (prompt extract-v3): new extraction tests red first (1 failed), then Pint PASS, Larastan L5 no errors on the changed services, LlmSignalExtractionTest + PromptComplianceTest + OpenAiCompatibleClientTest + SignalClassificationTest + SignalIngestionTest 63 passed (447 assertions), npm run build PASS. Local browser: the proposal shows the Usulan AI label and dialog note, saving it removes the label. Full PHPUnit 560 passed (6,288 assertions)."
     }
   ]
 }

@@ -190,6 +190,7 @@ class SignalExtractionService
                     'suggested_time_horizon_id', 'preliminary_impact', 'preliminary_uncertainty',
                     'confidence_score', 'confidence_rationale', 'extraction_provider', 'extraction_model',
                     'prompt_version', 'quote_verified', 'suggested_driving_force_id', 'generation_run_id',
+                    'horizon', 'wild_card',
                 ])->all());
             }
 

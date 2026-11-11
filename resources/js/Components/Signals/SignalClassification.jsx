@@ -1,3 +1,4 @@
+import { CpuIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
@@ -5,7 +6,7 @@ import FormField from "@/Components/FormField";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Switch } from "@/Components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
-import { SIGNAL_HORIZONS, WILD_CARD } from "@/domain/signals";
+import { isProposedClass, SIGNAL_HORIZONS, WILD_CARD } from "@/domain/signals";
 import { cn } from "@/lib/utils";
 
 /** Roadmap R4.2: the horizon and wild card badges of a signal; nothing when unclassified. */
@@ -16,6 +17,12 @@ export function SensingBadges({ signal, className }) {
         <span className={cn("inline-flex flex-wrap gap-1", className)}>
             {horizon && <span title={horizon.hint} className={statusBadge({ tone: horizon.tone })}>{horizon.label}</span>}
             {signal.wild_card && <span title={WILD_CARD.hint} className={statusBadge({ tone: "rejected" })}>{WILD_CARD.label}</span>}
+            {isProposedClass(signal) && (
+                <span title="Diusulkan AI saat ekstraksi, belum dikonfirmasi reviewer" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <CpuIcon aria-hidden="true" className="size-3" />
+                    Usulan AI
+                </span>
+            )}
         </span>
     );
 }
@@ -45,6 +52,12 @@ export default function ClassifyDialog({ signal, loading, onOpenChange, onSave }
     return (
         <FormDialog title="Klasifikasi sinyal" description={signal?.title} open={signal !== null} onOpenChange={onOpenChange} onOk={save} btnText="Simpan klasifikasi" cancelText="Batal" loading={loading}>
             <div className="flex flex-col gap-5">
+                {signal && isProposedClass(signal) && (
+                    <p role="status" className="m-0 flex items-start gap-2 rounded-md border border-border bg-muted/50 p-2 text-xs text-muted-foreground">
+                        <CpuIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                        Klasifikasi ini diusulkan AI saat ekstraksi. Periksa, lalu simpan untuk mengonfirmasi.
+                    </p>
+                )}
                 <FormField id="signal-horizon" label="Horizon" required={false} error={errors.horizon ? { message: [].concat(errors.horizon)[0] } : undefined} group>
                     <ToggleGroup type="single" variant="outline" value={horizon} onValueChange={setHorizon} aria-labelledby="signal-horizon-label" className="flex-wrap">
                         {Object.entries(SIGNAL_HORIZONS).map(([value, item]) => (

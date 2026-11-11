@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\DifferentPole;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -18,9 +19,9 @@ class ScenarioFrameworkRequest extends FormRequest
     {
         return [
             'axis_a_low_label' => ['required', 'string', 'max:120'],
-            'axis_a_high_label' => ['required', 'string', 'max:120', 'different:axis_a_low_label'],
+            'axis_a_high_label' => ['required', 'string', 'max:120', new DifferentPole('axis_a_low_label')],
             'axis_b_low_label' => ['required', 'string', 'max:120'],
-            'axis_b_high_label' => ['required', 'string', 'max:120', 'different:axis_b_low_label'],
+            'axis_b_high_label' => ['required', 'string', 'max:120', new DifferentPole('axis_b_low_label')],
         ];
     }
 
