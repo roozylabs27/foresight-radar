@@ -7,6 +7,7 @@ import DetailList, { DetailItem } from "@/Components/DetailList";
 import FormDialog from "@/Components/FormDialog";
 import Panel from "@/Components/Panel";
 import DecisionLog from "@/Components/ScenarioPlanning/DecisionLog";
+import ExerciseStatusControl from "@/Components/ScenarioPlanning/ExerciseStatusControl";
 import FocalSuggestion from "@/Components/ScenarioPlanning/FocalSuggestion";
 import ParticipantPanel from "@/Components/ScenarioPlanning/ParticipantPanel";
 import ProjectForm from "@/Components/ScenarioPlanning/ProjectForm";
@@ -57,7 +58,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                             {!project.confirmed_at && (
                                 <ConfirmDialog
                                     title="Konfirmasi focal issue?"
-                                    description="Setelah dikonfirmasi, langkah 2–9 terbuka. Mengubah pertanyaan, tujuan, atau tahun target nanti akan membutuhkan konfirmasi ulang."
+                                    description="Setelah dikonfirmasi, langkah 2 (driving forces) terbuka. Mengubah pertanyaan, tujuan, atau tahun target nanti akan membutuhkan konfirmasi ulang."
                                     confirmText="Konfirmasi"
                                     variant="default"
                                     onConfirm={() => visit("post", route("scenario-planning.confirm", project.id))}
@@ -108,7 +109,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                 <div className="flex flex-col gap-4">
                     <Panel
                         title="Sembilan langkah"
-                        description={!project.confirmed_at ? "Konfirmasi focal issue untuk membuka langkah 2." : !project.forces_confirmed_at ? "Sepakati daftar driving force untuk membuka langkah 3–9." : "Focal issue dan daftar driving force sudah disepakati."}
+                        description={!project.confirmed_at ? "Konfirmasi focal issue untuk membuka langkah 2." : !project.forces_confirmed_at ? "Sepakati daftar driving force untuk membuka langkah 3." : "Focal issue dan daftar driving force sudah disepakati."}
                     >
                         <NextActionCard nextAction={nextAction} lastGate={lastGate} />
                         <StaleBanner project={project} canManage={canManage} />
@@ -121,6 +122,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                             </p>
                         )}
                         <StepList steps={steps} />
+                        {canManage && <div className="flex flex-wrap gap-2"><ExerciseStatusControl project={project} steps={steps} onChange={(to) => new Promise((resolve) => router.post(route("scenario-planning.status", project.id), { status: to }, { preserveScroll: true, onFinish: resolve }))} /></div>}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium">
                             {project.forces_confirmed_at && <Link href={route("scenario-planning.compare", project.id)} className="text-primary hover:underline">Bandingkan empat skenario</Link>}
                             {project.forces_confirmed_at && <Link href={route("scenario-planning.backcasting.index", project.id)} className="text-primary hover:underline">Masa depan pilihan & backcasting</Link>}

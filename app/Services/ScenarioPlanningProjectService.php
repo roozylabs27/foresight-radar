@@ -10,6 +10,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Models\User;
 use App\Support\RowLock;
 use Carbon\CarbonInterface;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Scenario planning exercises (roadmap R0.1): the key focal issue, gate G1
@@ -209,6 +210,24 @@ class ScenarioPlanningProjectService
         });
     }
 
+    /**
+     * PRD-06: a confirmed exercise is active, in monitoring (only once step 9 is done) or archived.
+     * Draft is set by withdrawing gate G1, never by hand.
+     *
+     * @throws ValidationException
+     */
+    public function changeStatus(ScenarioPlanningProject $project, string $status, User $user): void
+    {
+        if (! in_array($status, ['active', 'monitoring', 'archived'], true) || ! $project->isConfirmed()) {
+            throw ValidationException::withMessages(['status' => 'Status ini tidak bisa dipilih untuk latihan ini.']);
+        }
+        if ($status === 'monitoring' && collect($this->steps($project))->firstWhere('number', 9)['status'] !== 'done') {
+            throw ValidationException::withMessages(['status' => 'Selesaikan langkah 9 (indikator peringatan dini) sebelum masuk tahap pemantauan.']);
+        }
+
+        $project->update(['status' => $status, 'updated_by' => $user->id]);
+    }
+
     /** Impact and uncertainty from this score up count as high on the matrix. */
     public const HIGH_SCORE = 6;
 
@@ -233,7 +252,7 @@ class ScenarioPlanningProjectService
      * an approved response (G7), step 9 with an accepted indicator rated in all four quadrants. `href` is the exercise's own screen when the step has one, otherwise the
      * existing tenant-wide page (`scoped` false).
      *
-     * @return array<int, array{number: int, key: string, title: string, status: string, href: ?string, scoped: bool}>
+     * @return array<int, array{number: int, key: string, title: string, status: string, href: ?string, scoped: bool, ahead: bool}>
      */
     public function steps(ScenarioPlanningProject $project): array
     {
@@ -244,9 +263,11 @@ class ScenarioPlanningProjectService
         $frameworkApproved = $framework?->isFrameworkApproved() ?? false;
         $conditionsDone = $frameworkApproved && app(ScenarioConditionService::class)->complete($framework);
         $conditionsStarted = $frameworkApproved && ScenarioCondition::whereIn('scenario_quadrant_id', $framework->quadrants()->select('id'))->exists();
-        $narratives = $frameworkApproved ? $framework->quadrants()->get(['narrative', 'review_status']) : collect();
+        $narratives = $frameworkApproved ? $framework->quadrants()->get(['narrative', 'review_status', 'provider', 'edited_at']) : collect();
         $narrativesDone = $narratives->count() === 4 && $narratives->every(fn ($quadrant) => $quadrant->review_status === 'approved');
-        $narrativesStarted = $narratives->contains(fn ($quadrant) => filled($quadrant->narrative));
+        // PRD-07: a template skeleton nobody edited is not a started narrative.
+        $narrativesStarted = $narratives->contains(fn ($quadrant) => filled($quadrant->narrative)
+            && ($quadrant->provider !== ScenarioNarrativeService::PROVIDER_TEMPLATE || $quadrant->isEdited()));
         $implicationsDone = $frameworkApproved && app(ScenarioImplicationService::class)->complete($framework);
         $implicationsStarted = $frameworkApproved && ScenarioImplication::whereIn('scenario_quadrant_id', $framework->quadrants()->select('id'))->exists();
         $responsesDone = $frameworkApproved && app(StrategicResponseService::class)->hasApproved($project);
@@ -257,7 +278,7 @@ class ScenarioPlanningProjectService
         $hasForces = (clone $included)->exists();
         $started = (clone $included)->whereHas('consensus')->exists() || $project->criticalUncertainties()->exists();
 
-        return collect(self::STEPS)->map(function (array $step, int $number) use ($project, $focal, $forces, $axes, $hasForces, $started, $framework, $frameworkApproved, $conditionsDone, $conditionsStarted, $narrativesDone, $narrativesStarted, $implicationsDone, $implicationsStarted, $responsesDone, $responsesStarted, $indicatorsDone, $indicatorsStarted) {
+        $steps = collect(self::STEPS)->map(function (array $step, int $number) use ($project, $focal, $forces, $axes, $hasForces, $started, $framework, $frameworkApproved, $conditionsDone, $conditionsStarted, $narrativesDone, $narrativesStarted, $implicationsDone, $implicationsStarted, $responsesDone, $responsesStarted, $indicatorsDone, $indicatorsStarted) {
             $status = match (true) {
                 $number === 1 => $focal ? 'done' : 'in_progress',
                 $number === 2 => ! $focal ? 'locked' : ($forces ? 'done' : ($hasForces ? 'in_progress' : 'available')),
@@ -280,7 +301,13 @@ class ScenarioPlanningProjectService
                 'href' => $scoped ? route(self::SCOPED_ROUTES[$number], $project) : ($step['module'] ? route($step['module']) : null),
                 'scoped' => $scoped,
             ];
-        })->values()->all();
+        })->values();
+
+        // PRD-07: steps 5–9 open together on G5, so a later step can be done before an earlier one.
+        // It stays done; `ahead` lets the screen say it was finished ahead of the steps before it.
+        return $steps->map(fn (array $step) => $step + [
+            'ahead' => $step['status'] === 'done' && $steps->contains(fn (array $earlier) => $earlier['number'] < $step['number'] && $earlier['status'] !== 'done'),
+        ])->all();
     }
 
     /**

@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { LoaderCircleIcon } from "lucide-react";
 
+import DiscardChangesDialog from "@/Components/DiscardChangesDialog";
 import { Button } from "@/Components/ui/button";
 import {
     Dialog,
@@ -18,6 +20,7 @@ import { cn } from "@/lib/utils";
  * - `onOk` runs from the submit button. Pass `formId` instead to make it a native
  *   submit button for a <form id={formId}> in `children` (react-hook-form).
  * - Width: `width` in px, or `className` (e.g. "sm:max-w-2xl").
+ * - `dirty`: closing without saving (Cancel, Escape, outside click) asks first.
  */
 export default function FormDialog({
     title,
@@ -34,18 +37,26 @@ export default function FormDialog({
     loading = false,
     width,
     className,
+    dirty = false,
     children,
 }) {
     const returnFocus = useReturnFocus(open);
+    const [asking, setAsking] = useState(false);
 
+    const close = () => {
+        onOpenChange?.(false);
+        onCancel?.();
+    };
     const handleOpenChange = (next) => {
         if (loading) return;
-        onOpenChange?.(next);
-        if (!next) onCancel?.();
+        if (next) return onOpenChange?.(true);
+        if (dirty) return setAsking(true);
+        close();
     };
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DiscardChangesDialog open={asking} onOpenChange={setAsking} onDiscard={close} />
             <DialogContent
                 showCloseButton={!loading}
                 className={cn("max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]", className)}

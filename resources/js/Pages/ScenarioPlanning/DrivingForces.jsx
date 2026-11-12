@@ -64,11 +64,11 @@ export default function DrivingForces({ auth, title, project, steps, forces, lib
                 <div className="flex flex-col gap-4">
                     <Panel title="Kesepakatan daftar (G2)" description="Disepakati bersama tim lintas fungsi. Mengubah status disertakan/dikeluarkan setelahnya membatalkan kesepakatan.">
                         {project.forces_confirmed_at ? (
-                            <p className="m-0 text-sm text-foreground">Disepakati oleh {project.forces_confirmed_by}, {new Date(project.forces_confirmed_at).toLocaleDateString("id-ID")}. Langkah 3–9 terbuka.</p>
+                            <p className="m-0 text-sm text-foreground">Disepakati oleh {project.forces_confirmed_by}, {new Date(project.forces_confirmed_at).toLocaleDateString("id-ID")}. Langkah 3 (skor) terbuka.</p>
                         ) : canManage ? (
                             <ConfirmDialog
                                 title="Sepakati daftar driving force?"
-                                description={`${included} driving force disertakan. Langkah 3–9 akan terbuka.`}
+                                description={`${included} driving force disertakan. Langkah 3 (skor) akan terbuka.`}
                                 confirmText="Sepakati"
                                 variant="default"
                                 onConfirm={actions.confirm}

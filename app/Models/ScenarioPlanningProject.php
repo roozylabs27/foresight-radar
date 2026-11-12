@@ -218,6 +218,17 @@ class ScenarioPlanningProject extends Model
         return $this->participants()->where('user_id', $user->id)->whereIn('role', ProjectParticipant::CONTRIBUTING)->exists();
     }
 
+    /**
+     * Step 9 observations (PRD-10): only the exercise's managers and its contributing participants
+     * record them, also while the exercise has no participants, because a numeric crossing flags the
+     * framework and the strategic responses for review.
+     */
+    public function recordsObservationsFrom(User $user): bool
+    {
+        return $user->can('update', $this)
+            || $this->participants()->where('user_id', $user->id)->whereIn('role', ProjectParticipant::CONTRIBUTING)->exists();
+    }
+
     /** Roadmap R4.1: the quadrant chosen as the preferred future. */
     public function preferredQuadrant(): BelongsTo
     {

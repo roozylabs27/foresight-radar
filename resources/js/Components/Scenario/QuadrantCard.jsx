@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { CircleCheckIcon, EyeIcon, LoaderCircleIcon, PencilIcon, UndoIcon } from "lucide-react";
 
+import DiscardChangesDialog from "@/Components/DiscardChangesDialog";
 import HintTooltip from "@/Components/HintTooltip";
 import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -17,6 +18,7 @@ import {
     SheetTitle,
 } from "@/Components/ui/sheet";
 import { Textarea } from "@/Components/ui/textarea";
+import { useDraft } from "@/hooks/use-draft";
 import { providerLabel } from "@/lib/llm";
 import { cn } from "@/lib/utils";
 
@@ -194,19 +196,21 @@ function StatementText({ statements, evidence }) {
 }
 
 function EditSheet({ quadrant, open, titleLocked, onOpenChange, onSave }) {
-    const [values, setValues] = useState(null);
+    const { values, setValues, reset, dirty } = useDraft(null);
     const [saving, setSaving] = useState(false);
+    const [asking, setAsking] = useState(false);
+    const requestClose = () => (dirty ? setAsking(true) : onOpenChange(false));
 
     useEffect(() => {
         if (open) {
-            setValues({
+            reset({
                 title: quadrant.title ?? "",
                 narrative: quadrant.narrative ?? "",
                 implications: quadrant.implications ?? "",
                 early_indicators: (quadrant.early_indicators ?? []).join("\n"),
             });
         }
-    }, [open, quadrant]);
+    }, [open, quadrant, reset]);
 
     const set = (key) => (event) => setValues((current) => ({ ...current, [key]: event.target.value }));
     const submit = async (event) => {
@@ -226,7 +230,8 @@ function EditSheet({ quadrant, open, titleLocked, onOpenChange, onSave }) {
     };
 
     return (
-        <Sheet open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
+        <Sheet open={open} onOpenChange={(next) => !saving && (next ? onOpenChange(true) : requestClose())}>
+            <DiscardChangesDialog open={asking} onOpenChange={setAsking} onDiscard={() => onOpenChange(false)} />
             <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Sunting kuadran</SheetTitle>
@@ -278,7 +283,7 @@ function EditSheet({ quadrant, open, titleLocked, onOpenChange, onSave }) {
                         {saving && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
                         Simpan
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+                    <Button type="button" variant="outline" onClick={requestClose} disabled={saving}>
                         Batal
                     </Button>
                 </SheetFooter>

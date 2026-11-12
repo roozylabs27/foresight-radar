@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
 import { CONDITION_KINDS, IMPLICATION_TYPES, RESPONSE_FITS } from "@/domain/scenarioPlanning";
+import { useDraft } from "@/hooks/use-draft";
 
 const EMPTY = { title: "", description: "", rationale: "", initiatives: "", priority: "", owner: "", depends_on: "", fit: {}, implications: [], conditions: [] };
 const NONE = "none";
@@ -19,14 +20,14 @@ const error = (errors, name) => (errors[name] ? { message: [].concat(errors[name
  * `onSave(values)` resolves to the 422 errors or undefined.
  */
 export default function ResponseDialog({ target, quadrants, implications, conditions, owners, loading, onOpenChange, onSave }) {
-    const [values, setValues] = useState(EMPTY);
+    const { values, setValues, reset, dirty } = useDraft(EMPTY);
     const [errors, setErrors] = useState({});
     const response = target?.response;
 
     useEffect(() => {
         if (!target) return;
         setErrors({});
-        setValues(response
+        reset(response
             ? { ...EMPTY, ...response, description: response.description ?? "", rationale: response.rationale ?? "", initiatives: response.initiatives ?? "", depends_on: response.depends_on ?? "", priority: response.priority ? String(response.priority) : "", owner: response.owner?.id ?? "", fit: { ...response.fit }, implications: response.implications.map((item) => item.id), conditions: response.conditions.map((item) => item.id) }
             : EMPTY);
     }, [target, response?.id]);
@@ -51,6 +52,7 @@ export default function ResponseDialog({ target, quadrants, implications, condit
             btnText="Simpan respons"
             cancelText="Batal"
             loading={loading}
+            dirty={dirty}
             className="sm:max-w-2xl"
         >
             <div className="flex flex-col gap-5">

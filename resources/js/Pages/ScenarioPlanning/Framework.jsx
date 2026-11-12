@@ -107,10 +107,9 @@ export default function Framework({ auth, title, project, steps, framework, axes
                                     </Button>
                                 </ConfirmDialog>
                             ) : (
-                                <Button size="sm" onClick={actions.approve} disabled={actions.busy}>
-                                    <CircleCheckIcon aria-hidden="true" />
-                                    Setujui kerangka
-                                </Button>
+                                <ConfirmDialog title="Setujui kerangka (G5)?" description="Kutub dan nama kuadran terkunci, dan langkah 5–9 terbuka." confirmText="Setujui" variant="default" onConfirm={actions.approve}>
+                                    <Button size="sm" disabled={actions.busy}><CircleCheckIcon aria-hidden="true" />Setujui kerangka</Button>
+                                </ConfirmDialog>
                             ))}
                             {approved && (
                                 <Link href={route("scenario-planning.conditions.index", project.id)} className="text-sm font-medium text-primary hover:underline">

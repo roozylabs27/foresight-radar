@@ -53,17 +53,17 @@ const number = new Intl.NumberFormat("id-ID");
 
 const makeSchema = (maxChars) =>
     z.object({
-        title: z.string().trim().min(1, "Please provide a source title"),
+        title: z.string().trim().min(1, "Isi judul sumber"),
         publisher: z.string().trim(),
         url: z
             .string()
             .trim()
-            .refine((value) => value === "" || isUrl(value), "Enter a valid URL"),
+            .refine((value) => value === "" || isUrl(value), "Masukkan URL yang valid"),
         published_at: z.string(),
         content: z
             .string()
             .trim()
-            .min(1, "Please paste the article or document body")
+            .min(1, "Tempel isi artikel atau dokumen")
             .min(30, "Must be at least 30 characters")
             .max(
                 maxChars,
@@ -81,7 +81,7 @@ function ProvenanceNote({ mode, model, label }) {
             <div className="flex flex-col gap-1 w-full">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-                        Evidence Provenance Guarantee
+                        Jaminan asal-usul bukti
                         <span className={cn(statusBadge(), ai ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
                             {ai ? `${label} · ${model}` : "Aturan"}
                         </span>
@@ -189,19 +189,19 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
                         {field(
                             "title",
                             <LabelWithTooltip
-                                label="Document / Article Title"
+                                label="Judul dokumen / artikel"
                                 tooltip="Nama dokumen, judul artikel, atau regulasi yang dianalisis sebagai rujukan utama."
                             />,
                             Input,
                             {
                                 required: true,
-                                placeholder: "e.g. EU Cleantech Regulatory Directive 2026/42",
+                                placeholder: "Contoh: EU Cleantech Regulatory Directive 2026/42",
                             }
                         )}
                         {field(
                             "publisher",
                             <LabelWithTooltip
-                                label="Publisher / Source Organization"
+                                label="Penerbit / organisasi sumber"
                                 tooltip="Nama lembaga atau organisasi penerbit (misal: Bank Indonesia, Reuters, McKinsey) untuk mengukur otoritas sumber."
                             />,
                             Input,
@@ -214,8 +214,8 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
                         {field(
                             "url",
                             <LabelWithTooltip
-                                label="Source URL (Optional)"
-                                tooltip="Tautan artikel asli untuk rujukan cepat analis (hanya disimpan sebagai metadata rujukan; isi teks diambil dari kolom Raw Content di bawah)."
+                                label="URL sumber (opsional)"
+                                tooltip="Tautan artikel asli untuk rujukan cepat analis (hanya disimpan sebagai metadata rujukan; isi teks diambil dari kolom Isi dokumen di bawah)."
                             />,
                             Input,
                             {
@@ -227,7 +227,7 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
                         {field(
                             "published_at",
                             <LabelWithTooltip
-                                label="Publication Date"
+                                label="Tanggal terbit"
                                 tooltip="Tanggal dokumen diterbitkan. Digunakan AI untuk mengukur cakrawala waktu (Time Horizon)."
                             />,
                             Input,
@@ -237,7 +237,7 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
                     {field(
                         "content",
                         <LabelWithTooltip
-                            label="Raw Content / Document Text"
+                            label="Isi dokumen"
                             tooltip="Teks atau paragraf isi dokumen yang ditempel analis. AI akan memindai teks ini, mengekstrak sinyal, mencocokkan kutipan verbatim, dan menghitung sidik jari SHA-256 untuk integritas audit."
                         />,
                         Textarea,
@@ -258,7 +258,7 @@ export default function IngestForm({ loading, onSubmit, mode = "heuristic", mode
                     <div className="flex flex-wrap items-center gap-2">
                         <Button type="submit" aria-busy={loading || undefined}>
                             {loading ? <LoaderCircleIcon aria-hidden="true" className="animate-spin" /> : <ZapIcon aria-hidden="true" />}
-                            {loading ? "Menyimpan sumber…" : "Ingest & Extract Signals"}
+                            {loading ? "Menyimpan sumber…" : "Simpan & ekstrak sinyal"}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => reset(EMPTY)}>
                             Clear

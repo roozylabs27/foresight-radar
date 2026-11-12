@@ -87,10 +87,18 @@ export default function ResponseCard({ response, quadrants, canManage, busy, onE
             {canManage && (
                 <div className="flex flex-wrap gap-2">
                     {response.status !== "approved" && (
-                        <Button size="sm" disabled={busy} onClick={onApprove}>
-                            <CircleCheckIcon aria-hidden="true" />
-                            Setujui
-                        </Button>
+                        <ConfirmDialog
+                            title="Setujui respons strategis (G7)?"
+                            description={`"${response.title}" menjadi respons yang disepakati. Mengubahnya nanti mengembalikannya menjadi usulan.`}
+                            confirmText="Setujui"
+                            variant="default"
+                            onConfirm={onApprove}
+                        >
+                            <Button size="sm" disabled={busy}>
+                                <CircleCheckIcon aria-hidden="true" />
+                                Setujui
+                            </Button>
+                        </ConfirmDialog>
                     )}
                     {response.status !== "rejected" && (
                         <Button size="sm" variant="outline" disabled={busy} onClick={onReject}>

@@ -509,6 +509,62 @@
 
 ## Session Log
 
+### 2026-11-12 — Session 90 (production readiness validation, Phase 5 fix group 3: product decisions PRD-10, 06, 07, 01)
+
+- **Decisions (product owner, 2026-11-12, all recommended options):**
+  - PRD-10: contributor required for observations;
+  - PRD-06: the coordinator sets monitoring / archived;
+  - PRD-07: "ahead" label, and an unedited template is not "started";
+  - PRD-01: deploy from `main` after CI, with a database backup.
+- **PRD-10:** `ScenarioPlanningProject::recordsObservationsFrom()` guards the observation store, confirm, delete (own) and `canRecord`. Comments and individual scores keep `acceptsInputFrom`. `test_observation_rules`: red before (302), green after.
+- **PRD-06:** `POST scenario-planning/{project}/status` with `ScenarioPlanningProjectService::changeStatus` (active ↔ monitoring after step 9 ↔ archived). Overview buttons with confirmation in `ExerciseStatusControl.jsx`; `Show.jsx` is 144 lines. The G1 flash now names step 2 (PRD-17 leftover).
+- **PRD-07:** `steps()` returns `ahead`; `StepList` shows "lebih dulu dari langkah sebelumnya"; an unedited template does not start step 6. Tests red before, green after.
+- **PRD-01:** `deploy.yml` runs on `workflow_run` of the CI gate (main, success only), deploys the exact tested SHA with `merge --ff-only`, and dumps MySQL to `~/foresight-backups` before `migrate`. Runbook in `docs/guidelines/deployment-and-rollback.md`; AGENTS.md notes it. The YAML parses; it has **not run on GitHub or the server yet**.
+- **Verification:**
+  - Test runs, all passing:
+
+    | Test file | Result |
+    |---|---|
+    | `EarlyWarningIndicatorTest` | 24 passed |
+    | `ScenarioNarrativeReviewTest` | 12 passed |
+    | `ProjectTest` | 9 passed |
+    | `WorkspaceTest` | 3 passed |
+    | Journeys (run before the PRD-07 change) | 2 passed |
+  - Pint passed; ESLint 0 errors / 57 warnings; `npm run build` passed.
+  - Local browser:
+    - step 9 shows the "lebih dulu" label;
+    - step 6 (template only) shows `available`;
+    - "Mulai pemantauan" → confirmation → Pemantauan, then "Aktifkan kembali" → Aktif (local data restored).
+  - Larastan on the 5 changed PHP files: No errors. Full suite not run.
+- **Next:** Phase 6 — the full suite, a parallel G1 re-run on MySQL, the readiness checklist and the final assessment; the first CI-gated deploy as the PRD-01 dry run.
+
+### 2026-11-12 — Session 89 (production readiness validation, Phase 5 fix group 2: PRD-17, 18, 19, 20)
+
+- **PRD-17:** G1 dialog and overview name "langkah 2 (driving forces)", G2 dialog and note "langkah 3 (skor)" (`Show.jsx`, `DrivingForces.jsx`); G5 "5–9" was already correct.
+- **PRD-18:** confirmation dialogs before G5 (`Framework.jsx`, still 148 lines) and G7 (`ResponseCard.jsx`).
+- **PRD-19:** `FormDialog` prop `dirty` asks "Buang perubahan?" (new `DiscardChangesDialog`); new hook `hooks/use-draft.js`. Wired into the response, indicator, implication, condition and observation dialogs and the quadrant narrative sheet (`QuadrantCard.jsx`).
+- **PRD-20:** Signals page, ingest form and review form labels and validation messages in Indonesian. The sidebar entry and page `<title>` are unchanged. Toast after adding forces: no change, because the controller already flashes and `flash-toast.js` shows it; the E2E observation was probably missed.
+- **Verification:**
+  - ESLint 0 errors / 57 warnings (unchanged); `npm run build` passed.
+  - Local browser (Roozy, exercise "Elektrifikasi Kendaraan 2030"):
+    - response dialog with typed text → Batal and Escape show "Buang perubahan?", "Lanjut mengisi" keeps the text, "Buang" closes;
+    - G7 "Setujui" shows the confirmation (cancelled, nothing approved);
+    - Signals tabs, headers, ingest labels and submit text are Indonesian, with no console errors.
+  - **Not checked in the browser:** G1, G2 and G5 dialogs (the local exercise has passed them; reopening G5 would flag downstream work) and the add-forces toast. No PHP changed, so PHPUnit was not re-run.
+- **Next:** decisions on PRD-01, 06, 07, 10; then Phase 6 (full suite, parallel G1 re-run on MySQL, checklist, assessment).
+
+### 2026-11-12 — Session 88 (production readiness validation, Phase 5 fix group 1: PRD-11, PRD-16, PRD-14)
+
+- **PRD-11:** new `App\Support\RowLock::run()` (transaction + `lockForUpdate` + reload) around G1 `ScenarioPlanningProjectService::confirm`, G2 `ProjectDrivingForceService::confirm`, G3 `ProjectAssessmentService::confirm`, G6 `ScenarioNarrativeService::reviewQuadrant`, G7 `StrategicResponseService::approve`; a gate already in the requested state is a no-op. Test `StrategicResponseTest::test_a_gate_passed_twice_from_stale_copies_is_logged_once`: red before (duplicate decisions), green after.
+- **PRD-16:** threshold stale reason "(> 10, nilai 11)" without "; " (`IndicatorThresholdService`). Assertion added to `EarlyWarningIndicatorTest`: red before, green after.
+- **PRD-14:** timeout not changed. Successful Gemini calls in the dev database took 193 s and 253 s; Gemini already has no retries. Waiting hint added to `SuggestionControl.jsx`. **Not checked in the browser** (needs a local login and a running AI call).
+- **Verification:**
+  - `StrategicResponseTest` 22 passed; `EarlyWarningIndicatorTest` 23 passed; `ProjectTest` 9, `ProjectDrivingForceTest` 12, `ProjectAssessmentTest` 15, `ScenarioNarrativeReviewTest` 12 and `ForesightExerciseJourneyTest` 1 passed (245–665 s each, host under load).
+  - Pint `--test` app + tests PASS; Larastan on the 7 changed PHP files: no errors; ESLint 0 errors / 57 warnings; `npm run build` passed (4 min 51 s).
+  - FPM reloaded, queue restarted; dev DB 38 user rows.
+  - **Not run:** the full PHPUnit suite (a folder run was stopped after 23 min at the user's request), and the parallel MySQL re-run of SEC-14.
+- **Next:** fix group 2 (PRD-17, 18, 19, 20); decisions pending on PRD-01, 06, 07, 10; Phase 6.
+
 ### 2026-11-12 — Session 87 (production readiness validation, Phase 4: reliability, usability, browser E2E)
 
 - `docs/audit/production-reliability-report.md`. On production, through the browser: exercise "[QA PROD] Transisi Energi Industri 2032" (`cf0bfccc-…`) taken from Step 1 to Step 9 (all steps done, G1–G7 once each, threshold crossing flagged framework, quadrants and response, report complete). Narratives written by hand (AI needs linked evidence; extraction could not run).

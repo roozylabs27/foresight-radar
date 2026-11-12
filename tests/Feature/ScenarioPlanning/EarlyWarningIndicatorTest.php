@@ -203,6 +203,30 @@ class EarlyWarningIndicatorTest extends TestCase
         return $this->actingAs($this->manager)->post(route('scenario-planning.indicators.store', $this->project), $this->indicatorPayload($overrides));
     }
 
+    /** PRD-06: after step 9 the coordinator moves the exercise into monitoring or the archive, and back. */
+    public function test_the_coordinator_moves_a_finished_exercise_to_monitoring_and_archive(): void
+    {
+        $this->readyFramework();
+        $status = fn (string $to, User $as) => $this->actingAs($as)->post(route('scenario-planning.status', $this->project), ['status' => $to]);
+
+        $status('monitoring', $this->manager)->assertSessionHasErrors('status');
+        $this->storeIndicator()->assertSessionHasNoErrors();
+        $status('monitoring', $this->viewer)->assertForbidden();
+        $status('draft', $this->manager)->assertSessionHasErrors('status');
+        $this->assertSame('active', $this->project->fresh()->status);
+
+        $status('monitoring', $this->manager)->assertSessionHasNoErrors();
+        $this->assertSame('monitoring', $this->project->fresh()->status);
+        $status('archived', $this->manager)->assertSessionHasNoErrors();
+        $this->assertSame('archived', $this->project->fresh()->status);
+        $status('active', $this->manager)->assertSessionHasNoErrors();
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.show', $this->project))
+            ->assertInertia(fn ($page) => $page->where('project.status', 'active')->where('steps.8.status', 'done')
+                // PRD-07: step 9 is done while steps 5–8 are not, so it is marked as done ahead of them.
+                ->where('steps.8.ahead', true)->where('steps.4.ahead', false)->where('steps.0.ahead', false));
+    }
+
     public function test_indicators_wait_for_an_approved_framework(): void
     {
         $this->approveAxes();
@@ -322,6 +346,11 @@ class EarlyWarningIndicatorTest extends TestCase
         ]);
     }
 
+    private function participate(User $user, string $role): ProjectParticipant
+    {
+        return ProjectParticipant::create(['project_id' => $this->project->id, 'tenant_id' => $this->project->tenant_id, 'user_id' => $user->id, 'role' => $role]);
+    }
+
     private function observe(User $user, EarlyWarningIndicator $indicator, array $values)
     {
         return $this->actingAs($user)->post(route('scenario-planning.indicators.observations.store', [$this->project, $indicator]), $values);
@@ -335,6 +364,7 @@ class EarlyWarningIndicatorTest extends TestCase
         $indicator = EarlyWarningIndicator::sole();
         $accepted = $this->signal('xEV sales up 40%');
         $this->signal('Unreviewed rumour', 'PENDING');
+        $this->participate($this->viewer, 'contributor');
 
         $this->observe($this->viewer, $indicator, [
             'observed_at' => '2026-10-31', 'value_numeric' => 6.2, 'direction' => 'rising',
@@ -365,6 +395,12 @@ class EarlyWarningIndicatorTest extends TestCase
         $indicator = EarlyWarningIndicator::sole();
         $pending = $this->signal('Unreviewed rumour', 'PENDING');
 
+        // PRD-10: a viewer who is not a contributing participant records nothing, also while the
+        // exercise has no participants (a crossing would flag the framework and the responses).
+        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 5])->assertForbidden();
+        $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))->assertInertia(fn ($page) => $page->where('canRecord', false));
+        $participant = $this->participate($this->viewer, 'contributor');
+
         $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31'])->assertSessionHasErrors('value_numeric');
         $this->observe($this->viewer, $indicator, ['observed_at' => now()->addDays(3)->toDateString(), 'value_text' => 'x'])->assertSessionHasErrors('observed_at');
         $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_text' => 'x', 'signal' => $pending->uuid])->assertSessionHasErrors('signal');
@@ -377,9 +413,11 @@ class EarlyWarningIndicatorTest extends TestCase
         $colleague->givePermissionTo(['view-scenario', 'manage-scenario']);
         $this->actingAs($colleague)->delete(route('scenario-planning.indicators.observations.destroy', [$this->project, $indicator, $observation]))->assertForbidden();
 
-        ProjectParticipant::create(['project_id' => $this->project->id, 'tenant_id' => $this->project->tenant_id, 'user_id' => $this->viewer->id, 'role' => 'viewer']);
+        $participant->update(['role' => 'viewer']);
         $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 7])->assertForbidden();
         $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))->assertInertia(fn ($page) => $page->where('canRecord', false));
+        // Their own earlier observation is no longer theirs to delete either.
+        $this->actingAs($this->viewer)->delete(route('scenario-planning.indicators.observations.destroy', [$this->project, $indicator, $observation]))->assertForbidden();
 
         $this->actingAs($this->manager)->delete(route('scenario-planning.indicators.observations.destroy', [$this->project, $indicator, $observation]))->assertSessionHasNoErrors();
         $this->assertSame(0, IndicatorObservation::count());
@@ -495,7 +533,7 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->observe($this->manager, $indicator, ['observed_at' => '2026-09-30', 'value_numeric' => 4, 'direction' => 'rising'])->assertSessionHasNoErrors();
         $this->assertNull($framework->fresh()->stale_since);
 
-        $this->observe($this->viewer, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 11, 'direction' => 'rising'])->assertSessionHasNoErrors();
+        $this->observe($this->manager, $indicator, ['observed_at' => '2026-10-31', 'value_numeric' => 11, 'direction' => 'rising'])->assertSessionHasNoErrors();
 
         $framework->refresh();
         $this->assertNotNull($framework->stale_since);
@@ -541,7 +579,7 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->assertNull($framework->fresh()->stale_since);
         $this->assertNull($response->fresh()->stale_since);
 
-        $this->observe($this->viewer, $adoption, ['observed_at' => '2026-10-31', 'value_numeric' => 11])->assertSessionHasNoErrors();
+        $this->observe($this->manager, $adoption, ['observed_at' => '2026-10-31', 'value_numeric' => 11])->assertSessionHasNoErrors();
 
         $crossing = IndicatorObservation::where('value_numeric', 11)->sole();
         $this->assertTrue($crossing->crossed_threshold);

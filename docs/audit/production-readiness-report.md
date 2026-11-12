@@ -82,15 +82,23 @@ See [production-remediation-backlog.md](production-remediation-backlog.md): PRD-
 
 ## 7. Phase 5 — Remediation (in progress, 2026-11-12)
 
-No P0 was found, so Phase 5 starts with the P2/P3 findings that need no product decision. Each fix has a test that failed before the change and passes after it. Nothing is deployed to production in this phase.
+No P0 was found, so Phase 5 starts with the P2/P3 findings that need no product decision. Each backend fix has a test that failed before the change and passes after it; frontend-only copy and dialog changes (group 2) are checked by ESLint, build and the browser. Nothing is deployed to production in this phase.
 
 | Group | Finding | Change | Test |
 |---|---|---|---|
 | 1 | PRD-11 duplicate gate decisions | `App\Support\RowLock::run()` (transaction, `lockForUpdate`, reload) around G1, G2, G3, G6, G7; a passed gate is a no-op | `StrategicResponseTest::test_a_gate_passed_twice_from_stale_copies_is_logged_once` |
 | 1 | PRD-16 split stale reason | threshold reason "(rule, nilai x)" without "; " | `EarlyWarningIndicatorTest::test_the_server_decides_a_numeric_crossing_and_ignores_the_client_flag` |
 | 1 | PRD-14 AI wait | timeout kept (successful Gemini calls take 193–253 s); waiting hint in the shared AI control | ESLint + build; browser check pending |
+| 2 | PRD-17 dialog copy | G1/G2 texts name the one step that opens | ESLint + build; browser |
+| 2 | PRD-18 G5/G7 one-click | confirmation dialogs on G5 and G7 | ESLint + build; browser |
+| 2 | PRD-19 typed text lost | `FormDialog` `dirty` + `useDraft`; "Buang perubahan?" on six long forms | ESLint + build; browser |
+| 2 | PRD-20 language / toast | Signals page labels in Indonesian; toast already exists (no change) | ESLint + build; browser |
+| 3 | PRD-10 viewer observations | contributor participant or project manager required (decision 2026-11-12) | `EarlyWarningIndicatorTest::test_observation_rules` |
+| 3 | PRD-06 closing state | status endpoint and overview buttons: active ↔ monitoring (after step 9) ↔ archived | `EarlyWarningIndicatorTest::test_the_coordinator_moves_a_finished_exercise_to_monitoring_and_archive` |
+| 3 | PRD-07 step order | `ahead` label; unedited template does not start step 6 | same test + `ScenarioNarrativeReviewTest::test_an_unedited_template_cannot_be_approved` |
+| 3 | PRD-01 deploy | deploy after a successful CI run on `main` only, exact commit, MySQL dump before `migrate`; rollback runbook | YAML parsed; not run on GitHub / server yet |
 
-Waiting for a product decision: PRD-01 (deploy pipeline), PRD-06 (closing state), PRD-07 (step completion order), PRD-10 (viewer observations). Next fix groups: PRD-17, PRD-18, PRD-19, PRD-20.
+All four product decisions were taken on 2026-11-12 (the recommended options).
 
 ## 8. Phase 6
 

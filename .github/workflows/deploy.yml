@@ -1,14 +1,17 @@
 name: Deploy to VPS
 
+# PRD-01 (production readiness 2026-11-12): production is deployed only from `main`, only after the
+# CI quality gate passed for that commit, and the database is dumped before migrations run.
+# Rollback: docs/guidelines/deployment-and-rollback.md.
 on:
-  push:
-    branches:
-      - main
-      - development
+  workflow_run:
+    workflows: ["CI & Security Quality Gate"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-production
   cancel-in-progress: false
 
 jobs:
@@ -16,10 +19,18 @@ jobs:
     name: Build & Deploy to VPS
     runs-on: ubuntu-latest
     environment: production
+    # A CI run that passed on main, or a manual run started from main.
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -89,7 +100,9 @@ jobs:
           script_stop: true
           script: |
             TARGET_DIR="${{ secrets.VPS_PROJECT_PATH }}"
-            TARGET_BRANCH="${{ github.ref_name }}"
+            TARGET_BRANCH="main"
+            DEPLOY_SHA="${{ env.DEPLOY_SHA }}"
+            BACKUP_DIR="$HOME/foresight-backups"
 
             if [ -z "$TARGET_DIR" ]; then
               echo "Error: VPS_PROJECT_PATH secret is not set."
@@ -109,7 +122,9 @@ jobs:
             if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
               git checkout "$TARGET_BRANCH"
             fi
-            git pull origin "$TARGET_BRANCH"
+            # Move main to exactly the commit CI tested (fails instead of merging if history diverged).
+            git merge --ff-only "$DEPLOY_SHA"
+            echo "Deploying $(git rev-parse --short HEAD); previous release: $(git rev-parse --short HEAD@{1})"
 
             # 1b. Ensure SSL certificate paths exist so Nginx can start cleanly
             echo "[1b/5] Preparing SSL challenge and certificate paths..."
@@ -137,6 +152,14 @@ jobs:
             # 3. Backend dependencies & database migrations
             echo "[3/5] Running composer and database migrations inside Docker..."
             docker exec -u 0 -e COMPOSER_ALLOW_SUPERUSER=1 laravel_app composer install --no-dev --optimize-autoloader --no-interaction
+            # PRD-01: dump the database before migrating; the deploy stops if the dump fails.
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="$BACKUP_DIR/db-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD@{1}).sql.gz"
+            set -o pipefail
+            docker exec laravel_mysql sh -c 'exec mysqldump --single-transaction --routines --triggers -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' | gzip > "$BACKUP_FILE"
+            test -s "$BACKUP_FILE"
+            echo "Database backup: $BACKUP_FILE"
+            ls -1t "$BACKUP_DIR"/db-*.sql.gz | tail -n +15 | xargs -r rm -f
             docker exec laravel_app php artisan migrate --force
 
             # 4. Cache & framework optimization

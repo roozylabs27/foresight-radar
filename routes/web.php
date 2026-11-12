@@ -108,6 +108,7 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::get('/{project}', 'show')->name('show')->can('view-scenario');
         Route::put('/{project}', 'update')->name('update')->can('manage-scenario');
         Route::post('/{project}/confirm', 'confirm')->name('confirm')->can('manage-scenario');
+        Route::post('/{project}/status', 'status')->name('status')->can('manage-scenario');
         Route::post('/{project}/focal/suggest', 'suggestFocal')->name('focal.suggest')->can('manage-scenario');
         Route::delete('/{project}/focal/suggestion', 'rejectFocal')->name('focal.suggestion.reject')->can('manage-scenario');
         Route::post('/{project}/stale/acknowledge', 'acknowledgeStale')->name('stale.acknowledge')->can('manage-scenario');

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
 import { IMPACT_LEVELS, IMPLICATION_TYPES } from "@/domain/scenarioPlanning";
+import { useDraft } from "@/hooks/use-draft";
 
 const EMPTY = { type: "opportunity", title: "", description: "", impact_level: "", priority: "", forces: [], conditions: [] };
 const NONE = "none";
@@ -37,14 +38,14 @@ function Choices({ id, options, value, onChange, empty }) {
  * closed; `prefill` seeds a new item (e.g. from the narrative text). `onSave` resolves to the 422 errors or undefined.
  */
 export default function ImplicationDialog({ target, forces, loading, onOpenChange, onSave }) {
-    const [values, setValues] = useState(EMPTY);
+    const { values, setValues, reset, dirty } = useDraft(EMPTY);
     const [errors, setErrors] = useState({});
     const item = target?.item;
 
     useEffect(() => {
         if (!target) return;
         setErrors({});
-        setValues(item
+        reset(item
             ? { ...EMPTY, ...item, type: item.type ?? "opportunity", description: item.description ?? "", impact_level: item.impact_level ?? "", priority: item.priority ? String(item.priority) : "", forces: item.forces.map((force) => force.id), conditions: item.conditions.map((condition) => condition.id) }
             : { ...EMPTY, ...target.prefill });
     }, [target?.quadrant.id, item?.id, target?.prefill]);
@@ -66,6 +67,7 @@ export default function ImplicationDialog({ target, forces, loading, onOpenChang
             btnText="Simpan item"
             cancelText="Batal"
             loading={loading}
+            dirty={dirty}
             className="sm:max-w-2xl"
         >
             <div className="flex flex-col gap-5">
