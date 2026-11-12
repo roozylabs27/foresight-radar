@@ -92,9 +92,7 @@ jobs:
       - name: NPM Security Audit (Block on Critical)
         run: npm audit --audit-level=critical
 
-      - name: TypeScript typecheck
-        run: npm run typecheck
-
+      # The frontend is JavaScript/JSX; ESLint replaces the old tsc step, which checked no source file.
       # Fails on errors (undefined names, rules of hooks, broken JSX); warnings are known debt.
       - name: ESLint (resources/js)
         run: npm run lint

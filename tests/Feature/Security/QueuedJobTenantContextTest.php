@@ -4,11 +4,23 @@ namespace Tests\Feature\Security;
 
 use App\Enums\LlmJobStatus;
 use App\Jobs\ExtractSignals;
+use App\Jobs\FetchIndicatorSource;
 use App\Jobs\GenerateScenarioNarrative;
+use App\Jobs\MatchSignals;
+use App\Jobs\SuggestConditions;
+use App\Jobs\SuggestFocalIssue;
+use App\Jobs\SuggestForceCandidates;
+use App\Jobs\SuggestForceScores;
+use App\Jobs\SuggestFramework;
+use App\Jobs\SuggestImplications;
+use App\Jobs\SuggestIndicators;
+use App\Jobs\SuggestResponses;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
+use App\Models\EarlyWarningIndicator;
 use App\Models\Environment;
 use App\Models\Scenario;
+use App\Models\ScenarioPlanningProject;
 use App\Models\Source;
 use App\Models\Tenant;
 use App\Models\User;
@@ -119,6 +131,51 @@ class QueuedJobTenantContextTest extends TestCase
         GenerateScenarioNarrative::dispatchSync($scenario, false, null);
 
         $this->assertSame($this->tenantB->id, $seen);
+    }
+
+    /**
+     * Audit AUD-16: a job's failed() handler runs outside the tenant context (the worker has reset
+     * it). Every handler must still mark its own organisation's row, and create nothing.
+     */
+    public function test_failed_handlers_mark_their_own_row_outside_the_tenant_context(): void
+    {
+        $user = User::factory()->create(['tenant_id' => $this->tenantB->id]);
+        $project = $this->asTenant($this->tenantB, fn () => ScenarioPlanningProject::create([
+            'name' => 'Rahasia B', 'focal_question' => 'Bagaimana pasar baterai pada 2030?', 'purpose' => 'Uji.', 'target_year' => now()->year + 4, 'created_by' => $user->id,
+        ]));
+        $scenario = $this->scenario($this->tenantB);
+        $source = $this->source($this->tenantB);
+        $indicator = $this->asTenant($this->tenantB, fn () => EarlyWarningIndicator::create([
+            'project_id' => $project->id, 'name' => 'Indikator', 'frequency' => 'quarterly', 'source_type' => 'external',
+            'status' => 'active', 'origin' => 'human', 'review_status' => 'accepted',
+        ])->forceFill(['fetch_status' => LlmJobStatus::PROCESSING->value]));
+        $indicator->save();
+        $suggestions = [
+            SuggestFocalIssue::class => 'focal_suggestion_status', SuggestForceCandidates::class => 'force_suggestion_status',
+            SuggestForceScores::class => 'score_suggestion_status', SuggestFramework::class => 'framework_suggestion_status',
+            SuggestConditions::class => 'condition_suggestion_status', SuggestImplications::class => 'implication_suggestion_status',
+            SuggestResponses::class => 'response_suggestion_status', SuggestIndicators::class => 'indicator_suggestion_status',
+            MatchSignals::class => 'match_suggestion_status',
+        ];
+        $rowsBefore = [ScenarioPlanningProject::withoutGlobalScopes()->count(), Scenario::withoutGlobalScopes()->count(), Source::withoutGlobalScopes()->count()];
+        app(TenantContext::class)->reset();
+
+        foreach (array_keys($suggestions) as $job) {
+            (new $job($project, $user->id))->failed(new \RuntimeException('worker died'));
+        }
+        (new GenerateScenarioNarrative($scenario, false, null))->failed(new \RuntimeException('worker died'));
+        (new ExtractSignals($source))->failed(new \RuntimeException('worker died'));
+        (new FetchIndicatorSource($indicator))->failed(new \RuntimeException('worker died'));
+
+        $project = ScenarioPlanningProject::withoutGlobalScopes()->find($project->id);
+        foreach ($suggestions as $job => $column) {
+            $this->assertSame(LlmJobStatus::FAILED->value, $project->getAttribute($column), $job);
+        }
+        $this->assertSame(LlmJobStatus::FAILED, Scenario::withoutGlobalScopes()->find($scenario->id)->generation_status);
+        $this->assertSame(LlmJobStatus::FAILED, Source::withoutGlobalScopes()->find($source->id)->extraction_status);
+        $this->assertSame(LlmJobStatus::FAILED->value, EarlyWarningIndicator::withoutGlobalScopes()->find($indicator->id)->fetch_status);
+        $this->assertSame($this->tenantB->id, (int) $project->tenant_id);
+        $this->assertSame($rowsBefore, [ScenarioPlanningProject::withoutGlobalScopes()->count(), Scenario::withoutGlobalScopes()->count(), Source::withoutGlobalScopes()->count()]);
     }
 
     private function runExpectingFailure(callable $dispatch): void

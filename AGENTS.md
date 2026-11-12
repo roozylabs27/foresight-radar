@@ -5,7 +5,7 @@
 Foresight Radar is a multi-tenant strategic foresight and decision intelligence platform. It helps an organisation collect evidence of change (signals), assess driving forces, and run scenario planning exercises along a nine-step method: from the key focal issue to strategic responses and early warning monitoring.
 
 - **Backend:** Laravel 11 (PHP 8.3), MySQL 8.0, Spatie Laravel Permission. The queue uses the `database` driver (worker container `laravel_queue`, scheduler container `laravel_scheduler`) and the cache uses `file`. Redis is configured in `.env.example` but has no service in `docker-compose.yml`.
-- **Frontend:** React 19, Inertia.js 2.0, **JavaScript/JSX** (`resources/js` is `.jsx`/`.js`; `jsconfig.json` provides the `@/*` alias; `tsconfig.json` only covers the one `.ts` file, so `npm run typecheck` checks almost nothing), Tailwind CSS v4 (`@tailwindcss/vite`), Radix UI (`radix-ui`), Lucide React, Ziggy (`route()`). **ESLint 9** (`eslint.config.js`: JS recommended, React, rules of hooks as errors; hook dependencies and jsx-a11y as warnings) runs with `npm run lint`; it must report 0 errors.
+- **Frontend:** React 19, Inertia.js 2.0, **JavaScript/JSX** (`resources/js` is `.jsx`/`.js`; `jsconfig.json` provides the `@/*` alias; there is no TypeScript source and no typecheck step since 2026-11-12), Tailwind CSS v4 (`@tailwindcss/vite`), Radix UI (`radix-ui`), Lucide React, Ziggy (`route()`). **ESLint 9** (`eslint.config.js`: JS recommended, React, rules of hooks as errors; hook dependencies and jsx-a11y as warnings) runs with `npm run lint`; it must report 0 errors.
 - **Design System:** `shadcn/ui` patterns located in `resources/js/Components/ui/`
 - **LLM Gateway:** Multi-provider (`anthropic`, OpenAI-compatible: OpenAI, Gemini, OpenRouter) with an organisation key and a personal key, background queues, and a run record per AI call (`AiGenerationRun`: purpose, provider, model, prompt version). AI output is always a proposal a person accepts. Signal extraction of external sources is AI-only. The keyword-rule extractor runs only with `SIGNAL_EXTRACTION_DRIVER=heuristic` (tests and offline work).
 
@@ -69,7 +69,7 @@ Standardized repository entry points for human developers and AI coding agents:
 ./init.sh                     # Verifies runtime dependencies, Docker, .env, and baseline smoke check
 
 # 2. Standard Quality Verification Engine
-./verify.sh                   # Pint --test, Larastan level 5, PHPUnit (all in laravel_app), npm typecheck, ESLint, Vite build, npm audit
+./verify.sh                   # Pint --test, Larastan level 5, PHPUnit (all in laravel_app), ESLint, Vite build, npm audit
 ./verify.sh --quick           # Same without the full PHPUnit suite
 ./verify.sh --e2e             # Adds the browser e2e smoke test
 
@@ -84,7 +84,7 @@ Notes from practice:
 - **Reload after PHP changes:** reload PHP-FPM after changing PHP (`docker exec laravel_app sh -c 'kill -USR2 1'`). Otherwise OPcache keeps serving old routes, and Ziggy reports "route not in the route list". Restart `laravel_queue` after changing job or service code.
 - **Run artisan in the container:** run artisan and tests inside `laravel_app`. Never run two PHPUnit processes at once, because they share the test database.
 - **Browser e2e runner:** `e2e` / `@e2e-dev/web` (`e2e.config.ts`) is an agentic runner that drives the browser through a model. Running it costs AI tokens and needs `ADMIN_PASSWORD` / `DEV_PASSWORD`. It is not Playwright.
-- **CI:** `.github/workflows/ci.yml` runs Pint, Larastan and PHPUnit on MySQL, then npm audit, typecheck, ESLint and build, and only the e2e smoke test.
+- **CI:** `.github/workflows/ci.yml` runs Pint, Larastan and PHPUnit on MySQL, then npm audit, ESLint and build, and only the e2e smoke test.
 
 ---
 

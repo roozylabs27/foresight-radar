@@ -90,7 +90,7 @@ function I18nRoot({ children }) {
             try {
                 localStorage.setItem("app_locale", targetLocale);
                 document.cookie = `app_locale=${targetLocale}; path=/; max-age=31536000; SameSite=Lax`;
-            } catch (_) {
+            } catch {
                 // Ignore storage access restrictions
             }
 

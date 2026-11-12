@@ -2,7 +2,6 @@ import { Link, usePage } from "@inertiajs/react";
 import {
     BrainCircuitIcon,
     Building2Icon,
-    KeyRoundIcon,
     LayersIcon,
     SettingsIcon,
     UserIcon,
@@ -60,8 +59,6 @@ const SETTINGS_NAV_CONFIG = [
 export default function SettingsLayout({
     auth,
     title,
-    subtitle,
-    activeTab = "ai",
     children,
 }) {
     const page = usePage();

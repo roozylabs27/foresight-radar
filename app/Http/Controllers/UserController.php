@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
+use App\Services\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Role;
@@ -54,6 +56,13 @@ class UserController extends Controller
 
     public function create(UserRequest $request)
     {
+        // Audit AUD-14: the new user joins the organisation the creator works in (their own, or the
+        // workspace an operator picked). Without one the account could not sign in, so refuse.
+        $tenantId = app(TenantContext::class)->getTenantId();
+        if ($tenantId === null) {
+            throw ValidationException::withMessages(['workspace' => 'Pilih organisasi (workspace) dulu sebelum membuat user.']);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -62,6 +71,7 @@ class UserController extends Controller
                 'uuid' => Uuid::uuid1(),
                 'email' => $request->email,
                 'password' => bcrypt($request->password),
+                'tenant_id' => $tenantId,
             ]);
 
             $get_role = Role::where('id', $request->role_id)->firstOrFail();

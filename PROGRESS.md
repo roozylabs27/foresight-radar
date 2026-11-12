@@ -25,9 +25,10 @@
 - **Remaining units:** none of U1–U7. Open items are the P2/P3 backlog in `docs/audit/2026-11-11/remediation-backlog.md` (typecheck/ESLint, browser e2e budget, AI run recorded before the transaction, user management, unused routes and files).
 - **Current blocker:** none. The user reviews and commits each unit.
 - **Known issues:**
-  - typecheck covers no JSX; ESLint has 108 warnings left as debt (0 errors).
+  - ESLint has 57 warnings left as debt (hook dependencies, accessibility); 0 errors.
+  - No browser e2e for the exercise pages (AUD-19).
 - **Production:** an AI provider must be configured per organisation before ingest works there. Deploy the dimension migration only with the procedure in `docs/audit/2026-11-11/tenant-isolation-data-integrity.md` (backup, staging run, cross-tenant checks).
-- **Highest-priority next task:** review and commit U4–U7, AUD-13 and AUD-18; then the next backlog decision (AUD-19 browser e2e budget, or AUD-14 platform user management).
+- **Highest-priority next task:** review and commit the backlog round (AUD-14, 16, 18, 22, 23, 26); the only open item is AUD-19 (browser e2e), which needs a decision on the AI token budget.
 
 ---
 
@@ -440,6 +441,7 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-12 (uncommitted) | Backlog round: AUD-14, 15, 16, 18, 21, 22, 23, 24, 26 | **PASS** | New tests seen red first: `UserManagementTenantTest` (2 failed: user created without organisation; operator without workspace not refused). `QueuedJobTenantContextTest` new handler test passes (12 handlers). User-related tests 21 passed; job context tests 7 passed. **Full PHPUnit: 626 passed (7,502 assertions, 709.38s).** Pint `--test` PASS; Larastan on `UserController` no errors. `npm run lint`: 0 errors, 57 warnings (was 108). `npm run build` PASS. `bash -n verify.sh` OK; CI YAML parses. Browser (logged in, built-in pane): sidebar shows User Management under Governance and no Scenarios entry; User Management table loads (fetch-data 200); /settings/ai redirects to /settings/llm; Knowledge Graph loads 42 entities from /data (200); Signals, Settings, Dashboard (What-if tab) and Cross-Impact render with no failed requests and no JavaScript errors |
 | 2026-11-12 (uncommitted) | AUD-18: ESLint for resources/js | **PASS** | `npm run lint` (ESLint 9.39.5, react 7.37.5, react-hooks 7.1.1, jsx-a11y 6.10.2): first run 7 errors / 120 warnings over 219 files; errors fixed (rules-of-hooks in `I18nProvider`, missing `axios` import in `use-comments.js`, regex escape), deprecated `label-has-for` off, now **0 errors, 108 warnings**, exit 0. `bash -n verify.sh` OK; CI YAML parses. `npm run build` PASS (3m 49s). Browser: login page renders translated text, no hook errors in the console (session expired, so pages behind login not rechecked). Not run: PHPUnit (no PHP change) |
 | 2026-11-12 (uncommitted) | AUD-13: AI extraction run recorded with its signals | **PASS (targeted)** | New test seen red first (run was `completed` with no signals), then passed. `tests/Feature/Llm` + `SignalIngestionTest`: 117 passed (729 assertions, 151.04s). Pint PASS; Larastan on `SignalExtractionService` no errors; queue restarted. Not run: full suite after this change |
 | 2026-11-12 (uncommitted) | Audit U7: journeys + final verify | **PASS** | `ForesightExerciseJourneyTest` 1 passed (177 assertions), `TenantIsolationJourneyTest` 1 passed (82 assertions); no app change needed (three test assumptions corrected: axis forces use pole conditions; observations are open before participants exist; the Dashboard page is a shell and its data endpoint refuses another organisation's scope). **Full PHPUnit: 622 passed (7,473 assertions, 585.30s).** Pint `--test`: one line-ending issue fixed, then PASS (477 files). Larastan full: no errors. `npm run build` PASS (1m 9s). `npm audit --audit-level=critical`: 0 critical (4 moderate, 6 high, partly in the `e2e` runner's dependencies). Not run: browser e2e (`npm run test:e2e:smoke`, agentic runner needs a model and credentials); `npm run typecheck` (checks no JSX, AUD-18) |
@@ -506,6 +508,18 @@
 ---
 
 ## Session Log
+
+### 2026-11-12 — Session 83 (backlog round)
+
+- **AUD-14:** User Management is the platform operators' tool (decision recorded); `UserController::create` assigns the creator's organisation or the operator's workspace and refuses without one. Test `UserManagementTenantTest`.
+- **AUD-16:** test runs all 12 job `failed()` handlers for another organisation with no tenant context; each marks its own row and creates nothing.
+- **AUD-22:** removed `settings.ai.*` (redirect for `/settings/ai`), knowledge-graph `/index` and `/get-data` (test moved to `/data`), `user-management.user.profile.*`; `scenarios.update` kept (tested).
+- **AUD-23:** sidebar entry "User Management" (Governance, `view-user`).
+- **AUD-26:** removed `Pages/Welcome.jsx`, `ui/scroll-area.jsx`, `ui/separator.jsx`, `types/foresight.ts`; the `typecheck` script and its `verify.sh`/CI steps went with the last `.ts` file (AGENTS.md updated).
+- **AUD-18:** 49 unused-variable warnings removed (imports, `React` namespace imports, dead props/state; no behaviour change); 57 warnings remain.
+- **Decisions:** AUD-15 accepted (email is the global identity); AUD-21 kept (dashboard tabs); AUD-24 split-when-touched policy (18 pages listed).
+- **Open:** AUD-19 browser e2e (token budget decision).
+- **Note:** Python edits on Windows had written CRLF line endings into some files; normalised back to LF.
 
 ### 2026-11-12 — Session 82 (backlog AUD-18: ESLint)
 

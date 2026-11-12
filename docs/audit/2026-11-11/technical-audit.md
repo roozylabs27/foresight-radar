@@ -99,12 +99,15 @@ No P0. Details in [tenant-isolation-data-integrity.md](tenant-isolation-data-int
 
 ### AUD-14 · P2 · Security risk (scoped) — `User` has no tenant scope
 - User listing, update and delete in user management work across tenants, reachable only by platform roles (`developer`, `super-admin`). `UserController::create` creates users with `tenant_id = NULL`, who are then locked out by `EnforceTenantContext`. Backlog; needs a product decision on platform user management.
+- **Status: fixed 2026-11-12.** Decision recorded: User Management is the platform operators' tool (only `developer` and `super-admin` hold the user permissions; organisations invite members in Settings → Members), so listing across organisations stays. A created user now joins the organisation the creator works in (own organisation, or the operator's picked workspace); without one the request is refused (`workspace`). Test: `UserManagementTenantTest` (seen red first).
 
 ### AUD-15 · P3 · Information exposure — global email uniqueness
 - `Rule::unique('users')` reveals an email registered in another tenant. Likely intended (one login per email). Backlog / decision.
+- **Status: accepted 2026-11-12.** The email is the global sign-in identity, so it stays unique across organisations; only people who may create users or invite members see the message. No change.
 
 ### AUD-16 · P2 · Latent risk — job `failed()` handlers run without tenant context
 - They only update existing rows today; a future `create` there would fall back to tenant 1. Backlog: note in AGENTS.md.
+- **Status: closed 2026-11-12.** The rule is in AGENTS.md (§1, tenant). `QueuedJobTenantContextTest::test_failed_handlers_mark_their_own_row_outside_the_tenant_context` runs all 12 handlers for another organisation with no tenant context: each marks its own row failed and creates nothing.
 
 ## Harness, documentation, tooling
 
@@ -114,6 +117,7 @@ No P0. Details in [tenant-isolation-data-integrity.md](tenant-isolation-data-int
 ### AUD-18 · P2 · Architectural improvement — typecheck covers nothing; no lint
 - `resources/js` has 182 `.jsx`, 30 `.js`, 1 `.ts` (unused); `tsconfig.json` includes only TS files, so `npm run typecheck` (CI and `verify.sh`) checks one unused file. No ESLint config or script. Backlog.
 - **Status: ESLint added 2026-11-12.** `eslint.config.js` (ESLint 9, flat config) for `resources/js`: `@eslint/js` recommended, `eslint-plugin-react` (recommended + jsx-runtime, no prop-types), `react-hooks/rules-of-hooks` as error, `exhaustive-deps` and all jsx-a11y recommended rules as warnings. `npm run lint` runs in `verify.sh` and CI and fails on errors. The first run found 7 errors, all fixed: `I18nProvider` called hooks after an early return (hooks moved into an inner `I18nRoot`), `use-comments.js` used a global `axios` without importing it, and a needless regex escape. 108 warnings remain as known debt (51 unused variables, 21 hook dependency lists, the rest accessibility), to be fixed when a file is touched. The typecheck step stays (it checks the one `.ts` file); converting to TypeScript was not decided.
+- **Update 2026-11-12:** the unused `types/foresight.ts` was removed (AUD-26), and with it the `typecheck` script and its steps in `verify.sh` and CI: the frontend is JavaScript, checked by ESLint. The 49 unused-variable warnings were removed (unused imports, `React` namespace imports in `ui/*`, dead props and state); 57 warnings remain (hook dependency lists and accessibility).
 
 ### AUD-19 · P2 · Testing gap — browser e2e
 - Two specs opened `/register`, which does not exist (accounts are by invitation) — **rewritten in U1** to the password reset page. No e2e covers scenario planning, Signals or Settings; CI runs only the login smoke. The `e2e` runner is agentic and needs a model, so it was not run here.
@@ -122,11 +126,11 @@ No P0. Details in [tenant-isolation-data-integrity.md](tenant-isolation-data-int
 
 | ID | Sev | Category | Finding | Evidence |
 |---|---|---|---|---|
-| AUD-21 | P3 | Product decision | Dashboard tabs repeat Prioritizing, Radar and Registered List pages | `resources/js/Pages/Dashboard.jsx` tabs; sidebar `AuthenticatedLayout.jsx:61-63` |
-| AUD-22 | P3 | Architectural improvement | Unused or duplicate routes: `settings.ai.*` (frontend uses `settings.llm.*`), knowledge-graph `/index` and `/get-data` aliases, `user-management.user.profile.*`, `scenarios.update` | `routes/web.php` |
-| AUD-23 | P3 | UX issue | User Management page has no navigation entry | no link to `user-management.user.` in `resources/js` |
-| AUD-24 | P3 | Architectural improvement | Pages exceed the 150-line rule (e.g. `Signals/Index.jsx` ~900, `KnowledgeGraph.jsx` ~720) | AGENTS.md rule vs code |
+| AUD-21 | P3 | Product decision | Dashboard tabs repeat Prioritizing, Radar and Registered List pages | `resources/js/Pages/Dashboard.jsx` tabs; sidebar `AuthenticatedLayout.jsx:61-63` | **Decided 2026-11-12: kept.** The dashboard tabs give the executive overview in one place; the pages stay the detailed views. |
+| AUD-22 | P3 | Architectural improvement | Unused or duplicate routes: `settings.ai.*` (frontend uses `settings.llm.*`), knowledge-graph `/index` and `/get-data` aliases, `user-management.user.profile.*`, `scenarios.update` | `routes/web.php` | **Done 2026-11-12:** removed `settings.ai.*` (a redirect keeps `/settings/ai` working), knowledge-graph `/index` and `/get-data`, `user-management.user.profile.*`. Kept `scenarios.update`: policy-protected and covered by authorization tests of the old page. |
+| AUD-23 | P3 | UX issue | User Management page has no navigation entry | no link to `user-management.user.` in `resources/js` | **Done 2026-11-12:** sidebar entry under Governance, shown only with `view-user` (platform roles). |
+| AUD-24 | P3 | Architectural improvement | Pages exceed the 150-line rule (e.g. `Signals/Index.jsx` ~900, `KnowledgeGraph.jsx` ~720) | AGENTS.md rule vs code | **Policy 2026-11-12:** split a page when it is substantially changed; no bulk refactor. 18 pages are above 150 lines (largest: KnowledgeGraph, Signals/Index, Report/CrossImpact, Report/Scenarios, Settings/Members, DrivingForce/Table). |
 | AUD-25 | P2 | Product decision → decided | Legacy global Scenarios module overlaps the exercise (creates stand-alone scenarios; edits exercise quadrants) | `ScenarioController`, `Report/Scenarios.jsx`; decision: hide from sidebar after U3 — **done in U3** |
-| AUD-26 | P3 | Architectural improvement | Unused files: `Pages/Welcome.jsx`, `Components/ui/scroll-area.jsx`, `ui/separator.jsx`, `types/foresight.ts` | no imports found |
+| AUD-26 | P3 | Architectural improvement | Unused files: `Pages/Welcome.jsx`, `Components/ui/scroll-area.jsx`, `ui/separator.jsx`, `types/foresight.ts` | no imports found | **Done 2026-11-12:** removed `Pages/Welcome.jsx`, `ui/scroll-area.jsx`, `ui/separator.jsx`, `types/foresight.ts`. |
 
 No mock data, placeholder buttons or `TODO` markers were found in `app/` or `resources/js`.

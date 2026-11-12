@@ -39,7 +39,7 @@ All seven units are implemented, each with tests and recorded verification (see 
 - **Step 1→9 now closes the loop:** Step 6 runs inside the exercise with exercise rights and narrative history (U3); thresholds are decided on the server with one event per crossing (U4); relevance is explained and windowed, labelled not a probability (U5); upstream changes flag Steps 7–9 with reasons, and G7 needs G6 (U6).
 - **Reliability:** lost queued work becomes retryable with atomic claims; the dimension migration refuses a lossy rollback (U2).
 - **Proof:** `ForesightExerciseJourneyTest` walks one exercise from Step 1 to Step 9 and `TenantIsolationJourneyTest` checks another organisation on every step (U7). Full PHPUnit 622 passed.
-- **Still open:** browser e2e for the exercise pages (AUD-19), the 108 ESLint warnings (AUD-18, lint itself added), and the P2/P3 backlog. The dimension migration must still be deployed with the staged procedure in [tenant-isolation-data-integrity.md](tenant-isolation-data-integrity.md).
+- **Backlog (2026-11-12):** AUD-13, 14, 16, 18, 22, 23, 26 done; AUD-15 accepted and AUD-21 kept by decision; AUD-24 is a split-when-touched policy. **Still open:** browser e2e for the exercise pages (AUD-19, needs a token budget) and 57 ESLint warnings (hook dependencies, accessibility). The dimension migration must still be deployed with the staged procedure in [tenant-isolation-data-integrity.md](tenant-isolation-data-integrity.md).
 
 ## What this stage (U1) changed
 

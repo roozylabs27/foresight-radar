@@ -19,9 +19,9 @@ import {
     PanelLeftOpenIcon,
     RadarIcon,
     SettingsIcon,
-    SlidersIcon,
     TargetIcon,
     UserIcon,
+    UsersIcon,
     WifiIcon,
     ZapIcon,
 } from "lucide-react";
@@ -67,6 +67,8 @@ const NAV_ITEMS = [
     { key: "status_action", group: "governance", label: "Status of Action", route: "status-action.", match: "/status-action", icon: CircleCheckIcon, permission: "view-status-action" },
     { key: "approval_items", group: "governance", label: "Approval Items", route: "approval-items.", match: "/approval-items", icon: FileCheckIcon, permission: "view-approval-items" },
     { key: "closed_items", group: "governance", label: "Closed Items", route: "closed-items.", match: "/closed-items", icon: InboxIcon, permission: "view-closed-items" },
+    // Platform operators only (view-user): organisations invite their own members in Settings (audit AUD-23).
+    { key: "user_management", group: "governance", label: "User Management", route: "user-management.user.", match: "/user-management", icon: UsersIcon, permission: "view-user" },
     { key: "settings", label: "Settings", route: "settings.index", match: "/settings", icon: SettingsIcon },
 ];
 
