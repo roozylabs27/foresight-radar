@@ -153,11 +153,26 @@ jobs:
             echo "[3/5] Running composer and database migrations inside Docker..."
             docker exec -u 0 -e COMPOSER_ALLOW_SUPERUSER=1 laravel_app composer install --no-dev --optimize-autoloader --no-interaction
             # PRD-01: dump the database before migrating; the deploy stops if the dump fails.
+            # It uses the credentials the application uses (.env), not the container's
+            # MYSQL_ROOT_PASSWORD: that variable only applies when the volume is first created and
+            # did not match production (deploy of 2026-11-12: "Access denied for user 'root'").
+            env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"; }
+            DB_NAME="$(env_value DB_DATABASE)"
+            DB_USER="$(env_value DB_USERNAME)"
+            DB_PASS="$(env_value DB_PASSWORD)"
+            if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
+              echo "Error: DB_DATABASE or DB_USERNAME missing in .env; no backup, deploy stopped."
+              exit 1
+            fi
             mkdir -p "$BACKUP_DIR"
             BACKUP_FILE="$BACKUP_DIR/db-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD@{1}).sql.gz"
             set -o pipefail
-            docker exec laravel_mysql sh -c 'exec mysqldump --single-transaction --routines --triggers -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' | gzip > "$BACKUP_FILE"
-            test -s "$BACKUP_FILE"
+            # MYSQL_PWD keeps the password off the command line; TCP matches a 'user'@'%' account.
+            docker exec -e MYSQL_PWD="$DB_PASS" laravel_mysql \
+              mysqldump --protocol=TCP -h 127.0.0.1 -u"$DB_USER" --single-transaction --no-tablespaces --triggers "$DB_NAME" \
+              | gzip > "$BACKUP_FILE"
+            # mysqldump writes "-- Dump completed" as its last line only when it finished.
+            gunzip -c "$BACKUP_FILE" | tail -n 1 | grep -q "Dump completed"
             echo "Database backup: $BACKUP_FILE"
             ls -1t "$BACKUP_DIR"/db-*.sql.gz | tail -n +15 | xargs -r rm -f
             docker exec laravel_app php artisan migrate --force

@@ -1,6 +1,6 @@
 # Production Readiness Report — Foresight Radar
 
-Status: **in progress** (Phases 1–4 done, Phase 5 in progress, 2026-11-12). Final assessment: **not yet given**.
+Status: **done** (Phases 1–6, 2026-11-12). Final assessment: **CONDITIONALLY READY** — for a controlled first organisation once the conditions in [the checklist §6](production-readiness-checklist.md#6-readiness-decision) are met.
 
 Related artefacts (filled in as the phases progress): [workflow matrix](production-workflow-matrix.md) · [security report](production-security-report.md) · [reliability report](production-reliability-report.md) · [remediation backlog](production-remediation-backlog.md) · [readiness checklist](production-readiness-checklist.md). The earlier code audit is in [2026-11-11/](2026-11-11/README.md); its fixes are the starting point here, not repeated.
 
@@ -80,7 +80,7 @@ See [production-remediation-backlog.md](production-remediation-backlog.md): PRD-
 - **AI live output not validated:** the provider (Gemini) was overloaded all session; every AI path failed cleanly with a clear message but after waits of up to ~4 minutes (PRD-14).
 - New findings: PRD-14 (AI wait / availability), PRD-16 (split stale reason), PRD-17 (dialog copy), PRD-18 (G5/G7 without confirmation), PRD-19 (no unsaved-change warning), PRD-20 (English labels on Signals). PRD-12 limited to direct API calls (the form blocks double clicks).
 
-## 7. Phase 5 — Remediation (in progress, 2026-11-12)
+## 7. Phase 5 — Remediation (done 2026-11-12)
 
 No P0 was found, so Phase 5 starts with the P2/P3 findings that need no product decision. Each backend fix has a test that failed before the change and passes after it; frontend-only copy and dialog changes (group 2) are checked by ESLint, build and the browser. Nothing is deployed to production in this phase.
 
@@ -88,7 +88,7 @@ No P0 was found, so Phase 5 starts with the P2/P3 findings that need no product 
 |---|---|---|---|
 | 1 | PRD-11 duplicate gate decisions | `App\Support\RowLock::run()` (transaction, `lockForUpdate`, reload) around G1, G2, G3, G6, G7; a passed gate is a no-op | `StrategicResponseTest::test_a_gate_passed_twice_from_stale_copies_is_logged_once` |
 | 1 | PRD-16 split stale reason | threshold reason "(rule, nilai x)" without "; " | `EarlyWarningIndicatorTest::test_the_server_decides_a_numeric_crossing_and_ignores_the_client_flag` |
-| 1 | PRD-14 AI wait | timeout kept (successful Gemini calls take 193–253 s); waiting hint in the shared AI control | ESLint + build; browser check pending |
+| 1 | PRD-14 AI wait | timeout kept (successful Gemini calls take 193–253 s); waiting hint in the shared AI control | ESLint + build; not seen during a live AI call |
 | 2 | PRD-17 dialog copy | G1/G2 texts name the one step that opens | ESLint + build; browser |
 | 2 | PRD-18 G5/G7 one-click | confirmation dialogs on G5 and G7 | ESLint + build; browser |
 | 2 | PRD-19 typed text lost | `FormDialog` `dirty` + `useDraft`; "Buang perubahan?" on six long forms | ESLint + build; browser |
@@ -100,12 +100,14 @@ No P0 was found, so Phase 5 starts with the P2/P3 findings that need no product 
 
 All four product decisions were taken on 2026-11-12 (the recommended options).
 
-## 8. Phase 6
+## 8. Phase 6 — Re-verification and decision (done 2026-11-12)
 
-Not started: re-verification, readiness checklist, final assessment.
+- **Gates (local, after all Phase 5 changes):**
+  - Pint and Larastan level 5 pass on the whole code base.
+  - **Full PHPUnit: 628 passed (7,581 assertions)**, which is 626 at baseline plus 2 new tests.
+  - ESLint 0 errors; build passes; npm audit 0 critical.
+- **Concurrency re-run (SEC-14) on local MySQL:** three simultaneous G1 confirms of a fresh "[QA]" exercise logged **one** "G1 approved" (two before the fix). The exercise was soft-deleted afterwards; the dev database is back to 38 users.
+- **Production:** fix group 1 (`7b9b75c`) reached production through the old workflow's `development` trigger, confirmed from the production bundle. Groups 2–3 (`1908f68`) are not deployed, because that commit carries the new CI-gated workflow. Production behaviour was not re-tested, and the live AI re-check was not possible (the production session had expired).
+- **Checklist and decision:** [production-readiness-checklist.md](production-readiness-checklist.md).
 
-### What Phase 2+ needs from the product owner
-
-- Sign in to production in the built-in browser with an account of the organisation used for testing.
-- For role and tenant boundaries: a second organisation with its own account, and accounts with a viewer-type role (e.g. `bod`) and an admin role; the product owner signs in to each when asked.
-- An AI provider configured for the test organisation (Settings → Mesin AI), since real AI calls are allowed on test data.
+**Final assessment: CONDITIONALLY READY.** A controlled first organisation can start once the Phase 5 changes are deployed through the new gated pipeline (with the first database dump checked), live AI is validated, logging is rotated with failed-job alerts, and test data is removed. Open onboarding of further organisations additionally needs CSP and Permissions-Policy, cross-organisation checks on production, and preferably a staging server.
