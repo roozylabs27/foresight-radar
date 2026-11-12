@@ -1,6 +1,6 @@
 # Production Remediation Backlog — Foresight Radar
 
-Started 2026-11-12 with the production readiness validation ([report](production-readiness-report.md)). Severity: P0 critical, P1 high, P2 medium, P3 low. A finding is **resolved** only after a fix is validated by a test; **observed** means seen in configuration or behaviour, not yet reproduced by a test.
+Started 2026-11-12 with the production readiness validation ([report](production-readiness-report.md)). After Phase 6: fixed in code and verified locally PRD-01 (workflow, first run pending), 06, 07, 10, 11, 16–20; open PRD-03, 04, 05, 08, 09, 13, 14 (live part); accepted PRD-02, 12. Decision: **CONDITIONALLY READY** ([checklist](production-readiness-checklist.md)). Severity: P0 critical, P1 high, P2 medium, P3 low. A finding is **resolved** only after a fix is validated by a test; **observed** means seen in configuration or behaviour, not yet reproduced by a test.
 
 | ID | Sev. | Area | Finding | Evidence | Recommended remediation | Regression check | Status |
 |---|---|---|---|---|---|---|---|

@@ -1,34 +1,31 @@
 # Project Progress — Foresight Radar
 
-## Current Verified State (updated 2026-11-11)
+## Current Verified State (updated 2026-11-12)
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
-- **Last reviewed commit:** `1a89e0c` (per-organisation dimensions, FIRM / Key Focal Issue report scope, AI-only ingestion). PR #16 appears merged into `main` (`ea80d76`).
-- **Baseline verification on `1a89e0c` (2026-11-11):**
-  - Pint PASS (463 files).
-  - Larastan L5: no errors.
-  - PHPUnit 583 passed (6,678 assertions, 823.60s).
-  - `npm run build` PASS.
+- **Last commit:** `1908f68`, pushed to `development`: Phase 5 groups 2–3 and the CI-gated deploy. `7b9b75c` holds group 1 and the audit docs.
+- **Production runs `7b9b75c`:** the old workflow deployed that `development` push. This was confirmed from the production bundle. `1908f68` did not deploy, because it carries the new workflow. The server's working copy is on `development`.
+- **Uncommitted:** the Phase 6 docs (the checklist, report §8, backlog, this file).
+- **Verification on the working tree (2026-11-12, Phase 6):**
+  - Pint and Larastan L5 (whole code base) pass.
+  - PHPUnit **628 passed** (7,581 assertions, 1,288 s).
+  - ESLint 0 errors / 57 warnings; `npm run build` passes; npm audit 0 critical (4 moderate, 6 high).
+  - Local MySQL: three parallel G1 confirms log one decision.
   - Dev DB has 38 users.
-  - `npm audit` not re-run today.
-  - Browser e2e not run (agentic runner).
-- **Current objective:** the staged audit and remediation toward one connected Step 1→9 exercise. The audit is in `docs/audit/2026-11-11/`, starting with `README.md`; the units are in `remediation-backlog.md`.
-- **Done:**
-  - U1: docs tracked in git, audit written, AGENTS.md corrected, broken `/register` e2e specs rewritten.
-  - U2: lost QUEUED/PROCESSING sources and indicator fetches become retryable; atomic job claims; dimension migration hardened (`down()` refuses lossy merges); dimension delete locks the row.
-  - U3: Step 6 narratives inside the exercise (`/scenario-planning/{id}/narratives`), exercise rights, narrative revision history; "Scenarios" off the sidebar.
-  - U4: threshold crossings decided on the server (operator + value), one event per crossing, framework and strategic responses flagged; qualitative indicators keep a manual flag with a note.
-  - U5: scenario relevance counts each indicator once (latest observation in 12 months), explains every quadrant and says it is not a probability (`docs/methodology/scenario-relevance.md`).
-  - U6: upstream changes flag implications, responses and indicators with a reason (framework/axis change, G5 withdrawal, implication change, narrative regeneration); G7 requires G6.
-  - U7: `ForesightExerciseJourneyTest` (Steps 1→9) and `TenantIsolationJourneyTest` pass; full verify recorded.
-- **Remaining units:** none of U1–U7. Open items are the P2/P3 backlog in `docs/audit/2026-11-11/remediation-backlog.md` (typecheck/ESLint, browser e2e budget, AI run recorded before the transaction, user management, unused routes and files).
-- **Current blocker:** none. The user reviews and commits each unit.
+- **Readiness decision:** **CONDITIONALLY READY** (`docs/audit/production-readiness-checklist.md` §6).
+- **Conditions before the first organisation:**
+  1. Merge `development` to `main`, and let the new CI-gated deploy run (the first PRD-01 dry run); check `~/foresight-backups`.
+  2. Validate live AI on production (Gemini was overloaded on 2026-11-12).
+  3. Rotate logs and alert on `failed_jobs`.
+  4. Remove the "[QA PROD]" and "[SMOKE TEST]" test data.
+- **Before more organisations:** CSP and Permissions-Policy, cross-organisation checks on production, a staging server.
+- **Current blocker:** none. The user reviews and commits.
 - **Known issues:**
-  - ESLint has 57 warnings left as debt (hook dependencies, accessibility); 0 errors.
+  - The ESLint warnings are debt.
   - No browser e2e for the exercise pages (AUD-19).
-- **Production:** an AI provider must be configured per organisation before ingest works there. Deploy the dimension migration only with the procedure in `docs/audit/2026-11-11/tenant-isolation-data-integrity.md` (backup, staging run, cross-tenant checks).
-- **Highest-priority next task:** review and commit the backlog round (AUD-14, 16, 18, 22, 23, 26); the only open item is AUD-19 (browser e2e), which needs a decision on the AI token budget.
+  - `composer verify` hits Composer's 1,200 s process timeout on this host; run `php artisan test` directly.
+- **Highest-priority next task:** commit the Phase 6 docs, merge `development` to `main`, and watch the first gated deploy.
 
 ---
 
@@ -508,6 +505,19 @@
 ---
 
 ## Session Log
+
+### 2026-11-12 — Session 91 (production readiness validation, Phase 6: re-verification and decision)
+
+- **Commands and evidence:**
+  - `docker exec laravel_app composer verify`: Pint PASS and Larastan "No errors" on the whole code base. PHPUnit was stopped by Composer's 1,200 s process timeout with no failure up to `ProjectTest`.
+  - `docker exec laravel_app php artisan test`: **628 passed (7,581 assertions)**, 1,288 s.
+  - `npm audit --audit-level=critical`: exit 0; 4 moderate, 6 high.
+  - ESLint and build were already green after the last frontend change.
+- **Concurrency re-run (SEC-14):** local MySQL, signed in as Roozy. A fresh "[QA] Paralel G1" exercise got three simultaneous G1 confirms; all three answered with a redirect, and one "G1 approved" was logged (two before PRD-11). The exercise was soft-deleted; 38 users.
+- **Production state:** runs `7b9b75c` (fix group 1, deployed by the old `development` trigger). Confirmed from `/build/manifest.json` and the bundles: the PRD-14 hint is present, while the group 2–3 UI and the status route are absent.
+- **Not done:** production behaviour re-checks and the live AI re-check (production session expired).
+- **Deliverables:** `docs/audit/production-readiness-checklist.md` (new), report §8 with the decision, backlog statuses.
+- **Decision:** CONDITIONALLY READY (conditions in the checklist §6).
 
 ### 2026-11-12 — Session 90 (production readiness validation, Phase 5 fix group 3: product decisions PRD-10, 06, 07, 01)
 
