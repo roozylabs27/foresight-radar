@@ -25,7 +25,7 @@
   - The ESLint warnings are debt.
   - No browser e2e for the exercise pages (AUD-19).
   - `composer verify` hits Composer's 1,200 s process timeout on this host; run `php artisan test` directly.
-- **Highest-priority next task:** commit the Phase 6 docs, merge `development` to `main`, and watch the first gated deploy.
+- **Highest-priority next task:** commit the deploy backup fix, push to `main`, and watch the re-run complete (production is half-deployed until then; see session 92).
 
 ---
 
@@ -505,6 +505,18 @@
 ---
 
 ## Session Log
+
+### 2026-11-12 — Session 92 (first CI-gated deploy: backup step failed, fixed)
+
+- **What happened:** the first `deploy.yml` run after merging to `main` (`88bc5fd`) passed the CI gate, fast-forwarded the server and ran `composer install`. The dump then failed: `mysqldump: Got error: 1045: Access denied for user 'root'@'localhost'`. `script_stop` ended the deploy **before `migrate`**, the caches, the PHP-FPM reload and the queue restart. No migration was pending (none since `9ae54b4`).
+- **Production after the failed run:** the new code files and frontend bundle are in place, but PHP-FPM still serves the previous bytecode and route cache (`opcache.validate_timestamps=0`) until a deploy completes.
+- **Fix (`deploy.yml`):** the dump reads `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD` from the server's `.env`, passes the password as `MYSQL_PWD`, and connects over TCP to 127.0.0.1. It uses `--single-transaction --no-tablespaces --triggers` and checks the "Dump completed" last line. The cause: `MYSQL_ROOT_PASSWORD` only applies when the volume is created and does not match production.
+- **Verification:**
+  - YAML parses.
+  - The `.env` parser was tested on plain, double-quoted and single-quoted values.
+  - The same mysqldump flags on local MySQL produced a complete dump and passed the check; a user without rights failed with exit 2, so the deploy would stop.
+- **Not committed.** Runbook, checklist (O1 PASS, O2 open until a re-run writes a dump) and backlog updated.
+- **Next:** commit and push to `main`. Watch the deploy: the backup line should show `Database backup: ~/foresight-backups/...`, followed by `Nothing to migrate`, the FPM reload and the queue restart.
 
 ### 2026-11-12 — Session 91 (production readiness validation, Phase 6: re-verification and decision)
 

@@ -7,7 +7,9 @@ Written for PRD-01 of the [production readiness validation](../audit/production-
 1. A commit is pushed or merged to `main`. Pushes to `development` or feature branches no longer deploy.
 2. The CI quality gate runs: `.github/workflows/ci.yml` (Pint, Larastan, PHPUnit on MySQL, npm audit, ESLint, build).
 3. Only when that CI run **succeeds**, `.github/workflows/deploy.yml` starts through `workflow_run`. It deploys exactly the commit CI tested (`DEPLOY_SHA`). On the server, `main` is fast-forwarded to that commit, and the deploy stops if history diverged.
-4. Before `migrate --force`, the database is dumped to `~/foresight-backups/db-<date>-<previous commit>.sql.gz`. If the dump fails or is empty, the deploy stops before migrating. The 14 most recent dumps are kept.
+4. Before `migrate --force`, the database is dumped to `~/foresight-backups/db-<date>-<previous commit>.sql.gz`. The dump uses the application's own credentials (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` from the server's `.env`), with the password passed as `MYSQL_PWD`. If the dump fails or does not end with "Dump completed", the deploy stops before migrating. The 14 most recent dumps are kept.
+
+   The first gated deploy (2026-11-12) used the MySQL container's `MYSQL_ROOT_PASSWORD`. That variable is only applied when the data volume is first created and did not match production, so it failed with "Access denied for user 'root'". It stopped before `migrate` and before caches, PHP-FPM reload and queue restart. At that point the code, `composer install` and the frontend bundle were already in place. Re-run the deploy after a failure at this step; there was no pending migration then.
 5. The deploy then caches config, reloads PHP-FPM and restarts the queue worker.
 
 A manual run (Actions → Deploy to VPS → Run workflow) is accepted only from `main`. It does not wait for CI, so use it only for a commit whose CI run already passed.

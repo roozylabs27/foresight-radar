@@ -50,8 +50,8 @@ Phase 6 of the [production readiness validation](production-readiness-report.md)
 
 | # | Check | Evidence | Status |
 |---|---|---|---|
-| O1 | Deploy only after CI on `main`, exact commit | PRD-01: `deploy.yml` changed, YAML parses | OPEN until the first gated deploy runs |
-| O2 | Database backup before migrations, rollback documented | PRD-01: dump step, `docs/guidelines/deployment-and-rollback.md` | OPEN until the first dump is checked on the server |
+| O1 | Deploy only after CI on `main`, exact commit | First gated run (2026-11-12, `main` `88bc5fd`): started after CI, fast-forwarded the server to the tested commit | PASS (first run) |
+| O2 | Database backup before migrations, rollback documented | First run: the dump failed ("Access denied for user 'root'", the container's root password does not match production) and the deploy **stopped before migrating**, as designed. Caches, FPM reload and queue restart did not run either. Fixed: the dump now uses the app's `.env` credentials via `MYSQL_PWD` and checks "Dump completed" (flags tested on local MySQL). Needs a re-run | OPEN until a re-run writes a dump |
 | O3 | Logs rotated, errors tracked or alerted | single unrotated log file | OPEN (PRD-04) |
 | O4 | Separate staging environment | production doubles as staging | ACCEPTED for now (PRD-02) |
 | O5 | AI provider configured for the organisation (not only a personal key) | personal Gemini key active; organisation key not checked | OPEN (PRD-05) |
