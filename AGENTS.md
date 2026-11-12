@@ -85,6 +85,7 @@ Notes from practice:
 - **Run artisan in the container:** run artisan and tests inside `laravel_app`. Never run two PHPUnit processes at once, because they share the test database.
 - **Browser e2e runner:** `e2e` / `@e2e-dev/web` (`e2e.config.ts`) is an agentic runner that drives the browser through a model. Running it costs AI tokens and needs `ADMIN_PASSWORD` / `DEV_PASSWORD`. It is not Playwright.
 - **CI:** `.github/workflows/ci.yml` runs Pint, Larastan and PHPUnit on MySQL, then npm audit, ESLint and build, and only the e2e smoke test.
+- **Deploy:** `.github/workflows/deploy.yml` deploys to production only after CI passed on `main`, and dumps the database before migrating. Pushing to `development` does not deploy. Rollback: `docs/guidelines/deployment-and-rollback.md`.
 
 ---
 

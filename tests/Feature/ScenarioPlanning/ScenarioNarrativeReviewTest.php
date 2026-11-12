@@ -284,12 +284,16 @@ class ScenarioNarrativeReviewTest extends TestCase
     {
         $this->readyFramework();
         $this->generate()->assertStatus(202);
+        $step = fn () => $this->actingAs($this->manager)->get(route('scenario-planning.show', $this->project));
+        // PRD-07: a template skeleton nobody edited is not a started narrative.
+        $step()->assertInertia(fn ($page) => $page->where('steps.5.status', 'available'));
 
         $this->review('HH', 'approved')->assertStatus(422)->assertJsonValidationErrors('status');
 
         $this->actingAs($this->manager)->putJson("/scenarios/{$this->framework()->uuid}/quadrants/{$this->quadrant('HH')->uuid}", [
             'title' => $this->quadrant('HH')->title, 'narrative' => 'Narasi yang ditulis tim.',
         ])->assertOk();
+        $step()->assertInertia(fn ($page) => $page->where('steps.5.status', 'in_progress'));
         $this->review('HH', 'approved')->assertOk();
     }
 

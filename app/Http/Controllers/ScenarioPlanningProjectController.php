@@ -78,13 +78,28 @@ class ScenarioPlanningProjectController extends Controller
             : 'Latihan disimpan.');
     }
 
+    /** PRD-06: close a finished exercise into monitoring or the archive, or make it active again. */
+    public function status(Request $request, ScenarioPlanningProject $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+        $status = (string) $request->validate(['status' => ['required', 'string']], [], ['status' => 'status'])['status'];
+
+        $this->projects->changeStatus($project, $status, $request->user());
+
+        return back()->with('success', match ($status) {
+            'monitoring' => 'Latihan masuk tahap pemantauan.',
+            'archived' => 'Latihan diarsipkan.',
+            default => 'Latihan aktif kembali.',
+        });
+    }
+
     public function confirm(Request $request, ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('confirm', $project);
 
         $this->projects->confirm($project, $request->user());
 
-        return back()->with('success', 'Focal issue dikonfirmasi. Langkah 2–9 sekarang terbuka.');
+        return back()->with('success', 'Focal issue dikonfirmasi. Langkah 2 (driving forces) sekarang terbuka.');
     }
 
     /** Roadmap R3.1: queue an AI critique of the focal question. */

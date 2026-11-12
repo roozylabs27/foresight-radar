@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
 import { INDICATOR_DIRECTIONS, crossesThreshold } from "@/domain/scenarioPlanning";
+import { useDraft } from "@/hooks/use-draft";
 
 const NONE = "none";
 const OBSERVED = ["rising", "falling", "stable"];
@@ -34,13 +35,13 @@ function ThresholdPreview({ indicator, value }) {
  * `onSave(values)` resolves to the 422 errors or undefined.
  */
 export default function ObservationDialog({ indicator, signals, loading, onOpenChange, onSave }) {
-    const [values, setValues] = useState(empty);
+    const { values, setValues, reset, dirty } = useDraft(empty);
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (!indicator) return;
         setErrors({});
-        setValues(empty());
+        reset(empty());
     }, [indicator?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
@@ -68,6 +69,7 @@ export default function ObservationDialog({ indicator, signals, loading, onOpenC
             btnText="Catat observasi"
             cancelText="Batal"
             loading={loading}
+            dirty={dirty}
             width={560}
         >
             <div className="flex flex-col gap-4">

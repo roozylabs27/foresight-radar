@@ -16,8 +16,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Observations of an early warning indicator (roadmap R2.3). Whoever may give input on the
- * exercise records them (see ScenarioPlanningProject::acceptsInputFrom); the recorder or the
+ * Observations of an early warning indicator (roadmap R2.3). The exercise's managers and contributing
+ * participants record them (PRD-10, ScenarioPlanningProject::recordsObservationsFrom); the recorder or the
  * coordinator deletes one. Whether an observation crosses the threshold is decided on the server
  * (audit U4, IndicatorThresholdService): by the indicator's numeric rule, or, for a qualitative
  * indicator only, by a person's flag with a note. A crossing flags the framework, its scenarios and
@@ -44,7 +44,7 @@ class IndicatorObservationController extends Controller
             'observed_at' => 'tanggal observasi', 'value_numeric' => 'nilai', 'value_text' => 'keterangan',
             'direction' => 'arah', 'signal' => 'sinyal', 'note' => 'catatan',
         ]);
-        abort_unless($project->acceptsInputFrom($request->user()), 403);
+        abort_unless($project->recordsObservationsFrom($request->user()), 403);
         $manualFlag = ! $this->thresholds->decidesNumerically($indicator) && (bool) ($validated['crossed_threshold'] ?? false);
         if ($manualFlag && blank($validated['note'] ?? null)) {
             throw ValidationException::withMessages(['note' => 'Jelaskan di catatan mengapa ambang indikator kualitatif ini terlewati.']);
@@ -72,7 +72,7 @@ class IndicatorObservationController extends Controller
     /** Roadmap R2.6: confirm an AI-matched observation; from now on it counts as the confirmer's. */
     public function confirm(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, IndicatorObservation $observation, SignalMatchService $matches): RedirectResponse
     {
-        abort_unless($project->acceptsInputFrom($request->user()), 403);
+        abort_unless($project->recordsObservationsFrom($request->user()), 403);
 
         $matches->confirm($observation, $request->user());
         $crossed = $this->thresholds->evaluate($observation->refresh());
@@ -82,7 +82,7 @@ class IndicatorObservationController extends Controller
 
     public function destroy(Request $request, ScenarioPlanningProject $project, EarlyWarningIndicator $indicator, IndicatorObservation $observation): RedirectResponse
     {
-        abort_unless($observation->recorded_by === $request->user()->id || $request->user()->can('update', $project), 403);
+        abort_unless(($observation->recorded_by === $request->user()->id && $project->recordsObservationsFrom($request->user())) || $request->user()->can('update', $project), 403);
 
         DB::transaction(function () use ($observation) {
             $this->thresholds->close($observation);

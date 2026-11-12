@@ -46,7 +46,7 @@ class EarlyWarningIndicatorController extends Controller
             'canManage' => Gate::allows('manage-scenario') && $request->user()->can('update', $project),
             'signals' => $this->indicators->signalOptions(),
             'sensing' => $this->indicators->sensing(),
-            'canRecord' => $project->acceptsInputFrom($request->user()),
+            'canRecord' => $project->recordsObservationsFrom($request->user()),
             'indicatorStatus' => $project->indicator_suggestion_status,
             'indicatorError' => $project->indicator_suggestion_error,
             'matchStatus' => $project->match_suggestion_status,

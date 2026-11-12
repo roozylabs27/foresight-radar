@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
 
 export const REVIEW_ACTIONS = {
     accept_create: {
-        title: "Accept Signal & Create Driving Force",
-        submit: "Confirm Acceptance",
+        title: "Terima sinyal & buat driving force",
+        submit: "Terima",
         intro: (
             <>
-                A signal is evidence <em>for</em> a driving force, not the force itself. Name the broader force of change this
-                signal points to; it starts in <strong>PENDING</strong> status. Prefer “Link to DF” when a matching force exists.
+                Sinyal adalah bukti <em>untuk</em> sebuah driving force, bukan force itu sendiri. Beri nama kekuatan perubahan yang
+                lebih luas yang ditunjuk sinyal ini; statusnya mulai <strong>PENDING</strong>. Pilih “Tautkan ke DF” bila force yang cocok sudah ada.
             </>
         ),
         fields: ["force_keyword", "force_description", "dimension_id", "confirm_signal_title"],
@@ -25,33 +25,33 @@ export const REVIEW_ACTIONS = {
             force_keyword: z
                 .string()
                 .trim()
-                .min(1, "Name the driving force")
-                .refine((value) => value.split(/\s+/).filter(Boolean).length <= 4, "At most 4 words"),
-            force_description: z.string().trim().min(1, "Describe the driving force"),
-            dimension_id: z.string().min(1, "Select dimension"),
+                .min(1, "Beri nama driving force")
+                .refine((value) => value.split(/\s+/).filter(Boolean).length <= 4, "Paling banyak 4 kata"),
+            force_description: z.string().trim().min(1, "Jelaskan driving force"),
+            dimension_id: z.string().min(1, "Pilih dimensi"),
             confirm_signal_title: z.boolean(),
         }),
     },
     accept_link: {
-        title: "Accept Signal & Link to Existing Driving Force",
-        submit: "Confirm Acceptance",
-        intro: "Attach this signal as verifiable supporting evidence to an existing active Driving Force.",
+        title: "Terima sinyal & tautkan ke driving force yang ada",
+        submit: "Terima",
+        intro: "Lampirkan sinyal ini sebagai bukti pendukung yang dapat diverifikasi untuk driving force aktif yang sudah ada.",
         fields: ["driving_force_id"],
         schema: z.object({
-            driving_force_id: z.string().min(1, "Select target driving force"),
+            driving_force_id: z.string().min(1, "Pilih driving force tujuan"),
         }),
     },
     reject: {
-        title: "Reject Candidate Signal",
-        submit: "Confirm Rejection",
-        intro: "Provide feedback on why this candidate signal does not meet strategic foresight criteria.",
+        title: "Tolak sinyal kandidat",
+        submit: "Tolak",
+        intro: "Tulis alasan sinyal kandidat ini tidak memenuhi kriteria strategic foresight.",
         fields: ["rejection_reason"],
         schema: z.object({
             rejection_reason: z
                 .string()
                 .trim()
-                .min(1, "Please provide a reason for rejection")
-                .max(1000, "The reason may not be greater than 1000 characters."),
+                .min(1, "Tulis alasan penolakan")
+                .max(1000, "Alasan paling banyak 1000 karakter."),
         }),
     },
 };
@@ -139,7 +139,7 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
                     <>
                         {textField("force_keyword", "Driving force name (max. 4 words)", Input, {
                             autoComplete: "off",
-                            placeholder: "e.g. Battery Technology Shift",
+                            placeholder: "Contoh: Battery Technology Shift",
                         })}
                         {textField("force_description", "Driving force description", Textarea, { rows: 3, className: "max-h-40 min-h-20" })}
                         <Controller
@@ -156,7 +156,7 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
                             name="dimension_id"
                             control={control}
                             render={({ field, fieldState }) => (
-                                <FormField id={ids.dimension_id} label="Taxonomy Dimension" error={fieldState.error}>
+                                <FormField id={ids.dimension_id} label="Dimensi taksonomi" error={fieldState.error}>
                                     <Select
                                         name={field.name}
                                         value={field.value}
@@ -186,7 +186,7 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
                         name="driving_force_id"
                         control={control}
                         render={({ field, fieldState }) => (
-                            <FormField id={ids.driving_force_id} label="Target Driving Force" error={fieldState.error}>
+                            <FormField id={ids.driving_force_id} label="Driving force tujuan" error={fieldState.error}>
                                 <SearchableSelect
                                     id={ids.driving_force_id}
                                     field={field}
@@ -204,7 +204,7 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
                     textField("rejection_reason", "Rejection Reason", Textarea, {
                         rows: 3,
                         maxLength: 1000,
-                        placeholder: "e.g. Redundant with existing Driving Force #4; lacks verifiable market impact.",
+                        placeholder: "Contoh: sama dengan Driving Force #4; dampak pasar tidak dapat diverifikasi.",
                         className: "max-h-40 min-h-20",
                     })}
             </fieldset>

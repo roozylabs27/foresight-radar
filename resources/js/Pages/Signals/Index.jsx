@@ -57,17 +57,17 @@ import { SENSING_FILTERS } from "@/domain/signals";
 const REVIEW_FORM_ID = "signal-review-form";
 
 const STATUS_OPTIONS = [
-    { value: "PENDING", label: "Review Status: Pending" },
-    { value: "ACCEPTED", label: "Review Status: Accepted" },
-    { value: "REJECTED", label: "Review Status: Rejected" },
-    { value: "ALL", label: "All Statuses" },
+    { value: "PENDING", label: "Status: Menunggu review" },
+    { value: "ACCEPTED", label: "Status: Diterima" },
+    { value: "REJECTED", label: "Status: Ditolak" },
+    { value: "ALL", label: "Semua status" },
 ];
 
 // review_status values; ACCEPTED uses the approved tone.
 const STATUS_BADGES = {
-    PENDING: { status: "pending", label: "Pending" },
-    ACCEPTED: { status: "approved", label: "Accepted" },
-    REJECTED: { status: "rejected", label: "Rejected" },
+    PENDING: { status: "pending", label: "Menunggu" },
+    ACCEPTED: { status: "approved", label: "Diterima" },
+    REJECTED: { status: "rejected", label: "Ditolak" },
 };
 
 const confidence = (signal) => Math.round((signal.confidence_score || 0.8) * 100);
@@ -230,7 +230,7 @@ function ActionButtons({ signal, onInspect, onAction, onClassify }) {
         <div className="flex min-w-[150px] flex-col gap-1.5">
             <Button size="sm" variant="outline" className="justify-start border-input" onClick={() => onInspect(signal)}>
                 <EyeIcon aria-hidden="true" />
-                Inspect
+                Rincian
             </Button>
             {signal.review_status !== "REJECTED" && (
                 <Button size="sm" variant="outline" className="justify-start border-input" onClick={() => onClassify(signal)}>
@@ -242,7 +242,7 @@ function ActionButtons({ signal, onInspect, onAction, onClassify }) {
                 <>
                     <Button size="sm" className="justify-start" onClick={() => onAction("accept_link", signal)}>
                         <LinkIcon aria-hidden="true" />
-                        Link to DF
+                        Tautkan ke DF
                     </Button>
                     <Button
                         size="sm"
@@ -251,7 +251,7 @@ function ActionButtons({ signal, onInspect, onAction, onClassify }) {
                         onClick={() => onAction("accept_create", signal)}
                     >
                         <CirclePlusIcon aria-hidden="true" />
-                        Accept as New DF
+                        Terima sebagai DF baru
                     </Button>
                     <Button
                         size="sm"
@@ -260,7 +260,7 @@ function ActionButtons({ signal, onInspect, onAction, onClassify }) {
                         onClick={() => onAction("reject", signal)}
                     >
                         <CircleXIcon aria-hidden="true" />
-                        Reject
+                        Tolak
                     </Button>
                 </>
             )}
@@ -278,7 +278,7 @@ function InspectDialog({ signal, open, onOpenChange }) {
                 className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-[720px]"
             >
                 <DialogHeader>
-                    <DialogTitle>Signal Inspection &amp; Provenance</DialogTitle>
+                    <DialogTitle>Rincian sinyal &amp; asal-usul</DialogTitle>
                     <DialogDescription className="sr-only">Detail, bukti, dan asal sinyal kandidat.</DialogDescription>
                 </DialogHeader>
                 {signal && (
@@ -310,18 +310,18 @@ function InspectDialog({ signal, open, onOpenChange }) {
                                     {signal.suggested_driving_force.keyword}
                                 </DetailItem>
                             )}
-                            <DetailItem label="Dimension">
-                                <DimensionChip name={signal.dimension?.name || "General"} />
+                            <DetailItem label="Dimensi">
+                                <DimensionChip name={signal.dimension?.name || "Umum"} />
                             </DetailItem>
-                            <DetailItem label="Estimated Horizon">
-                                {signal.suggested_time_horizon?.name || "Unassigned"}
+                            <DetailItem label="Perkiraan cakrawala waktu">
+                                {signal.suggested_time_horizon?.name || "Belum ditentukan"}
                             </DetailItem>
-                            <DetailItem label="Scoring Estimates">
+                            <DetailItem label="Perkiraan skor">
                                 Impact: {signal.preliminary_impact ?? "N/A"} | Uncertainty:{" "}
                                 {signal.preliminary_uncertainty ?? "N/A"}
                             </DetailItem>
-                            <DetailItem label="Confidence">
-                                {confidence(signal)}% ({signal.confidence_rationale || "Algorithmic heuristic"})
+                            <DetailItem label="Keyakinan">
+                                {confidence(signal)}% ({signal.confidence_rationale || "Heuristik algoritmik"})
                             </DetailItem>
                             <DetailItem label="Source Title" className="sm:col-span-2">
                                 {signal.source?.title || "N/A"}
@@ -368,7 +368,7 @@ function InspectDialog({ signal, open, onOpenChange }) {
                 )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Close
+                        Tutup
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -473,7 +473,7 @@ export default function SignalIndex({
         setReviewing(true);
         try {
             const response = await axios.post(`/signals/${review.signal.uuid}/review`, { action: review.action, ...values });
-            toast.success(response.data.message || "Review action processed.");
+            toast.success(response.data.message || "Review diproses.");
             setReviewOpen(false);
             table.reload();
         } catch (error) {
@@ -606,7 +606,7 @@ export default function SignalIndex({
                 enableSorting: true,
                 header: () => (
                     <HeaderWithTooltip
-                        title="Signal Title & Evidence"
+                        title="Judul sinyal & bukti"
                         tooltip="Judul indikasi perubahan masa depan dan kutipan bukti verbatim dari teks sumber yang mendasarinya."
                     />
                 ),
@@ -617,7 +617,7 @@ export default function SignalIndex({
                 enableSorting: true,
                 header: () => (
                     <HeaderWithTooltip
-                        title="Taxonomy & Origin"
+                        title="Taksonomi & asal"
                         tooltip="Klasifikasi dimensi makro (STEEP-V), estimasi cakrawala waktu (Time Horizon), dan identitas penerbit dokumen sumber."
                     />
                 ),
@@ -638,7 +638,7 @@ export default function SignalIndex({
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div className="cursor-help">
-                                        <DimensionChip name={signal.dimension?.name || "Unassigned"} />
+                                        <DimensionChip name={signal.dimension?.name || "Belum ditentukan"} />
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-xs text-xs">
@@ -659,7 +659,7 @@ export default function SignalIndex({
                                 </Tooltip>
                             )}
                             <span className="text-[11px] text-muted-foreground">
-                                Source: {signal.source?.publisher || signal.source?.title || "Manual entry"}
+                                Sumber: {signal.source?.publisher || signal.source?.title || "Entri manual"}
                             </span>
                         </div>
                     );
@@ -670,7 +670,7 @@ export default function SignalIndex({
                 enableSorting: true,
                 header: () => (
                     <HeaderWithTooltip
-                        title="Assessment & Confidence"
+                        title="Penilaian & keyakinan"
                         tooltip="Metrik evaluasi sinyal: Confidence (keyakinan bukti), Est. Impact (skala pengaruh 1–10), Uncertainty (tingkat ketidakpastian 1–10), dan Mesin pengekstrak."
                     />
                 ),
@@ -743,8 +743,8 @@ export default function SignalIndex({
                 id: "actions",
                 header: () => (
                     <HeaderWithTooltip
-                        title="Action"
-                        tooltip="Tindakan analisis: Inspect (rincian lengkap & SHA-256), Accept as New DF (luluskan jadi Driving Force), Link to DF, atau Reject."
+                        title="Tindakan"
+                        tooltip="Tindakan analisis: Rincian (lengkap dengan SHA-256), Terima sebagai DF baru (luluskan jadi Driving Force), Tautkan ke DF, atau Tolak."
                     />
                 ),
                 cell: ({ row }) => <ActionButtons signal={row.original} onInspect={openInspect} onAction={openReview} onClassify={setClassifying} />,
@@ -771,8 +771,8 @@ export default function SignalIndex({
                 <PageHeader
                     as="h2"
                     icon={<ZapIcon />}
-                    title="Signal-to-Insight Workspace"
-                    description="Ingest external publications and review evidence-backed candidate signals before formal repository graduation."
+                    title="Ruang kerja sinyal"
+                    description="Masukkan publikasi eksternal dan tinjau sinyal kandidat yang didukung bukti sebelum masuk ke repositori."
                     badge={
                         <span
                             className={cn(
@@ -828,11 +828,11 @@ export default function SignalIndex({
                     <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
                         <TabsTrigger value="review" className="px-3 py-1.5">
                             <ClipboardCheckIcon aria-hidden="true" />
-                            Candidate Review Queue
+                            Antrean review sinyal kandidat
                         </TabsTrigger>
                         <TabsTrigger value="ingest" className="px-3 py-1.5">
                             <CloudUploadIcon aria-hidden="true" />
-                            Ingest Source Document / URL
+                            Masukkan dokumen / URL sumber
                         </TabsTrigger>
                     </TabsList>
 
@@ -842,7 +842,7 @@ export default function SignalIndex({
                             actions={
                                 <Button variant="outline" className="border-input" onClick={() => setTab("ingest")}>
                                     <CloudUploadIcon aria-hidden="true" />
-                                    Ingest New
+                                    Masukkan sumber
                                 </Button>
                             }
                         >
@@ -873,7 +873,7 @@ export default function SignalIndex({
                                     value={search}
                                     onSearch={setSearch}
                                     label="Cari sinyal"
-                                    placeholder="Search title, summary, or quotes..."
+                                    placeholder="Cari judul, ringkasan, atau kutipan..."
                                     className="w-full sm:w-[280px]"
                                 />
                             </FilterField>

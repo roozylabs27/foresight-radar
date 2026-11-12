@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
 import { EXTERNAL_SOURCES, INDICATOR_DIRECTIONS, INDICATOR_FREQUENCIES, INDICATOR_SOURCES, THRESHOLD_OPERATORS } from "@/domain/scenarioPlanning";
+import { useDraft } from "@/hooks/use-draft";
 
 const EMPTY = {
     name: "", description: "", uncertainty: "", force: "", metric: "", unit: "", baseline_value: "", baseline_date: "",
@@ -41,14 +42,14 @@ function OptionalSelect({ id, value, onChange, placeholder, options }) {
  * `{ indicator, prefill }` or null when closed. `onSave(values)` resolves to the 422 errors or undefined.
  */
 export default function IndicatorDialog({ target, quadrants, uncertainties, forces, owners, loading, onOpenChange, onSave }) {
-    const [values, setValues] = useState(EMPTY);
+    const { values, setValues, reset, dirty } = useDraft(EMPTY);
     const [errors, setErrors] = useState({});
     const indicator = target?.indicator;
 
     useEffect(() => {
         if (!target) return;
         setErrors({});
-        setValues(indicator
+        reset(indicator
             ? {
                   ...EMPTY,
                   ...Object.fromEntries(Object.entries(indicator).map(([key, value]) => [key, value ?? ""])),
@@ -93,6 +94,7 @@ export default function IndicatorDialog({ target, quadrants, uncertainties, forc
             btnText="Simpan indikator"
             cancelText="Batal"
             loading={loading}
+            dirty={dirty}
             className="sm:max-w-2xl"
         >
             <div className="flex flex-col gap-5">

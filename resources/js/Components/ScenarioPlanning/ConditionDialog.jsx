@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
 import { CONDITION_KINDS } from "@/domain/scenarioPlanning";
+import { useDraft } from "@/hooks/use-draft";
 
 const EMPTY = { kind: "assumption", text: "", axis: null, force: null };
 
@@ -16,14 +17,14 @@ const error = (errors, name) => (errors[name] ? { message: [].concat(errors[name
  * add) or null when closed. `onSave(values)` resolves to the 422 errors or undefined.
  */
 export default function ConditionDialog({ target, axes, forces, loading, onOpenChange, onSave }) {
-    const [values, setValues] = useState(EMPTY);
+    const { values, setValues, reset, dirty } = useDraft(EMPTY);
     const [errors, setErrors] = useState({});
     const condition = target?.condition;
 
     useEffect(() => {
         if (!target) return;
         setErrors({});
-        setValues(condition ? { kind: condition.kind, text: condition.text, axis: condition.axis, force: condition.force?.id ?? null } : EMPTY);
+        reset(condition ? { kind: condition.kind, text: condition.text, axis: condition.axis, force: condition.force?.id ?? null } : EMPTY);
     }, [target?.quadrant.id, condition?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
@@ -43,6 +44,7 @@ export default function ConditionDialog({ target, axes, forces, loading, onOpenC
             btnText="Simpan kondisi"
             cancelText="Batal"
             loading={loading}
+            dirty={dirty}
         >
             <div className="flex flex-col gap-5">
                 <FormField id="condition-kind" label="Jenis" error={error(errors, "kind")} group>

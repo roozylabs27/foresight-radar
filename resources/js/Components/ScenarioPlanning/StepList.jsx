@@ -35,6 +35,8 @@ export default function StepList({ steps }) {
                                     {step.number}. {step.title}
                                 </span>
                                 <span className={statusBadge({ tone: status.tone })}>{status.label}</span>
+                                {/* PRD-07: done while a step before it is still open. */}
+                                {step.ahead && <span className="text-xs text-muted-foreground">lebih dulu dari langkah sebelumnya</span>}
                             </div>
                             <p className="m-0 text-xs text-muted-foreground">{STEP_PURPOSES[step.key]}</p>
                             {linked && (
