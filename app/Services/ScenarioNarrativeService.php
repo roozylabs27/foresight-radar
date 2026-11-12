@@ -7,6 +7,7 @@ use App\Jobs\GenerateScenarioNarrative;
 use App\Models\AiGenerationRun;
 use App\Models\Scenario;
 use App\Models\ScenarioCitation;
+use App\Models\ScenarioNarrativeRevision;
 use App\Models\ScenarioQuadrant;
 use App\Services\Llm\AiGenerationRecorder;
 use App\Services\Llm\LlmClientResolver;
@@ -158,6 +159,11 @@ class ScenarioNarrativeService
                 }
                 $row = $existing[$quadrant['position']] ?? null;
                 if ($row) {
+                    if (filled($row->narrative)) {
+                        // Audit U6: the opportunities and challenges were written against the old narrative.
+                        app(StalenessService::class)->markImplications($row->implicationItems()->get(), "Narasi skenario dibuat ulang ({$row->position})");
+                    }
+                    ScenarioNarrativeRevision::capture($row, 'regenerate', $userId);
                     $row->update($attributes);
                 } else {
                     $row = $scenario->quadrants()->create($attributes);
@@ -179,6 +185,66 @@ class ScenarioNarrativeService
         });
 
         return ['scenario' => $scenario->fresh('quadrants'), 'provider' => $provider, 'notice' => $notice];
+    }
+
+    /**
+     * Save an analyst's edit of a quadrant. The replaced text is kept as a revision; an edited
+     * narrative no longer matches its typed statements (roadmap R2.7), so they are dropped and its
+     * citations stay untyped; an approved narrative goes back to draft. Quadrant names of an approved
+     * framework are a team decision (G5) and stay locked.
+     *
+     * @param  array{title: string, narrative: string, implications?: ?string, early_indicators?: ?array}  $data
+     *
+     * @throws ValidationException when the name of an approved framework's quadrant would change
+     */
+    public function updateQuadrant(ScenarioQuadrant $quadrant, array $data, int $userId): ScenarioQuadrant
+    {
+        $scenario = $quadrant->scenario;
+        if ($scenario->isFrameworkApproved() && $data['title'] !== $quadrant->title) {
+            throw ValidationException::withMessages(['title' => 'Nama kuadran terkunci oleh persetujuan kerangka (G5). Buka kembali kerangkanya di latihan untuk mengganti nama.']);
+        }
+
+        DB::transaction(function () use ($quadrant, $data, $userId) {
+            $changed = $data['title'] !== $quadrant->title || $data['narrative'] !== $quadrant->narrative
+                || (array_key_exists('implications', $data) && $data['implications'] !== $quadrant->implications);
+            if ($changed) {
+                ScenarioNarrativeRevision::capture($quadrant, 'edit', $userId);
+            }
+            if ($data['narrative'] !== $quadrant->narrative && $quadrant->narrative_statements !== null) {
+                $quadrant->narrative_statements = null;
+                $quadrant->citations()->update(['statement_kind' => null, 'statement_index' => null]);
+            }
+            $quadrant->update($data + [
+                'early_indicators' => $data['early_indicators'] ?? [],
+                'edited_by' => $userId,
+                'edited_at' => now(),
+            ] + ($quadrant->review_status === 'approved' ? ['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null] : []));
+            app(StalenessService::class)->clearQuadrant($quadrant);
+        });
+
+        return $quadrant;
+    }
+
+    /**
+     * Review state of one quadrant narrative (roadmap R1.6). `approved` is gate G6 (logged by
+     * GateDecisionObserver); an unedited template skeleton is no narrative yet and cannot be approved.
+     *
+     * @throws ValidationException
+     */
+    public function reviewQuadrant(ScenarioQuadrant $quadrant, string $status, int $userId): ScenarioQuadrant
+    {
+        if ($status !== 'draft' && blank($quadrant->narrative)) {
+            throw ValidationException::withMessages(['status' => 'Kuadran ini belum punya narasi.']);
+        }
+        if ($status === 'approved' && $quadrant->provider === self::PROVIDER_TEMPLATE && ! $quadrant->isEdited()) {
+            throw ValidationException::withMessages(['status' => 'Narasi ini masih kerangka tanpa AI. Lengkapi narasinya dulu sebelum disetujui.']);
+        }
+
+        $quadrant->update($status === 'draft'
+            ? ['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null]
+            : ['review_status' => $status, 'reviewed_by' => $userId, 'reviewed_at' => now()]);
+
+        return $quadrant;
     }
 
     /**
@@ -214,7 +280,7 @@ class ScenarioNarrativeService
      * The client this user's generation runs on: their own key, the organization's key, or
      * the platform default, in LlmClientResolver's order.
      */
-    protected function clientFor(?int $userId): StructuredLlmClient
+    public function clientFor(?int $userId): StructuredLlmClient
     {
         return ($userId ? app(LlmClientResolver::class)->resolveForUserId($userId, false) : null) ?? $this->llm;
     }

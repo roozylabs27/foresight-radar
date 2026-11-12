@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\EarlyWarningIndicator;
 use App\Models\ScenarioCondition;
+use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\Signal;
 use App\Models\StrategicResponse;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -18,8 +21,12 @@ use Illuminate\Support\Str;
  */
 class StalenessService
 {
-    /** Flag the exercise framework and all its quadrants. */
-    public function markFramework(ScenarioPlanningProject $project, string $reason): void
+    /**
+     * Flag the exercise framework and all its quadrants. With `$downstream` (the default) Steps 7–9
+     * are flagged too: implications, strategic responses and indicators (audit U6). A threshold
+     * crossing passes false and flags only the responses itself.
+     */
+    public function markFramework(ScenarioPlanningProject $project, string $reason, bool $downstream = true): void
     {
         $framework = $project->framework()->first();
         if (! $framework) {
@@ -28,6 +35,57 @@ class StalenessService
 
         $framework->forceFill(['stale_since' => $framework->stale_since ?? now(), 'stale_reason' => $this->append($framework->stale_reason, $reason)])->save();
         $this->markQuadrants($framework->quadrants()->get(), $reason);
+        if ($downstream) {
+            $this->markDownstream($project, $reason);
+        }
+    }
+
+    /** Audit U6: flag Steps 7–9 of the exercise (implications, strategic responses, indicators). */
+    public function markDownstream(ScenarioPlanningProject $project, string $reason): void
+    {
+        $framework = $project->framework()->first();
+        if ($framework) {
+            $this->markImplications(ScenarioImplication::whereIn('scenario_quadrant_id', $framework->quadrants()->select('id'))->get(), $reason);
+        }
+        $this->markResponses($project, $reason);
+        foreach ($project->indicators()->get() as $indicator) {
+            $this->flag($indicator, $reason);
+        }
+    }
+
+    /** Audit U6: the approved framework (G5) was withdrawn, so everything built on it needs a look. */
+    public function frameworkReopened(ScenarioPlanningProject $project): void
+    {
+        $this->markDownstream($project, 'Kerangka skenario dibuka kembali (persetujuan G5 ditarik)');
+    }
+
+    /** @param  Collection<int, ScenarioImplication>  $implications */
+    public function markImplications(Collection $implications, string $reason): void
+    {
+        foreach ($implications as $implication) {
+            $this->flag($implication, $reason);
+        }
+    }
+
+    /** Audit U6: an implication changed or is being removed; flag the responses that rely on it. */
+    public function implicationChanged(ScenarioImplication $implication, string $reason): void
+    {
+        foreach (StrategicResponse::whereHas('implications', fn ($q) => $q->whereKey($implication->id))->get() as $response) {
+            $this->flag($response, $reason);
+        }
+    }
+
+    /** "Keep" for one implication or indicator: an edit by the team settles its flag. */
+    public function clear(ScenarioImplication|EarlyWarningIndicator $row): void
+    {
+        if ($row->getAttribute('stale_since') !== null) {
+            $row->forceFill(['stale_since' => null, 'stale_reason' => null])->save();
+        }
+    }
+
+    private function flag(Model $row, string $reason): void
+    {
+        $row->forceFill(['stale_since' => $row->getAttribute('stale_since') ?? now(), 'stale_reason' => $this->append($row->getAttribute('stale_reason'), $reason)])->save();
     }
 
     /** Flag a force's framework when the force belongs to one of its axes. */
@@ -76,6 +134,14 @@ class StalenessService
         }
     }
 
+    /** Audit U4: flag every strategic response of the exercise (a threshold crossing may change what to do). */
+    public function markResponses(ScenarioPlanningProject $project, string $reason): void
+    {
+        foreach ($project->strategicResponses()->get() as $response) {
+            $this->flag($response, $reason);
+        }
+    }
+
     /** "Keep" for one response: the team checked it against the changed conditions. */
     public function clearResponse(StrategicResponse $response): void
     {
@@ -101,12 +167,17 @@ class StalenessService
 
         $framework->forceFill(['stale_since' => null, 'stale_reason' => null, 'stale_acknowledged_by' => $user->id, 'stale_acknowledged_at' => now()])->save();
         $framework->quadrants()->update(['stale_since' => null, 'stale_reason' => null]);
+        // Audit U6: implications and indicators are kept with the framework; responses keep their own "keep".
+        ScenarioImplication::whereIn('scenario_quadrant_id', $framework->quadrants()->select('id'))->update(['stale_since' => null, 'stale_reason' => null]);
+        $project->indicators()->update(['stale_since' => null, 'stale_reason' => null]);
     }
 
     /**
      * Stale state for the exercise overview, or null when nothing is flagged.
      *
-     * @return array{since: string, reasons: array<int, string>, quadrants: array<int, array{position: string, title: string, reason: ?string}>}|null
+     * `downstream` counts the flagged Steps 7–9 items (audit U6).
+     *
+     * @return array{since: ?string, reasons: array<int, string>, quadrants: array<int, array{position: string, title: string, reason: ?string}>, downstream: array{implications: int, responses: int, indicators: int}}|null
      */
     public function present(ScenarioPlanningProject $project): ?array
     {
@@ -115,13 +186,17 @@ class StalenessService
             return null;
         }
         $quadrants = $framework->quadrants()->whereNotNull('stale_since')->get();
-        if ($framework->stale_since === null && $quadrants->isEmpty()) {
+        $implications = ScenarioImplication::whereIn('scenario_quadrant_id', $framework->quadrants()->select('id'))->whereNotNull('stale_since')->get(['stale_since', 'stale_reason']);
+        $indicators = $project->indicators()->whereNotNull('stale_since')->get(['stale_since', 'stale_reason']);
+        $responses = $project->strategicResponses()->whereNotNull('stale_since')->count();
+        if ($framework->stale_since === null && $quadrants->isEmpty() && $implications->isEmpty() && $indicators->isEmpty() && $responses === 0) {
             return null;
         }
 
-        $since = $framework->stale_since ?? $quadrants->min('stale_since');
+        $since = $framework->stale_since ?? $quadrants->min('stale_since') ?? $implications->min('stale_since') ?? $indicators->min('stale_since');
         $reasons = collect(explode('; ', (string) $framework->stale_reason))
             ->merge($quadrants->flatMap(fn ($quadrant) => explode('; ', (string) $quadrant->stale_reason)))
+            ->merge($implications->toBase()->concat($indicators)->flatMap(fn ($row) => explode('; ', (string) $row->getAttribute('stale_reason'))))
             ->filter()
             ->unique()
             ->values()
@@ -131,6 +206,7 @@ class StalenessService
             'since' => $since?->toISOString(),
             'reasons' => $reasons,
             'quadrants' => $quadrants->map(fn ($quadrant) => ['position' => $quadrant->position, 'title' => $quadrant->title, 'reason' => $quadrant->stale_reason])->values()->all(),
+            'downstream' => ['implications' => $implications->count(), 'responses' => $responses, 'indicators' => $indicators->count()],
         ];
     }
 

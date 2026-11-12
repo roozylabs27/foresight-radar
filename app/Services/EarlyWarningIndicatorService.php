@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Models\EarlyWarningIndicator;
 use App\Models\IndicatorObservation;
+use App\Models\IndicatorThresholdEvent;
 use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\Signal;
 use App\Models\User;
 use App\Support\Provenance;
+use App\Support\ThresholdEvaluator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -23,6 +25,9 @@ use Ramsey\Uuid\Uuid;
  */
 class EarlyWarningIndicatorService
 {
+    /** Audit U5: observations older than this do not count for relevance. */
+    public const RELEVANCE_WINDOW_MONTHS = 12;
+
     public function create(ScenarioPlanningProject $project, array $validated, User $user): EarlyWarningIndicator
     {
         $framework = $this->requireApproved($project);
@@ -55,6 +60,8 @@ class EarlyWarningIndicatorService
                 'updated_by' => $user->id,
             ]);
             $this->syncDirections($indicator, $framework, $validated['directions'] ?? []);
+            // Audit U6: an edit by the team settles the indicator's review flag.
+            app(StalenessService::class)->clear($indicator);
         });
     }
 
@@ -107,7 +114,7 @@ class EarlyWarningIndicatorService
     public function list(ScenarioPlanningProject $project): array
     {
         return EarlyWarningIndicator::where('project_id', $project->id)
-            ->with(['directions.quadrant', 'uncertainty:id,uuid,name', 'projectForce.drivingForce', 'owner:id,uuid,name', 'observations.signal:id,uuid,title', 'observations.recorder:id,name'])
+            ->with(['directions.quadrant', 'uncertainty:id,uuid,name', 'projectForce.drivingForce', 'owner:id,uuid,name', 'observations.signal:id,uuid,title', 'observations.recorder:id,name', 'thresholdEvents'])
             ->orderBy('name')
             ->get()
             ->map(function (EarlyWarningIndicator $indicator) {
@@ -129,13 +136,25 @@ class EarlyWarningIndicatorService
                     'external_source' => $indicator->external_source,
                     'external_series' => $indicator->external_series,
                     'external_area' => $indicator->external_area,
-                    'fetch_status' => $indicator->fetch_status,
-                    'fetch_error' => $indicator->fetch_error,
+                    ...app(ExternalIndicatorService::class)->fetchState($indicator),
                     'last_fetched_at' => $indicator->last_fetched_at?->toISOString(),
                     'threshold_rule' => $indicator->threshold_rule,
+                    'threshold_operator' => $indicator->threshold_operator,
+                    'threshold_value' => $indicator->threshold_value,
+                    'threshold_numeric' => ThresholdEvaluator::isNumeric($indicator->threshold_operator, $indicator->threshold_value),
+                    'threshold_text' => ThresholdEvaluator::describe($indicator->threshold_operator, $indicator->threshold_value),
+                    'threshold_events' => $indicator->thresholdEvents->map(fn (IndicatorThresholdEvent $event) => [
+                        'id' => $event->uuid,
+                        'kind' => $event->kind,
+                        'rule' => ThresholdEvaluator::describe($event->operator, $event->threshold_value),
+                        'observed_value' => $event->observed_value,
+                        'observed_at' => $event->observed_at->toDateString(),
+                        'closed' => $event->closed_at !== null,
+                    ])->values()->all(),
                     'status' => $indicator->status,
                     'origin' => $indicator->origin,
                     'review_status' => $indicator->review_status,
+                    'stale_reason' => $indicator->stale_since ? $indicator->stale_reason : null,
                     'directions' => (object) $directions->all(),
                     'discriminates' => self::discriminates($directions->pluck('direction')),
                     'observation_count' => $indicator->observations->count(),
@@ -176,48 +195,94 @@ class EarlyWarningIndicatorService
     }
 
     /**
-     * Roadmap R2.3: which scenario the observations point to. Each observation with a direction
-     * supports every quadrant whose expected direction for that indicator matches it, and
-     * contradicts every quadrant expecting another measurable direction; qualitative or unset
-     * expectations and retired indicators do not count. `leading` is the quadrant with the
-     * highest net support (supporting − contradicting) when it is positive and unique.
+     * Audit U5 (AUD-06): which scenario the recent evidence points to, with the reasons. Not a
+     * probability: a transparent count, documented in docs/methodology/scenario-relevance.md.
      *
-     * @return array{observations: int, leading: ?string, quadrants: array<int, array{position: string, title: ?string, supporting: int, contradicting: int}>}
+     * - Each active indicator counts once, by its latest accepted observation with a direction inside
+     *   the last RELEVANCE_WINDOW_MONTHS months (older ones are reported as `outdated`).
+     * - Per quadrant with a measurable expected direction: same direction supports, rising against
+     *   falling contradicts, "stable" against a moving expectation (or the reverse) is unclear.
+     *   Qualitative or unset expectations do not count.
+     * - `reading`: strengthening when supporting > contradicting, weakening when fewer, else unclear.
+     * - `leading`: the quadrant with the highest net (supporting − contradicting) when positive and unique.
+     *
+     * @return array{counted: int, outdated: int, window_months: int, since: string, leading: ?string, quadrants: array<int, array<string, mixed>>}
      */
     public function relevance(ScenarioPlanningProject $project, Scenario $framework): array
     {
+        $since = now()->subMonths(self::RELEVANCE_WINDOW_MONTHS)->startOfDay();
         $quadrants = $framework->quadrants()->get()->keyBy('position');
-        $tally = collect(Scenario::POSITIONS)->mapWithKeys(fn ($position) => [$position => ['supporting' => 0, 'contradicting' => 0]])->all();
-        $observations = 0;
+        $rows = collect(Scenario::POSITIONS)->mapWithKeys(fn ($position) => [$position => ['supporting' => 0, 'contradicting' => 0, 'unclear' => 0, 'indicators' => []]])->all();
+        $counted = 0;
+        $outdated = 0;
 
         $indicators = EarlyWarningIndicator::where('project_id', $project->id)
             ->where('status', 'active')
             ->with(['directions.quadrant', 'observations' => fn ($q) => $q->whereNotNull('direction')->where('review_status', 'accepted')])
+            ->orderBy('name')
             ->get();
         foreach ($indicators as $indicator) {
-            $expected = $indicator->directions
-                ->filter(fn ($row) => in_array($row->expected_direction, IndicatorObservation::DIRECTIONS, true))
-                ->mapWithKeys(fn ($row) => [$row->quadrant->position => $row->expected_direction]);
-            foreach ($indicator->observations as $observation) {
-                $observations++;
-                foreach ($expected as $position => $direction) {
-                    $tally[$position][$direction === $observation->direction ? 'supporting' : 'contradicting']++;
+            // observations() is ordered newest first.
+            $latest = $indicator->observations->first();
+            if ($latest === null) {
+                continue;
+            }
+            if ($latest->observed_at->lt($since)) {
+                $outdated++;
+
+                continue;
+            }
+            $counted++;
+
+            foreach ($indicator->directions as $row) {
+                $expected = $row->expected_direction;
+                if (! in_array($expected, IndicatorObservation::DIRECTIONS, true) || ! $row->quadrant) {
+                    continue;
                 }
+                $verdict = self::verdict($expected, $latest->direction);
+                $position = $row->quadrant->position;
+                $rows[$position][$verdict]++;
+                $rows[$position]['indicators'][] = [
+                    'name' => $indicator->name,
+                    'observed' => $latest->direction,
+                    'expected' => $expected,
+                    'verdict' => $verdict,
+                    'observed_at' => $latest->observed_at->toDateString(),
+                    'crossed_threshold' => $latest->crossed_threshold,
+                ];
             }
         }
 
-        $net = collect($tally)->map(fn ($row) => $row['supporting'] - $row['contradicting']);
+        $net = collect($rows)->map(fn ($row) => $row['supporting'] - $row['contradicting']);
         $best = $net->max();
-        $leading = $observations > 0 && $best > 0 && $net->filter(fn ($value) => $value === $best)->count() === 1 ? $net->search($best) : null;
+        $leading = $counted > 0 && $best > 0 && $net->filter(fn ($value) => $value === $best)->count() === 1 ? $net->search($best) : null;
 
         return [
-            'observations' => $observations,
+            'counted' => $counted,
+            'outdated' => $outdated,
+            'window_months' => self::RELEVANCE_WINDOW_MONTHS,
+            'since' => $since->toDateString(),
             'leading' => $leading,
             'quadrants' => collect(Scenario::POSITIONS)->map(fn ($position) => [
                 'position' => $position,
                 'title' => $quadrants[$position]->title ?? null,
-            ] + $tally[$position])->all(),
+                'reading' => match ($rows[$position]['supporting'] <=> $rows[$position]['contradicting']) {
+                    1 => 'strengthening',
+                    -1 => 'weakening',
+                    default => 'unclear',
+                },
+            ] + $rows[$position])->all(),
         ];
+    }
+
+    /** One indicator's latest direction against one quadrant's expectation. */
+    public static function verdict(string $expected, string $observed): string
+    {
+        if ($expected === $observed) {
+            return 'supporting';
+        }
+
+        return $expected === 'stable' || $observed === 'stable' ? 'unclear' : 'contradicting';
     }
 
     /** At least two different expected directions across the quadrants. */
@@ -302,6 +367,8 @@ class EarlyWarningIndicatorService
             'external_series' => $validated['external_series'] ?? null,
             'external_area' => isset($validated['external_area']) ? strtoupper($validated['external_area']) : null,
             'threshold_rule' => $validated['threshold_rule'] ?? null,
+            'threshold_operator' => $validated['threshold_operator'] ?? null,
+            'threshold_value' => isset($validated['threshold_operator']) ? ($validated['threshold_value'] ?? null) : null,
         ];
     }
 

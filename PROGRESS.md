@@ -1,16 +1,33 @@
 # Project Progress — Foresight Radar
 
-## Current Verified State
+## Current Verified State (updated 2026-11-11)
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
-- **Current branch:** `development` (audit run on `claude/tenant-isolation-audit-791e36` @ `3d25019`, tree identical to `ff8502d`)
-- **Last reviewed commit:** `3d25019`
-- **Harness status:** Initialized & Verified (5/5 subsystems operational: Instructions, Tools, Environment, State, Feedback)
-- **Baseline verification (2026-10-26):** PASS. Pint 280 files, Larastan L5 0 errors, PHPUnit 290 passed (2,680 assertions), Vite build OK, npm audit 0 critical.
-- **Current objective:** Tenant isolation & invitation audit remediation complete (2026-10-30); next: scenario planning roadmap. The audit's original verdict (NOT READY, 2026-10-26) is superseded by the remediation table in `docs/audit/TENANT_INVITATION_READINESS_AUDIT.md`.
-- **Current blocker:** None. Every numbered tenant/invitation finding is fixed and covered by tests (TENANT-001..010, INVITE-001..009, UX-001), all uncommitted. Not done: Playwright smoke for the members page (UX-001 checklist), audit log for membership changes (P3), MySQL row-lock behaviour (tests run on SQLite).
-- **Highest-priority next task:** User review and commit of R1.12, R0.6 and R3.3 plus the session 38–41 records; all P0/P1 roadmap items are done. Next small items: R2.9 (response assumptions linked to conditions), R3.4 (mark superseded product docs). Step 6 still lives on `/scenarios`. R0.4 uses the default answers to Pak Jaka's questions 3–5.
-- **Scenario planning blueprint (2026-10-30):** Methodology alignment audit against `docs/Scenario Planning Methodology - Part of Era Jaya.pptx` complete (docs only). Overall alignment partial: steps 2, 3, 4, 6 usable; 1, 5, 8 missing; 7, 9 minimal. First product slice after tenant work: roadmap R0.3 (taxonomy), then R0.1 → R0.2 → R0.4 → R0.5 (`docs/product/SCENARIO_PLANNING_DEVELOPMENT_ROADMAP.md`).
+- **Current branch:** `development`
+- **Last reviewed commit:** `1a89e0c` (per-organisation dimensions, FIRM / Key Focal Issue report scope, AI-only ingestion). PR #16 appears merged into `main` (`ea80d76`).
+- **Baseline verification on `1a89e0c` (2026-11-11):**
+  - Pint PASS (463 files).
+  - Larastan L5: no errors.
+  - PHPUnit 583 passed (6,678 assertions, 823.60s).
+  - `npm run build` PASS.
+  - Dev DB has 38 users.
+  - `npm audit` not re-run today.
+  - Browser e2e not run (agentic runner).
+- **Current objective:** the staged audit and remediation toward one connected Step 1→9 exercise. The audit is in `docs/audit/2026-11-11/`, starting with `README.md`; the units are in `remediation-backlog.md`.
+- **Done:**
+  - U1: docs tracked in git, audit written, AGENTS.md corrected, broken `/register` e2e specs rewritten.
+  - U2: lost QUEUED/PROCESSING sources and indicator fetches become retryable; atomic job claims; dimension migration hardened (`down()` refuses lossy merges); dimension delete locks the row.
+  - U3: Step 6 narratives inside the exercise (`/scenario-planning/{id}/narratives`), exercise rights, narrative revision history; "Scenarios" off the sidebar.
+  - U4: threshold crossings decided on the server (operator + value), one event per crossing, framework and strategic responses flagged; qualitative indicators keep a manual flag with a note.
+  - U5: scenario relevance counts each indicator once (latest observation in 12 months), explains every quadrant and says it is not a probability (`docs/methodology/scenario-relevance.md`).
+  - U6: upstream changes flag implications, responses and indicators with a reason (framework/axis change, G5 withdrawal, implication change, narrative regeneration); G7 requires G6.
+  - U7: `ForesightExerciseJourneyTest` (Steps 1→9) and `TenantIsolationJourneyTest` pass; full verify recorded.
+- **Remaining units:** none of U1–U7. Open items are the P2/P3 backlog in `docs/audit/2026-11-11/remediation-backlog.md` (typecheck/ESLint, browser e2e budget, AI run recorded before the transaction, user management, unused routes and files).
+- **Current blocker:** none. The user reviews and commits each unit.
+- **Known issues:**
+  - typecheck covers no JSX; ESLint has 108 warnings left as debt (0 errors).
+- **Production:** an AI provider must be configured per organisation before ingest works there. Deploy the dimension migration only with the procedure in `docs/audit/2026-11-11/tenant-isolation-data-integrity.md` (backup, staging run, cross-tenant checks).
+- **Highest-priority next task:** review and commit U4–U7, AUD-13 and AUD-18; then the next backlog decision (AUD-19 browser e2e budget, or AUD-14 platform user management).
 
 ---
 
@@ -423,6 +440,16 @@
 | 2026-10-26 (uncommitted) | UX-001 + E2E-001..004 | **PASS** | `composer verify`: Pint 290 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 326 passed (2,902 assertions, 359.43s); `npm run build` PASS (1m 18s); browser check PASS; `tests/Audit` 3 failed / 4 passed |
 | 2026-10-26 (uncommitted) | TENANT-002 Remediation | **PASS** | `composer verify`: Pint 292 files PASS, Larastan L5 `[OK] No errors`, PHPUnit 332 passed (2,914 assertions, 241.99s); `tests/Audit` 2 failed / 4 passed (TENANT-005, INVITE-006) |
 | 2026-10-30 (uncommitted) | TENANT-005 + INVITE-006 Remediation | **PASS** | `composer verify` exit 0: Pint PASS, Larastan L5 PASS, PHPUnit 342 passed (2,952 assertions, 428.15s); `tests/Feature/Settings` + `tests/Audit` 56 passed (audit suite 6/6); `npm run build` not run (no frontend change) |
+| 2026-11-12 (uncommitted) | AUD-18: ESLint for resources/js | **PASS** | `npm run lint` (ESLint 9.39.5, react 7.37.5, react-hooks 7.1.1, jsx-a11y 6.10.2): first run 7 errors / 120 warnings over 219 files; errors fixed (rules-of-hooks in `I18nProvider`, missing `axios` import in `use-comments.js`, regex escape), deprecated `label-has-for` off, now **0 errors, 108 warnings**, exit 0. `bash -n verify.sh` OK; CI YAML parses. `npm run build` PASS (3m 49s). Browser: login page renders translated text, no hook errors in the console (session expired, so pages behind login not rechecked). Not run: PHPUnit (no PHP change) |
+| 2026-11-12 (uncommitted) | AUD-13: AI extraction run recorded with its signals | **PASS (targeted)** | New test seen red first (run was `completed` with no signals), then passed. `tests/Feature/Llm` + `SignalIngestionTest`: 117 passed (729 assertions, 151.04s). Pint PASS; Larastan on `SignalExtractionService` no errors; queue restarted. Not run: full suite after this change |
+| 2026-11-12 (uncommitted) | Audit U7: journeys + final verify | **PASS** | `ForesightExerciseJourneyTest` 1 passed (177 assertions), `TenantIsolationJourneyTest` 1 passed (82 assertions); no app change needed (three test assumptions corrected: axis forces use pole conditions; observations are open before participants exist; the Dashboard page is a shell and its data endpoint refuses another organisation's scope). **Full PHPUnit: 622 passed (7,473 assertions, 585.30s).** Pint `--test`: one line-ending issue fixed, then PASS (477 files). Larastan full: no errors. `npm run build` PASS (1m 9s). `npm audit --audit-level=critical`: 0 critical (4 moderate, 6 high, partly in the `e2e` runner's dependencies). Not run: browser e2e (`npm run test:e2e:smoke`, agentic runner needs a model and credentials); `npm run typecheck` (checks no JSX, AUD-18) |
+| 2026-11-11 (uncommitted) | Audit U6: propagation into Steps 7–9; G7 needs G6 | **PASS** | 6 new tests run red first (6 failed, 15 existing passed). After: `StrategicResponseTest` 21 passed (2 older tests needed the G6 step). **Full PHPUnit: 620 passed (7,214 assertions, 1,885.95s)**, covering U4–U6; Pint `--test` PASS (438 files). Larastan: 5 type findings (missing `@property` for the new columns, a mixed-model collection merge) fixed, rerun no errors, affected tests rerun 3 passed. `npm run build` PASS (1m 41s). Dev DB: migration `2026_11_11_000004` applied; 38 users. Browser: Step 7 shows the banner line "Langkah 7–9 yang perlu ditinjau" and the "Perlu ditinjau" tag (dev implication flagged temporarily, then cleared). Note: the host was slowed by another project's long `pytest` run and OneDrive sync (CPU ~94%); one earlier run was stopped and rerun, not counted |
+| 2026-11-11 (uncommitted) | Audit U5: explainable scenario relevance | **PASS (targeted)** | 4 relevance tests run red first (4 failed), then passed. `tests/Feature/ScenarioPlanning`: 176 passed, 1 failed (an older test read the renamed `relevance.observations`; updated to `relevance.counted`, rerun passed). Pint PASS; Larastan on `EarlyWarningIndicatorService` no errors; `npm run build` PASS (1m 56s). Browser: dev exercise shows each quadrant's reading, counts and reasons, and the "Hitungan, bukan probabilitas" label. Not run: full suite after U5; relevance on report/compare (not added) |
+| 2026-11-11 (uncommitted) | Audit U4: server-side threshold engine | **PASS (targeted)** | New tests run red first: `ThresholdEvaluatorTest` 3 + 5 in `EarlyWarningIndicatorTest` (incl. the rewritten crossing test) = 8 failed. After: `tests/Unit` + `tests/Feature/ScenarioPlanning` **216 passed (4,786 assertions, 500.93s)**. Pint PASS; Larastan on the changed files: 1 finding (match without default) fixed, rerun no errors; `npm run build` PASS (1m 35s). Dev DB: migration `2026_11_11_000003` first failed on MySQL (default index name > 64 chars), partial objects removed, fixed migration applied; 38 users. Browser: indicator dialog shows operator/value/note (value enabled only with an operator); observation dialog of a qualitative indicator shows the flag with the note hint; nothing saved. Not run: full suite after U4; the numeric preview in the browser (needs a saved numeric threshold) |
+| 2026-11-11 (uncommitted) | Audit U3: Step 6 inside the exercise, narrative revisions, exercise rights | **PASS** | **Full PHPUnit: 604 passed (6,932 assertions, 2,511.95s)**, covering U2 and U3. Targeted before that: `ScenarioNarrativeReviewTest` (6 new) + `WorkspaceTest` + `Llm/ScenarioTest` + `ScenarioFrameworkTest` 53 passed. The new tests were not cleanly seen red (the first run picked up the code mid-run). Pint PASS; `npm run build` PASS (3m 12s); migration `2026_11_11_000002` applied to the dev DB; dev DB 38 users. Browser: Step 6 page renders the exercise's 4 quadrants, stepper links to it; two edits via the UI stored one revision shown in Riwayat narasi; test text and revision then removed and the quadrant's stale flag restored. Not run: AI generation in the browser (real provider call), other-organisation check (U7) |
+| 2026-11-11 (uncommitted) | Audit U2: stale job states, atomic claims, migration safety, dimension delete lock | **PASS (targeted)** | 8 new extraction tests run red first (7 failed), then `SignalExtractionRecoveryTest` + `LlmSignalExtractionTest` + `tests/Feature/Taxonomy` (incl. new `DimensionMigrationSafetyTest`, 5) + `ExternalIndicatorSourceTest` (2 new) + `DimensionSettingsTest`: **62 passed (538 assertions, 169.45s)**. The indicator and migration tests were written together with the fix and not seen red. Pint PASS (107 files); Larastan on the changed files: 1 finding fixed, rerun no errors; affected tests rerun after that fix: 22 passed. Dev DB 38 users, no pending sources or fetches. Browser: `/signals` and an exercise's indicator page load (Inertia props carry the fetch state; `/signals/extractions/active` 200). Not run: full PHPUnit suite, `npm run build` (no frontend change), a full `down()` with schema changes, MySQL row-lock behaviour |
+| 2026-11-11 (uncommitted) | Audit U1: docs tracked, audit deliverables, harness corrections | **PASS (docs only)** | No PHP/JSX changed, so PHPUnit and build not re-run for U1. `git check-ignore` confirms the deck, PDFs and screenshots under `docs/` stay ignored; 74 Markdown/JSON + 1 HTML + 1 CSS become trackable; secret pattern scan of `docs/**/*.md\|json` found nothing. `tests/e2e/auth.e2e.ts` and `accessibility-labels.e2e.ts` rewritten from the missing `/register` to `/forgot-password`, **not executed** (agentic e2e runner) |
+| 2026-11-11 (`1a89e0c`) | Audit baseline before U1 | **PASS** | Pint 463 files PASS; Larastan L5 full analysis no errors; PHPUnit 583 passed (6,678 assertions, 823.60s); dev DB 38 users |
 | 2026-11-11 (uncommitted) | Report scope: FIRM or Key Focal Issue (plan Part A) | **PASS** | `ReportScopeTest` red first (6 failed), then 7 passed (138 assertions); Pint PASS on 8 files; Larastan L5 `[OK] No errors` on the 7 changed PHP files; `ReportScopeTest` + `ForesightReportingServiceTest` + `RatingDataChainTest` + `VisualizationAuthorizationTest` + `DateRangeValidationTest` + `InformationDisclosureTest` + `PhaseOneRemediationTest` + `PhaseTwoThreeRemediationTest` + `WorkspaceTest` 32 passed (437 assertions); dev DB still 38 users; `npm run build` PASS (2m 57s, then rebuilt after the tracker fix); full suite not run; local browser check done |
 | 2026-11-11 (uncommitted) | AI-only ingestion of external sources | **PASS** | New tests red first (4 failed), then green; Pint PASS; Larastan L5 `[OK] No errors` on `SignalExtractionService`, `SignalIngestionController`, `ExtractSignals`; `LlmSignalExtractionTest` + `SignalIngestionTest` + `SignalExtractionRecoveryTest` + `OpenAiCompatibleClientTest` + `RateLimitingTest` + `SignalClassificationTest` + `PromptComplianceTest` + `SignalExtractionBenchmarkTest`: 75 passed, 1 failed (the benchmark test asserting the old keyword fallback), updated, then `SignalExtractionBenchmarkTest` 4 passed; dev DB still 38 users; `npm run build` PASS (3m 46s); full suite not run; local browser check done (retry not clicked) |
 | 2026-11-11 (uncommitted) | Matrix row 4.7 pole validation and AI pole critique | **PASS** | New tests red first (3 failed), then 3 passed (68 assertions); Pint PASS on 8 files (import order fixed in the test); Larastan L5 `[OK] No errors` on the 7 changed PHP files; `ScenarioFrameworkTest` + `CriticalUncertaintyTest` + `Llm/ScenarioTest` + `ScenarioHarnessTest` + `PromptComplianceTest` 70 passed (653 assertions, 718.28s); dev DB still 38 users; `npm run build` PASS (2m 3s); full PHPUnit 563 passed (6,356 assertions, 980.92s), dev DB still 38 users; local browser: page renders, critique and warning not seen (local framework is approved) |
@@ -479,6 +506,122 @@
 ---
 
 ## Session Log
+
+### 2026-11-12 — Session 82 (backlog AUD-18: ESLint)
+
+- Added `eslint.config.js` (flat config) and `npm run lint` (`eslint resources/js`); dev dependencies `eslint@9`, `@eslint/js@9`, `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-jsx-a11y`, `globals`. `route` is declared as a global (Ziggy).
+- Severity: errors for JS mistakes, rules of hooks and React rendering mistakes; warnings for hook dependencies, unused variables and jsx-a11y. react-hooks 7's preset also enables React Compiler rules; only the two classic rules are on, to avoid a flood on older code.
+- Fixed the 7 errors: `I18nProvider` (hooks after an early return, moved to `I18nRoot`), `use-comments.js` (global `axios`), `Signals/ReviewForm.jsx` (regex escape).
+- Wired into `verify.sh` (step 4b) and CI (after typecheck). AGENTS.md updated.
+- Remaining: 108 warnings (51 unused variables, 21 hook dependency lists, accessibility); fix when a file is touched.
+
+### 2026-11-12 — Session 81 (backlog AUD-13)
+
+- `SignalExtractionService::extract()` keeps the LLM call outside the transaction; the new `store()` records the `AiGenerationRun` inside the transaction with the signals, so a rollback removes both. On a storage error the call is recorded as `failed` (`storage_failed: …`) and the exception reaches `ExtractSignals`, whose `failed()` marks the source failed (retryable).
+- Test: `test_a_storage_failure_leaves_no_completed_run_without_signals`.
+
+### 2026-11-12 — Session 80 (audit unit U7: end-to-end journeys and final verification)
+
+- **Scope:** AUD-20, Scenarios A and B of the brief.
+- **Journey A** (`tests/Feature/Journeys/ForesightExerciseJourneyTest.php`): one organisation, one exercise, Steps 1→9 through the page routes with `FakeLlmClient`: G1–G5, conditions, narratives in the exercise citing an accepted signal, G6, implications linked to forces and conditions, a response linked to an implication and a condition (G7), an indicator with a numeric threshold; all nine steps `done`; a crossing observation creates one event and flags the framework and the response; relevance reads the quadrants; the gate log is G1, G2, G3, G4×2, G5, G6×4, G7 with one actor; the report opens; a second exercise of the same organisation sees and changes nothing of the first (404).
+- **Journey B** (`tests/Feature/Journeys/TenantIsolationJourneyTest.php`): organisation B (same permissions) gets 404 on 14 pages and 11 writes of A's exercise, on A's signal source (read and retry) and on A-scoped dashboard data; B's lists are empty; nothing of A changed.
+- **Findings:** none in the application. Three wrong assumptions in the first draft of the tests were corrected (see the evidence row).
+- **Final verification:** full PHPUnit 622 passed; Pint PASS; Larastan full no errors; build PASS; npm audit 0 critical. Browser e2e not run (agentic runner).
+- **Host note (U6/U7):** another project's `pytest` and OneDrive sync slowed the machine for part of the session; the final suite ran on a free host.
+
+### 2026-11-11 — Session 79 (audit unit U6: propagation into Steps 7–9)
+
+- **Scope:** AUD-07, AUD-08.
+- **Data:** `stale_since`/`stale_reason` on `scenario_implications` and `early_warning_indicators` (migration `2026_11_11_000004`).
+- **Rules (`StalenessService`):** `markFramework` also flags Steps 7–9 (`markDownstream`) unless called with `downstream: false` (threshold crossings, which flag responses only); `frameworkReopened` from `ScenarioFrameworkService::reopen` and `ScenarioPlanningProject::withdrawFrameworkApproval`; `implicationChanged` on implication edit/delete flags the responses that rely on it; narrative regeneration of a filled quadrant flags its implications. Edits clear an implication's or indicator's own flag; acknowledge also clears implications and indicators; responses keep their per-response keep. `present()` adds `downstream` counts.
+- **Gate:** `StrategicResponseService::approve` requires all four narratives approved (G6).
+- **UI:** `StaleTag` on implication items and indicator cards; `StaleBanner` lists flagged Steps 7–9 items; the responses page shows the G6 error.
+- **Decision log:** review flags are not logged as decisions (G5 withdrawal already is).
+- **Environment:** another project's `pytest` and OneDrive sync kept the host CPU near 94%; PHP in Docker ran ~10× slower. Not stopped (not this session's process).
+
+### 2026-11-11 — Session 78 (audit unit U5: explainable scenario relevance)
+
+- **Scope:** AUD-06.
+- **Rule:** `EarlyWarningIndicatorService::relevance()` counts each active indicator once, by its latest accepted directional observation inside 12 months (`RELEVANCE_WINDOW_MONTHS`); older ones are `outdated`. Rising against falling contradicts; stable against a moving expectation (or the reverse) is unclear; qualitative/unset expectations do not count. Per quadrant: counts, a reading (menguat / melemah / belum jelas) and the indicators behind it (direction, date, expectation, verdict, threshold crossing). `leading` as before (highest positive unique net). Output keys changed: `observations` became `counted` (+ `outdated`, `window_months`, `since`, `unclear`, `reading`, `indicators`).
+- **UI:** `RelevancePanel` shows the reading, counts, an expandable reason list and "Hitungan, bukan probabilitas" with the rule as a tooltip.
+- **Docs:** `docs/methodology/scenario-relevance.md` (inputs, rule table, explanation, limits).
+- **Not done:** relevance on the report and compare pages (they never showed it); full suite after U5.
+
+### 2026-11-11 — Session 77 (audit unit U4: threshold engine)
+
+- **Scope:** AUD-04, AUD-05.
+- **Data:** `early_warning_indicators.threshold_operator` (gt/gte/lt/lte) + `threshold_value`; `threshold_rule` stays as the note. Table `indicator_threshold_events` (unique per observation, kind numeric/manual, rule, observed value and date, `closed_at`).
+- **Logic:** pure `App\Support\ThresholdEvaluator`; `IndicatorThresholdService::evaluate()` on manual store and on confirmation of a proposal (World Bank or AI match). The client flag is ignored for a numeric indicator; a qualitative indicator's flag needs a note. A crossing flags the framework, its quadrants and every strategic response of the exercise (`StalenessService::markResponses`) with a reason naming indicator, rule, value and date. Deleting the observation closes its event; flags stay.
+- **UI:** `IndicatorDialog` threshold section; `ObservationDialog` shows a preview of the server's decision for numeric indicators, the flag + note hint for qualitative ones; `ThresholdEvents` on the indicator card. Domain helper `crossesThreshold` (preview only).
+- **Found:** the default composite index name exceeded MySQL's 64 characters (SQLite tests do not check); named explicitly.
+- **Not done / not verified:** full suite after U4; the numeric preview in the browser; AI indicator proposals still propose only the text rule (a person adds operator and value).
+
+### 2026-11-11 — Session 76 (audit unit U3: Step 6 inside the exercise)
+
+- **Scope:** AUD-01, AUD-02, AUD-03, AUD-25.
+- **Routes and page:** `scenario-planning.narratives.{index,state,generate,quadrant,review}` (`ExerciseNarrativeController`), `Pages/ScenarioPlanning/Narratives.jsx` (111 lines) with `NarrativeGenerateBar`, `NarrativeEvidence`, `NarrativeRevisions`, `hooks/use-exercise-narratives.js`; reuses `QuadrantCard`. `SCOPED_ROUTES[6]`; Step 6 has no global module any more.
+- **Shared logic:** quadrant edit and review moved into `ScenarioNarrativeService::updateQuadrant()/reviewQuadrant()`; the scenario payload into `ScenarioPresenter`; `ScenarioController` delegates, so `/scenarios` behaves the same.
+- **Rights:** `ScenarioPolicy::update` defers to `ScenarioPlanningProjectPolicy` for an exercise framework (owner/creator/admin), on both pages.
+- **Revisions:** table `scenario_narrative_revisions`, `ScenarioNarrativeRevision::capture()` before an edit that changes title/narrative/implications and before a regeneration of a filled quadrant. Found by the new test: an edit without `implications` counted as a change every time.
+- **Navigation:** "Scenarios" removed from the sidebar (route kept); links in Framework, Show, Conditions (next) and Implications (back) go to Step 6. `WorkspaceTest` updated for the sidebar decision.
+- **Larastan:** first attempt timed out (ran alongside the full suite); rerun found one undefined-property access in `ScenarioNarrativeRevision::capture()`, fixed with `getAttribute()`; final run no errors.
+- **Not done / not verified:** browser AI generation (would call the real provider); another organisation's access (U7); citation rows are still rewritten on regeneration (the revision keeps cited ids and typed statements).
+
+### 2026-11-11 — Session 75 (audit unit U2: stale job states and migration safety)
+
+- **Scope:** AUD-09, AUD-10, AUD-11, AUD-12 from `docs/audit/2026-11-11/technical-audit.md`.
+- **Stale job states (AUD-09):** new `App\Support\StaleJob`. QUEUED is lost after `queue.stale_queued_after` (900 s, env `QUEUE_STALE_QUEUED_AFTER`); PROCESSING only after the job timeout + 60 s, so a job still allowed to run is never shown failed.
+  - `SignalExtractionService::progress()` marks a lost source FAILED with a reason, by a conditional update (a job that claimed it meanwhile wins). `retry()` accepts FAILED or lost and releases the old job's unique lock before dispatching.
+  - `ExternalIndicatorService::fetchState()` (used by the indicator register) shows a lost fetch as failed; `queue()` re-queues it.
+- **Atomic claims (AUD-10):** `extract()` and `FetchIndicatorSource` move QUEUED→PROCESSING with a conditional update; a duplicate job, or one for a failed or completed row, does nothing. Both jobs set `uniqueFor`. Completion clears `extraction_error` by query (Eloquent skipped the null because it was already null in memory: found by the new test). The `failed()` handlers update by key and only while pending.
+- **Migration (AUD-11):** owner = lowest organisation not deleted; the FK swap checks the current delete rule first, so a rerun does nothing; `down()` runs `downBlockers()` first and stops before any change unless every organisation's taxonomy equals the owner's.
+- **Dimension delete (AUD-12):** transaction + `lockForUpdate` on the dimension row before counting usage.
+- **Changed wording:** the extraction failure messages now say "coba lagi dari halaman Sinyal" (retry exists since Session 71); one assertion in `LlmSignalExtractionTest` updated.
+- **Verified after the Larastan fix:** Larastan on `SignalExtractionService` and `DimensionService`: no errors; `SignalExtractionRecoveryTest` + `DimensionMigrationSafetyTest` + `DimensionSettingsTest`: 22 passed (124 assertions, 125.15s).
+- **Not done / not verified:** full PHPUnit suite; a full `down()` that changes the schema; row-lock behaviour on MySQL (the tests use SQLite).
+
+### 2026-11-11 — Session 74 (comprehensive audit, unit U1: audit deliverables and harness truth)
+
+- **Request:** a comprehensive product, methodology, architecture and engineering audit with remediation. The work is staged: no large refactors. The goal is one organisation completing one exercise from Step 1 to Step 9 with connected data, evidence, approval and monitoring.
+- **User decisions:**
+  - Track `docs/` in git (binaries stay local).
+  - Keep `/scenarios` but hide it from the sidebar after Step 6 moves into the exercise.
+  - Thresholds as a structured operator + value, evaluated server-side.
+  - Stop after each unit for review and commit.
+- **Phase 0 discovery:**
+  - Branch `development` is clean at `1a89e0c`; PR #16 appears merged into `main` (`ea80d76`).
+  - Baseline: Pint, Larastan and PHPUnit 583 passed.
+  - Three read-only reviews: methodology Findings A–E; tenant isolation and data integrity; product gaps and the harness.
+- **Findings:**
+  - A (Step 6) not resolved.
+  - B (threshold) not resolved.
+  - C (relevance) partial.
+  - D (harness) resolved in this unit, except typecheck and lint.
+  - E (chain) partial.
+  - No P0 in tenant isolation.
+  - P1: QUEUED states can stick; the dimension migration's `down()` is unsafe.
+  - The full list with evidence is in `docs/audit/2026-11-11/technical-audit.md` (AUD-01..26).
+- **U1 changes (documentation and harness only):**
+  - `.gitignore` tracks `docs/` but ignores `*.pdf`, `*.pptx` and `*.png` under it.
+  - New `docs/audit/2026-11-11/`:
+    - `README` (executive summary)
+    - `technical-audit`
+    - `methodology-alignment`
+    - `tenant-isolation-data-integrity` (with the migration risk assessment and safe deployment procedure)
+    - `feature-gap-matrix`
+    - `remediation-backlog` (U1–U7 and the P2/P3 backlog)
+    - `test-verification-report`
+  - AGENTS.md corrected:
+    - JavaScript/JSX, not TypeScript; the agentic `e2e` runner, not Playwright; Laravel 11 / React 19.
+    - Queue and cache drivers; the service and job inventory; domain concepts (tenancy, dimensions, firm vs exercise, gates, staleness, signals vs forces).
+    - What `verify.sh` runs; reload and testing practice; the 150-line rule stated honestly.
+  - PROGRESS header refreshed.
+  - `feature_list.json` 1.2.0 with `last_updated` 2026-11-11 and a note on what "passing" means.
+  - Two e2e specs moved from the missing `/register` (accounts are by invitation) to `/forgot-password`.
+- **Not run:**
+  - Browser e2e (agentic runner, needs a model and credentials).
+  - `npm audit`.
+- **Next recommended action:** U2 (stale QUEUED states, atomic extraction claim, migration safety, dimension delete race).
 
 ### 2026-11-11 — Session 73 (plan Part B: per-organisation dimensions; Dashboard scope)
 

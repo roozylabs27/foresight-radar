@@ -9,6 +9,7 @@ use App\Http\Controllers\CrossImpactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DrivingForceController;
 use App\Http\Controllers\EarlyWarningIndicatorController;
+use App\Http\Controllers\ExerciseNarrativeController;
 use App\Http\Controllers\ForesightRadarController;
 use App\Http\Controllers\IndicatorObservationController;
 use App\Http\Controllers\KnowledgeGraphController;
@@ -168,6 +169,15 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::put('/{condition}', 'update')->name('update')->can('manage-scenario');
         Route::delete('/{condition}', 'destroy')->name('destroy')->can('manage-scenario');
         Route::post('/{condition}/move', 'move')->name('move')->can('manage-scenario');
+    });
+
+    // Step 6 inside the exercise (audit U3). One generation is one LLM call for all four quadrants.
+    Route::prefix('scenario-planning/{project}/narratives')->controller(ExerciseNarrativeController::class)->name('scenario-planning.narratives.')->group(function () {
+        Route::get('/', 'index')->name('index')->can('view-scenario');
+        Route::get('/state', 'state')->name('state')->can('view-scenario');
+        Route::post('/generate', 'generate')->name('generate')->can('manage-scenario')->middleware('throttle:10,1,scenario-generate');
+        Route::put('/quadrants/{quadrant}', 'updateQuadrant')->name('quadrant')->can('manage-scenario');
+        Route::post('/quadrants/{quadrant}/review', 'reviewQuadrant')->name('review')->can('manage-scenario');
     });
 
     Route::prefix('scenario-planning/{project}/implications')->controller(ScenarioImplicationController::class)->name('scenario-planning.implications.')->group(function () {

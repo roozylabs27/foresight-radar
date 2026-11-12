@@ -95,7 +95,7 @@ export default function ReviewForm({ id, action, signal, dimensions = [], drivin
     const { control, submit } = useDialogForm({
         schema: config.schema,
         defaultValues: {
-            title: signal?.title ? signal.title.replace(/[\.\s]+$/, "").trim() : "",
+            title: signal?.title ? signal.title.replace(/[.\s]+$/, "").trim() : "",
             summary: signal?.summary ? signal.summary.replace(/\.{2,}$/, "").trim() : "",
             dimension_id: toFieldValue(signal?.dimension_id),
             driving_force_id: toFieldValue(signal?.suggested_driving_force_id ?? ""),

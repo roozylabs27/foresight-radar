@@ -27,6 +27,10 @@ return [
 
     'llm_job_timeout' => (int) env('LLM_JOB_TIMEOUT', 300),
 
+    // Seconds a row may stay "queued" before its job counts as lost (App\Support\StaleJob);
+    // the analyst can then retry it.
+    'stale_queued_after' => (int) env('QUEUE_STALE_QUEUED_AFTER', 900),
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections

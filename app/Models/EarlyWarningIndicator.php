@@ -32,6 +32,11 @@ use Ramsey\Uuid\Uuid;
  * @property string $status
  * @property string $origin
  * @property string $review_status
+ * @property string|null $threshold_rule
+ * @property Carbon|null $stale_since
+ * @property string|null $stale_reason
+ * @property string|null $threshold_operator
+ * @property float|null $threshold_value
  */
 class EarlyWarningIndicator extends Model
 {
@@ -64,6 +69,8 @@ class EarlyWarningIndicator extends Model
         'external_series',
         'external_area',
         'threshold_rule',
+        'threshold_operator',
+        'threshold_value',
         'status',
         'origin',
         'review_status',
@@ -73,8 +80,10 @@ class EarlyWarningIndicator extends Model
 
     protected $casts = [
         'baseline_value' => 'float',
+        'threshold_value' => 'float',
         'baseline_date' => 'date',
         'last_fetched_at' => 'datetime',
+        'stale_since' => 'datetime',
     ];
 
     protected static function booted()
@@ -90,6 +99,12 @@ class EarlyWarningIndicator extends Model
     public function observations(): HasMany
     {
         return $this->hasMany(IndicatorObservation::class)->orderByDesc('observed_at')->orderByDesc('id');
+    }
+
+    /** Threshold crossings, newest first (audit U4). */
+    public function thresholdEvents(): HasMany
+    {
+        return $this->hasMany(IndicatorThresholdEvent::class)->orderByDesc('observed_at')->orderByDesc('id');
     }
 
     public function project(): BelongsTo

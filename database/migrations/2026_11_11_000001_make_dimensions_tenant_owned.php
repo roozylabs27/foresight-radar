@@ -8,10 +8,14 @@ use Ramsey\Uuid\Uuid;
 
 /**
  * Plan part B1: environments and dimensions belong to one organisation. The existing rows go to the
- * first organisation; every other organisation gets its own copy, and its driving forces, signals
- * and force candidates are moved to the copy (matched by code, or by name for rows without a code).
- * Codes become unique per organisation, dimensions can be archived and carry a colour key, and a
- * dimension that still has driving forces can no longer be deleted (it used to delete them).
+ * owner (the lowest organisation that is not deleted); every other organisation gets its own copy,
+ * and its driving forces, signals and force candidates are moved to the copy (matched by code, or by
+ * name for rows without a code). Codes become unique per organisation, dimensions can be archived and
+ * carry a colour key, and a dimension that still has driving forces can no longer be deleted (it
+ * used to delete them).
+ *
+ * Every step is guarded so a rerun after a failed attempt is safe (MySQL does not roll back schema
+ * changes). down() refuses to run when merging the organisations back would lose data.
  */
 return new class extends Migration
 {
@@ -19,7 +23,6 @@ return new class extends Migration
 
     public function up(): void
     {
-        // Guards make a rerun after a failed attempt safe (MySQL does not roll back schema changes).
         if (! Schema::hasColumn('environments', 'tenant_id')) {
             Schema::table('environments', function (Blueprint $table) {
                 $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->cascadeOnDelete();
@@ -45,28 +48,34 @@ return new class extends Migration
             });
         }
 
-        $owner = DB::table('tenants')->min('id');
+        $owner = $this->owner();
         if ($owner !== null) {
             DB::table('environments')->whereNull('tenant_id')->update(['tenant_id' => $owner]);
             DB::table('dimensions')->whereNull('tenant_id')->update(['tenant_id' => $owner]);
             foreach (DB::table('environments')->where('tenant_id', $owner)->orderBy('id')->pluck('id')->values() as $position => $id) {
                 DB::table('environments')->where('id', $id)->update(['sort_order' => $position + 1]);
             }
+            // Deleted organisations get a copy too, so none of their data keeps pointing across.
             foreach (DB::table('tenants')->where('id', '!=', $owner)->orderBy('id')->pluck('id') as $tenantId) {
-                $this->copyTaxonomy((int) $owner, (int) $tenantId);
+                $this->copyTaxonomy($owner, (int) $tenantId);
             }
         }
 
-        Schema::table('driving_forces', function (Blueprint $table) {
-            $table->dropForeign(['dimension_id']);
-            $table->foreign('dimension_id')->references('id')->on('dimensions')->restrictOnDelete();
-        });
+        $this->forceForeignKey('restrict');
+    }
+
+    /** The organisation that keeps the existing rows: the lowest one that is not deleted. */
+    public function owner(): ?int
+    {
+        $id = DB::table('tenants')->whereNull('deleted_at')->min('id') ?? DB::table('tenants')->min('id');
+
+        return $id === null ? null : (int) $id;
     }
 
     /**
      * Give $toTenant its own copy of $fromTenant's environments and dimensions, reusing what it
-     * already has (same code, or same name without a code), and move $toTenant's data that still
-     * points at $fromTenant's dimensions to its own. Safe to run twice.
+     * already has (same code, or same name where both have no code), and move $toTenant's data that
+     * still points at $fromTenant's dimensions to its own. Safe to run twice.
      */
     public function copyTaxonomy(int $fromTenant, int $toTenant): void
     {
@@ -101,34 +110,40 @@ return new class extends Migration
         });
     }
 
-    /** Back to one shared taxonomy: data moves to the first organisation's rows (by code or name) and the copies go. */
+    /**
+     * Back to one shared taxonomy. Only safe while every organisation still has exactly the owner's
+     * taxonomy: then each copy has an identical row to merge into and nothing is lost. Otherwise (a
+     * renamed, added, archived or moved dimension, or another environment) the rollback stops before
+     * changing anything; restore the backup taken before the deploy instead.
+     */
     public function down(): void
     {
-        $owner = DB::table('tenants')->min('id');
-
-        Schema::table('driving_forces', function (Blueprint $table) {
-            $table->dropForeign(['dimension_id']);
-            $table->foreign('dimension_id')->references('id')->on('dimensions')->cascadeOnDelete();
-        });
-
-        if ($owner !== null) {
-            foreach (DB::table('dimensions')->where('tenant_id', '!=', $owner)->get() as $copy) {
-                $shared = DB::table('dimensions')->where('tenant_id', $owner)
-                    ->where(fn ($q) => $copy->code !== null ? $q->where('code', $copy->code) : $q->where('name', $copy->name))
-                    ->value('id');
-                if ($shared === null) {
-                    continue;
-                }
-                foreach (self::DATA_TABLES as $table) {
-                    DB::table($table)->where('dimension_id', $copy->id)->update(['dimension_id' => $shared]);
-                }
-                DB::table('dimensions')->where('id', $copy->id)->delete();
-            }
-            DB::table('environments')->where('tenant_id', '!=', $owner)->whereNotExists(
-                fn ($q) => $q->from('dimensions')->whereColumn('dimensions.environment_id', 'environments.id')
-            )->delete();
+        $blockers = $this->downBlockers();
+        if ($blockers !== []) {
+            throw new RuntimeException(
+                "Rollback stopped before any change: merging the organisations' dimensions would lose data.".PHP_EOL
+                .'- '.implode(PHP_EOL.'- ', $blockers).PHP_EOL
+                .'Restore the pre-deploy backup instead.'
+            );
         }
 
+        $owner = $this->owner();
+        if ($owner !== null) {
+            DB::transaction(function () use ($owner) {
+                foreach (DB::table('dimensions')->where('tenant_id', '!=', $owner)->get() as $copy) {
+                    $shared = DB::table('dimensions')->where('tenant_id', $owner)
+                        ->where(fn ($q) => $copy->code !== null ? $q->where('code', $copy->code) : $q->whereNull('code')->where('name', $copy->name))
+                        ->value('id');
+                    foreach (self::DATA_TABLES as $table) {
+                        DB::table($table)->where('dimension_id', $copy->id)->update(['dimension_id' => $shared]);
+                    }
+                    DB::table('dimensions')->where('id', $copy->id)->delete();
+                }
+                DB::table('environments')->where('tenant_id', '!=', $owner)->delete();
+            });
+        }
+
+        $this->forceForeignKey('cascade');
         Schema::table('dimensions', function (Blueprint $table) {
             $table->dropUnique(['tenant_id', 'code']);
             $table->dropIndex(['tenant_id', 'sort_order']);
@@ -139,6 +154,74 @@ return new class extends Migration
         Schema::table('environments', function (Blueprint $table) {
             $table->dropConstrainedForeignId('tenant_id');
             $table->dropColumn('sort_order');
+        });
+    }
+
+    /**
+     * Why down() would lose data: for each organisation whose taxonomy differs from the owner's, the
+     * lines found only there and the lines missing there.
+     *
+     * @return list<string>
+     */
+    public function downBlockers(): array
+    {
+        $owner = $this->owner();
+        if ($owner === null || ! Schema::hasColumn('dimensions', 'tenant_id')) {
+            return [];
+        }
+
+        $expected = $this->taxonomyOf($owner);
+        $tenants = DB::table('dimensions')->where('tenant_id', '!=', $owner)->distinct()->pluck('tenant_id')
+            ->merge(DB::table('environments')->where('tenant_id', '!=', $owner)->distinct()->pluck('tenant_id'))
+            ->unique()->sort()->values();
+
+        $blockers = [];
+        foreach ($tenants as $tenantId) {
+            $actual = $this->taxonomyOf((int) $tenantId);
+            $parts = array_filter([
+                ($extra = array_diff($actual, $expected)) ? 'only here ['.implode('; ', $extra).']' : null,
+                ($missing = array_diff($expected, $actual)) ? 'missing ['.implode('; ', $missing).']' : null,
+            ]);
+            if ($parts !== []) {
+                $blockers[] = "organisation #{$tenantId}: ".implode(', ', $parts);
+            }
+        }
+
+        return $blockers;
+    }
+
+    /**
+     * An organisation's taxonomy as comparable lines: each environment, and each dimension with its
+     * code, name, environment and archive state.
+     *
+     * @return list<string>
+     */
+    private function taxonomyOf(int $tenantId): array
+    {
+        $environments = DB::table('environments')->where('tenant_id', $tenantId)->pluck('name', 'id');
+        $lines = $environments->map(fn ($name) => "environment {$name}")->values()->all();
+        foreach (DB::table('dimensions')->where('tenant_id', $tenantId)->get() as $dimension) {
+            $lines[] = 'dimension '.($dimension->code ?? '(no code)').": {$dimension->name} in "
+                .($environments[$dimension->environment_id] ?? '?').($dimension->archived_at ? ' (archived)' : '');
+        }
+        sort($lines);
+
+        return $lines;
+    }
+
+    /** Give driving_forces.dimension_id this delete rule; nothing to do when it already has it (rerun). */
+    private function forceForeignKey(string $onDelete): void
+    {
+        $current = collect(Schema::getForeignKeys('driving_forces'))->first(fn ($key) => $key['columns'] === ['dimension_id']);
+        if ($current !== null && strtolower((string) $current['on_delete']) === $onDelete) {
+            return;
+        }
+
+        Schema::table('driving_forces', function (Blueprint $table) use ($current, $onDelete) {
+            if ($current !== null) {
+                $table->dropForeign($current['name'] ?: ['dimension_id']);
+            }
+            $table->foreign('dimension_id')->references('id')->on('dimensions')->onDelete($onDelete);
         });
     }
 };

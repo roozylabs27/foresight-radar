@@ -50,6 +50,9 @@ class ScenarioImplicationService
         DB::transaction(function () use ($implication, $validated, $forces, $conditions, $user) {
             $implication->update($this->attributes($validated) + ['review_status' => 'accepted', 'updated_by' => $user->id]);
             $this->syncLinks($implication, $forces, $conditions);
+            // Audit U6: the team reviewed this item; responses relying on it need a look.
+            app(StalenessService::class)->clear($implication);
+            app(StalenessService::class)->implicationChanged($implication, 'Implikasi diubah: '.Str::limit($implication->title, 80));
         });
     }
 
@@ -57,6 +60,7 @@ class ScenarioImplicationService
     {
         $this->requireApproved($implication->quadrant->scenario);
 
+        app(StalenessService::class)->implicationChanged($implication, 'Implikasi dihapus: '.Str::limit($implication->title, 80));
         $implication->delete();
     }
 
@@ -93,6 +97,7 @@ class ScenarioImplicationService
                 'priority' => $item->priority,
                 'origin' => $item->origin,
                 'review_status' => $item->review_status,
+                'stale_reason' => $item->stale_since ? $item->stale_reason : null,
                 'forces' => $item->projectForces->map(fn ($link) => ['id' => $link->uuid, 'keyword' => $link->drivingForce?->keyword])->values()->all(),
                 'conditions' => $item->conditions->map(fn ($condition) => ['id' => $condition->uuid, 'text' => $condition->text])->values()->all(),
                 'generic' => $generic->has($normalize($item->title)) || $similar->has($item->uuid),

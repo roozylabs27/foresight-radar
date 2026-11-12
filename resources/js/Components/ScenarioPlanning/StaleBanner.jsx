@@ -13,6 +13,12 @@ export default function StaleBanner({ project, canManage }) {
     const [busy, setBusy] = useState(false);
     const stale = project.stale;
     if (!stale) return null;
+    const counts = stale.downstream ?? {};
+    const downstream = [
+        counts.implications && `${counts.implications} peluang/tantangan`,
+        counts.responses && `${counts.responses} respons strategis`,
+        counts.indicators && `${counts.indicators} indikator`,
+    ].filter(Boolean);
 
     const keep = () => {
         setBusy(true);
@@ -33,10 +39,11 @@ export default function StaleBanner({ project, canManage }) {
             {stale.quadrants.length > 0 && (
                 <p className="m-0 text-xs">Kuadran terdampak: {stale.quadrants.map((quadrant) => quadrant.title).join(", ")}</p>
             )}
+            {downstream.length > 0 && <p className="m-0 text-xs">Langkah 7–9 yang perlu ditinjau: {downstream.join(", ")}.</p>}
             {canManage && (
                 <ConfirmDialog
                     title="Pertahankan apa adanya?"
-                    description="Tandai bahwa tim sudah meninjau perubahan ini dan tetap memakai kerangka serta skenario yang ada."
+                    description="Tandai bahwa tim sudah meninjau perubahan ini dan tetap memakai kerangka, skenario, peluang/tantangan dan indikator yang ada. Respons strategis ditinjau satu per satu di langkah 8."
                     confirmText="Pertahankan"
                     onConfirm={keep}
                 >

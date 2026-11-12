@@ -3,6 +3,7 @@ import { CheckIcon, CopyPlusIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucid
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
 import ProvenanceBadge from "@/Components/ProvenanceBadge";
+import StaleTag from "@/Components/ScenarioPlanning/StaleTag";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { IMPACT_LEVELS, IMPLICATION_TYPES } from "@/domain/scenarioPlanning";
@@ -17,6 +18,7 @@ function Item({ item, canManage, onEdit, onRemove, onAccept }) {
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                     {type && <span className={statusBadge({ tone: type.tone })}>{type.label}</span>}
                     {item.review_status === "proposed" && <ProvenanceBadge origin={item.origin} review="proposed" />}
+                    <StaleTag reason={item.stale_reason} />
                     {item.priority && <span className="font-medium text-foreground">P{item.priority}</span>}
                     {item.impact_level && <span>{IMPACT_LEVELS[item.impact_level]}</span>}
                     {item.generic && (

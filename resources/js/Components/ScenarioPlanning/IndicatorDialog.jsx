@@ -6,11 +6,11 @@ import { Input } from "@/Components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
-import { EXTERNAL_SOURCES, INDICATOR_DIRECTIONS, INDICATOR_FREQUENCIES, INDICATOR_SOURCES } from "@/domain/scenarioPlanning";
+import { EXTERNAL_SOURCES, INDICATOR_DIRECTIONS, INDICATOR_FREQUENCIES, INDICATOR_SOURCES, THRESHOLD_OPERATORS } from "@/domain/scenarioPlanning";
 
 const EMPTY = {
     name: "", description: "", uncertainty: "", force: "", metric: "", unit: "", baseline_value: "", baseline_date: "",
-    frequency: "quarterly", owner: "", source_type: "manual", threshold_rule: "", status: "active", directions: {},
+    frequency: "quarterly", owner: "", source_type: "manual", threshold_rule: "", threshold_operator: "", threshold_value: "", status: "active", directions: {},
     external_source: "world_bank", external_series: "", external_area: "",
 };
 const NONE = "none";
@@ -74,6 +74,8 @@ export default function IndicatorDialog({ target, quadrants, uncertainties, forc
             owner: blankToNull(values.owner),
             baseline_value: blankToNull(values.baseline_value),
             baseline_date: blankToNull(values.baseline_date),
+            threshold_operator: blankToNull(values.threshold_operator),
+            threshold_value: blankToNull(values.threshold_value),
             directions: Object.fromEntries(Object.entries(values.directions).filter(([, row]) => row.direction)),
         });
         if (result) return setErrors(result);
@@ -178,9 +180,24 @@ export default function IndicatorDialog({ target, quadrants, uncertainties, forc
                         </Select>
                     </FormField>
                 </div>
-                <FormField id="indicator-threshold" label="Ambang perhatian" required={false} error={error(errors, "threshold_rule")}>
-                    <Input id="indicator-threshold" value={values.threshold_rule} onChange={(event) => set("threshold_rule", event.target.value)} maxLength={500} placeholder="Contoh: di atas 10% sebelum 2028" />
-                </FormField>
+                <fieldset className="m-0 grid gap-4 rounded-md border border-border p-3 sm:grid-cols-2">
+                    <legend className="px-1 text-xs font-semibold text-muted-foreground">Ambang batas · nilai angka dihitung oleh sistem</legend>
+                    <FormField id="indicator-threshold-operator" label="Operator" required={false} error={error(errors, "threshold_operator")}>
+                        <OptionalSelect
+                            id="indicator-threshold-operator"
+                            value={values.threshold_operator}
+                            onChange={(value) => set("threshold_operator", value)}
+                            placeholder="Tanpa ambang angka (kualitatif)"
+                            options={Object.entries(THRESHOLD_OPERATORS).map(([value, label]) => ({ value, label }))}
+                        />
+                    </FormField>
+                    <FormField id="indicator-threshold-value" label={`Nilai ambang${values.unit ? ` (${values.unit})` : ""}`} required={Boolean(values.threshold_operator)} error={error(errors, "threshold_value")}>
+                        <Input id="indicator-threshold-value" type="number" step="any" value={values.threshold_value} disabled={!values.threshold_operator} onChange={(event) => set("threshold_value", event.target.value)} />
+                    </FormField>
+                    <FormField id="indicator-threshold" label="Catatan ambang" required={false} error={error(errors, "threshold_rule")} className="flex flex-col gap-2 sm:col-span-2">
+                        <Input id="indicator-threshold" value={values.threshold_rule} onChange={(event) => set("threshold_rule", event.target.value)} maxLength={500} placeholder="Contoh: di atas 10% sebelum 2028" />
+                    </FormField>
+                </fieldset>
                 {values.source_type === "external" && (
                     <fieldset className="m-0 grid gap-4 rounded-md border border-border p-3 sm:grid-cols-3">
                         <legend className="px-1 text-xs font-semibold text-muted-foreground">Sumber eksternal · nilai baru masuk sebagai usulan</legend>

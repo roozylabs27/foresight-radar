@@ -4,6 +4,8 @@ import ConfirmDialog from "@/Components/ConfirmDialog";
 import HintTooltip from "@/Components/HintTooltip";
 import ExternalFetchControl from "@/Components/ScenarioPlanning/ExternalFetchControl";
 import IndicatorObservations from "@/Components/ScenarioPlanning/IndicatorObservations";
+import StaleTag from "@/Components/ScenarioPlanning/StaleTag";
+import ThresholdEvents from "@/Components/ScenarioPlanning/ThresholdEvents";
 import ProvenanceBadge from "@/Components/ProvenanceBadge";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
@@ -20,6 +22,7 @@ export default function IndicatorCard({ indicator, quadrants, canManage, canReco
                 <h3 className="m-0 text-sm font-semibold text-foreground">{indicator.name}</h3>
                 <span className={statusBadge({ tone: indicator.source_type === "manual" ? "neutral" : "approved" })}>{INDICATOR_SOURCES[indicator.source_type]}</span>
                 {indicator.review_status === "proposed" && <ProvenanceBadge origin={indicator.origin} review="proposed" />}
+                <StaleTag reason={indicator.stale_reason} />
                 {indicator.status === "retired" && <span className={statusBadge({ tone: "closed" })}>Tidak dipantau lagi</span>}
                 {!indicator.discriminates && Object.keys(indicator.directions).length > 0 && (
                     <HintTooltip content="Arahnya sama di semua kuadran yang dinilai, jadi indikator ini belum membedakan skenario.">
@@ -49,11 +52,14 @@ export default function IndicatorCard({ indicator, quadrants, canManage, canReco
                 {metric && <span>Metrik: {metric}</span>}
                 {baseline && <span>Awal: {baseline}</span>}
                 <span>{INDICATOR_FREQUENCIES[indicator.frequency]}</span>
-                {indicator.threshold_rule && <span>Ambang: {indicator.threshold_rule}</span>}
+                {indicator.threshold_text && <span>Ambang: {indicator.threshold_text}{indicator.unit ? ` ${indicator.unit}` : ""}</span>}
+                {indicator.threshold_rule && <span>{indicator.threshold_text ? "Catatan ambang" : "Ambang"}: {indicator.threshold_rule}</span>}
                 {indicator.uncertainty && <span>CU: {indicator.uncertainty.name}</span>}
                 {indicator.force && <span>DF: {indicator.force.keyword}</span>}
                 {indicator.owner && <span>PJ: {indicator.owner.name}</span>}
             </p>
+
+            <ThresholdEvents events={indicator.threshold_events ?? []} />
 
             {indicator.source_type === "external" && <ExternalFetchControl indicator={indicator} canManage={canManage} busy={busy} onFetch={onFetch} />}
 

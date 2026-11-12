@@ -74,9 +74,9 @@ export default function Implications({ auth, title, project, steps, framework, q
                         </>
                     )}
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Link href={route("scenario-planning.conditions.index", project.id)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                        <Link href={route("scenario-planning.narratives.index", project.id)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                             <ArrowLeftIcon aria-hidden="true" className="size-4" />
-                            Kondisi tiap skenario
+                            Narasi skenario
                         </Link>
                         {ready && (
                             <Link href={route("scenario-planning.responses.index", project.id)} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">

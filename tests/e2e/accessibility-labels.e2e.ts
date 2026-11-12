@@ -46,12 +46,13 @@ test.describe('Form Label Accessibility (A11Y-001)', () => {
     expect(passwordInput).not.toBeNull();
   });
 
-  test('Register form inputs correctly match label htmlFor without browser binding errors', async ({ app, screen, browser }) => {
+  // Accounts are created by invitation only (no /register); the password reset form is the other guest form.
+  test('Password reset form input correctly matches its label htmlFor', async ({ app, screen, browser }) => {
     attachDomHelper(browser);
-    await app.open('/register');
-    await expect(screen.getByRole('heading', 'Daftar Akun Baru')).toBeVisible();
+    await app.open('/forgot-password');
+    await expect(screen.getByRole('heading', 'Lupa Kata Sandi?')).toBeVisible();
 
-    const fields = ['name', 'email', 'password', 'password_confirmation'];
+    const fields = ['email'];
     for (const field of fields) {
       const label = await browser.$(`label[for$="${field}"]`);
       expect(label).not.toBeNull();

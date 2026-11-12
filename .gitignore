@@ -21,7 +21,10 @@ yarn-error.log
 /.archify
 /.superpowers
 /public/docs
-/docs
+# docs/ is tracked (AGENTS.md points into it); decks, PDFs and screenshots stay local.
+/docs/**/*.pdf
+/docs/**/*.pptx
+/docs/**/*.png
 /audit
 /.config
 /.e2e

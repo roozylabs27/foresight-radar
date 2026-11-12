@@ -73,6 +73,12 @@ class ScenarioQuadrant extends Model
         return $this->hasMany(ScenarioCitation::class)->orderBy('statement_index')->orderBy('id');
     }
 
+    /** Earlier versions of the narrative (audit U3). */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(ScenarioNarrativeRevision::class);
+    }
+
     public function scenario(): BelongsTo
     {
         return $this->belongsTo(Scenario::class);

@@ -6,6 +6,7 @@ use App\Models\EarlyWarningIndicator;
 use App\Models\Scenario;
 use App\Services\ExternalIndicatorService;
 use App\Support\TenantRule;
+use App\Support\ThresholdEvaluator;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -40,6 +41,9 @@ class EarlyWarningIndicatorRequest extends FormRequest
             'external_series' => ['exclude_unless:source_type,external', 'required', 'string', 'max:60', 'regex:/^[A-Za-z0-9]+(\.[A-Za-z0-9_]+)*$/'],
             'external_area' => ['exclude_unless:source_type,external', 'required', 'string', 'regex:/^[A-Za-z]{2,3}$/'],
             'threshold_rule' => ['nullable', 'string', 'max:500'],
+            // Audit U4: a numeric threshold the server evaluates; both or neither.
+            'threshold_operator' => ['nullable', 'required_with:threshold_value', Rule::in(array_keys(ThresholdEvaluator::OPERATORS))],
+            'threshold_value' => ['nullable', 'required_with:threshold_operator', 'numeric', 'between:-1000000000000,1000000000000'],
             'status' => ['nullable', Rule::in(EarlyWarningIndicator::STATUSES)],
             'directions' => ['nullable', 'array', function (string $attribute, mixed $value, Closure $fail) {
                 if (array_diff(array_keys((array) $value), Scenario::POSITIONS) !== []) {
@@ -63,6 +67,8 @@ class EarlyWarningIndicatorRequest extends FormRequest
             'external_series' => 'kode seri',
             'external_area' => 'kode wilayah',
             'threshold_rule' => 'ambang',
+            'threshold_operator' => 'operator ambang',
+            'threshold_value' => 'nilai ambang',
             'directions.*.direction' => 'arah',
         ];
     }

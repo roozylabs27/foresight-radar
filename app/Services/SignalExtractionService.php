@@ -15,10 +15,14 @@ use App\Services\Extraction\LlmSignalExtractor;
 use App\Services\Llm\AiGenerationRecorder;
 use App\Services\Llm\LlmClientResolver;
 use App\Services\Llm\LlmException;
+use App\Services\Llm\LlmResponse;
 use App\Services\Llm\Prompts\SignalExtractionPrompt;
 use App\Services\Llm\StructuredLlmClient;
 use App\Support\EvidenceVerifier;
+use App\Support\StaleJob;
 use Carbon\Carbon;
+use Illuminate\Bus\UniqueLock;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +30,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Ramsey\Uuid\Uuid;
+use Throwable;
 
 class SignalExtractionService
 {
@@ -136,13 +141,17 @@ class SignalExtractionService
      */
     public function retry(Source $source): Source
     {
-        if ($source->extraction_status !== LlmJobStatus::FAILED) {
+        if ($source->extraction_status !== LlmJobStatus::FAILED && ! $this->isStale($source)) {
             throw ValidationException::withMessages(['source' => 'Hanya ekstraksi yang gagal yang bisa dicoba lagi.']);
         }
         $this->requireAi($source->created_by ? (int) $source->created_by : null);
 
         $source->update(['extraction_status' => LlmJobStatus::QUEUED, 'extraction_error' => null]);
-        ExtractSignals::dispatch($source);
+        // A lost job may still hold the unique lock and would swallow this dispatch. Releasing it is
+        // safe: if the old job does run after all, the atomic claim lets only one of them extract.
+        $job = new ExtractSignals($source);
+        (new UniqueLock(app(CacheRepository::class)))->release($job);
+        dispatch($job);
 
         return $source->refresh();
     }
@@ -173,11 +182,9 @@ class SignalExtractionService
      */
     public function extract(Source $source): void
     {
-        if ($source->extraction_status === LlmJobStatus::COMPLETED) {
+        if (! $this->claim($source)) {
             return;
         }
-
-        $source->update(['extraction_status' => LlmJobStatus::PROCESSING, 'extraction_error' => null]);
 
         $content = (string) $source->raw_content;
         $title = (string) $source->title;
@@ -186,6 +193,7 @@ class SignalExtractionService
         $useAi = config('services.signal_extraction.driver') !== self::PROVIDER_HEURISTIC;
         $notice = null;
         $candidates = null;
+        $response = null;
         $meta = [];
 
         if ($useAi && ! $llm->isAvailable()) {
@@ -200,12 +208,12 @@ class SignalExtractionService
             try {
                 $extractor = $userLlm ? new LlmSignalExtractor($userLlm) : ($this->llmExtractor ?? $this->llmExtractor());
                 $result = $extractor->extract($title, $content);
-                $run = app(AiGenerationRecorder::class)->completed('signal_extraction', $result['response'], SignalExtractionPrompt::VERSION, $refs, $source->created_by);
+                // The run is recorded with the signals, inside the transaction below (audit AUD-13).
+                $response = $result['response'];
                 $candidates = array_map(fn ($item) => $item + [
                     'extraction_provider' => $result['meta']['provider'],
                     'extraction_model' => $result['meta']['model'],
                     'prompt_version' => $result['meta']['prompt_version'],
-                    'generation_run_id' => $run->id,
                 ], $result['candidates']);
                 $meta = $result['meta'] + ['label' => $llm->label()];
                 if ($meta['irrelevant'] ?? false) {
@@ -232,10 +240,35 @@ class SignalExtractionService
             $meta += ['provider' => self::PROVIDER_HEURISTIC, 'returned' => count($candidates)];
         }
 
-        DB::transaction(function () use ($source, $candidates, $meta, $notice) {
+        try {
+            $this->store($source, $candidates, $meta, $notice, $response, $refs ?? []);
+        } catch (Throwable $e) {
+            // Nothing was stored, so the call is recorded as failed with the reason; the job marks the source failed.
+            if ($response !== null) {
+                app(AiGenerationRecorder::class)->unsuccessful(AiGenerationRun::FAILED, 'signal_extraction', $llm, SignalExtractionPrompt::VERSION, $refs ?? [], 'storage_failed: '.Str::limit($e->getMessage(), 200, ''), $source->created_by, null, $response);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Save the candidates as pending signals and complete the source, in one transaction. An AI
+     * call's run (roadmap R1.12) is recorded here too, so a rollback leaves no "completed" run without
+     * its signals (audit AUD-13).
+     *
+     * @param  array<int, array<string, mixed>>  $candidates
+     * @param  array<string, mixed>  $meta
+     * @param  array<string, mixed>  $refs
+     */
+    private function store(Source $source, array $candidates, array $meta, ?string $notice, ?LlmResponse $response, array $refs): void
+    {
+        DB::transaction(function () use ($source, $candidates, $meta, $notice, $response, $refs) {
+            $runId = $response === null ? null
+                : app(AiGenerationRecorder::class)->completed('signal_extraction', $response, SignalExtractionPrompt::VERSION, $refs, $source->created_by)->id;
             $source->signals()->where('review_status', 'PENDING')->delete();
 
             foreach ($candidates as $item) {
+                $item['generation_run_id'] = $runId;
                 Signal::create([
                     'uuid' => (string) Uuid::uuid4(),
                     'source_id' => $source->id,
@@ -254,7 +287,56 @@ class SignalExtractionService
                 'extraction_meta' => $meta + ['notice' => $notice],
                 'extraction_status' => LlmJobStatus::COMPLETED,
             ]);
+            // Written by query: the in-memory error is already null, so Eloquent would skip it, and an
+            // error another process wrote while this job ran would stay on a completed source.
+            Source::withoutGlobalScopes()->whereKey($source->id)->update(['extraction_error' => null]);
+            $source->forceFill(['extraction_error' => null])->syncOriginal();
         });
+    }
+
+    /**
+     * Move a QUEUED source to PROCESSING for this worker only. The conditional update is atomic, so
+     * a second job for the same source (or one for a source already failed or completed) does nothing.
+     */
+    private function claim(Source $source): bool
+    {
+        $claimed = Source::withoutGlobalScopes()->whereKey($source->id)
+            ->where('extraction_status', LlmJobStatus::QUEUED->value)
+            ->update(['extraction_status' => LlmJobStatus::PROCESSING->value, 'extraction_error' => null, 'updated_at' => now()]);
+        if ($claimed === 1) {
+            $source->forceFill(['extraction_status' => LlmJobStatus::PROCESSING, 'extraction_error' => null])->syncOriginal();
+        }
+
+        return $claimed === 1;
+    }
+
+    /** A queued source no worker picked up, or a processing one whose worker died (App\Support\StaleJob). */
+    public function isStale(Source $source): bool
+    {
+        return StaleJob::isStale($source->extraction_status, $source->updated_at, $this->jobTimeout());
+    }
+
+    /**
+     * Mark a stale source failed so the analyst can retry it. Only when it is still in the state and
+     * at the time it was read: a job that claimed it meanwhile wins. Returns whether it was marked.
+     */
+    private function markLost(Source $source): bool
+    {
+        $error = $source->extraction_status === LlmJobStatus::QUEUED
+            ? 'Ekstraksi sinyal tidak dimulai karena antrean tidak memprosesnya. Sumber tersimpan tanpa sinyal; coba lagi dari halaman Sinyal.'
+            : 'Ekstraksi sinyal terhenti karena timeout atau kegagalan server. Sumber tersimpan tanpa sinyal; coba lagi dari halaman Sinyal.';
+        $marked = Source::withoutGlobalScopes()->whereKey($source->id)
+            ->where('extraction_status', $source->extraction_status->value)
+            ->where('updated_at', $source->updated_at)
+            ->update(['extraction_status' => LlmJobStatus::FAILED->value, 'extraction_error' => $error, 'updated_at' => now()]);
+        $source->refresh();
+
+        return $marked === 1;
+    }
+
+    private function jobTimeout(): int
+    {
+        return (int) config('queue.llm_job_timeout', 300);
     }
 
     /**
@@ -267,20 +349,10 @@ class SignalExtractionService
     {
         // Sources saved before extraction was queued have no status and are complete.
         $status = $source->extraction_status ?? LlmJobStatus::COMPLETED;
-        $staleWindow = (int) config('queue.llm_job_timeout', 300);
-
-        if ($status === LlmJobStatus::PROCESSING
-            && $source->updated_at
-            && $source->updated_at->diffInSeconds(now()) >= $staleWindow) {
+        if ($this->isStale($source) && $this->markLost($source)) {
             $status = LlmJobStatus::FAILED;
-            $error = $source->extraction_error ?? 'Ekstraksi sinyal terhenti karena timeout atau kegagalan server. Sumber tersimpan tanpa sinyal; coba ingest ulang dokumen ini.';
-            $source->update([
-                'extraction_status' => LlmJobStatus::FAILED,
-                'extraction_error' => $error,
-            ]);
-        } else {
-            $error = $source->extraction_error;
         }
+        $error = $source->extraction_error;
 
         $progress = [
             'id' => $source->uuid,

@@ -9,6 +9,9 @@ use App\Models\IndicatorObservation;
 use App\Services\IndicatorSources\IndicatorSource;
 use App\Services\IndicatorSources\IndicatorSourceException;
 use App\Services\IndicatorSources\WorldBankSource;
+use App\Support\StaleJob;
+use Illuminate\Bus\UniqueLock;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -52,16 +55,63 @@ class ExternalIndicatorService
         $this->queue($indicator);
     }
 
-    /** Queue a fetch unless one is already waiting or running. */
+    /**
+     * Queue a fetch unless one is already waiting or running. A fetch whose job was lost
+     * (App\Support\StaleJob) does not block: its unique lock is released and it is queued again;
+     * if the old job runs after all, the atomic claim lets only one of them fetch.
+     */
     public function queue(EarlyWarningIndicator $indicator): bool
     {
-        if (LlmJobStatus::tryFrom((string) $indicator->fetch_status)?->isPending()) {
+        if (LlmJobStatus::tryFrom((string) $indicator->fetch_status)?->isPending() && ! $this->isLost($indicator)) {
             return false;
         }
         $indicator->forceFill(['fetch_status' => LlmJobStatus::QUEUED->value, 'fetch_error' => null])->save();
-        FetchIndicatorSource::dispatch($indicator);
+        $job = new FetchIndicatorSource($indicator);
+        (new UniqueLock(app(CacheRepository::class)))->release($job);
+        dispatch($job);
 
         return true;
+    }
+
+    /**
+     * The fetch state shown on the register. A lost fetch is marked failed first, so the
+     * coordinator sees why and gets the fetch button back.
+     *
+     * @return array{fetch_status: ?string, fetch_error: ?string}
+     */
+    public function fetchState(EarlyWarningIndicator $indicator): array
+    {
+        if ($this->isLost($indicator)) {
+            EarlyWarningIndicator::withoutGlobalScopes()->whereKey($indicator->id)
+                ->where('fetch_status', $indicator->fetch_status)
+                ->where('updated_at', $indicator->updated_at)
+                ->update([
+                    'fetch_status' => LlmJobStatus::FAILED->value,
+                    'fetch_error' => 'Pengambilan data tidak selesai karena antrean tidak memprosesnya atau prosesnya terhenti. Coba lagi.',
+                    'updated_at' => now(),
+                ]);
+            $indicator->refresh();
+        }
+
+        return ['fetch_status' => $indicator->fetch_status, 'fetch_error' => $indicator->fetch_error];
+    }
+
+    /** Move a QUEUED fetch to PROCESSING for this worker only (atomic conditional update). */
+    public function claim(EarlyWarningIndicator $indicator): bool
+    {
+        $claimed = EarlyWarningIndicator::withoutGlobalScopes()->whereKey($indicator->id)
+            ->where('fetch_status', LlmJobStatus::QUEUED->value)
+            ->update(['fetch_status' => LlmJobStatus::PROCESSING->value, 'updated_at' => now()]);
+        if ($claimed === 1) {
+            $indicator->forceFill(['fetch_status' => LlmJobStatus::PROCESSING->value])->syncOriginal();
+        }
+
+        return $claimed === 1;
+    }
+
+    private function isLost(EarlyWarningIndicator $indicator): bool
+    {
+        return StaleJob::isStale(LlmJobStatus::tryFrom((string) $indicator->fetch_status), $indicator->updated_at, FetchIndicatorSource::TIMEOUT);
     }
 
     /** Run by FetchIndicatorSource. Returns the number of new observations. */

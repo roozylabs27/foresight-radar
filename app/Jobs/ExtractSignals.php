@@ -6,6 +6,7 @@ use App\Enums\LlmJobStatus;
 use App\Jobs\Middleware\RunInTenantContext;
 use App\Models\Source;
 use App\Services\SignalExtractionService;
+use App\Support\StaleJob;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,6 +32,9 @@ class ExtractSignals implements ShouldBeUnique, ShouldQueue
 
     public bool $failOnTimeout = true;
 
+    /** The unique lock expires, so a job lost from the queue cannot block a retry forever. */
+    public int $uniqueFor;
+
     public function uniqueId(): string
     {
         return (string) $this->source->id;
@@ -39,6 +43,7 @@ class ExtractSignals implements ShouldBeUnique, ShouldQueue
     public function __construct(public Source $source)
     {
         $this->timeout = (int) config('queue.llm_job_timeout', 300);
+        $this->uniqueFor = StaleJob::lockSeconds($this->timeout);
     }
 
     /**
@@ -51,21 +56,8 @@ class ExtractSignals implements ShouldBeUnique, ShouldQueue
 
     public function handle(SignalExtractionService $extraction): void
     {
-        if ($this->source->extraction_status === LlmJobStatus::COMPLETED) {
-            return;
-        }
-
-        $staleWindow = (int) config('queue.llm_job_timeout', 300);
-        $isStale = $this->source->extraction_status === LlmJobStatus::PROCESSING
-            && $this->source->updated_at
-            && $this->source->updated_at->diffInSeconds(now()) >= $staleWindow;
-
-        if ($this->source->extraction_status !== LlmJobStatus::QUEUED
-            && $this->source->extraction_status !== LlmJobStatus::FAILED
-            && ! $isStale) {
-            return;
-        }
-
+        // The service claims the source atomically: a duplicate job, or one for a source that
+        // already failed or completed, does nothing.
         try {
             $extraction->extract($this->source);
         } catch (Throwable $e) {
@@ -74,17 +66,20 @@ class ExtractSignals implements ShouldBeUnique, ShouldQueue
         }
     }
 
+    /**
+     * Runs outside the tenant context, so it changes only this source, by key, and only while its
+     * extraction is still pending: a late failure never overwrites a completed or failed result.
+     */
     public function failed(Throwable $e): void
     {
-        if ($this->source->extraction_status === LlmJobStatus::FAILED) {
-            return;
-        }
-
         Log::error('Signal extraction job failed', ['source' => $this->source->uuid, 'error' => $e->getMessage()]);
 
-        $this->source->update([
-            'extraction_status' => LlmJobStatus::FAILED,
-            'extraction_error' => 'Ekstraksi sinyal gagal karena kesalahan server. Sumber tersimpan tanpa sinyal; coba ingest ulang dokumen ini.',
-        ]);
+        Source::withoutGlobalScopes()->whereKey($this->source->id)
+            ->whereIn('extraction_status', [LlmJobStatus::QUEUED->value, LlmJobStatus::PROCESSING->value])
+            ->update([
+                'extraction_status' => LlmJobStatus::FAILED->value,
+                'extraction_error' => 'Ekstraksi sinyal gagal karena kesalahan server. Sumber tersimpan tanpa sinyal; coba lagi dari halaman Sinyal.',
+                'updated_at' => now(),
+            ]);
     }
 }

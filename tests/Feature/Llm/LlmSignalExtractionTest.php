@@ -273,6 +273,31 @@ class LlmSignalExtractionTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('failedExtractions.0.id', Source::sole()->uuid)->where('failedExtractions.0.status', 'failed'));
     }
 
+    /**
+     * Audit AUD-13: the AI run is recorded with the signals it produced. When storing them fails, no
+     * "completed" run is left without signals; the call is recorded as failed with the reason.
+     */
+    public function test_a_storage_failure_leaves_no_completed_run_without_signals(): void
+    {
+        Queue::fake();
+        $this->llm->respond(['signals' => [$this->candidate()]]);
+        $this->ingest()->assertStatus(202);
+        Signal::creating(fn () => throw new RuntimeException('Disk penuh'));
+
+        try {
+            app()->call([Queue::pushed(ExtractSignals::class)->first(), 'handle']);
+            $this->fail('the storage failure should reach the job');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Disk penuh', $e->getMessage());
+        }
+
+        $this->assertSame(0, Signal::count());
+        $run = AiGenerationRun::sole();
+        $this->assertSame('failed', $run->status);
+        $this->assertStringContainsString('Disk penuh', (string) $run->error);
+        $this->assertSame(LlmJobStatus::FAILED, Source::sole()->extraction_status);
+    }
+
     public function test_ingest_is_refused_without_an_active_ai_provider(): void
     {
         $this->fakeLlm(available: false);
@@ -407,7 +432,7 @@ class LlmSignalExtractionTest extends TestCase
         $this->actingAs($this->analyst)->getJson("/signals/sources/{$source->uuid}/extraction")
             ->assertJsonPath('status', 'failed')
             ->assertJsonPath('extraction', null)
-            ->assertJsonPath('error', 'Ekstraksi sinyal gagal karena kesalahan server. Sumber tersimpan tanpa sinyal; coba ingest ulang dokumen ini.');
+            ->assertJsonPath('error', 'Ekstraksi sinyal gagal karena kesalahan server. Sumber tersimpan tanpa sinyal; coba lagi dari halaman Sinyal.');
         $this->assertSame(0, Signal::count());
     }
 

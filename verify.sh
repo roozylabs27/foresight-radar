@@ -159,6 +159,16 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 4b. Frontend Lint (ESLint: JSX, rules of hooks, a11y warnings)
+# ------------------------------------------------------------------------------
+if [ "${RUN_FRONTEND}" = true ]; then
+    run_check "Frontend Lint (ESLint, 0 errors)" \
+        "run_npm run lint"
+else
+    run_check "Frontend Lint (ESLint, 0 errors)" "" true
+fi
+
+# ------------------------------------------------------------------------------
 # 5. Frontend Production Build (Vite)
 # ------------------------------------------------------------------------------
 if [ "${RUN_FRONTEND}" = true ]; then

@@ -14,6 +14,7 @@ use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Support\DimensionTaxonomy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -165,7 +166,7 @@ class WorkspaceTest extends TestCase
         $this->createFramework();
         $this->approveFramework()->assertSessionHasNoErrors();
 
-        foreach (['forces', 'assessment', 'uncertainties', 'framework', 'conditions', 'implications', 'responses', 'indicators'] as $page) {
+        foreach (['forces', 'assessment', 'uncertainties', 'framework', 'conditions', 'narratives', 'implications', 'responses', 'indicators'] as $page) {
             $this->actingAs($this->viewer)->get(route("scenario-planning.{$page}.index", $this->project))
                 ->assertOk()
                 ->assertInertia(fn ($inertia) => $inertia->has('steps', 9)->where('steps.3.status', 'done')->where('steps.3.href', route('scenario-planning.framework.index', $this->project)));
@@ -200,16 +201,19 @@ class WorkspaceTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('lastGate.gate', 'G5')->where('nextAction.number', 5));
     }
 
+    /** Audit U3: the old Scenarios page left the sidebar (Step 6 lives in the exercise); its route stays. */
     public function test_the_sidebar_groups_items_without_removing_any_route(): void
     {
         $layout = file_get_contents(resource_path('js/Layouts/AuthenticatedLayout.jsx'));
 
         foreach (['dashboard.', 'scenario-planning.index', 'signals.index', 'driving-force.', 'time-horizon.', 'rating-urgency.', 'status-action.', 'approval-items.', 'closed-items.',
-            'visualization.prioritizing.', 'visualization.registered-list.', 'visualization.foresight-radar.', 'visualization.cross-impact.', 'visualization.knowledge-graph.', 'scenarios.index', 'settings.index'] as $route) {
+            'visualization.prioritizing.', 'visualization.registered-list.', 'visualization.foresight-radar.', 'visualization.cross-impact.', 'visualization.knowledge-graph.', 'settings.index'] as $route) {
             $this->assertStringContainsString("route: \"{$route}\"", $layout, "Sidebar lost {$route}");
         }
         foreach (['scenario_planning', 'library', 'analysis', 'governance'] as $group) {
             $this->assertStringContainsString("group: \"{$group}\"", $layout);
         }
+        $this->assertStringNotContainsString('route: "scenarios.index"', $layout);
+        $this->assertTrue(Route::has('scenarios.index'));
     }
 }

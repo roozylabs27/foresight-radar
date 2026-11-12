@@ -6,7 +6,7 @@ import { Input } from "@/Components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
-import { INDICATOR_DIRECTIONS } from "@/domain/scenarioPlanning";
+import { INDICATOR_DIRECTIONS, crossesThreshold } from "@/domain/scenarioPlanning";
 
 const NONE = "none";
 const OBSERVED = ["rising", "falling", "stable"];
@@ -14,9 +14,23 @@ const today = () => new Date().toISOString().slice(0, 10);
 const empty = () => ({ observed_at: today(), value_numeric: "", value_text: "", direction: "", crossed_threshold: false, signal: "", note: "" });
 const error = (errors, name) => (errors[name] ? { message: [].concat(errors[name])[0] } : undefined);
 
+/** The server decides a numeric crossing; this shows what it will decide for the value typed. */
+function ThresholdPreview({ indicator, value }) {
+    const crossed = crossesThreshold(indicator.threshold_operator, indicator.threshold_value, value);
+    return (
+        <p role="status" className="m-0 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Ambang {indicator.threshold_text}
+            {indicator.unit ? ` ${indicator.unit}` : ""}:{" "}
+            {crossed === null ? "dihitung otomatis dari nilai angka." : crossed ? <b className="text-danger">nilai ini melewati ambang; kerangka dan respons akan ditandai untuk ditinjau.</b> : "nilai ini belum melewati ambang."}
+        </p>
+    );
+}
+
 /**
  * Record one observation of an indicator (roadmap R2.3): date, value or description, the direction
- * it moved, whether it crossed the threshold, and optionally the accepted signal behind it.
+ * it moved, and optionally the accepted signal behind it. For an indicator with a numeric threshold
+ * the server decides the crossing from the value (shown here as a preview); for a qualitative one a
+ * person flags it and explains why in the note (audit U4).
  * `onSave(values)` resolves to the 422 errors or undefined.
  */
 export default function ObservationDialog({ indicator, signals, loading, onOpenChange, onSave }) {
@@ -36,6 +50,7 @@ export default function ObservationDialog({ indicator, signals, loading, onOpenC
             value_numeric: values.value_numeric === "" ? null : Number(values.value_numeric),
             value_text: values.value_text || null,
             direction: values.direction || null,
+            crossed_threshold: indicator?.threshold_numeric ? false : values.crossed_threshold,
             signal: values.signal || null,
             note: values.note || null,
         });
@@ -76,13 +91,19 @@ export default function ObservationDialog({ indicator, signals, loading, onOpenC
                         ))}
                     </ToggleGroup>
                 </FormField>
-                <label className="flex items-start gap-2 text-sm text-foreground">
-                    <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={values.crossed_threshold} onChange={(event) => set("crossed_threshold", event.target.checked)} />
-                    <span>
-                        Melewati ambang batas
-                        {indicator?.threshold_rule && <span className="block text-xs text-muted-foreground">Ambang: {indicator.threshold_rule}</span>}
-                    </span>
-                </label>
+                {indicator?.threshold_numeric ? (
+                    <ThresholdPreview indicator={indicator} value={values.value_numeric} />
+                ) : (
+                    <label className="flex items-start gap-2 text-sm text-foreground">
+                        <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={values.crossed_threshold} onChange={(event) => set("crossed_threshold", event.target.checked)} />
+                        <span>
+                            Melewati ambang batas
+                            <span className="block text-xs text-muted-foreground">
+                                {indicator?.threshold_rule ? `Ambang: ${indicator.threshold_rule}. ` : ""}Indikator kualitatif: jelaskan alasannya di catatan.
+                            </span>
+                        </span>
+                    </label>
+                )}
                 <FormField id="observation-signal" label="Sinyal pendukung" required={false} error={error(errors, "signal")}>
                     <Select value={values.signal || NONE} onValueChange={(value) => set("signal", value === NONE ? "" : value)}>
                         <SelectTrigger id="observation-signal" className="w-full">
