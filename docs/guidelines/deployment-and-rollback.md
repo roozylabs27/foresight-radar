@@ -36,15 +36,19 @@ The frontend bundle in `public/build` belongs to the broken release. Re-run the 
 ### B. A migration ran
 
 1. Put the application in maintenance mode: `docker exec laravel_app php artisan down`.
-2. Restore the dump taken just before this deploy, which is the newest file in `~/foresight-backups`:
+2. Restore the dump taken just before this deploy, which is the newest file in `~/foresight-backups`. Use the **application user** from `.env`: the container's MySQL root password does not work on production. This command shape was rehearsed in isolation on 2026-11-13 ([recovery report](../audit/recovery-rehearsal-report.md)).
    ```bash
-   gunzip -c ~/foresight-backups/db-<date>-<previous-sha>.sql.gz | docker exec -i laravel_mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'
+   cd /var/www/foresight-radar
+   env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"; }
+   gunzip -c ~/foresight-backups/db-<date>-<previous-sha>.sql.gz | docker exec -i -e MYSQL_PWD="$(env_value DB_PASSWORD)" laravel_mysql mysql --protocol=TCP -h 127.0.0.1 -u"$(env_value DB_USERNAME)" "$(env_value DB_DATABASE)"
    ```
    Data written between the deploy and the restore is lost. Note the time window and tell affected users.
 3. Check out the previous commit and clear caches as in A.
 4. `docker exec laravel_app php artisan up`.
 
 Prefer restoring the dump over `migrate:rollback`. Some migrations move data (for example `2026_11_11_000001`), and their `down()` refuses to run when it would lose data.
+
+Full procedures, health checks and the isolated restore rehearsal: [production-operations-runbook.md](production-operations-runbook.md).
 
 ## Still open
 

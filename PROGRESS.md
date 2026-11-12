@@ -1,6 +1,6 @@
 # Project Progress — Foresight Radar
 
-## Current Verified State (updated 2026-11-12)
+## Current Verified State (updated 2026-11-13)
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
@@ -25,7 +25,7 @@
   - The ESLint warnings are debt.
   - No browser e2e for the exercise pages (AUD-19).
   - `composer verify` hits Composer's 1,200 s process timeout on this host; run `php artisan test` directly.
-- **Highest-priority next task:** commit the deploy backup fix, push to `main`, and watch the re-run complete (production is half-deployed until then; see session 92).
+- **Highest-priority next task:** merge the OPS-01 deploy fix and verify the security headers on production. Then decide on scheduled and off-server backups (OPS-02, OPS-03). See session 94.
 
 ---
 
@@ -505,6 +505,66 @@
 ---
 
 ## Session Log
+
+### 2026-11-13 — Session 95 (OPS-02/03 tooling: scheduled and off-server backups)
+
+- New `scripts/ops/backup-database.sh`, the single backup script; `deploy.yml` now calls it instead of the inline dump.
+  - App credentials from `.env`; dir 700 / files 600 / `umask 077`.
+  - `.partial` until "Dump completed"; log with size, sha256 and duration.
+  - Age retention: 14 days, minimum 3 valid dumps, only after success.
+  - Optional verified rclone off-server copy (`OFFSITE_REMOTE`); `--check` for age and completeness (`MAX_AGE_HOURS` 26); optional `BACKUP_PING_URL`.
+  - Optional owner settings in `~/.config/foresight-backup.env`.
+- Runbook §4b: cron lines (daily 01:15 WIB = 18:15 UTC; check every 6 h), off-server options (rclone `crypt` recommended, provider snapshots, scheduled pull), restore from the off-server copy, dead man's switch.
+- **Verification (local Docker, scratch dir):** 9 scenarios passed:
+  1. success, 3 s;
+  2. `--check` OK;
+  3. invalid label refused;
+  4. failure: exit 1, 1 valid + 1 `.partial`;
+  5. the next success removed the `.partial`;
+  6. retention: 7 → 3 (the 4 dumps aged 20 days removed);
+  7. off-server set without rclone: exit 1, local dump kept;
+  8. stale 30 h: `--check` exit 1;
+  9. empty dir: `--check` exit 1.
+
+  Also: `bash -n` OK, deploy YAML parses. Test files removed.
+- **Not done (needs the owner):** install the cron job on the VPS; choose and configure off-server storage. Then run the script by hand once and restore the off-server copy in the recovery stack (runbook §5).
+
+### 2026-11-13 — Session 94 (production verification and recovery rehearsal)
+
+- **Access, as decided by the product owner:**
+  - The owner ran the read-only `scripts/ops/verify-production.sh` on the VPS and pasted the output.
+  - Production signed-in checks were not done (no session in the panel). GitHub step logs were not read (no sign-in).
+- **Production state:**
+  - Server on `main` `2d202e7` (= CI #105, Deploy #53 via `workflow_run`), clean tree, no pending migrations.
+  - 5 containers Up; disk 14 %; DB 55 InnoDB tables, 4 MB.
+  - `ops:failed-jobs` runs hourly; daily logs active; 0 failed jobs.
+- **OPS-01 (P1, verified):** the PR #21 nginx and PHP config never went live.
+  - Single-file bind mounts keep the old inode after `git merge` (host vs container hashes differ; Permissions-Policy 2 vs 0). Production still sends `X-Powered-By` and the nginx version, with no CSP or Permissions-Policy.
+  - Fix in `deploy.yml`: hash compare, `docker compose run --rm --no-deps -T nginx nginx -t`, recreate on difference, print the live count. Tested locally.
+- **Backups:**
+  - Latest `db-20261112-152935-d34343a.sql.gz` (28,141 B, sha256 `f60b0158…`) is complete and consistent.
+  - Findings: files world-readable (OPS-04); the failed 20 B dump of #51 is kept (OPS-05); backups only at deploy (OPS-02, P1); no off-server copy (OPS-03, P1).
+  - `deploy.yml` now uses `chmod 700`/`600`, `umask 077`, and writes `.partial` before renaming. Tested locally: a failed dump exits 2 and leaves only `.partial`.
+- **Recovery rehearsal (isolated, local):**
+  - New `docker-compose.recovery.yml`, `docker/recovery/recovery.env` and `scripts/ops/restore-rehearsal.sh`.
+  - The production backup was copied by the owner with `scp` (host key checked) and its checksum matched.
+  - Restore 12.6 s; 55/55 tables; 63 migrations; 165 foreign keys with 0 orphans; counts equal live production.
+  - Restored app: 37/37 critical pages 200 with a recovery-only account.
+  - Previous release `d34343a` (worktree): served in 19 s, 37/37 pages 200.
+  - Runbook restore (app user) over a populated DB: 20.8 s.
+  - Alert flow end to end: error log plus mail to the test address, no payload.
+  - Tooling defects found and fixed (OPS-14): `php artisan serve` read the dev `.env`; the project reads `CACHE_DRIVER`.
+  - Afterwards the stack, volume, worktree, the backup copy and the test files were removed.
+- **Docs:**
+  - New: `docs/audit/production-verification-report.md`, `backup-integrity-report.md`, `recovery-rehearsal-report.md`, `docs/guidelines/production-operations-runbook.md`.
+  - `deployment-and-rollback.md`: restore with the app user (OPS-06).
+  - Checklist §7 (statuses) and backlog OPS-01..14.
+- **Assessment:** RECOVERY VERIFIED, not yet operationally ready.
+- **Not committed.** Needs the owner:
+  1. Commit and merge, then watch the deploy apply OPS-01 (log line `nginx live config: 2 …`).
+  2. On the server: `chmod 700 ~/foresight-backups && chmod 600 ~/foresight-backups/db-*.sql.gz`, and delete the 20 B file.
+  3. Set `OPS_ALERT_EMAIL`.
+  4. Decide on scheduled and off-server backups, monitoring, and RPO/RTO targets.
 
 ### 2026-11-12 — Session 93 (PRD-04 logging and failed-job alert, PRD-03 security headers)
 
