@@ -21,3 +21,6 @@ Artisan::command('inspire', function () {
 
 // Roadmap R3.6: fetch every active external early warning indicator once a day.
 Schedule::command('indicators:fetch-external')->dailyAt('02:00')->withoutOverlapping();
+
+// PRD-04 (production readiness): report queued jobs that failed in the last hour.
+Schedule::command('ops:failed-jobs')->hourly()->withoutOverlapping();

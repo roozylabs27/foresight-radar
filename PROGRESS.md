@@ -17,9 +17,9 @@
 - **Conditions before the first organisation:**
   1. Merge `development` to `main`, and let the new CI-gated deploy run (the first PRD-01 dry run); check `~/foresight-backups`.
   2. Validate live AI on production (Gemini was overloaded on 2026-11-12).
-  3. Rotate logs and alert on `failed_jobs`.
+  3. Deploy the log rotation and the `ops:failed-jobs` alert (done in code, session 93), and set `OPS_ALERT_EMAIL`.
   4. Remove the "[QA PROD]" and "[SMOKE TEST]" test data.
-- **Before more organisations:** CSP and Permissions-Policy, cross-organisation checks on production, a staging server.
+- **Before more organisations:** enforce the CSP (report-only since session 93), cross-organisation checks on production, a staging server.
 - **Current blocker:** none. The user reviews and commits.
 - **Known issues:**
   - The ESLint warnings are debt.
@@ -505,6 +505,25 @@
 ---
 
 ## Session Log
+
+### 2026-11-12 — Session 93 (PRD-04 logging and failed-job alert, PRD-03 security headers)
+
+- **PRD-04 logging:**
+  - `config/logging.php`: `stack` uses `LOG_STACK` (default `daily`), with `LOG_DAILY_DAYS` (default 14). `.env.example` documents both.
+- **PRD-04 failed-job alert:**
+  - New command `ops:failed-jobs` (`app/Console/Commands/CheckFailedJobs.php`), scheduled hourly in `routes/console.php`.
+  - It logs the last hour's failed jobs as one error (job names and counts, no payloads) and mails a summary when `OPS_ALERT_EMAIL` (`config/ops.php`) is set.
+  - Test: `tests/Feature/Reliability/FailedJobsAlertTest.php`, 4 tests, red before (no command) and green after.
+- **PRD-03:**
+  - `docker/nginx/default.conf`, both server blocks: `Permissions-Policy`, `Content-Security-Policy-Report-Only`, `server_tokens off`, `fastcgi_hide_header X-Powered-By`.
+  - `docker/php/local.ini`: `expose_php = Off`.
+  - `deploy.yml`: `nginx -t` and `nginx -s reload` after the FPM reload, because `compose up` does not reload a changed mounted config.
+- **Verification:**
+  - Pint passed; Larastan on the command: no errors; `schedule:list` shows `0 * * * * ops:failed-jobs`.
+  - `nginx -t` passed locally, then nginx reload and an `laravel_app` restart.
+  - Browser (login page): CSP-Report-Only and Permissions-Policy present, `Server: nginx` without a version, no X-Powered-By, no CSP report in the console. Authenticated pages were not checked (the local session expired).
+  - Reliability and Security test folders: 72 passed (259 assertions, 186 s).
+- **Not committed, not deployed.** On production: do not pin `LOG_STACK=single` in `.env`, and set `OPS_ALERT_EMAIL` plus a working mailer for mail alerts.
 
 ### 2026-11-12 — Session 92 (first CI-gated deploy: backup step failed, fixed)
 
