@@ -65,8 +65,9 @@ class IndicatorThresholdService
             ]);
 
             $rule = ThresholdEvaluator::describe($indicator->threshold_operator, $indicator->threshold_value);
+            // No "; " inside: StalenessService joins reasons with it and the UI splits on it (PRD-16).
             $reason = "Indikator {$indicator->name} melewati ambang batas"
-                .($rule && $numeric ? " ({$rule}; nilai {$this->number($observation->value_numeric)})" : '')
+                .($rule && $numeric ? " ({$rule}, nilai {$this->number($observation->value_numeric)})" : '')
                 ." pada {$observation->observed_at->toDateString()}";
             $project = $indicator->project;
             $this->staleness->markFramework($project, $reason, downstream: false);

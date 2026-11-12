@@ -552,6 +552,9 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->assertNotNull($framework->fresh()->stale_since);
         $this->assertStringContainsString('xEV adoption growth', (string) $response->fresh()->stale_reason);
         $this->assertStringContainsString('> 10', (string) $response->fresh()->stale_reason);
+        // PRD-16: reasons are joined with "; " and shown one per line, so one reason must not contain it.
+        $this->assertStringNotContainsString('; ', (string) $response->fresh()->stale_reason);
+        $this->assertStringContainsString('(> 10, nilai 11)', (string) $response->fresh()->stale_reason);
 
         $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
             ->assertInertia(fn ($page) => $page

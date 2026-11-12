@@ -20,6 +20,11 @@ use App\Models\ScenarioQuadrant;
 use App\Models\StrategicResponse;
 use App\Models\TimeHorizon;
 use App\Models\User;
+use App\Services\ProjectAssessmentService;
+use App\Services\ProjectDrivingForceService;
+use App\Services\ScenarioNarrativeService;
+use App\Services\ScenarioPlanningProjectService;
+use App\Services\StrategicResponseService;
 use App\Support\DimensionTaxonomy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -556,6 +561,41 @@ class StrategicResponseTest extends TestCase
         $this->fakeLlm()->respond(['responses' => [$this->draftResponse('Kecocokan kurang', ['I1'], ['HH' => 'applies'])]]);
         $this->actingAs($this->manager)->post(route('scenario-planning.responses.suggest', $this->project))->assertSessionHasNoErrors();
         $this->assertSame(0, StrategicResponse::count());
+    }
+
+    /**
+     * Production readiness PRD-11: two simultaneous requests for the same gate each loaded the record
+     * before the other wrote it. Simulated with two copies loaded up front: the gate is passed once
+     * and logged once.
+     */
+    public function test_a_gate_passed_twice_from_stale_copies_is_logged_once(): void
+    {
+        $this->actingAs($this->manager)->post(route('scenario-planning.store'), [
+            'name' => 'Paralel', 'focal_question' => 'Bagaimana pasar baterai pada 2030?', 'purpose' => 'Uji paralel.', 'target_year' => now()->year + 4,
+        ])->assertSessionHasNoErrors();
+        $fresh = ScenarioPlanningProject::where('name', 'Paralel')->sole();
+        $twice = function (callable $pass, callable $load) {
+            [$first, $second] = [$load(), $load()];
+            $pass($first);
+            $pass($second);
+        };
+
+        $twice(fn ($p) => app(ScenarioPlanningProjectService::class)->confirm($p, $this->manager), fn () => $fresh->fresh());
+        $this->actingAs($this->manager)->post(route('scenario-planning.forces.store', $fresh), ['forces' => [$this->forces['Politic']->uuid, $this->forces['Technology']->uuid]])->assertSessionHasNoErrors();
+        $twice(fn ($p) => app(ProjectDrivingForceService::class)->confirm($p, $this->manager), fn () => $fresh->fresh());
+        $twice(fn ($p) => app(ProjectAssessmentService::class)->confirm($p, $this->manager), fn () => $fresh->fresh());
+
+        $this->readyFramework();
+        DB::table('scenario_quadrants')->where('scenario_id', $this->framework()->id)->update(['narrative' => 'Narasi tim.', 'edited_at' => now()]);
+        foreach (Scenario::POSITIONS as $position) {
+            $twice(fn ($q) => app(ScenarioNarrativeService::class)->reviewQuadrant($q, 'approved', $this->manager->id), fn () => $this->quadrant($position));
+        }
+        $this->store()->assertSessionHasNoErrors();
+        $twice(fn ($r) => app(StrategicResponseService::class)->approve($r, $this->manager), fn () => StrategicResponse::sole());
+
+        $count = fn (ScenarioPlanningProject $project, string $gate) => ProjectDecision::where('project_id', $project->id)->where('gate', $gate)->where('action', 'approved')->count();
+        $this->assertSame([1, 1, 1], [$count($fresh, 'G1'), $count($fresh, 'G2'), $count($fresh, 'G3')]);
+        $this->assertSame([4, 1], [$count($this->project, 'G6'), $count($this->project, 'G7')]);
     }
 
     /* Audit 2026-11-11 U6 (AUD-07, AUD-08): upstream changes reach Steps 7–9; G7 needs G6. */

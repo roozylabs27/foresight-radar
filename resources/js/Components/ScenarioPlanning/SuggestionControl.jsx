@@ -29,6 +29,8 @@ export default function SuggestionControl({ status, error, validationError, canM
                 </Button>
             )}
             {!canManage && pending && <p className="m-0 text-xs text-muted-foreground">{pendingLabel}</p>}
+            {/* PRD-14: a busy provider can take up to the AI timeout (4 minutes) to answer or fail. */}
+            {pending && <p className="m-0 text-xs text-muted-foreground">Bisa sampai 4 menit. Halaman ini boleh ditinggal; hasilnya tetap tersimpan.</p>}
             {(validationError || (status === "failed" && error)) && (
                 <p role="alert" className="m-0 flex items-start gap-1.5 rounded-md bg-danger-soft p-2 text-xs text-danger">
                     <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />

@@ -10,6 +10,7 @@ use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
 use App\Support\Provenance;
+use App\Support\RowLock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -83,20 +84,25 @@ class ProjectDrivingForceService
     }
 
     /**
-     * Gate G2.
+     * Gate G2. Agreeing an already agreed list changes nothing.
      *
      * @throws ValidationException without a confirmed focal issue or an included force
      */
     public function confirm(ScenarioPlanningProject $project, User $user): void
     {
-        if (! $project->isConfirmed()) {
-            throw ValidationException::withMessages(['forces' => 'Konfirmasi focal issue dulu.']);
-        }
-        if (! $project->projectForces()->where('inclusion_status', 'included')->exists()) {
-            throw ValidationException::withMessages(['forces' => 'Sertakan minimal satu driving force sebelum menyepakati daftar.']);
-        }
+        RowLock::run($project, function () use ($project, $user) {
+            if ($project->forcesConfirmed()) {
+                return;
+            }
+            if (! $project->isConfirmed()) {
+                throw ValidationException::withMessages(['forces' => 'Konfirmasi focal issue dulu.']);
+            }
+            if (! $project->projectForces()->where('inclusion_status', 'included')->exists()) {
+                throw ValidationException::withMessages(['forces' => 'Sertakan minimal satu driving force sebelum menyepakati daftar.']);
+            }
 
-        $project->update(['forces_confirmed_by' => $user->id, 'forces_confirmed_at' => now(), 'updated_by' => $user->id]);
+            $project->update(['forces_confirmed_by' => $user->id, 'forces_confirmed_at' => now(), 'updated_by' => $user->id]);
+        });
     }
 
     /** Withdraw gate G2, and with it G3 and G4: scores and axes were agreed for the old list. */
