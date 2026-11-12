@@ -189,6 +189,12 @@ jobs:
             echo "[4b/5] Reloading PHP-FPM to flush opcache..."
             docker exec laravel_app sh -c 'kill -USR2 1'
 
+            # 4c. docker/nginx/default.conf is a mounted file: `compose up` does not reload nginx when
+            # only its content changed (PRD-03 headers). Test first so a bad config never goes live.
+            echo "[4c/5] Testing and reloading nginx configuration..."
+            docker exec laravel_nginx nginx -t
+            docker exec laravel_nginx nginx -s reload
+
             # 5. Restart background queue worker
             echo "[5/5] Restarting Laravel queue worker..."
             docker restart laravel_queue || docker compose restart queue

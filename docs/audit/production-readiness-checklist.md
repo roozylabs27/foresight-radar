@@ -32,7 +32,7 @@ Phase 6 of the [production readiness validation](production-readiness-report.md)
 | S2 | Cross-organisation reads and writes refused | SEC-05..09 (local), `TenantIsolationJourneyTest` | PASS (local + tests) |
 | S3 | Cross-organisation on production | only one organisation there | OPEN (PRD-13) |
 | S4 | Viewer cannot change the exercise | SEC-10, SEC-11; PRD-10 fix (observations need a contributor) | PASS |
-| S5 | Security headers (CSP, Permissions-Policy, version disclosure) | SEC-17 | OPEN (PRD-03) |
+| S5 | Security headers (CSP, Permissions-Policy, version disclosure) | SEC-17 | Fixed in config (PRD-03), verified locally; on production after the next deploy. CSP is report-only |
 | S6 | Duplicate create under concurrent API calls | the form blocks double clicks (E2E-02) | ACCEPTED (PRD-12, P3) |
 
 ## 4. Reliability and AI
@@ -52,7 +52,7 @@ Phase 6 of the [production readiness validation](production-readiness-report.md)
 |---|---|---|---|
 | O1 | Deploy only after CI on `main`, exact commit | First gated run (2026-11-12, `main` `88bc5fd`): started after CI, fast-forwarded the server to the tested commit | PASS (first run) |
 | O2 | Database backup before migrations, rollback documented | First run: the dump failed ("Access denied for user 'root'", the container's root password does not match production) and the deploy **stopped before migrating**, as designed. Caches, FPM reload and queue restart did not run either. Fixed: the dump now uses the app's `.env` credentials via `MYSQL_PWD` and checks "Dump completed" (flags tested on local MySQL). Needs a re-run | OPEN until a re-run writes a dump |
-| O3 | Logs rotated, errors tracked or alerted | single unrotated log file | OPEN (PRD-04) |
+| O3 | Logs rotated, errors tracked or alerted | single unrotated log file | Fixed (PRD-04): daily logs, hourly `ops:failed-jobs` with optional mail; on production after the next deploy and with `OPS_ALERT_EMAIL` set |
 | O4 | Separate staging environment | production doubles as staging | ACCEPTED for now (PRD-02) |
 | O5 | AI provider configured for the organisation (not only a personal key) | personal Gemini key active; organisation key not checked | OPEN (PRD-05) |
 | O6 | Test data removed from production | "[QA PROD]" exercise and source, "[SMOKE TEST]" records still there | OPEN (needs the product owner's go-ahead) |
