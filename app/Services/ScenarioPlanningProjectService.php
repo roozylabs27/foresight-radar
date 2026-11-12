@@ -8,6 +8,7 @@ use App\Models\ScenarioCondition;
 use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
 use App\Models\User;
+use App\Support\RowLock;
 use Carbon\CarbonInterface;
 
 /**
@@ -194,16 +195,18 @@ class ScenarioPlanningProjectService
     /** Gate G1. Confirming an already confirmed exercise changes nothing. */
     public function confirm(ScenarioPlanningProject $project, User $user): void
     {
-        if ($project->isConfirmed()) {
-            return;
-        }
+        RowLock::run($project, function () use ($project, $user) {
+            if ($project->isConfirmed()) {
+                return;
+            }
 
-        $project->update([
-            'confirmed_by' => $user->id,
-            'confirmed_at' => now(),
-            'status' => $project->status === 'draft' ? 'active' : $project->status,
-            'updated_by' => $user->id,
-        ]);
+            $project->update([
+                'confirmed_by' => $user->id,
+                'confirmed_at' => now(),
+                'status' => $project->status === 'draft' ? 'active' : $project->status,
+                'updated_by' => $user->id,
+            ]);
+        });
     }
 
     /** Impact and uncertainty from this score up count as high on the matrix. */

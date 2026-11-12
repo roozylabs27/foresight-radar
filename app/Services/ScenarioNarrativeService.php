@@ -16,6 +16,7 @@ use App\Services\Llm\LlmResponse;
 use App\Services\Llm\Prompts\ScenarioNarrativePrompt;
 use App\Services\Llm\StructuredLlmClient;
 use App\Support\Provenance;
+use App\Support\RowLock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -233,18 +234,23 @@ class ScenarioNarrativeService
      */
     public function reviewQuadrant(ScenarioQuadrant $quadrant, string $status, int $userId): ScenarioQuadrant
     {
-        if ($status !== 'draft' && blank($quadrant->narrative)) {
-            throw ValidationException::withMessages(['status' => 'Kuadran ini belum punya narasi.']);
-        }
-        if ($status === 'approved' && $quadrant->provider === self::PROVIDER_TEMPLATE && ! $quadrant->isEdited()) {
-            throw ValidationException::withMessages(['status' => 'Narasi ini masih kerangka tanpa AI. Lengkapi narasinya dulu sebelum disetujui.']);
-        }
+        return RowLock::run($quadrant, function () use ($quadrant, $status, $userId) {
+            if ($quadrant->review_status === $status) {
+                return $quadrant;
+            }
+            if ($status !== 'draft' && blank($quadrant->narrative)) {
+                throw ValidationException::withMessages(['status' => 'Kuadran ini belum punya narasi.']);
+            }
+            if ($status === 'approved' && $quadrant->provider === self::PROVIDER_TEMPLATE && ! $quadrant->isEdited()) {
+                throw ValidationException::withMessages(['status' => 'Narasi ini masih kerangka tanpa AI. Lengkapi narasinya dulu sebelum disetujui.']);
+            }
 
-        $quadrant->update($status === 'draft'
-            ? ['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null]
-            : ['review_status' => $status, 'reviewed_by' => $userId, 'reviewed_at' => now()]);
+            $quadrant->update($status === 'draft'
+                ? ['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null]
+                : ['review_status' => $status, 'reviewed_by' => $userId, 'reviewed_at' => now()]);
 
-        return $quadrant;
+            return $quadrant;
+        });
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Models\Signal;
 use App\Models\User;
 use App\Support\Provenance;
+use App\Support\RowLock;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -86,21 +87,26 @@ class ProjectAssessmentService
     }
 
     /**
-     * Gate G3.
+     * Gate G3. Agreeing already agreed scores changes nothing.
      *
      * @throws ValidationException before the force list is agreed or while an included force has no score
      */
     public function confirm(ScenarioPlanningProject $project, User $user): void
     {
-        if (! $project->forcesConfirmed()) {
-            throw ValidationException::withMessages(['scores' => 'Sepakati daftar driving force dulu.']);
-        }
-        $missing = $project->projectForces()->where('inclusion_status', 'included')->whereDoesntHave('consensus')->count();
-        if ($missing > 0) {
-            throw ValidationException::withMessages(['scores' => "{$missing} driving force yang disertakan belum diberi skor."]);
-        }
+        RowLock::run($project, function () use ($project, $user) {
+            if ($project->scoresConfirmed()) {
+                return;
+            }
+            if (! $project->forcesConfirmed()) {
+                throw ValidationException::withMessages(['scores' => 'Sepakati daftar driving force dulu.']);
+            }
+            $missing = $project->projectForces()->where('inclusion_status', 'included')->whereDoesntHave('consensus')->count();
+            if ($missing > 0) {
+                throw ValidationException::withMessages(['scores' => "{$missing} driving force yang disertakan belum diberi skor."]);
+            }
 
-        $project->update(['scores_confirmed_by' => $user->id, 'scores_confirmed_at' => now(), 'updated_by' => $user->id]);
+            $project->update(['scores_confirmed_by' => $user->id, 'scores_confirmed_at' => now(), 'updated_by' => $user->id]);
+        });
     }
 
     /**

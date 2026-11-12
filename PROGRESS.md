@@ -509,6 +509,33 @@
 
 ## Session Log
 
+### 2026-11-12 — Session 87 (production readiness validation, Phase 4: reliability, usability, browser E2E)
+
+- `docs/audit/production-reliability-report.md`. On production, through the browser: exercise "[QA PROD] Transisi Energi Industri 2032" (`cf0bfccc-…`) taken from Step 1 to Step 9 (all steps done, G1–G7 once each, threshold crossing flagged framework, quadrants and response, report complete). Narratives written by hand (AI needs linked evidence; extraction could not run).
+- Gemini overloaded (HTTP 503) all session: focal review, force candidates, pole critique, extraction and retry failed cleanly with clear messages; waits up to ~4 min. Live AI output NOT TESTED.
+- Edge cases: invalid invitation 404 page; 419 page "Sesi Kedaluwarsa"; retry while running refused; Escape discards forms without warning.
+- Findings PRD-14, 16–20; PRD-12 limited to direct API calls.
+- **Test data left in production:** the [QA PROD] exercise and the [QA PROD] source (failed, no signals).
+- **Next:** Phase 5 (remediation of verified issues: start with PRD-11, PRD-16, PRD-14; decisions needed for PRD-01, PRD-06, PRD-07, PRD-10).
+
+### 2026-11-12 — Session 86 (production readiness validation, Phase 3: security and integrity)
+
+- `docs/audit/production-security-report.md`: 17 scenarios. Production (Developer, one organisation): CSRF 419, unknown ids 404, no secrets in props, session cookie HttpOnly. Local Docker with three temporary QA accounts in two organisations (created and deleted, dev DB back to 38 users): cross-organisation reads and writes 404, foreign dimension/user ids 422, viewer 403 on 11 writes and no action buttons.
+- Findings: PRD-10 (viewer can record observations, decision), PRD-11 (duplicate gate decisions under concurrency; `confirm()` has no lock), PRD-12 (duplicate create under concurrency), PRD-13 (cross-organisation untestable on production). No P0.
+- **Next:** Phase 4 (reliability, usability, browser E2E of the nine steps on production with a [QA PROD] exercise and real AI).
+
+### 2026-11-12 — Session 85 (production readiness validation, Phase 2: workflow mapping)
+
+- `docs/audit/production-workflow-matrix.md` (nine steps + eleven supporting journeys, three validation columns). Production read-only: every step page of the test exercise 200, gate log complete, Gemini key active. New observations PRD-06..09 in the backlog.
+- **Next:** Phase 3 (security and integrity) needs a second organisation with an account and viewer/admin accounts in ProNext Hub; the product owner signs in when asked.
+
+### 2026-11-12 — Session 84 (production readiness validation, Phase 1: baseline)
+
+- **Brief:** production workflow validation and reliability audit (six phases, stop after each). Decisions: production (https://foresight-radar.id) doubles as staging; the agent drives the built-in browser; real AI calls allowed on test data; test records prefixed [QA PROD]; the product owner signs in.
+- **Done (read-only):** production runs current `main` (Ziggy routes identical to local minus Ignition); front-door headers checked; deploy workflow, compose services, queue, scheduler, logging and session config reviewed.
+- **Artefacts:** `docs/audit/production-readiness-report.md` (Phase 1), `docs/audit/production-remediation-backlog.md` (PRD-01..05, all observed, none validated by test yet).
+- **Next:** Phase 2 (workflow mapping) needs the product owner signed in to production, plus a second organisation and viewer/admin accounts for the boundary tests.
+
 ### 2026-11-12 — Session 83 (backlog round)
 
 - **AUD-14:** User Management is the platform operators' tool (decision recorded); `UserController::create` assigns the creator's organisation or the operator's workspace and refuses without one. Test `UserManagementTenantTest`.

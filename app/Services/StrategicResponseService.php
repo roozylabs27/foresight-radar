@@ -9,6 +9,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Models\StrategicResponse;
 use App\Models\User;
 use App\Support\Provenance;
+use App\Support\RowLock;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -62,12 +63,20 @@ class StrategicResponseService
     }
 
     /**
-     * Gate G7.
+     * Gate G7. Approving an approved response changes nothing.
      *
      * @throws ValidationException when the rationale or a quadrant's fit is missing
      */
     public function approve(StrategicResponse $response, User $user): void
     {
+        RowLock::run($response, fn () => $this->approveLocked($response, $user));
+    }
+
+    private function approveLocked(StrategicResponse $response, User $user): void
+    {
+        if ($response->status === 'approved') {
+            return;
+        }
         $this->requireApproved($response->project);
 
         $errors = [];
