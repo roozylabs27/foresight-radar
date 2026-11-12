@@ -54,7 +54,8 @@ echo "  opcache.validate_timestamps: $(docker exec laravel_app php -r 'echo ini_
 
 section "5. Laravel configuration (values that are not secret)"
 docker exec laravel_app php artisan about --only=environment 2>/dev/null | sed -n '1,20p'
-docker exec laravel_app php artisan tinker --execute '
+# HOME=/tmp: psysh (tinker) wants a writable config directory, /var/www/.config is not.
+docker exec -e HOME=/tmp -e XDG_CONFIG_HOME=/tmp laravel_app php artisan tinker --execute '
 $c = fn ($k) => json_encode(config($k));
 echo "app.env=".$c("app.env")." app.debug=".$c("app.debug")." app.url=".$c("app.url").PHP_EOL;
 echo "logging.default=".$c("logging.default")." stack.channels=".$c("logging.channels.stack.channels")." daily.days=".$c("logging.channels.daily.days").PHP_EOL;
@@ -94,7 +95,10 @@ echo "queue worker log, last 6 h: DONE=$(docker logs --since 6h laravel_queue 2>
 
 section "8. Logs"
 docker exec laravel_app sh -c 'ls -la --time-style=+%Y-%m-%d storage/logs | tail -n 20' 2>/dev/null | awk '{print "  " $5, $6, $7}'
-echo "ERROR lines today (count only): $(docker exec laravel_app sh -c "cat storage/logs/laravel-$(date -u +%Y-%m-%d).log storage/logs/laravel.log 2>/dev/null | grep -c '\.ERROR:'")"
+echo "ERROR lines per daily log file (newest 3, counts only):"
+docker exec laravel_app sh -c 'for f in $(ls -1t storage/logs/laravel-*.log 2>/dev/null | head -n 3); do echo "  $(basename $f): $(grep -c "\.ERROR:" $f)"; done' 2>/dev/null
+echo "ERROR messages in the newest daily file (message text only, first 80 chars, grouped):"
+docker exec laravel_app sh -c 'f=$(ls -1t storage/logs/laravel-*.log 2>/dev/null | head -n 1); [ -n "$f" ] && grep -oE "\.ERROR: [^{]{0,80}" "$f" | sed -E "s/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/<email>/g" | sort | uniq -c | sort -rn | head -n 10' 2>/dev/null | awk '{print "  " $0}'
 
 section "9. Backups in $BACKUP_DIR"
 ls -la --time-style='+%Y-%m-%d %H:%M' "$BACKUP_DIR" 2>&1 | awk '{print "  " $1, $5, $6, $7, $8}'

@@ -32,7 +32,7 @@ Phase 6 of the [production readiness validation](production-readiness-report.md)
 | S2 | Cross-organisation reads and writes refused | SEC-05..09 (local), `TenantIsolationJourneyTest` | PASS (local + tests) |
 | S3 | Cross-organisation on production | only one organisation there | OPEN (PRD-13) |
 | S4 | Viewer cannot change the exercise | SEC-10, SEC-11; PRD-10 fix (observations need a contributor) | PASS |
-| S5 | Security headers (CSP, Permissions-Policy, version disclosure) | SEC-17 | Fixed in config (PRD-03), verified locally; on production after the next deploy. CSP is report-only |
+| S5 | Security headers (CSP, Permissions-Policy, version disclosure) | Not live on production after Deploy #53: the mounted config was never applied (OPS-01, verified). Fixed in `deploy.yml`, not deployed | FAIL |
 | S6 | Duplicate create under concurrent API calls | the form blocks double clicks (E2E-02) | ACCEPTED (PRD-12, P3) |
 
 ## 4. Reliability and AI
@@ -51,8 +51,8 @@ Phase 6 of the [production readiness validation](production-readiness-report.md)
 | # | Check | Evidence | Status |
 |---|---|---|---|
 | O1 | Deploy only after CI on `main`, exact commit | First gated run (2026-11-12, `main` `88bc5fd`): started after CI, fast-forwarded the server to the tested commit | PASS (first run) |
-| O2 | Database backup before migrations, rollback documented | First run: the dump failed ("Access denied for user 'root'", the container's root password does not match production) and the deploy **stopped before migrating**, as designed. Caches, FPM reload and queue restart did not run either. Fixed: the dump now uses the app's `.env` credentials via `MYSQL_PWD` and checks "Dump completed" (flags tested on local MySQL). Needs a re-run | OPEN until a re-run writes a dump |
-| O3 | Logs rotated, errors tracked or alerted | single unrotated log file | Fixed (PRD-04): daily logs, hourly `ops:failed-jobs` with optional mail; on production after the next deploy and with `OPS_ALERT_EMAIL` set |
+| O2 | Database backup before migrations, rollback documented | Deploys #52 and #53 wrote complete dumps (verify script: `gzip -t` ok, "Dump completed", 55 tables). The latest one was **restored in isolation** (12.6 s, 0 orphans, 37/37 pages). The rollback runbook now uses the app user | PASS |
+| O3 | Logs rotated, errors tracked or alerted | Daily log files on production; `ops:failed-jobs` runs hourly (4 "DONE" in 6 h); the alert works in isolation. `OPS_ALERT_EMAIL` is empty on production, so there is no mail delivery | FAIL (mail delivery, OPS-07) |
 | O4 | Separate staging environment | production doubles as staging | ACCEPTED for now (PRD-02) |
 | O5 | AI provider configured for the organisation (not only a personal key) | personal Gemini key active; organisation key not checked | OPEN (PRD-05) |
 | O6 | Test data removed from production | "[QA PROD]" exercise and source, "[SMOKE TEST]" records still there | OPEN (needs the product owner's go-ahead) |
@@ -77,6 +77,36 @@ Conditions, in order:
 4. Remove the "[QA PROD]" and "[SMOKE TEST]" records with the product owner's go-ahead (O6).
 5. Before a second organisation: CSP and Permissions-Policy (PRD-03), and repeat SEC-05..09 on production with two organisations (PRD-13). A staging server (PRD-02) is strongly recommended before data-moving migrations.
 
-## 7. Remaining backlog after Phase 5
+## 7. Production operations validation (2026-11-13)
+
+Statuses: PASS (verified by the stated check), FAIL, BLOCKED, NOT TESTED, NOT APPLICABLE. Details: [verification](production-verification-report.md), [backup](backup-integrity-report.md), [recovery](recovery-rehearsal-report.md), [runbook](../guidelines/production-operations-runbook.md).
+
+| Requirement | Evidence | Status |
+|---|---|---|
+| Release integrity | Server HEAD `2d202e7` = CI #105 and Deploy #53 (`workflow_run`); clean tree; no pending migrations | PASS |
+| Application health | `/login` 200 in about 100 ms; no debug routes; Phase 5 routes and bundles live. Signed-in production pages were not checked | PASS (unauthenticated) / NOT TESTED (signed in) |
+| Infrastructure | 5 containers Up, no restart loops; disk 14 %; 6.6 GB RAM free; DB reachable with the app user | PASS |
+| Deployment | CI gate, exact SHA, fast-forward, backup gate and stop-on-failure verified. Mounted nginx and PHP config were **not applied**; a manual dispatch bypasses CI | FAIL (OPS-01), gap (OPS-12) |
+| Backup | Latest dump complete, consistent (InnoDB + `--single-transaction`), 55/55 tables. World-readable; deploy-time only; no off-server copy | PASS (validity) / FAIL (OPS-02, OPS-03, OPS-04) |
+| Restore | Production backup restored into an isolated stack: checksum verified, 12.6 s, 55/55 tables, 63 migrations, 0 orphan rows | PASS |
+| Data integrity | 25 critical table counts equal the live counts; 165 foreign keys without orphans; `tenant_id` valid everywhere | PASS |
+| Application recovery | Restored app: 37/37 critical pages 200 with a recovery-only account; no external calls | PASS |
+| Code rollback | Previous release `d34343a` served the restored DB in 19 s; 37/37 pages 200 (in isolation, not on production) | PASS (isolation) |
+| Migration recovery | Runbook restore (app user) over a populated DB in 20.8 s; post-backup writes lost as expected; previous code runs on the restored schema | PASS (isolation) |
+| Monitoring | `ops:failed-jobs` scheduled and running on production; alert end to end in isolation | PASS |
+| Alerting | Mail delivery on production: `OPS_ALERT_EMAIL` empty | FAIL (OPS-07) |
+| Documentation | Runbook and rollback guide now match the rehearsed commands (app-user restore, recovery stack) | PASS |
+| Deploy step logs | require a GitHub sign-in | NOT TESTED |
+| Recovery on production hardware | not allowed by the safety rules (no restore into production; no separate server) | NOT APPLICABLE / BLOCKED (no staging server, PRD-02) |
+
+**Operations assessment: RECOVERY VERIFIED** — not operationally ready yet. A production backup restores completely in isolation, and the application, the previous release and the documented restore all work on it. Open before OPERATIONALLY READY:
+- the security config was never applied (OPS-01, fix ready);
+- backups happen only at deploy and stay on the same VPS (OPS-02, OPS-03);
+- backup files are world-readable (OPS-04);
+- no alert mail (OPS-07);
+- no monitoring of disk, database or backup age (OPS-11);
+- no RPO/RTO targets or recovery owner (OPS-13).
+
+## 8. Remaining backlog after Phase 5
 
 Open: PRD-02 (accepted), PRD-03, PRD-04, PRD-05, PRD-08 (P3), PRD-09, PRD-12 (P3, accepted), PRD-13, PRD-14 (live part). The npm audit "high" findings (6) are not triaged. Fixed in code and verified locally: PRD-01 (workflow), PRD-06, PRD-07, PRD-10, PRD-11, PRD-16, PRD-17, PRD-18, PRD-19, PRD-20.

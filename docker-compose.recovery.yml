@@ -1,0 +1,64 @@
+# Foresight Radar — isolated recovery environment (production operations validation, 2026-11-13).
+#
+# Restores a production backup WITHOUT touching production or the local dev stack:
+#   - its own Compose project, network and MySQL container (no shared volume or network);
+#   - the code is mounted read-only; nothing writes into storage/ (cookie sessions, array cache,
+#     logs to stderr, compiled views in /tmp);
+#   - no queue worker or scheduler: queued jobs are stored, never run;
+#   - mail goes to the `array` mailer; no AI keys; a fresh APP_KEY, so provider keys stored
+#     encrypted in the restored database cannot be decrypted or used.
+#
+# Use it only through scripts/ops/restore-rehearsal.sh (see docs/guidelines/production-operations-runbook.md):
+#   docker compose -p foresight-recovery -f docker-compose.recovery.yml up -d
+#   ...
+#   docker compose -p foresight-recovery -f docker-compose.recovery.yml down -v   # removes the restored data
+#
+# Restored production data is sensitive: keep the ports on 127.0.0.1 and remove the stack afterwards.
+
+name: foresight-recovery
+
+services:
+  recovery_mysql:
+    image: mysql:8.0
+    container_name: recovery_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: recovery-root-local-only
+      MYSQL_DATABASE: foresight_radar
+      MYSQL_USER: recovery
+      MYSQL_PASSWORD: recovery-local-only
+    ports:
+      - "127.0.0.1:33307:3306"
+    volumes:
+      - recovery_mysql_data:/var/lib/mysql
+    networks:
+      - recovery
+
+  recovery_app:
+    image: foresight-radar-app
+    container_name: recovery_app
+    # Not `php artisan serve`: it passes only a few variables to its PHP workers, which then read
+    # the developer's .env (found 2026-11-13: sessions and logs went to the local storage/).
+    # The PHP built-in server with Laravel's router runs one process with this environment; the
+    # router serves files from its working directory, hence public/. Run artisan with -w /var/www.
+    working_dir: /var/www/public
+    command: php -S 0.0.0.0:8000 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+    depends_on:
+      - recovery_mysql
+    ports:
+      - "127.0.0.1:8090:8000"
+    volumes:
+      - .:/var/www:ro
+      # The developer's .env is never visible here: the recovery configuration replaces it.
+      - ./docker/recovery/recovery.env:/var/www/.env:ro
+    env_file:
+      - ./docker/recovery/recovery.env
+    networks:
+      - recovery
+
+networks:
+  recovery:
+    name: foresight-recovery
+
+volumes:
+  recovery_mysql_data:
+    name: foresight-recovery-mysql

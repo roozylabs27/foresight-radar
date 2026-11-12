@@ -152,29 +152,11 @@ jobs:
             # 3. Backend dependencies & database migrations
             echo "[3/5] Running composer and database migrations inside Docker..."
             docker exec -u 0 -e COMPOSER_ALLOW_SUPERUSER=1 laravel_app composer install --no-dev --optimize-autoloader --no-interaction
-            # PRD-01: dump the database before migrating; the deploy stops if the dump fails.
-            # It uses the credentials the application uses (.env), not the container's
-            # MYSQL_ROOT_PASSWORD: that variable only applies when the volume is first created and
-            # did not match production (deploy of 2026-11-12: "Access denied for user 'root'").
-            env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"; }
-            DB_NAME="$(env_value DB_DATABASE)"
-            DB_USER="$(env_value DB_USERNAME)"
-            DB_PASS="$(env_value DB_PASSWORD)"
-            if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
-              echo "Error: DB_DATABASE or DB_USERNAME missing in .env; no backup, deploy stopped."
-              exit 1
-            fi
-            mkdir -p "$BACKUP_DIR"
-            BACKUP_FILE="$BACKUP_DIR/db-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD@{1}).sql.gz"
-            set -o pipefail
-            # MYSQL_PWD keeps the password off the command line; TCP matches a 'user'@'%' account.
-            docker exec -e MYSQL_PWD="$DB_PASS" laravel_mysql \
-              mysqldump --protocol=TCP -h 127.0.0.1 -u"$DB_USER" --single-transaction --no-tablespaces --triggers "$DB_NAME" \
-              | gzip > "$BACKUP_FILE"
-            # mysqldump writes "-- Dump completed" as its last line only when it finished.
-            gunzip -c "$BACKUP_FILE" | tail -n 1 | grep -q "Dump completed"
-            echo "Database backup: $BACKUP_FILE"
-            ls -1t "$BACKUP_DIR"/db-*.sql.gz | tail -n +15 | xargs -r rm -f
+            # PRD-01 / OPS-02..05: dump the database before migrating with the same script the daily
+            # cron job uses (scripts/ops/backup-database.sh): app credentials from .env, owner-only
+            # files, .partial until "Dump completed", optional verified off-server copy, retention.
+            # A failed dump stops the deploy here, before any migration.
+            BACKUP_DIR="$BACKUP_DIR" bash scripts/ops/backup-database.sh "$(git rev-parse --short HEAD@{1})"
             docker exec laravel_app php artisan migrate --force
 
             # 4. Cache & framework optimization
@@ -184,16 +166,35 @@ jobs:
             docker exec laravel_app php artisan view:cache
             docker exec -u 0 laravel_app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-            # 4b. opcache.validate_timestamps=0 (docker/php/local.ini): PHP-FPM keeps serving the
-            # previous release's bytecode until it reloads, while the new JS bundle is already live.
-            echo "[4b/5] Reloading PHP-FPM to flush opcache..."
-            docker exec laravel_app sh -c 'kill -USR2 1'
+            # docker/php/local.ini and docker/nginx/default.conf are mounted as single files. `git merge`
+            # replaces a changed file (new inode) while a running container keeps the old one, so a
+            # reload alone re-reads the OLD file (verified 2026-11-13: host and container hashes differed,
+            # and the PRD-03 headers were missing after a successful deploy). When the file the
+            # container sees differs from the repository's, the container is recreated instead.
+            same_file() { [ "$(sha256sum "$1" | cut -d' ' -f1)" = "$(docker exec "$2" sha256sum "$3" | cut -d' ' -f1)" ]; }
 
-            # 4c. docker/nginx/default.conf is a mounted file: `compose up` does not reload nginx when
-            # only its content changed (PRD-03 headers). Test first so a bad config never goes live.
-            echo "[4c/5] Testing and reloading nginx configuration..."
-            docker exec laravel_nginx nginx -t
-            docker exec laravel_nginx nginx -s reload
+            # 4b. opcache.validate_timestamps=0: PHP-FPM keeps serving the previous release's bytecode
+            # until it reloads, while the new JS bundle is already live.
+            if same_file docker/php/local.ini laravel_app /usr/local/etc/php/conf.d/local.ini; then
+              echo "[4b/5] Reloading PHP-FPM to flush opcache..."
+              docker exec laravel_app sh -c 'kill -USR2 1'
+            else
+              echo "[4b/5] docker/php/local.ini changed: recreating app, queue and scheduler..."
+              docker compose up -d --no-deps --force-recreate app queue scheduler
+            fi
+
+            # 4c. Test the repository's nginx config before it goes live: `compose run` uses the same
+            # mounts and network as the nginx service, without publishing its ports.
+            echo "[4c/5] Testing nginx configuration..."
+            docker compose run --rm --no-deps -T nginx nginx -t
+            if same_file docker/nginx/default.conf laravel_nginx /etc/nginx/conf.d/default.conf; then
+              docker exec laravel_nginx nginx -s reload
+            else
+              echo "docker/nginx/default.conf changed: recreating nginx..."
+              docker compose up -d --no-deps --force-recreate nginx
+            fi
+            docker exec laravel_nginx sh -c 'nginx -T 2>/dev/null | grep -c Permissions-Policy' \
+              | xargs -I{} echo "nginx live config: {} Permissions-Policy line(s)"
 
             # 5. Restart background queue worker
             echo "[5/5] Restarting Laravel queue worker..."
