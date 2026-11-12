@@ -1,28 +1,19 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
-    ActivityIcon,
-    ArrowRightIcon,
-    CheckCircle2Icon,
-    CircleDotIcon,
     ExternalLinkIcon,
     FileTextIcon,
-    FilterIcon,
-    Maximize2Icon,
     NetworkIcon,
     RotateCcwIcon,
     SearchIcon,
-    SlidersHorizontalIcon,
-    ZapIcon,
     ZoomInIcon,
     ZoomOutIcon,
 } from "lucide-react";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import DimensionChip, { dimensionColor } from "@/Components/DimensionChip";
-import Panel from "@/Components/Panel";
+import DimensionChip from "@/Components/DimensionChip";
 import { statusBadge } from "@/Components/StatusBadge";
 import { useTheme } from "@/Components/ThemeProvider";
 import { Button } from "@/Components/ui/button";

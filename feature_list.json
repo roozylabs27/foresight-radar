@@ -35,7 +35,7 @@
         "Non-admins cannot escalate privileges or assign Super Admin role",
         "User policies protect unauthorized account tampering"
       ],
-      "verification_evidence": "Tests/Feature/UserManagementFilterTest and Tests/Feature/Security/RoleEscalationTest pass"
+      "verification_evidence": "Tests/Feature/UserManagementFilterTest and Tests/Feature/Security/RoleEscalationTest pass 2026-11-12 (AUD-14/23): a created user joins the creator's organisation or the operator's workspace (refused without one); sidebar entry for platform roles; UserManagementTenantTest seen red then passed."
     },
     {
       "id": "FEAT-003",
@@ -235,7 +235,7 @@
         "GitHub Actions CI runs backend tests, frontend build, and headless E2E smoke tests",
         "Zero Pint style issues, zero Larastan Level 5 errors, zero test failures"
       ],
-      "verification_evidence": "composer verify passes (241 files, 137 stan files, 259 tests, 2503 assertions); verify.sh passes"
+      "verification_evidence": "composer verify passes (241 files, 137 stan files, 259 tests, 2503 assertions); verify.sh passes 2026-11-12: ESLint added (`npm run lint`, 0 errors) to verify.sh and CI; the empty TypeScript typecheck step removed."
     },
     {
       "id": "FEAT-018",

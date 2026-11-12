@@ -17,16 +17,16 @@ Order follows the agreed plan: small units, each ending with tests, documentatio
 | ID | Priority | Item | Note |
 |---|---|---|---|
 | AUD-13 | P2 | AI extraction run recorded `completed` before the signal transaction | **Done 2026-11-12**: recorded inside the transaction; a storage failure records a failed run |
-| AUD-14 | P2 | `User` not tenant-scoped for platform user management; created users get `tenant_id = NULL` | Product decision on platform user management |
-| AUD-16 | P2 | Job `failed()` handlers outside tenant context | Document rule; wrap with `TenantContext::runAs` if a handler ever creates rows |
-| AUD-18 | P2 | Typecheck covers no JSX; no ESLint | **ESLint added 2026-11-12** (0 errors, 108 warnings as debt); JS vs TS still undecided |
-| AUD-19 | P2 | Browser e2e for scenario planning, Signals, Settings; CI runs only smoke | The agentic `e2e` runner needs a model; decide budget |
-| AUD-21 | P3 | Dashboard tabs duplicate report pages | Decide: keep tabs or link to the pages |
-| AUD-22 | P3 | Unused / duplicate routes | Remove after confirming no external caller |
-| AUD-23 | P3 | User Management not in navigation | Add for platform roles, or remove |
-| AUD-24 | P3 | Pages above the 150-line rule | Split when touched |
-| AUD-15 | P3 | Global email uniqueness disclosure | Likely intended |
-| AUD-26 | P3 | Unused files | Remove when touched |
+| AUD-14 | P2 | `User` not tenant-scoped for platform user management; created users get `tenant_id = NULL` | **Done 2026-11-12**: operators' tool by decision; new users join the creator's organisation or workspace |
+| AUD-16 | P2 | Job `failed()` handlers outside tenant context | **Closed 2026-11-12**: rule in AGENTS.md; test covers all 12 handlers |
+| AUD-18 | P2 | Typecheck covers no JSX; no ESLint | **Done 2026-11-12**: ESLint (0 errors, 57 warnings left: hook deps and a11y); typecheck removed, the frontend stays JavaScript |
+| AUD-19 | P2 | Browser e2e for scenario planning, Signals, Settings; CI runs only smoke | **Open: needs a budget decision** (agentic runner spends AI tokens). HTTP-level journeys cover Steps 1–9 and tenant isolation (U7) |
+| AUD-21 | P3 | Dashboard tabs duplicate report pages | **Decided 2026-11-12: kept** |
+| AUD-22 | P3 | Unused / duplicate routes | **Done 2026-11-12** (`scenarios.update` kept, tested) |
+| AUD-23 | P3 | User Management not in navigation | **Done 2026-11-12** (platform roles only) |
+| AUD-24 | P3 | Pages above the 150-line rule | **Policy**: split when substantially changed (18 pages listed in technical-audit.md) |
+| AUD-15 | P3 | Global email uniqueness disclosure | **Accepted 2026-11-12**: email is the global sign-in identity |
+| AUD-26 | P3 | Unused files | **Done 2026-11-12**; typecheck step removed with the last `.ts` file |
 
 ## Rules for every unit
 

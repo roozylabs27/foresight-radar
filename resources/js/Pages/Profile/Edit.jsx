@@ -1,5 +1,5 @@
 import { Head } from "@inertiajs/react";
-import { Building2Icon, MailIcon, ShieldCheckIcon, UserIcon } from "lucide-react";
+import { Building2Icon, MailIcon, ShieldCheckIcon } from "lucide-react";
 
 import SettingsLayout from "@/Layouts/SettingsLayout";
 import { Badge } from "@/Components/ui/badge";

@@ -428,7 +428,6 @@ export default function SignalIndex({
     extractionMode = "heuristic",
     extractionModel = null,
     extractionLabel = "Aturan",
-    activeLlm = null,
     maxContentChars = 60000,
     pendingExtractions = [],
     failedExtractions = [],

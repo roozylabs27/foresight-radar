@@ -149,17 +149,9 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 4. TypeScript Typecheck (tsc)
-# ------------------------------------------------------------------------------
-if [ "${RUN_FRONTEND}" = true ]; then
-    run_check "TypeScript Typecheck (tsc)" \
-        "run_npm run typecheck"
-else
-    run_check "TypeScript Typecheck (tsc)" "" true
-fi
-
-# ------------------------------------------------------------------------------
-# 4b. Frontend Lint (ESLint: JSX, rules of hooks, a11y warnings)
+# 4. Frontend Lint (ESLint: JSX, rules of hooks, a11y warnings)
+#    The frontend is JavaScript/JSX; the old tsc step checked no source file and was
+#    removed (audit AUD-18/AUD-26).
 # ------------------------------------------------------------------------------
 if [ "${RUN_FRONTEND}" = true ]; then
     run_check "Frontend Lint (ESLint, 0 errors)" \

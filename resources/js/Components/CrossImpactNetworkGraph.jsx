@@ -1,20 +1,14 @@
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-    ActivityIcon,
     ArrowRightIcon,
-    CheckIcon,
-    EditIcon,
     FilterIcon,
-    HelpCircleIcon,
-    InfoIcon,
     RotateCcwIcon,
-    SlidersHorizontalIcon,
 } from "lucide-react";
 
 import DimensionChip, { dimensionColor } from "@/Components/DimensionChip";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip";
+
 import { cn } from "@/lib/utils";
 import HintTooltip from "@/Components/HintTooltip";
 
@@ -97,9 +91,7 @@ export default function CrossImpactNetworkGraph({
     highlight = null,
     canManage = false,
     onEdit = () => {},
-    selectedLoop = null,
 }) {
-    const filterId = useId();
     const [polarityFilter, setPolarityFilter] = useState("all"); // 'all' | 'pos' | 'neg' | 'strong'
     const [hoveredForceId, setHoveredForceId] = useState(null);
     const [pinnedForceId, setPinnedForceId] = useState(null);
@@ -441,7 +433,6 @@ export default function CrossImpactNetworkGraph({
                             else if (activeForceId && !isSelected && !isConnected) opacity = 0.25;
 
                             const dimColor = dimensionColor(force.dimension);
-                            const sum = summaryMap.get(force.id);
 
                             return (
                                 <g

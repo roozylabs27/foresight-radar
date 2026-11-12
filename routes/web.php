@@ -91,9 +91,7 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         });
         Route::prefix('/knowledge-graph')->name('knowledge-graph.')->group(function () {
             Route::get('/', [KnowledgeGraphController::class, 'index'])->can('view-foresight-radar');
-            Route::get('/index', [KnowledgeGraphController::class, 'index'])->name('index')->can('view-foresight-radar');
             Route::get('/data', [KnowledgeGraphController::class, 'data'])->name('data')->can('view-foresight-radar');
-            Route::get('/get-data', [KnowledgeGraphController::class, 'data'])->name('get-data')->can('view-foresight-radar');
         });
     });
 
@@ -316,10 +314,6 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
             Route::put('/{user}', 'update')->name('update')->can('edit-user');
             Route::delete('/{user}', 'delete')->name('delete')->can('delete-user');
 
-            Route::prefix('profile')->controller(ProfileController::class)->name('profile.')->group(function () {
-                Route::get('/', 'edit');
-                Route::patch('/', 'update')->name('update');
-            });
         });
         // Route::prefix('role')->controller(App\Http\Controllers\RoleController::class)->name('role.')->group(function () {
         //     Route::get('/', 'index');
@@ -336,16 +330,10 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
             return redirect()->route('settings.llm.index');
         })->name('index');
 
-        // AI & Reasoning Engine settings
-        Route::prefix('ai')->name('ai.')->controller(UserLlmSettingController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::post('/', 'store')->name('store');
-            Route::post('/activate', 'activate')->name('activate');
-            Route::post('/test', 'test')->name('test');
-            Route::delete('/{provider}', 'destroy')->name('destroy');
-        });
+        // The old /settings/ai address (its endpoints were never used by the frontend; audit AUD-22).
+        Route::get('/ai', fn () => redirect()->route('settings.llm.index'));
 
-        // Backward-compatible alias for llm endpoints
+        // AI & Reasoning Engine settings
         Route::prefix('llm')->name('llm.')->controller(UserLlmSettingController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');

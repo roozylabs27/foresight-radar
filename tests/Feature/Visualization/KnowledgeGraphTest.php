@@ -103,7 +103,7 @@ class KnowledgeGraphTest extends TestCase
     public function test_unauthenticated_user_cannot_view_knowledge_graph(): void
     {
         $this->get('/visualization/knowledge-graph')->assertRedirect('/login');
-        $this->getJson('/visualization/knowledge-graph/get-data')->assertStatus(401);
+        $this->getJson('/visualization/knowledge-graph/data')->assertStatus(401);
     }
 
     public function test_unprivileged_user_gets_403_on_knowledge_graph(): void
@@ -115,7 +115,7 @@ class KnowledgeGraphTest extends TestCase
             ->assertStatus(403);
 
         $this->actingAs($unprivileged)
-            ->getJson('/visualization/knowledge-graph/get-data')
+            ->getJson('/visualization/knowledge-graph/data')
             ->assertStatus(403);
     }
 
@@ -132,7 +132,7 @@ class KnowledgeGraphTest extends TestCase
 
     public function test_knowledge_graph_data_endpoint_returns_nodes_and_links(): void
     {
-        $response = $this->actingAs($this->analyst)->getJson('/visualization/knowledge-graph/get-data');
+        $response = $this->actingAs($this->analyst)->getJson('/visualization/knowledge-graph/data');
 
         $response->assertOk();
         $data = $response->json();

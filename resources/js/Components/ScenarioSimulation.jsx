@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/Components/ui/skeleton";
 import { statusBadge } from "@/Components/StatusBadge";
 import { cn } from "@/lib/utils";
-import { Factor, Gauge } from "@/Components/ExecutiveOverview";
+import { Gauge } from "@/Components/ExecutiveOverview";
 
 const READINESS_TONES = {
     green: "border-emerald-500/20 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
@@ -22,7 +22,6 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
     const [overrides, setOverrides] = useState({});
     const [propagate, setPropagate] = useState(false);
     const [simulationResult, setSimulationResult] = useState(null);
-    const [simulating, setSimulating] = useState(false);
 
     // Forces available from reasoningData contributions
     const forces = useMemo(() => {
@@ -74,7 +73,6 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
 
         const controller = new AbortController();
         const timer = setTimeout(() => {
-            setSimulating(true);
             const payload = {
                 date: params?.date ?? null,
                 dimension: params?.dimension ?? null,
@@ -91,11 +89,9 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
                 .post("/dashboard/simulate", payload, { signal: controller.signal })
                 .then((res) => {
                     setSimulationResult(res.data);
-                    setSimulating(false);
                 })
                 .catch((err) => {
                     if (axios.isCancel(err)) return;
-                    setSimulating(false);
                     toast.error("Gagal menjalankan simulasi", {
                         description: err.response?.data?.message || err.message,
                     });
