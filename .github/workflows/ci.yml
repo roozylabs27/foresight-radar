@@ -38,11 +38,11 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      # Security Policy: composer audit reports upstream advisories in the Laravel 11 ecosystem.
-      # Runs in advisory reporting mode pending major framework version upgrades.
-      - name: Composer Security Audit (Advisory)
+      # Security Policy (production readiness 2026-11-13): blocks on any advisory that is not listed with
+      # a reason under config.audit.ignore in composer.json (the Laravel 11 advisories with no 11.x fix,
+      # docs/production-readiness/known-risks.md R-08). A new advisory fails CI.
+      - name: Composer Security Audit (Block on unlisted advisories)
         run: composer audit
-        continue-on-error: true
 
       - name: Copy .env
         run: cp .env.example .env

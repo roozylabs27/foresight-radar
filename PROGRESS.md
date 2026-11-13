@@ -1,6 +1,6 @@
 # Project Progress — Foresight Radar
 
-## Current Verified State (updated 2026-11-13)
+## Current Verified State (updated 2026-11-13, session 100)
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
@@ -25,7 +25,7 @@
   - The ESLint warnings are debt.
   - No browser e2e for the exercise pages (AUD-19).
   - `composer verify` hits Composer's 1,200 s process timeout on this host; run `php artisan test` directly.
-- **Highest-priority next task:** merge the OPS-01 deploy fix and verify the security headers on production. Then decide on scheduled and off-server backups (OPS-02, OPS-03). See session 94.
+- **Highest-priority next task:** commit and merge the session 100 production-readiness fixes (SEC-PR-01 is critical), let CI and the gated deploy run, then the VPS owner runs `verify-production.sh` and closes R-01, R-02 and R-13 (`docs/production-readiness/known-risks.md`).
 
 ---
 
@@ -505,6 +505,48 @@
 ---
 
 ## Session Log
+
+### 2026-11-13 — Session 100 (production readiness remediation and final verification)
+
+Brief: "Production Readiness Remediation & Final Verification" (phases 0–11). Deliverables are in `docs/production-readiness/`: readiness matrix, final verification report, deployment and recovery runbook, known risks.
+
+- **Baseline:**
+  - `main` `81fa161` (PR #25) has the same tree as `development` `de6765d`; no open PRs; CI #118 and Deploy #57 green.
+  - Full PHPUnit on the baseline: **641 passed, 0 failed** (8,499 assertions, 943 s). The failure noted after session 99 does not reproduce.
+- **Fixed, with tests:**
+  - **SEC-PR-01, Critical.** The AI connection test sent the platform key to any base URL a user typed (reproduced: 200 from the attacker URL). Fixed in the controller and `LlmClientResolver`.
+  - **SEC-PR-02.** SSRF through the AI base URL; new rule `PublicHttpsUrl`.
+  - **SEC-PR-03.** An organisation admin could demote or remove a platform operator; `UserPolicy` is now checked.
+  - **PI-07.** New `driving_force_ratings.assessed_at` (migration `2026_11_13_000004`, backfilled from the rating history, else `created_at`). All FIRM reports filter on it and the dashboard trend groups on it; "Periode penilaian" has an explanation.
+  - **Ops and deploy:**
+    - backup lock, space check, checksum;
+    - CI-proof gate for manual deploys and push-only `workflow_run`;
+    - `post-deploy-check.sh` and the release log;
+    - `verify-production.sh` additions.
+  - **Dependencies:** 20 Symfony packages updated (8 advisories). The 4 Laravel 11 advisories are listed with reasons, and CI's composer audit now blocks.
+- **Tests:**
+  - New: `LlmCredentialSafetyTest` (12), `FirmAssessmentPeriodTest` (6), 1 member test.
+  - Fixture `ReasoningEngineTest` now backdates `assessed_at` too; assertions unchanged.
+- **Verification (final tree):**
+  - Full PHPUnit **660 passed, 0 failed** (8,568 assertions, 507 s). The run before the fixture fix was 659 / 1.
+  - Larastan whole code base: No errors (337 s). The run before typing the closure had 1 error.
+  - Pint: PASS (493 files).
+  - ESLint: 0 errors, 57 warnings. Build: passed.
+  - npm audit: 0 critical. composer audit: exit 0.
+  - Backup script: concurrent runs, tamper, lock timeout and low disk tested in WSL against the dev DB.
+  - Dev DB migrated (27 ratings backfilled, 2 moved period, 1 without history); 38 users; FPM reloaded; queue restarted.
+- **Production, read-only, browser:**
+  - `/up` 200; security headers live (CSP report-only);
+  - `.env` / `.git` / logs 404; HTTPS with a valid certificate; session cookie HttpOnly.
+  - `verify-production.sh` was not run (it needs the VPS owner).
+- **Local browser (user signed in):** the Foresight Radar filter shows "Periode penilaian" with the explanation tooltip; `/visualization/foresight-radar/get-data` returns 200 with 26 forces for the default period; no request on the page fails (the console's 401s came from before sign-in).
+- **Not done:**
+  - browser E2E A–F;
+  - the new deploy gate and post-deploy check are not exercised until the next deploy.
+- **Readiness decision:** **CONDITIONALLY READY** (matrix §Gate).
+  - Owner actions: R-01 alert mail, R-02 backup cron and off-server copy, R-13 MySQL default credentials, plus running `verify-production.sh`.
+  - Engineering: R-04 browser E2E, R-05 CSP enforce, R-06 DNS pinning, R-08 Laravel 12.
+- **Not committed.**
 
 ### 2026-11-13 — Session 99 (product integrity remediation, Phase 1 group 2: PI-03, PI-02, PI-06, gate rationale)
 

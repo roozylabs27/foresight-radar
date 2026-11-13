@@ -86,6 +86,20 @@ class TenantMemberAuthorizationTest extends TestCase
         $this->assertSame($this->tenant->id, (int) $this->admin->fresh()->tenant_id);
     }
 
+    /** Production readiness 2026-11-13 (SEC-PR-03): an organisation admin cannot demote or remove a platform operator. */
+    public function test_admin_cannot_demote_or_remove_a_platform_operator_in_the_organisation(): void
+    {
+        $operator = User::factory()->create(['tenant_id' => $this->tenant->id, 'email' => 'operator@acme.test']);
+        $operator->assignRole('super-admin');
+
+        $this->actingAs($this->admin)->patch(route('settings.members.role', ['user' => $operator]), ['role' => 'bod'])->assertForbidden();
+        $this->actingAs($this->admin)->delete(route('settings.members.destroy', ['user' => $operator]))->assertForbidden();
+
+        $operator->refresh();
+        $this->assertTrue($operator->hasRole('super-admin'));
+        $this->assertSame($this->tenant->id, (int) $operator->tenant_id);
+    }
+
     public function test_bod_member_cannot_cancel_invitation(): void
     {
         $invitation = TenantInvitation::create([

@@ -119,7 +119,8 @@ class ReasoningEngineTest extends TestCase
         ]);
 
         if ($createdAt) {
-            $rating->forceFill(['created_at' => $createdAt])->saveQuietly();
+            // PI-07: an earlier rating was also assessed then; the reports filter on assessed_at.
+            $rating->forceFill(['created_at' => $createdAt, 'assessed_at' => $createdAt])->saveQuietly();
         }
 
         return $df;

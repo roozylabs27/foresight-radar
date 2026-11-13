@@ -490,7 +490,7 @@ class ReasoningEngineService
         $byMonth = $this->reportingService->baseApprovedRatingQuery($range, $dimension)
             ->with('status_action')
             ->get()
-            ->groupBy(fn ($rating) => Carbon::parse($rating->created_at)->format('Y-m'));
+            ->groupBy(fn (DrivingForceRating $rating) => Carbon::parse($rating->assessed_at)->format('Y-m')); // PI-07: month of assessment
 
         $data = [];
         for ($month = $start->copy(); $month->lte($end); $month->addMonth()) {

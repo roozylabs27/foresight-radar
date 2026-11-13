@@ -91,6 +91,14 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "audit": {
+            "ignore": {
+                "PKSA-d5tc-s1qs-h781": "Laravel 11 has no fix (fixed in 12.69). Debug page only: APP_DEBUG=false in production. docs/production-readiness/known-risks.md R-08",
+                "PKSA-m5cs-t1y6-qpcs": "Laravel 11 has no fix (fixed in 12.61.1). Signed routes (invitations, email verification) also check a token or hash. known-risks.md R-08",
+                "PKSA-3r5d-mb8f-1qw9": "Laravel 11 has no fix (fixed in 12.60). Symfony Mime address validation rejects CRLF before mail headers. known-risks.md R-08",
+                "PKSA-mdq4-51ck-6kdq": "Same advisory as PKSA-3r5d-mb8f-1qw9 (CVE-2026-48019). known-risks.md R-08"
+            }
         }
     },
     "minimum-stability": "stable",

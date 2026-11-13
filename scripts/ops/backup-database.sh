@@ -13,10 +13,15 @@
 #   MAX_AGE_HOURS         --check fails above this age         (default 26)
 #   OFFSITE_REMOTE        rclone destination, e.g. "foresight-offsite:backups" (empty = no off-server copy)
 #   BACKUP_PING_URL       URL called after a successful backup (dead man's switch, e.g. healthchecks.io); empty = none
+#   LOCK_WAIT_SECONDS     wait this long for another backup run to finish (default 900)
+#   MIN_FREE_MB           refuse to dump with less free space than this (default: 3x the newest dump, at least 200)
 #
 # Safety: dumps are owner-only (dir 700, files 600). A dump is written as .partial and renamed only after
 # mysqldump finished ("-- Dump completed" last line), so a failed dump never counts as a backup and never
 # causes a valid one to be deleted. Retention runs only after a successful dump.
+# Production readiness 2026-11-13: one run at a time (flock), so a deploy dump and the cron dump cannot
+# delete each other's .partial file; a free-space precheck; gzip integrity and a .sha256 sidecar that
+# --check verifies.
 
 set -euo pipefail
 umask 077
@@ -41,6 +46,7 @@ BACKUP_DIR="${BACKUP_DIR:-$HOME/foresight-backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 KEEP_MIN="${KEEP_MIN:-3}"
 MAX_AGE_HOURS="${MAX_AGE_HOURS:-26}"
+LOCK_WAIT_SECONDS="${LOCK_WAIT_SECONDS:-900}"
 OFFSITE_REMOTE="${OFFSITE_REMOTE:-}"
 BACKUP_PING_URL="${BACKUP_PING_URL:-}"
 MYSQL_CONTAINER="${MYSQL_CONTAINER:-laravel_mysql}"
@@ -53,13 +59,21 @@ valid_dumps() { ls -1t "$BACKUP_DIR"/db-*.sql.gz 2>/dev/null || true; }
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 
+# One backup run at a time (deploy and cron share BACKUP_DIR). A second run waits, then gives up.
+exec 9>"$BACKUP_DIR/.backup.lock"
+flock -w "$LOCK_WAIT_SECONDS" 9 || fail "another backup run still holds $BACKUP_DIR/.backup.lock after ${LOCK_WAIT_SECONDS} s"
+
 # --- freshness check -------------------------------------------------------------------------
 if [ "$LABEL" = "--check" ]; then
   NEWEST="$(valid_dumps | head -n 1)"
   [ -n "$NEWEST" ] || fail "no backup in $BACKUP_DIR"
   AGE_H=$(( ( $(date +%s) - $(stat -c %Y "$NEWEST") ) / 3600 ))
   if [ "$AGE_H" -gt "$MAX_AGE_HOURS" ]; then fail "newest backup $(basename "$NEWEST") is ${AGE_H} h old (max ${MAX_AGE_HOURS} h)"; fi
+  gzip -t "$NEWEST" 2>/dev/null || fail "newest backup $(basename "$NEWEST") is not a valid gzip file"
   gunzip -c "$NEWEST" | tail -n 1 | grep -q "Dump completed" || fail "newest backup $(basename "$NEWEST") is incomplete"
+  if [ -f "$NEWEST.sha256" ]; then
+    [ "$(sha256sum "$NEWEST" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$NEWEST.sha256")" ] || fail "newest backup $(basename "$NEWEST") does not match its checksum"
+  fi
   log "OK newest backup $(basename "$NEWEST") is ${AGE_H} h old"
   exit 0
 fi
@@ -76,7 +90,14 @@ DB_PASS="$(env_value DB_PASSWORD)"
 
 # --- dump --------------------------------------------------------------------------------------
 chmod 600 "$BACKUP_DIR"/db-*.sql.gz 2>/dev/null || true
+# Safe under the lock: a .partial left now can only come from an earlier run that failed.
 rm -f "$BACKUP_DIR"/*.partial
+# Free-space precheck: three times the newest dump (gzip output plus headroom), at least 200 MB.
+NEWEST_BYTES=$(stat -c %s "$(valid_dumps | head -n 1)" 2>/dev/null || echo 0)
+NEED_MB="${MIN_FREE_MB:-$(( NEWEST_BYTES * 3 / 1048576 ))}"
+[ "$NEED_MB" -ge 200 ] || NEED_MB=200
+FREE_MB=$(df -Pm "$BACKUP_DIR" | awk 'NR==2 {print $4}')
+[ "$FREE_MB" -ge "$NEED_MB" ] || fail "only ${FREE_MB} MB free in $BACKUP_DIR (need ${NEED_MB} MB)"
 FILE="$BACKUP_DIR/db-$(date -u +%Y%m%d-%H%M%S)-$LABEL.sql.gz"
 START=$(date +%s)
 # MYSQL_PWD keeps the password off the command line; TCP matches a 'user'@'%' account.
@@ -85,10 +106,13 @@ if ! docker exec -e MYSQL_PWD="$DB_PASS" "$MYSQL_CONTAINER" \
      | gzip > "$FILE.partial"; then
   fail "mysqldump or gzip exited with an error (partial file left as $(basename "$FILE").partial)"
 fi
+gzip -t "$FILE.partial" 2>/dev/null || fail "dump is not a valid gzip file"
 gunzip -c "$FILE.partial" | tail -n 1 | grep -q "Dump completed" || fail "dump did not complete"
 mv "$FILE.partial" "$FILE"
 chmod 600 "$FILE"
 SHA="$(sha256sum "$FILE" | cut -d' ' -f1)"
+echo "$SHA  $(basename "$FILE")" > "$FILE.sha256"
+chmod 600 "$FILE.sha256"
 log "Database backup: $FILE ($(stat -c %s "$FILE") bytes, sha256 ${SHA:0:16}, $(( $(date +%s) - START )) s)"
 
 # --- off-server copy (OPS-03) ------------------------------------------------------------------
@@ -108,7 +132,7 @@ KEPT=0
 while IFS= read -r f; do
   KEPT=$((KEPT + 1))
   if [ "$KEPT" -gt "$KEEP_MIN" ] && [ -n "$(find "$f" -mtime +"$RETENTION_DAYS" 2>/dev/null)" ]; then
-    rm -f "$f"
+    rm -f "$f" "$f.sha256"
     log "Retention: removed $(basename "$f") (older than $RETENTION_DAYS days)"
   fi
 done < <(valid_dumps)

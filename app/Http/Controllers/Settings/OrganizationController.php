@@ -11,6 +11,7 @@ use App\Models\Source;
 use App\Models\Tenant;
 use App\Models\TenantLlmSetting;
 use App\Models\User;
+use App\Rules\PublicHttpsUrl;
 use App\Services\Llm\TenantLlmQuota;
 use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -115,7 +116,7 @@ class OrganizationController extends Controller
             'model' => ['nullable', 'string', 'max:100'],
             'api_key' => ['nullable', 'string', 'max:500'],
             'clear_api_key' => ['boolean'],
-            'base_url' => ['nullable', 'url', 'max:255', 'required_if:provider,openai_compatible'],
+            'base_url' => ['nullable', 'url', 'max:255', 'required_if:provider,openai_compatible', new PublicHttpsUrl],
             'is_enabled' => ['boolean'],
             'allow_user_byok' => ['boolean'],
         ]);
