@@ -506,6 +506,29 @@
 
 ## Session Log
 
+### 2026-11-13 — Session 96 (Deploy #55 failed; backups run on production)
+
+- **On production, by the owner:** the backup dir is now 700 and the files 600; the empty `db-20261112-123050-9ae54b4` was removed. `backup-database.sh scheduled` → `db-20261113-054035-scheduled.sql.gz` (28,179 B, 2 s); `--check` OK. **Cron not installed yet.**
+- **Deploy #55 (`257b3b1`) failed** after `view:cache`, at the new inline 4b/4c block; no output between them, so the exact line is unknown.
+  - The new backup step ran inside the deploy: `db-20261112-182635-9530561`, 28,142 B.
+  - Migrate: nothing to migrate.
+  - Production is half-deployed: no FPM reload or queue restart, and the security headers are still missing (browser check). No PHP app code changed since `9530561`.
+- **What was tried:** emulating appleboy `script_stop` per-line checks. The `else` hypothesis was disproved (the else branch did not exit in the emulation). A `\` continuation does break under per-line checks.
+- **Fix (uncommitted):**
+  - New `scripts/ops/apply-runtime-config.sh`: `set -e`, a running-container guard, PHP reload or recreate, `compose run` nginx test, nginx reload or recreate, hash re-check (exit 1 on mismatch).
+  - `deploy.yml` calls it in one line. The step has no multi-line `else` and no `\` continuations (scan: 0 risky lines; `openssl` joined into one line).
+  - Runbook §3 updated.
+- **Verification:**
+  - `bash -n` OK and the YAML parses.
+  - Guard: with Docker Desktop unreachable, the script printed "container laravel_app is not running … nothing applied", exit 1.
+  - **After Docker Desktop restarted (local), all paths tested:**
+    1. Same files: PHP-FPM reload, `compose run` `nginx -t` ok, nginx reload, both hashes match, `nginx live config: 2`, `expose_php` Off, exit 0.
+    2. nginx differs (forced with `NGINX_HOST_FILE`): `laravel_nginx` recreated and back up. The final check reported `ERROR: nginx config differs`, exit 1 — expected, because the variant file is not the mounted one; this proves a mismatch is never reported as success.
+    3. Normal run again: exit 0.
+
+    Browser check of `localhost:8080/login`: 200, `Server: nginx`, no `X-Powered-By`, CSP-RO and Permissions-Policy present.
+- **Next:** commit and merge, and watch the deploy print `[4b/5]`, `[4c/5]`, `nginx live config: 2` and `matches the repository`. Then check the production headers in the browser and install the cron job (runbook §4b).
+
 ### 2026-11-13 — Session 95 (OPS-02/03 tooling: scheduled and off-server backups)
 
 - New `scripts/ops/backup-database.sh`, the single backup script; `deploy.yml` now calls it instead of the inline dump.
