@@ -131,10 +131,7 @@ jobs:
             mkdir -p docker/certbot/conf/live/foresight-radar.id docker/certbot/www
             if [ ! -f "docker/certbot/conf/live/foresight-radar.id/fullchain.pem" ]; then
               echo "Generating temporary self-signed certificate to allow initial Nginx boot..."
-              openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-                -keyout "docker/certbot/conf/live/foresight-radar.id/privkey.pem" \
-                -out "docker/certbot/conf/live/foresight-radar.id/fullchain.pem" \
-                -subj "/CN=localhost"
+              openssl req -x509 -nodes -newkey rsa:2048 -days 1 -keyout "docker/certbot/conf/live/foresight-radar.id/privkey.pem" -out "docker/certbot/conf/live/foresight-radar.id/fullchain.pem" -subj "/CN=localhost"
             fi
 
             # 1c. Recreate Docker containers if compose config changed
@@ -166,35 +163,12 @@ jobs:
             docker exec laravel_app php artisan view:cache
             docker exec -u 0 laravel_app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-            # docker/php/local.ini and docker/nginx/default.conf are mounted as single files. `git merge`
-            # replaces a changed file (new inode) while a running container keeps the old one, so a
-            # reload alone re-reads the OLD file (verified 2026-11-13: host and container hashes differed,
-            # and the PRD-03 headers were missing after a successful deploy). When the file the
-            # container sees differs from the repository's, the container is recreated instead.
-            same_file() { [ "$(sha256sum "$1" | cut -d' ' -f1)" = "$(docker exec "$2" sha256sum "$3" | cut -d' ' -f1)" ]; }
-
-            # 4b. opcache.validate_timestamps=0: PHP-FPM keeps serving the previous release's bytecode
-            # until it reloads, while the new JS bundle is already live.
-            if same_file docker/php/local.ini laravel_app /usr/local/etc/php/conf.d/local.ini; then
-              echo "[4b/5] Reloading PHP-FPM to flush opcache..."
-              docker exec laravel_app sh -c 'kill -USR2 1'
-            else
-              echo "[4b/5] docker/php/local.ini changed: recreating app, queue and scheduler..."
-              docker compose up -d --no-deps --force-recreate app queue scheduler
-            fi
-
-            # 4c. Test the repository's nginx config before it goes live: `compose run` uses the same
-            # mounts and network as the nginx service, without publishing its ports.
-            echo "[4c/5] Testing nginx configuration..."
-            docker compose run --rm --no-deps -T nginx nginx -t
-            if same_file docker/nginx/default.conf laravel_nginx /etc/nginx/conf.d/default.conf; then
-              docker exec laravel_nginx nginx -s reload
-            else
-              echo "docker/nginx/default.conf changed: recreating nginx..."
-              docker compose up -d --no-deps --force-recreate nginx
-            fi
-            docker exec laravel_nginx sh -c 'nginx -T 2>/dev/null | grep -c Permissions-Policy' \
-              | xargs -I{} echo "nginx live config: {} Permissions-Policy line(s)"
+            # 4b/4c. PHP-FPM reload or recreate, nginx test and reload or recreate, then a hash check that
+            # the containers see the repository's config (OPS-01). Kept in a script and called in ONE
+            # line: `script_stop` checks the exit status after every line of this block, and Deploy #55
+            # stopped on the `else` of a multi-line `if` (entered with $? = 1). Avoid multi-line
+            # if/else and backslash continuations in this script block.
+            bash scripts/ops/apply-runtime-config.sh
 
             # 5. Restart background queue worker
             echo "[5/5] Restarting Laravel queue worker..."

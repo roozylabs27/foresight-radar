@@ -49,23 +49,20 @@ From a browser: `https://foresight-radar.id/login` loads, and the response heade
    - `nginx live config: 2 Permissions-Policy line(s)`.
 3. Run §1 and compare HEAD with the merged commit.
 
-## 3. Apply changed nginx or PHP configuration — reviewed only (deploy does this from `deploy.yml` after OPS-01)
+## 3. Apply changed nginx or PHP configuration — reviewed; the guard is tested locally (deploy step 4b/4c)
 
-When §1 shows different hashes in section 4:
-
-```bash
-docker compose run --rm --no-deps -T nginx nginx -t
-```
+`scripts/ops/apply-runtime-config.sh` runs from the project directory:
 
 ```bash
-docker compose up -d --no-deps --force-recreate nginx
+cd /var/www/foresight-radar && bash scripts/ops/apply-runtime-config.sh
 ```
 
-```bash
-docker compose up -d --no-deps --force-recreate app queue scheduler
-```
+It checks that `laravel_app` and `laravel_nginx` are running, then:
+- **PHP:** if the container's `local.ini` equals the repository's, it reloads PHP-FPM; otherwise it recreates `app`, `queue` and `scheduler`.
+- **nginx:** it tests the repository's config with `docker compose run --rm --no-deps -T nginx nginx -t`. If the container's file equals the repository's, it reloads nginx; otherwise it recreates `nginx`.
+- **Verify:** it compares the hashes again and exits 1 if a container still sees a different file. It prints `nginx live config: N Permissions-Policy line(s)` and `PHP expose_php`.
 
-Run the first command and continue only if it reports "test is successful". Each recreate causes a few seconds of downtime for that service.
+Each recreate costs a few seconds of downtime for that service. Deploy #55 (2026-11-13) stopped exactly where this logic sat inline in `deploy.yml`. The deploy now calls this script in one line.
 
 ## 4. Verify a backup — run on production; integrity rehearsed in isolation
 
