@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -20,6 +21,8 @@ use Ramsey\Uuid\Uuid;
  * @property string $inclusion_status
  * @property string|null $influence_note
  * @property bool $is_predetermined
+ * @property Carbon|null $stale_since
+ * @property string|null $stale_reason
  */
 class ProjectDrivingForce extends Model
 {
@@ -41,6 +44,7 @@ class ProjectDrivingForce extends Model
 
     protected $casts = [
         'is_predetermined' => 'boolean',
+        'stale_since' => 'datetime',
     ];
 
     protected static function booted()

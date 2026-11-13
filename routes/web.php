@@ -236,19 +236,19 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(fu
         Route::post('/confirm', 'confirm')->name('confirm')->can('manage-scenario');
         Route::put('/{projectForce}', 'update')->name('update')->can('manage-scenario');
         Route::put('/{projectForce}/mine', 'mine')->name('mine')->can('view-scenario');
+        Route::post('/{projectForce}/library', 'keepLibrary')->name('library')->can('manage-scenario');
         Route::post('/suggest', 'suggest')->name('suggest')->can('manage-scenario');
         Route::post('/{projectForce}/suggestion/accept', 'acceptSuggestion')->name('suggestion.accept')->can('manage-scenario');
         Route::delete('/{projectForce}/suggestion', 'rejectSuggestion')->name('suggestion.reject')->can('manage-scenario');
         Route::delete('/{projectForce}/mine', 'withdraw')->name('withdraw')->can('view-scenario');
     });
 
+    // PAD-2 (2026-11-13): stand-alone scenarios are a read-only archive; scenarios are made in an
+    // exercise. The write routes remain for exercise frameworks (exercise policy and gates apply).
     Route::prefix('scenarios')->controller(ScenarioController::class)->name('scenarios.')->group(function () {
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::get('/fetch', 'fetch')->name('fetch')->can('view-scenario');
-        Route::get('/suggest-axes', 'suggestAxes')->name('suggest-axes')->can('view-scenario');
         Route::get('/{scenario}', 'show')->name('show')->can('view-scenario');
-        Route::post('/', 'store')->name('store')->can('manage-scenario');
-        Route::put('/{scenario}', 'update')->name('update')->can('manage-scenario');
         Route::delete('/{scenario}', 'destroy')->name('destroy')->can('manage-scenario');
         Route::put('/{scenario}/quadrants/{quadrant}', 'updateQuadrant')->name('quadrant')->can('manage-scenario');
         Route::post('/{scenario}/quadrants/{quadrant}/review', 'reviewQuadrant')->name('quadrant.review')->can('manage-scenario');

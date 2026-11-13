@@ -9,6 +9,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Services\ProjectAssessmentService;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\ScoreSuggestionService;
+use App\Support\DecisionContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -31,8 +32,11 @@ class ProjectAssessmentController extends Controller
             'title' => 'Critical Uncertainties · '.$project->name,
             'project' => $this->projects->present($project),
             'steps' => $this->projects->steps($project),
-            'forces' => $this->assessments->list($project, $request->user()),
+            'forces' => $forces = $this->assessments->list($project, $request->user()),
             'wideSpread' => ProjectAssessmentService::WIDE_SPREAD,
+            // PI-02: shown in the G3 dialog (forces still to review, and with a wide spread to discuss).
+            'libraryPending' => count(array_filter($forces, fn ($force) => $force['library_pending'])),
+            'spreadCount' => count(array_filter($forces, fn ($force) => $force['individual']['wide'])),
             'canScore' => Gate::allows('view-scenario') && $project->acceptsInputFrom($request->user()),
             'suggestionStatus' => $project->score_suggestion_status,
             'suggestionError' => $project->score_suggestion_error,
@@ -97,9 +101,20 @@ class ProjectAssessmentController extends Controller
         return back()->with('success', 'Skor Anda ditarik.');
     }
 
+    /** PI-02: keep the organisation rating as this exercise's score ("Pakai nilai library"). */
+    public function keepLibrary(Request $request, ScenarioPlanningProject $project, ProjectDrivingForce $projectForce): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $this->assessments->keepLibrary($projectForce, $request->user());
+
+        return back()->with('success', 'Nilai library dipakai sebagai skor kesepakatan.');
+    }
+
     public function confirm(Request $request, ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
 
         $this->assessments->confirm($project, $request->user());
 

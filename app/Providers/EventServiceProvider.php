@@ -3,11 +3,13 @@
 namespace App\Providers;
 
 use App\Models\CriticalUncertainty;
+use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\StrategicResponse;
+use App\Observers\DrivingForceObserver;
 use App\Observers\DrivingForceRatingObserver;
 use App\Observers\GateDecisionObserver;
 use Illuminate\Auth\Events\Registered;
@@ -34,6 +36,7 @@ class EventServiceProvider extends ServiceProvider
      * @var array<class-string, array<int, class-string>>
      */
     protected $observers = [
+        DrivingForce::class => [DrivingForceObserver::class],
         DrivingForceRating::class => [DrivingForceRatingObserver::class],
         ScenarioPlanningProject::class => [GateDecisionObserver::class],
         CriticalUncertainty::class => [GateDecisionObserver::class],

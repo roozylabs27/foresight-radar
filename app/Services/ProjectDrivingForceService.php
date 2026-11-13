@@ -21,6 +21,9 @@ use Illuminate\Validation\ValidationException;
  */
 class ProjectDrivingForceService
 {
+    /** PI-06: firm force statuses an exercise does not take. */
+    public const NOT_OFFERED = ['REJECTED', 'CLOSED'];
+
     /**
      * Add library forces as included. Forces already in the list are left as they are.
      *
@@ -36,6 +39,11 @@ class ProjectDrivingForceService
 
         return DB::transaction(function () use ($project, $uuids, $user) {
             $added = 0;
+            // PI-06: rejected and closed firm forces are not part of an exercise.
+            $refused = DrivingForce::whereIn('uuid', $uuids)->whereIn('status', self::NOT_OFFERED)->pluck('keyword');
+            if ($refused->isNotEmpty()) {
+                throw ValidationException::withMessages(['forces' => 'Driving force yang ditolak atau ditutup tidak bisa dipakai di exercise: '.$refused->implode(', ').'.']);
+            }
             foreach (DrivingForce::whereIn('uuid', $uuids)->pluck('id') as $forceId) {
                 $link = ProjectDrivingForce::firstOrCreate(
                     ['project_id' => $project->id, 'driving_force_id' => $forceId],
@@ -62,6 +70,7 @@ class ProjectDrivingForceService
         $link->fill(array_intersect_key($validated, array_flip(['inclusion_status', 'influence_note', 'is_predetermined'])));
         $withdraws = $link->isDirty('inclusion_status') && $link->project->forcesConfirmed();
         $link->save();
+        app(StalenessService::class)->clearProjectForce($link);
 
         if ($withdraws) {
             $this->withdrawAgreement($link->project);
@@ -157,15 +166,17 @@ class ProjectDrivingForceService
                 'influence_note' => $link->influence_note,
                 'is_predetermined' => $link->is_predetermined,
                 'open_comments' => (int) $link->getAttribute('open_comments'),
+                'stale_reason' => $link->stale_since ? $link->stale_reason : null,
                 'force' => $this->forceSummary($link->drivingForce),
             ])
             ->all();
     }
 
-    /** Library forces not yet in the list, from any month; deleted forces are not offered. */
+    /** Library forces not yet in the list, from any month; deleted, rejected and closed forces are not offered (PI-06). */
     public function library(ScenarioPlanningProject $project): array
     {
         return DrivingForce::whereNotIn('id', $project->projectForces()->select('driving_force_id'))
+            ->whereNotIn('status', self::NOT_OFFERED)
             ->with('dimension.environment')
             ->withCount('supporting_signals')
             ->orderBy('keyword')

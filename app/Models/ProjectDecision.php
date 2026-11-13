@@ -15,6 +15,9 @@ use Illuminate\Support\Carbon;
  * @property string $action
  * @property string|null $subject
  * @property int|null $actor_id
+ * @property string|null $artefact_type
+ * @property int|null $artefact_id
+ * @property string|null $rationale
  * @property Carbon $created_at
  */
 class ProjectDecision extends Model
@@ -25,6 +28,9 @@ class ProjectDecision extends Model
 
     public const ACTIONS = ['approved', 'rejected', 'withdrawn'];
 
+    /** Roadmap #13: exercise status changes are logged under this code, with the new status as action. */
+    public const STATUS = 'ST';
+
     protected $fillable = [
         'tenant_id',
         'project_id',
@@ -32,6 +38,9 @@ class ProjectDecision extends Model
         'action',
         'subject',
         'actor_id',
+        'artefact_type',
+        'artefact_id',
+        'rationale',
     ];
 
     public function actor(): BelongsTo

@@ -2,10 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ScenarioPlanningProject;
 use App\Support\TenantRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ScenarioPlanningProjectRequest extends FormRequest
 {
@@ -31,7 +29,7 @@ class ScenarioPlanningProjectRequest extends FormRequest
             'owner' => ['nullable', 'uuid', TenantRule::exists('users', 'uuid')],
             'background' => $optionalText,
             'objectives' => $optionalText,
-            'status' => ['sometimes', Rule::in(ScenarioPlanningProject::STATUSES)],
+            // No `status`: it changes only through scenario-planning.status (PI-01).
         ];
     }
 

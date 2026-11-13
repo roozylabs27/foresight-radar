@@ -9,6 +9,7 @@ use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\Environment;
 use App\Models\Scenario;
+use App\Models\ScenarioPlanningProject;
 use App\Models\TimeHorizon;
 use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -95,9 +96,24 @@ class ScenarioHarnessTest extends TestCase
         ]);
     }
 
-    private function createScenario(User $owner): Scenario
+    /** An exercise framework (PAD-2: the only kind that can still change), approved or draft. */
+    private function createFramework(User $owner, bool $approved): Scenario
     {
-        return Scenario::create([
+        $project = ScenarioPlanningProject::create([
+            'name' => 'AI Governance', 'focal_question' => 'What will the regulatory and tech landscape look like?',
+            'purpose' => 'Harness.', 'target_year' => now()->year + 4, 'status' => 'active', 'created_by' => $owner->id,
+        ]);
+        $framework = $this->createScenario($owner, ['project_id' => $project->id] + ($approved ? ['framework_status' => 'approved', 'approved_at' => now()] : []));
+        foreach (Scenario::POSITIONS as $position) {
+            $framework->quadrants()->create(['position' => $position, 'title' => $framework->defaultTitle($position)]);
+        }
+
+        return $framework;
+    }
+
+    private function createScenario(User $owner, array $overrides = []): Scenario
+    {
+        return Scenario::create($overrides + [
             'name' => 'Future of AI Governance',
             'focal_question' => 'What will the regulatory and tech landscape look like?',
             'axis_a_force_id' => $this->forceA->id,
@@ -150,42 +166,35 @@ class ScenarioHarnessTest extends TestCase
         $this->assertDatabaseHas('scenarios', ['id' => $scenario->id]);
     }
 
-    public function test_owner_can_delete_own_scenario(): void
+    /** PAD-2: a stand-alone scenario is a read-only archive: not even its creator or an admin deletes it. */
+    public function test_an_archived_scenario_cannot_be_deleted_by_its_creator_or_an_admin(): void
     {
         $scenario = $this->createScenario($this->creator);
 
-        $response = $this->actingAs($this->creator)->deleteJson("/scenarios/{$scenario->uuid}");
-        $response->assertStatus(200);
+        $this->actingAs($this->creator)->deleteJson("/scenarios/{$scenario->uuid}")->assertStatus(403);
+        $this->actingAs($this->admin)->deleteJson("/scenarios/{$scenario->uuid}")->assertStatus(403);
 
-        $this->assertDatabaseMissing('scenarios', ['id' => $scenario->id]);
+        $this->assertDatabaseHas('scenarios', ['id' => $scenario->id]);
     }
 
-    public function test_admin_can_delete_any_scenario(): void
+    /** The exercise's rule applies to its framework: its creator may delete a draft one. */
+    public function test_the_exercise_owner_can_delete_a_draft_framework(): void
     {
-        $scenario = $this->createScenario($this->creator);
+        $framework = $this->createFramework($this->creator, approved: false);
 
-        $response = $this->actingAs($this->admin)->deleteJson("/scenarios/{$scenario->uuid}");
-        $response->assertStatus(200);
+        $this->actingAs($this->otherManager)->deleteJson("/scenarios/{$framework->uuid}")->assertStatus(403);
+        $this->actingAs($this->creator)->deleteJson("/scenarios/{$framework->uuid}")->assertStatus(200);
 
-        $this->assertDatabaseMissing('scenarios', ['id' => $scenario->id]);
+        $this->assertDatabaseMissing('scenarios', ['id' => $framework->id]);
     }
 
-    public function test_non_owner_without_admin_role_cannot_update_scenario(): void
+    /** PAD-2: the edit route of stand-alone scenarios is gone. */
+    public function test_a_stand_alone_scenario_has_no_edit_route(): void
     {
         $scenario = $this->createScenario($this->creator);
 
-        $payload = [
-            'name' => 'Updated by Intruder',
-            'axis_a' => $this->forceA->uuid,
-            'axis_b' => $this->forceB->uuid,
-            'axis_a_low_label' => 'Low',
-            'axis_a_high_label' => 'High',
-            'axis_b_low_label' => 'Low',
-            'axis_b_high_label' => 'High',
-        ];
-
-        $response = $this->actingAs($this->otherManager)->putJson("/scenarios/{$scenario->uuid}", $payload);
-        $response->assertStatus(403);
+        $this->actingAs($this->creator)->putJson("/scenarios/{$scenario->uuid}", ['name' => 'Updated'])->assertStatus(405);
+        $this->assertSame('Future of AI Governance', $scenario->fresh()->name);
     }
 
     public function test_non_owner_without_admin_role_cannot_generate_scenario_narrative(): void
@@ -207,7 +216,7 @@ class ScenarioHarnessTest extends TestCase
 
     public function test_concurrent_narrative_generation_is_rejected_when_job_is_pending(): void
     {
-        $scenario = $this->createScenario($this->creator);
+        $scenario = $this->createFramework($this->creator, approved: true);
         $scenario->update([
             'generation_status' => LlmJobStatus::QUEUED,
             'updated_at' => now(),

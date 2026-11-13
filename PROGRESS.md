@@ -506,6 +506,77 @@
 
 ## Session Log
 
+### 2026-11-13 — Session 98 (product integrity remediation, Phase 1 group 1: PI-01, PI-09, PAD-2, PI-10)
+
+- **PI-01:** the exercise status can no longer be set through PUT `scenario-planning.update` (request rule and service assignment removed); only `scenario-planning.status` / G1 change it. Test red (PUT status=monitoring changed the status) → green.
+- **PI-09:**
+  - `EarlyWarningIndicatorService::complete()`: step 9 is done when owned, accepted, active indicators with 4 directions **together tell both axes apart** (`AXIS_PAIRS`, `axesTold()`).
+  - `relevance()` counts accepted, discriminating indicators only.
+  - `SignalMatchService` dates AI-matched observations by the source's `published_at`, else the signal's capture date.
+  - The step 9 next-action copy says so; `docs/methodology/scenario-relevance.md` updated.
+  - Tests: 3 red → green; the PRD-06 test (helper `completeStepNine`) and the journey test (second indicator for axis A, owners) updated.
+- **PAD-2 (/scenarios archive):**
+  - Routes `scenarios.store`, `scenarios.update`, `scenarios.suggest-axes` removed, together with `ScenarioRequest`, `ScenarioController::store/update/suggestAxes`, and `ScenarioService::suggestAxes/resolveAxes`.
+  - `ScenarioPolicy` refuses every change to a stand-alone scenario (no exercise); exercise frameworks keep the exercise policy.
+  - `Report/Scenarios.jsx` (540 → 370 lines) is a read-only archive with a link to Scenario Planning.
+  - Tests: `Llm/ScenarioTest` runs the 18 narrative-engine tests on an approved exercise framework, plus one archive test. ScenarioHarnessTest is updated (archive cannot be deleted; the exercise owner deletes a draft framework; no edit route). TenantAwareExistsRules drops the removed endpoint; ScenarioFrameworkTest expects 405. The `scenarios.e2e.ts` spec checks the archive.
+- **PI-10 (stuck exercise AI jobs):**
+  - Migration `2026_11_13_000001`: `suggestion_started_at` JSON, set by a model `saving` hook when any of the 9 `*_suggestion_status` becomes queued.
+  - `App\Services\Llm\SuggestionRecovery` marks one past `StaleJob`'s window as failed ("Proses AI terhenti…") with a conditional update, and releases its unique lock. It runs from the new `RecoverLostAiSuggestions` middleware (web group, after binding, GET with an exercise).
+  - `uniqueFor = StaleJob::lockSeconds()` on the 9 jobs.
+  - Tests: 2 red → green.
+- **Verification:**
+  - Pint (whole code base) passed.
+  - Dev DB migrated (38 users); FPM reloaded; queue restarted.
+  - ESLint 0 errors / 57 warnings (unchanged); build passed.
+  - Targeted suites green: EarlyWarningIndicator 25, Journey 1, Project 10, Llm/Scenario 19, ScenarioHarness 8, TenantAwareExistsRules 4, ScenarioFramework 17, ScenarioNarrativeReview 12, Staleness 7, ProjectAssessment (PI-10 tests).
+  - Full PHPUnit: **633 passed (7,671 assertions)**, 625 s. Larastan on the whole code base: No errors (463 s).
+  - Browser (local, owner signed in):
+    - `/scenarios` shows the archive note with a link to Scenario Planning, 2 archived scenarios, and no write buttons.
+    - On the local exercise both indicators tell the axes apart but have **no owner**, so step 9 is now `in_progress` (was `done`) and "Mulai pemantauan" is gone (only "Arsipkan").
+    - Follow-up done the same day:
+      - `EarlyWarningIndicatorService::stepNineGaps()` lists what keeps step 9 open: no accepted indicator with 4 directions; indicators without an owner (named); each axis not yet told apart, with its poles. `complete()` uses the same rule, so the page and the stepper agree; an extra unowned indicator no longer blocks a step that is otherwise done.
+      - The indicators page shows it in `StepNineGaps.jsx` (page 151 → 147 lines).
+      - Test `test_the_indicators_page_lists_what_keeps_step_nine_open` red → green; EarlyWarningIndicatorTest 26 passed; Journeys + WorkspaceTest 5 passed.
+      - Pint --test and Larastan (changed files) clean; ESLint clean; build passed.
+      - Browser: the local exercise shows "Langkah 9 belum selesai" naming both unowned indicators and axes A (Slow ↔ Fast) and B (Unfavorable ↔ Favorable); no console errors.
+- **Not committed.**
+
+### 2026-11-13 — Session 97 (product capability and feature integrity audit, audit only)
+
+- **Baseline:** `main` `46e22d4` = `development` `82a26a6` (identical trees), clean working tree. Production now serves the PR #21 headers: CSP-RO, Permissions-Policy, no versions, no `X-Powered-By` (browser check after the `46e22d4` deploy); OPS-01 is live.
+- **Method:**
+  - Four read-only investigations in parallel: environmental intelligence and FIRM analytics; the nine-step method; AI, monitoring and decision support; platform, navigation and collaboration.
+  - Key claims re-checked directly in the code: status bypass; library copies counted at G3; G6/G7 surviving withdrawal; no notifications; `frequency` unused; relevance indicator filter; `observed_at`; rating `created_at` period; library status filter; no organisation creation; coordinator role.
+  - No application code changed; no tests run in this session (the last full suite was 628 green on 2026-11-12).
+- **Deliverables in `docs/audit/product-integrity/`:**
+  - `product-capability-inventory.md` (≈70 capabilities: A/B/C/D/AI/P);
+  - `product-feature-integrity-report.md` (PI-01..PI-20, AI integrity, FIRM vs exercise, orphan table);
+  - `product-workflow-traceability.md` (Mermaid diagrams for the domain and workflows A–E, evidence-chain table);
+  - `product-methodology-integrity.md` (per step and per mechanism);
+  - `product-gap-roadmap.md` (3 phases, acceptance criteria, sizes, executive assessment, maturity, direction).
+- **Main findings:** no P0. The P1 items:
+  - status bypass through PUT update (PI-01), left by the PRD-06 change of 2026-11-12;
+  - G3 passes on library-copied scores (PI-02);
+  - G6/G7 survive upstream withdrawal and stale artefacts can be approved (PI-03);
+  - monitoring never notifies a person (PI-04);
+  - the narrative → implication evidence chain breaks (PI-05);
+  - silent drift between the firm library and the exercise (PI-06);
+  - FIRM period filter on rating `created_at` (PI-07, needs a product decision);
+  - legacy `/scenarios` still writable (PI-08);
+  - weak step 9 completion and relevance (PI-09);
+  - stuck exercise AI jobs (PI-10).
+- **Assessment:** scenario planning platform with an evidence library; method coherent in structure, partial in substance; monitoring is a register (maturity 2); coherence 2.
+- **`feature_list.json` not changed:** its "passing" means tests pass. The audit statuses live in the inventory and are not test evidence of a change.
+- **Decision PI-07 (product owner):** the FIRM period means "rated in the period". The implementation must use the latest rating activity, not `created_at`, because re-ratings update the same row.
+- **Architecture decisions** (`docs/audit/product-integrity/product-architecture-decisions.md`):
+  - PAD-2: `/scenarios` becomes a read-only archive.
+  - PAD-3: the Dashboard tabs are kept as they are.
+  - PAD-4: one firm-lifecycle board replaces the 5 governance pages.
+  - PAD-5: the Knowledge Graph is simplified (filters, scope, own permission).
+  - Still open: participant roles; firm forces allowed in an exercise; the analyst role; organisation provisioning.
+- **Next:** targeted remediation, Phase 1 (roadmap items 1, 4, 5, 6 first; then 3, 2, 7 with 13; item 8 as decided in PAD-1).
+
 ### 2026-11-13 — Session 96 (Deploy #55 failed; backups run on production)
 
 - **On production, by the owner:** the backup dir is now 700 and the files 600; the empty `db-20261112-123050-9ae54b4` was removed. `backup-database.sh scheduled` → `db-20261113-054035-scheduled.sql.gz` (28,179 B, 2 s); `--check` OK. **Cron not installed yet.**

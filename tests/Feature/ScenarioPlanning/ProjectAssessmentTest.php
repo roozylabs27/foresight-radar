@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
+use App\Jobs\SuggestForceScores;
 use App\Models\AiGenerationRun;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
@@ -14,10 +15,13 @@ use App\Models\Source;
 use App\Models\TimeHorizon;
 use App\Models\User;
 use App\Support\DimensionTaxonomy;
+use Illuminate\Bus\UniqueLock;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -27,7 +31,7 @@ use Tests\TestCase;
  */
 class ProjectAssessmentTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private User $manager;
 
@@ -151,6 +155,41 @@ class ProjectAssessmentTest extends TestCase
         $this->assertSame([8, 9], [$assessment->impact, $assessment->uncertainty]);
     }
 
+    /** PI-02: a score copied from the library is reviewed for this focal issue before G3. */
+    public function test_library_scores_are_confirmed_per_force_before_agreeing_scores(): void
+    {
+        $kept = $this->force('TKDN Regulation', [8, 9]);
+        $changed = $this->force('Import Regulation', [6, 4]);
+        $project = $this->project(forces: [$kept, $changed]);
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project))->assertSessionHasErrors('scores');
+        $this->actingAs($this->viewer)->get(route('scenario-planning.assessment.index', $project))
+            ->assertInertia(fn ($page) => $page->where('libraryPending', 2)->where('forces.0.library_pending', true));
+
+        // A viewer cannot confirm; the coordinator keeps one value and changes the other.
+        $this->actingAs($this->viewer)->post(route('scenario-planning.assessment.library', [$project, $this->link($project, $kept)]))->assertForbidden();
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.library', [$project, $this->link($project, $kept)]))->assertSessionHasNoErrors();
+        $this->score($project, $changed, ['impact' => 5, 'uncertainty' => 7])->assertSessionHasNoErrors();
+
+        $copy = $this->link($project, $kept)->consensus;
+        $this->assertSame(['library', 8, 9, $this->manager->id], [$copy->origin, $copy->impact, $copy->uncertainty, $copy->updated_by]);
+        $this->actingAs($this->viewer)->get(route('scenario-planning.assessment.index', $project))
+            ->assertInertia(fn ($page) => $page->where('libraryPending', 0));
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project))->assertSessionHasNoErrors();
+        $this->assertNotNull($project->fresh()->scores_confirmed_at);
+    }
+
+    public function test_the_agreement_dialog_counts_forces_with_a_wide_spread(): void
+    {
+        $force = $this->force('TKDN Regulation');
+        $project = $this->project(forces: [$force]);
+        $this->mine($this->manager, $project, $force, ['impact' => 9, 'uncertainty' => 9])->assertSessionHasNoErrors();
+        $this->mine($this->viewer, $project, $force, ['impact' => 2, 'uncertainty' => 3])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.assessment.index', $project))
+            ->assertInertia(fn ($page) => $page->where('spreadCount', 1));
+    }
+
     public function test_project_scores_never_change_the_organization_rating(): void
     {
         $force = $this->force('TKDN Regulation', [8, 9]);
@@ -192,6 +231,7 @@ class ProjectAssessmentTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('steps.2.status', 'in_progress')->where('steps.3.status', 'locked'));
 
         $this->score($project, $unscored, ['impact' => 7, 'uncertainty' => 8]);
+        $this->keepLibraryScores($this->manager, $project);
         $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project))->assertSessionHasNoErrors();
 
         $project->refresh();
@@ -205,6 +245,7 @@ class ProjectAssessmentTest extends TestCase
     {
         $force = $this->force('TKDN Regulation', [8, 9]);
         $project = $this->project(forces: [$force]);
+        $this->keepLibraryScores($this->manager, $project);
         $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project));
 
         $this->score($project, $force, ['impact' => 8, 'uncertainty' => 9, 'impact_rationale' => 'Lebih jelas.']);
@@ -303,6 +344,7 @@ class ProjectAssessmentTest extends TestCase
         $this->mine($this->viewer, $project, $force, ['impact' => 9, 'uncertainty' => 3])->assertSessionHasErrors('impact');
         $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, $excluded)]), ['inclusion_status' => 'excluded']);
         $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $project));
+        $this->keepLibraryScores($this->manager, $project);
         $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project))->assertSessionHasNoErrors();
 
         $this->mine($this->viewer, $project, $force, ['impact' => 11, 'uncertainty' => 3])->assertSessionHasErrors('impact');
@@ -339,6 +381,45 @@ class ProjectAssessmentTest extends TestCase
     }
 
     /** Roadmap R2.4 (score suggestions): AI proposes scores citing only offered signals; nothing applies until accepted. */
+    /**
+     * PI-10: an exercise AI assist whose worker died stayed "queued" for good: the page kept the button
+     * disabled and the unique lock swallowed every new request. Past the stale window the page marks it
+     * failed with a reason and releases the lock, so asking again works.
+     */
+    public function test_a_lost_ai_suggestion_is_marked_failed_and_can_be_asked_again(): void
+    {
+        $alpha = $this->force('Alpha Rule');
+        $project = $this->project(forces: [$alpha]);
+        $fake = $this->fakeLlm();
+        $page = fn () => $this->actingAs($this->manager)->get(route('scenario-planning.assessment.index', $project));
+
+        // Queued 20 minutes ago by a worker that died, still holding the unique lock.
+        $this->travelTo(now()->subMinutes(20));
+        $project->update(['score_suggestion_status' => 'queued', 'score_suggestion_error' => null]);
+        (new UniqueLock(app(CacheRepository::class)))->acquire(new SuggestForceScores($project, $this->manager->id));
+        $this->travelBack();
+
+        $page()->assertInertia(fn ($p) => $p->where('suggestionStatus', 'failed')
+            ->where('suggestionError', 'Proses AI terhenti tanpa hasil (pekerja antrean berhenti). Coba lagi.'));
+
+        $fake->respond(['suggestions' => [$this->suggestion('F1', 7, 6, [])]]);
+        $this->actingAs($this->manager)->post(route('scenario-planning.assessment.suggest', $project))->assertSessionHasNoErrors();
+        $this->assertSame('completed', $project->fresh()->getRawOriginal('score_suggestion_status'));
+        $this->assertSame(1, ForceAssessment::where('kind', 'ai_suggestion')->count());
+    }
+
+    /** PI-10: a request still inside the stale window is left alone. */
+    public function test_a_recent_ai_suggestion_is_not_touched(): void
+    {
+        $project = $this->project(forces: [$this->force('Alpha Rule')]);
+        $this->travelTo(now()->subMinutes(5));
+        $project->update(['score_suggestion_status' => 'queued']);
+        $this->travelBack();
+
+        $this->actingAs($this->manager)->get(route('scenario-planning.assessment.index', $project))
+            ->assertInertia(fn ($p) => $p->where('suggestionStatus', 'queued'));
+    }
+
     public function test_ai_suggests_scores_and_nothing_applies_until_accepted(): void
     {
         $alpha = $this->force('Alpha Rule');

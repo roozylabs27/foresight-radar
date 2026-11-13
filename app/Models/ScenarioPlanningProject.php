@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\LlmJobStatus;
+use App\Services\Llm\SuggestionRecovery;
 use App\Services\StalenessService;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -33,6 +35,7 @@ use Ramsey\Uuid\Uuid;
  * @property string|null $preferred_rationale
  * @property int|null $preferred_by
  * @property Carbon|null $preferred_at
+ * @property array<string, string>|null $suggestion_started_at
  */
 class ScenarioPlanningProject extends Model
 {
@@ -93,6 +96,7 @@ class ScenarioPlanningProject extends Model
         'scores_confirmed_at' => 'datetime',
         'focal_suggestion' => 'array',
         'preferred_at' => 'datetime',
+        'suggestion_started_at' => 'array',
     ];
 
     protected static function booted()
@@ -100,6 +104,21 @@ class ScenarioPlanningProject extends Model
         static::creating(function ($project) {
             if (empty($project->uuid)) {
                 $project->uuid = (string) Uuid::uuid4();
+            }
+        });
+
+        // PI-10: remember when each AI assist was queued, so SuggestionRecovery can tell a lost job.
+        static::saving(function (ScenarioPlanningProject $project) {
+            $started = null;
+            foreach (array_keys(SuggestionRecovery::KINDS) as $kind) {
+                $column = "{$kind}_suggestion_status";
+                if ($project->isDirty($column) && $project->getAttribute($column) === LlmJobStatus::QUEUED->value) {
+                    $started ??= (array) ($project->suggestion_started_at ?? []);
+                    $started[$kind] = now()->toIso8601String();
+                }
+            }
+            if ($started !== null) {
+                $project->suggestion_started_at = $started;
             }
         });
     }
@@ -273,7 +292,7 @@ class ScenarioPlanningProject extends Model
             $framework->update(['framework_status' => 'draft', 'approved_by' => null, 'approved_at' => null]);
             $withdrawn = true;
         }
-        // Audit U6: work built on the approved framework (Steps 7–9) is flagged for review.
+        // Audit U6 / PI-03: G6 and G7 fall with G5, and Steps 6–9 are flagged for review.
         if ($withdrawn) {
             app(StalenessService::class)->frameworkReopened($this);
         }

@@ -91,6 +91,10 @@ class StrategicResponseService
         if ($approved < count(Scenario::POSITIONS)) {
             $errors['narratives'] = 'Setujui keempat narasi skenario (langkah 6, G6) sebelum menyetujui respons strategis.';
         }
+        // PI-03: a response flagged by an upstream change is reviewed ("Tetap berlaku" or edited) first.
+        if ($response->stale_since !== null) {
+            $errors['stale'] = 'Respons ini ditandai perlu ditinjau ('.$response->stale_reason.'). Tinjau lalu pilih "Tetap berlaku" atau ubah sebelum menyetujuinya.';
+        }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }

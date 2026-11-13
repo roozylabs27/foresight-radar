@@ -93,6 +93,7 @@ export default function ResponseCard({ response, quadrants, canManage, busy, onE
                             confirmText="Setujui"
                             variant="default"
                             onConfirm={onApprove}
+                            withRationale
                         >
                             <Button size="sm" disabled={busy}>
                                 <CircleCheckIcon aria-hidden="true" />

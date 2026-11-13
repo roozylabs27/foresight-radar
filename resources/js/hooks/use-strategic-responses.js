@@ -19,7 +19,7 @@ export function useStrategicResponses(projectId) {
         busy,
         save: (values, responseId) => (responseId ? visit("put", url("update", responseId), values) : visit("post", url("store"), values)),
         remove: (responseId) => visit("delete", url("destroy", responseId)),
-        approve: (responseId) => visit("post", url("approve", responseId)),
+        approve: (responseId, rationale) => visit("post", url("approve", responseId), { rationale }),
         reject: (responseId) => visit("post", url("reject", responseId)),
         keep: (responseId) => visit("post", url("keep", responseId)),
         suggest: () => visit("post", url("suggest")),

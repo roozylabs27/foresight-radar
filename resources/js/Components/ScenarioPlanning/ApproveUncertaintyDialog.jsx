@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
+import { Textarea } from "@/Components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/Components/ui/toggle-group";
 
 /**
  * Approve a critical uncertainty as axis A or B (gate G4). When the server
  * reports that the two axes strongly influence each other, the dialog asks for
- * an explicit acknowledgement before trying again.
+ * an explicit acknowledgement and a reason (roadmap #13) before trying again; otherwise the reason is optional.
  */
 export default function ApproveUncertaintyDialog({ uncertainty, takenAxes, loading, onOpenChange, onApprove }) {
     const [axis, setAxis] = useState("A");
     const [acknowledge, setAcknowledge] = useState(false);
+    const [rationale, setRationale] = useState("");
     const [errors, setErrors] = useState({});
 
     // Reset only when another uncertainty is opened: props are new objects after every Inertia
@@ -20,11 +22,12 @@ export default function ApproveUncertaintyDialog({ uncertainty, takenAxes, loadi
         if (!uncertainty) return;
         setErrors({});
         setAcknowledge(false);
+        setRationale("");
         setAxis(takenAxes.includes("A") ? "B" : "A");
     }, [uncertainty?.id]);
 
     const approve = async () => {
-        const result = await onApprove(axis, acknowledge);
+        const result = await onApprove(axis, acknowledge, rationale.trim() || null);
         if (result) return setErrors(result);
         onOpenChange(false);
     };
@@ -61,6 +64,9 @@ export default function ApproveUncertaintyDialog({ uncertainty, takenAxes, loadi
                         </label>
                     </div>
                 )}
+                <FormField id="approve-rationale" label={acknowledge ? "Alasan (wajib karena peringatan diabaikan)" : "Alasan (opsional)"} error={errors.rationale ? { message: [].concat(errors.rationale)[0] } : undefined}>
+                    <Textarea id="approve-rationale" value={rationale} maxLength={1000} onChange={(event) => setRationale(event.target.value)} placeholder="Dicatat di riwayat keputusan." />
+                </FormField>
             </div>
         </FormDialog>
     );

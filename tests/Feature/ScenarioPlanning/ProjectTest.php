@@ -184,6 +184,25 @@ class ProjectTest extends TestCase
         $this->assertSame('Diperbarui admin', $project->fresh()->name);
     }
 
+    /**
+     * Product integrity PI-01: the exercise status changes only through `scenario-planning.status`
+     * (monitoring needs step 9 done; draft only by withdrawing G1). The edit form cannot set it.
+     */
+    public function test_the_edit_form_cannot_change_the_exercise_status(): void
+    {
+        $project = $this->project($this->manager);
+        $this->actingAs($this->manager)->post(route('scenario-planning.confirm', $project))->assertSessionHasNoErrors();
+        $this->assertSame('active', $project->fresh()->status);
+
+        foreach (['monitoring', 'archived', 'draft'] as $status) {
+            $this->actingAs($this->manager)
+                ->put(route('scenario-planning.update', $project), $this->payload(['status' => $status, 'background' => "Coba {$status}."]))
+                ->assertSessionHasNoErrors();
+            $this->assertSame('active', $project->fresh()->status, "PUT with status={$status} must not change the status");
+        }
+        $this->assertSame('Coba draft.', $project->fresh()->background);
+    }
+
     public function test_deleting_a_project_soft_deletes_it(): void
     {
         $project = $this->project($this->manager);

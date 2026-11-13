@@ -6,6 +6,7 @@ use App\Enums\LlmJobStatus;
 use App\Jobs\Middleware\RunInTenantContext;
 use App\Models\ScenarioPlanningProject;
 use App\Services\ForceCandidateService;
+use App\Support\StaleJob;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,6 +25,9 @@ class SuggestForceCandidates implements ShouldBeUnique, ShouldQueue
 
     public int $timeout;
 
+    /** PI-10: the unique lock expires, so a job lost with its worker cannot block a new request forever. */
+    public int $uniqueFor;
+
     public function uniqueId(): string
     {
         return 'force-candidates-'.$this->project->id;
@@ -32,6 +36,7 @@ class SuggestForceCandidates implements ShouldBeUnique, ShouldQueue
     public function __construct(public ScenarioPlanningProject $project, public ?int $userId)
     {
         $this->timeout = (int) config('queue.llm_job_timeout', 300);
+        $this->uniqueFor = StaleJob::lockSeconds($this->timeout);
     }
 
     /**

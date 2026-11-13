@@ -5,7 +5,7 @@ import { DECISION_ACTIONS } from "@/domain/scenarioPlanning";
 /** Gate decisions of an exercise, newest first: who approved, rejected or withdrew what (roadmap R2.2). */
 export default function DecisionLog({ decisions }) {
     return (
-        <Panel title="Riwayat keputusan" description="Setiap persetujuan, penolakan, dan pembatalan gate G1–G7, terbaru di atas.">
+        <Panel title="Riwayat keputusan" description="Setiap persetujuan, penolakan, dan pembatalan gate G1–G7 serta perubahan status latihan, terbaru di atas.">
             {decisions.length === 0 ? (
                 <p className="m-0 text-sm text-muted-foreground">Belum ada keputusan gate.</p>
             ) : (
@@ -20,6 +20,7 @@ export default function DecisionLog({ decisions }) {
                                         {action?.label ?? row.action}
                                         {row.subject && <>: {row.subject}</>}
                                     </span>
+                                    {row.rationale && <span className="text-foreground/80">Alasan: {row.rationale}</span>}
                                     <span className="text-muted-foreground">
                                         {row.actor ?? "Sistem"} · {new Date(row.at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
                                     </span>

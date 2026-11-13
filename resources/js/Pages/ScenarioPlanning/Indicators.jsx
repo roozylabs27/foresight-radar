@@ -10,13 +10,14 @@ import IndicatorDialog from "@/Components/ScenarioPlanning/IndicatorDialog";
 import ObservationDialog from "@/Components/ScenarioPlanning/ObservationDialog";
 import RelevancePanel from "@/Components/ScenarioPlanning/RelevancePanel";
 import SensingPanel from "@/Components/ScenarioPlanning/SensingPanel";
+import StepNineGaps from "@/Components/ScenarioPlanning/StepNineGaps";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { useEarlyWarningIndicators } from "@/hooks/use-early-warning-indicators";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 9: early warning indicator register with expected direction per scenario (roadmap R1.9), observations and relevance (R2.3). */
-export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, signals, canRecord, relevance, indicatorStatus, indicatorError, matchStatus, matchError, sensing = [], errors = {} }) {
+export default function Indicators({ auth, title, project, steps, frameworkApproved, quadrants, indicators, uncertainties, forces, owners, canManage, signals, canRecord, relevance, stepNineGaps = [], indicatorStatus, indicatorError, matchStatus, matchError, sensing = [], errors = {} }) {
     const actions = useEarlyWarningIndicators(project.id);
     const [target, setTarget] = useState(null);
     const [observing, setObserving] = useState(null);
@@ -38,11 +39,7 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
         >
             <Head title={title} />
             <main className="grid flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:px-6 lg:py-5">
-                {relevance && (
-                    <div className="lg:col-span-2">
-                        <RelevancePanel relevance={relevance} />
-                    </div>
-                )}
+                {relevance && <div className="lg:col-span-2"><RelevancePanel relevance={relevance} /></div>}
                 <Panel
                     title={`Indikator (${indicators.length})`}
                     description="Indikator yang baik bergerak ke arah berbeda di skenario yang berbeda."
@@ -54,6 +51,7 @@ export default function Indicators({ auth, title, project, steps, frameworkAppro
                     )}
                 >
                     {(errors.indicators || errors.external) && <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{errors.indicators || errors.external}</p>}
+                    {frameworkApproved && <StepNineGaps gaps={stepNineGaps} />}
                     {frameworkApproved && (
                         <IndicatorAiControls
                             indicators={indicators}
