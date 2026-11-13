@@ -506,6 +506,48 @@
 
 ## Session Log
 
+### 2026-11-13 — Session 99 (product integrity remediation, Phase 1 group 2: PI-03, PI-02, PI-06, gate rationale)
+
+User decisions (all the recommended options): PI-06 offers every firm force except REJECTED/CLOSED; PI-02 confirms library scores per force; the gate reason is optional and required on a warning override; PI-03 withdraws G6/G7 automatically.
+
+- **PI-03:**
+  - `StalenessService::frameworkReopened` (both G5 paths: reopen, and withdrawal through an axis) withdraws approved narratives (G6) and responses (G7) row by row, so each is logged. It also flags narratives that have text.
+  - `reviewQuadrant('approved')` and response approval refuse a stale artefact (422) until it is edited / kept.
+  - Responses page shows `errors.stale`.
+  - Test red → green.
+- **PI-02:**
+  - G3 is refused while an included force still has an unreviewed library copy (`origin=library`, `updated_by` null).
+  - New route `assessment.library` ("Pakai nilai library") keeps the copy with the reviewer recorded; origin stays `library`; no migration.
+  - Props `libraryPending` / `spreadCount`; the G3 button names the pending count; the dialog mentions wide spreads.
+  - 2 tests red → green. 18 fixtures that reached G3 on library copies now press the button over HTTP (`Tests\Support\KeepsLibraryScores`).
+- **PI-06:**
+  - `library()` and `add()` exclude REJECTED and CLOSED.
+  - New `DrivingForceObserver` flags each exercise link (migration `2026_11_13_000002`: `project_driving_forces.stale_since/stale_reason`), and an axis framework, when the firm force's keyword/description/dimension changes, it is rejected or closed, or it is soft-deleted. A merge tombstone is skipped (merge flags its own).
+  - Saving the link clears the flag; step 2 shows "Perlu ditinjau".
+  - 2 tests.
+  - Not done: showing the firm value next to copied scores.
+- **Gate rationale (#13):**
+  - Migration `2026_11_13_000003`: `project_decisions.artefact_type/artefact_id/rationale`.
+  - The scoped `App\Support\DecisionContext` takes the optional reason from the G1, G2, G3, G4 (approve/withdraw), G5 (approve/reopen), G6 review, G7 (approve/reject) and status requests. It is required when `acknowledge_dependency` overrides the G4 warning.
+  - `GateDecisionObserver` writes the artefact and the reason; exercise status changes are logged as `ST` (G1 also logs `ST active`).
+  - Backcasting stores its reason too.
+  - Frontend:
+    - `ConfirmDialog withRationale` adds "Alasan (opsional)", used in the G1, G2, G3, G5, G7 and status dialogs;
+    - `ApproveUncertaintyDialog` has a reason field, required once the warning is acknowledged;
+    - the decision log shows "Alasan".
+  - 3 tests; the decision-log test now expects `ST active`.
+  - Not done: opening the artefact from the log; no reason field on the G6 review button.
+- **Verification:**
+  - Pint (whole code base) fixed style; Larastan whole code base: No errors.
+  - ESLint 0 errors / 57 warnings (unchanged); `npm run build` passed.
+  - Full PHPUnit: **640 passed, 1 failed** (8,478 assertions, 571 s). The failure was `test_every_gate_decision_is_logged_with_its_actor` expecting no `ST active`. After updating it, StrategicResponseTest gave 25 passed. The full suite was not rerun after that fix.
+  - Dev DB migrated (2 migrations), 38 users; FPM reloaded; queue restarted.
+  - Browser (local):
+    - step 3 of the local exercise shows "Pakai nilai library" on its 2 library copies (`libraryPending` 2). That exercise passed G3 before this rule, so the copies stay as they are until reviewed.
+    - The "Arsipkan" dialog shows "Alasan (opsional)"; it was closed without archiving.
+    - No new console errors; the 401s in the log predate the navigation.
+- **Not committed.**
+
 ### 2026-11-13 — Session 98 (product integrity remediation, Phase 1 group 1: PI-01, PI-09, PAD-2, PI-10)
 
 - **PI-01:** the exercise status can no longer be set through PUT `scenario-planning.update` (request rule and service assignment removed); only `scenario-planning.status` / G1 change it. Test red (PUT status=monitoring changed the status) → green.
