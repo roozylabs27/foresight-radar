@@ -25,7 +25,7 @@ export default function ExerciseStatusControl({ project, steps, onChange }) {
     return moves.map((status) => {
         const { label, icon: Icon, title, description } = MOVES[status];
         return (
-            <ConfirmDialog key={status} title={title} description={description} confirmText={label} variant="default" onConfirm={() => onChange(status)}>
+            <ConfirmDialog key={status} title={title} description={description} confirmText={label} variant="default" onConfirm={(rationale) => onChange(status, rationale)} withRationale>
                 <Button size="sm" variant="outline">
                     <Icon aria-hidden="true" />
                     {label}

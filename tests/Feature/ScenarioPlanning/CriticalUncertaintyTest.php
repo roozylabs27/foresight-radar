@@ -7,6 +7,7 @@ use App\Models\CrossImpact;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
+use App\Models\ProjectDecision;
 use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioPlanningProject;
 use App\Models\TimeHorizon;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -26,7 +28,7 @@ use Tests\TestCase;
  */
 class CriticalUncertaintyTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private User $manager;
 
@@ -76,6 +78,7 @@ class CriticalUncertaintyTest extends TestCase
         $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, 'Purchasing Power')]), ['is_predetermined' => true]);
         $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $project));
         if ($agreeScores) {
+            $this->keepLibraryScores($this->manager, $project);
             $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project));
         }
 
@@ -177,9 +180,15 @@ class CriticalUncertaintyTest extends TestCase
         $this->approve($regulation, 'A');
 
         $this->approve($technology, 'B')->assertSessionHasErrors('acknowledge_dependency');
-        $this->approve($technology, 'B', acknowledge: true)->assertSessionHasNoErrors();
+        // Gate rationale (#13): overriding the warning needs a reason, kept in the decision log.
+        $this->approve($technology, 'B', acknowledge: true)->assertSessionHasErrors('rationale');
+        $this->actingAs($this->manager)->post(route('scenario-planning.uncertainties.approve', [$this->project, $technology]), [
+            'axis' => 'B', 'acknowledge_dependency' => true, 'rationale' => 'Keterkaitan sudah dibahas; tetap dua sumbu ini.',
+        ])->assertSessionHasNoErrors();
 
         $this->assertSame('approved', $technology->fresh()->status);
+        $decision = ProjectDecision::where('gate', 'G4')->where('action', 'approved')->latest('id')->first();
+        $this->assertSame(['Keterkaitan sudah dibahas; tetap dua sumbu ini.', 'critical_uncertainty', $technology->id], [$decision->rationale, $decision->artefact_type, $decision->artefact_id]);
     }
 
     public function test_two_approvals_complete_step_three_and_open_step_four(): void

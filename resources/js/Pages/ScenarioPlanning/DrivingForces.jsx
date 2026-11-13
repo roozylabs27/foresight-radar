@@ -72,6 +72,7 @@ export default function DrivingForces({ auth, title, project, steps, forces, lib
                                 confirmText="Sepakati"
                                 variant="default"
                                 onConfirm={actions.confirm}
+                                withRationale
                             >
                                 <Button size="sm" disabled={locked || included === 0}>
                                     <CircleCheckIcon aria-hidden="true" />

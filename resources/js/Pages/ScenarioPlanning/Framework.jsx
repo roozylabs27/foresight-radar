@@ -100,6 +100,7 @@ export default function Framework({ auth, title, project, steps, framework, axes
                                     description="Kerangka kembali menjadi draf dan langkah 5–9 terkunci lagi sampai disetujui ulang."
                                     confirmText="Buka kembali"
                                     onConfirm={actions.reopen}
+                                    withRationale
                                 >
                                     <Button size="sm" variant="outline">
                                         <LockOpenIcon aria-hidden="true" />
@@ -107,7 +108,7 @@ export default function Framework({ auth, title, project, steps, framework, axes
                                     </Button>
                                 </ConfirmDialog>
                             ) : (
-                                <ConfirmDialog title="Setujui kerangka (G5)?" description="Kutub dan nama kuadran terkunci, dan langkah 5–9 terbuka." confirmText="Setujui" variant="default" onConfirm={actions.approve}>
+                                <ConfirmDialog title="Setujui kerangka (G5)?" description="Kutub dan nama kuadran terkunci, dan langkah 5–9 terbuka." confirmText="Setujui" variant="default" onConfirm={actions.approve} withRationale>
                                     <Button size="sm" disabled={actions.busy}><CircleCheckIcon aria-hidden="true" />Setujui kerangka</Button>
                                 </ConfirmDialog>
                             ))}

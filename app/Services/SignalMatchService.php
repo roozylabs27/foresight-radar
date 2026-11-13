@@ -104,7 +104,8 @@ class SignalMatchService
                 $signal = $signalRefs[$match['signal']];
                 IndicatorObservation::create([
                     'early_warning_indicator_id' => $indicatorRefs[$match['indicator']],
-                    'observed_at' => now()->toDateString(),
+                    // PI-09: dated by the evidence (source publication, else when the signal was captured), not the match.
+                    'observed_at' => ($signal->source?->published_at ?? $signal->created_at ?? now())->toDateString(),
                     'value_text' => Str::limit($signal->title, 255, ''),
                     'direction' => $match['direction'] === SignalMatchPrompt::NONE ? null : $match['direction'],
                     'crossed_threshold' => false,

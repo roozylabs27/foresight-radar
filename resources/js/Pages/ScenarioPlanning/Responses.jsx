@@ -47,8 +47,8 @@ export default function Responses({ auth, title, project, steps, frameworkApprov
                         </Button>
                     )}
                 >
-                    {(errors.responses || errors.rationale || errors.fit || errors.narratives) && (
-                        <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{[errors.responses, errors.rationale, errors.fit, errors.narratives].filter(Boolean).join(" ")}</p>
+                    {(errors.responses || errors.rationale || errors.fit || errors.narratives || errors.stale) && (
+                        <p role="alert" className="m-0 rounded-md bg-danger-soft p-3 text-sm text-danger">{[errors.responses, errors.rationale, errors.fit, errors.narratives, errors.stale].filter(Boolean).join(" ")}</p>
                     )}
                     {!frameworkApproved ? (
                         <p className="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning">Setujui kerangka skenario (langkah 4) dulu sebelum menyusun respons strategis.</p>
@@ -86,7 +86,7 @@ export default function Responses({ auth, title, project, steps, frameworkApprov
                                             busy={actions.busy}
                                             onEdit={() => setTarget({ response })}
                                             onRemove={() => actions.remove(response.id)}
-                                            onApprove={() => actions.approve(response.id)}
+                                            onApprove={(rationale) => actions.approve(response.id, rationale)}
                                             onReject={() => actions.reject(response.id)}
                                             onKeep={() => actions.keep(response.id)}
                                         />

@@ -39,6 +39,8 @@ class EarlyWarningIndicatorController extends Controller
             'quadrants' => $framework ? $this->indicators->quadrants($framework) : [],
             'indicators' => $this->indicators->list($project),
             'relevance' => $framework ? $this->indicators->relevance($project, $framework) : null,
+            // PI-09: what still keeps step 9 open (empty when done).
+            'stepNineGaps' => $this->indicators->stepNineGaps($project),
             'uncertainties' => $project->criticalUncertainties()->orderBy('name')->get(['uuid', 'name'])->map(fn ($item) => ['id' => $item->uuid, 'name' => $item->name])->all(),
             'forces' => $project->projectForces()->where('inclusion_status', 'included')->with('drivingForce')->get()
                 ->map(fn ($link) => ['id' => $link->uuid, 'keyword' => $link->drivingForce?->keyword])->sortBy('keyword')->values()->all(),

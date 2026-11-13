@@ -29,7 +29,7 @@ export function useProjectForces(projectId) {
         add: (forceIds) => visit("post", route("scenario-planning.forces.store", projectId), { forces: forceIds }),
         update: (linkId, data) => visit("put", route("scenario-planning.forces.update", [projectId, linkId]), data),
         remove: (linkId) => visit("delete", route("scenario-planning.forces.destroy", [projectId, linkId])),
-        confirm: () => visit("post", route("scenario-planning.forces.confirm", projectId)),
+        confirm: (rationale) => visit("post", route("scenario-planning.forces.confirm", projectId), { rationale }),
         suggest: () => visit("post", route("scenario-planning.forces.suggest", projectId)),
         acceptCandidate: (candidateId) => visit("post", route("scenario-planning.forces.candidates.accept", [projectId, candidateId])),
         rejectCandidate: (candidateId) => visit("delete", route("scenario-planning.forces.candidates.reject", [projectId, candidateId])),

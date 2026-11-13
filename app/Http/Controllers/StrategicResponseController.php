@@ -9,6 +9,7 @@ use App\Services\ResponseSuggestionService;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\StalenessService;
 use App\Services\StrategicResponseService;
+use App\Support\DecisionContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -88,6 +89,7 @@ class StrategicResponseController extends Controller
     public function approve(Request $request, ScenarioPlanningProject $project, StrategicResponse $response): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
 
         $this->responses->approve($response, $request->user());
 
@@ -107,6 +109,7 @@ class StrategicResponseController extends Controller
     public function reject(Request $request, ScenarioPlanningProject $project, StrategicResponse $response): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
 
         $this->responses->reject($response, $request->user());
 

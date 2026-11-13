@@ -24,6 +24,7 @@ use App\Services\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -35,7 +36,7 @@ use Tests\TestCase;
  */
 class TenantIsolationJourneyTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private const PERMISSIONS = ['view-scenario', 'manage-scenario', 'view-signal', 'create-signal', 'view-dashboard'];
 
@@ -109,6 +110,7 @@ class TenantIsolationJourneyTest extends TestCase
         $forces = DrivingForce::withoutGlobalScopes()->where('tenant_id', $this->memberA->tenant_id)->pluck('uuid')->all();
         $this->asA()->post(route('scenario-planning.forces.store', $this->project), ['forces' => $forces])->assertSessionHasNoErrors();
         $this->asA()->post(route('scenario-planning.forces.confirm', $this->project))->assertSessionHasNoErrors();
+        $this->keepLibraryScores($this->memberA, $this->project);
         $this->asA()->post(route('scenario-planning.assessment.confirm', $this->project))->assertSessionHasNoErrors();
         foreach ([['Politic', 'Regulation', 'A'], ['Technology', 'Technology', 'B']] as [$keyword, $name, $axis]) {
             $this->asA()->post(route('scenario-planning.uncertainties.store', $this->project), [

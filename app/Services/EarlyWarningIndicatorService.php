@@ -216,11 +216,15 @@ class EarlyWarningIndicatorService
         $counted = 0;
         $outdated = 0;
 
+        // PI-09: only accepted indicators that tell the futures apart count; one rising in every
+        // quadrant (or still a proposal) would raise every reading at once.
         $indicators = EarlyWarningIndicator::where('project_id', $project->id)
             ->where('status', 'active')
+            ->where('review_status', 'accepted')
             ->with(['directions.quadrant', 'observations' => fn ($q) => $q->whereNotNull('direction')->where('review_status', 'accepted')])
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->filter(fn ($indicator) => self::axesTold($this->expectedByPosition($indicator)) !== []);
         foreach ($indicators as $indicator) {
             // observations() is ordered newest first.
             $latest = $indicator->observations->first();
@@ -291,15 +295,89 @@ class EarlyWarningIndicatorService
         return $directions->unique()->count() >= 2;
     }
 
-    /** True when an accepted, active indicator has a direction in every quadrant. */
+    /**
+     * PI-09: the quadrant pairs that differ only on one axis (position = axis A pole, then axis B pole).
+     * An indicator tells an axis apart when it expects different directions in such a pair.
+     */
+    public const AXIS_PAIRS = ['A' => [['HH', 'LH'], ['HL', 'LL']], 'B' => [['HH', 'HL'], ['LH', 'LL']]];
+
+    /**
+     * The axes ('A', 'B') an indicator's expected directions tell apart.
+     *
+     * @param  array<string, string>  $expectedByPosition
+     * @return array<int, string>
+     */
+    public static function axesTold(array $expectedByPosition): array
+    {
+        $directional = array_filter($expectedByPosition, fn ($direction) => in_array($direction, IndicatorObservation::DIRECTIONS, true));
+
+        return collect(self::AXIS_PAIRS)
+            ->filter(fn ($pairs) => collect($pairs)->contains(fn ($pair) => isset($directional[$pair[0]], $directional[$pair[1]])
+                && $directional[$pair[0]] !== $directional[$pair[1]]))
+            ->keys()->values()->all();
+    }
+
+    /**
+     * PI-09: step 9 is done when accepted, active indicators with an owner and a direction in every
+     * quadrant together tell both axes apart, so monitoring can show which future is unfolding.
+     */
     public function complete(ScenarioPlanningProject $project): bool
     {
-        return EarlyWarningIndicator::where('project_id', $project->id)
+        return $this->stepNineGaps($project) === [];
+    }
+
+    /**
+     * What still keeps step 9 open, in plain words for the indicators page (empty when done). It is the
+     * same rule as complete(), so the page and the stepper never disagree.
+     *
+     * @return array<int, string>
+     */
+    public function stepNineGaps(ScenarioPlanningProject $project): array
+    {
+        $complete = EarlyWarningIndicator::where('project_id', $project->id)
             ->where('review_status', 'accepted')
             ->where('status', 'active')
-            ->withCount('directions')
+            ->with('directions.quadrant')
+            ->orderBy('name')
             ->get()
-            ->contains(fn ($indicator) => $indicator->directions_count >= count(Scenario::POSITIONS));
+            ->filter(fn ($indicator) => $indicator->directions->count() >= count(Scenario::POSITIONS));
+        if ($complete->isEmpty()) {
+            return ['Belum ada indikator yang diterima dengan arah di keempat kuadran.'];
+        }
+
+        $told = $complete->whereNotNull('owner_id')
+            ->flatMap(fn ($indicator) => self::axesTold($this->expectedByPosition($indicator)))
+            ->unique();
+        if ($told->contains('A') && $told->contains('B')) {
+            return [];
+        }
+
+        // Not done: name the unowned indicators (an owner may be all that is missing), then the axes.
+        $gaps = [];
+        $unowned = $complete->whereNull('owner_id');
+        if ($unowned->isNotEmpty()) {
+            $gaps[] = 'Belum ada penanggung jawab untuk: '.$unowned->pluck('name')->implode(', ').'.';
+        }
+        $framework = $project->framework()->first();
+        foreach (['A', 'B'] as $axis) {
+            if (! $told->contains($axis)) {
+                $poles = $framework ? ' ('.implode(' ↔ ', $axis === 'A'
+                    ? [$framework->axis_a_low_label, $framework->axis_a_high_label]
+                    : [$framework->axis_b_low_label, $framework->axis_b_high_label]).')' : '';
+                $gaps[] = "Belum ada indikator dengan penanggung jawab yang membedakan sumbu {$axis}{$poles}: arahnya harus berbeda antara kedua kutub sumbu itu.";
+            }
+        }
+
+        return $gaps;
+    }
+
+    /** @return array<string, string> */
+    private function expectedByPosition(EarlyWarningIndicator $indicator): array
+    {
+        return $indicator->directions
+            ->filter(fn ($row) => $row->quadrant !== null)
+            ->mapWithKeys(fn ($row) => [$row->quadrant->position => (string) $row->expected_direction])
+            ->all();
     }
 
     /**

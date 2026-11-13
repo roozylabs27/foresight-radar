@@ -2,6 +2,7 @@ import { PencilIcon, Trash2Icon } from "lucide-react";
 
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import CommentButton from "@/Components/ScenarioPlanning/CommentButton";
+import StaleTag from "@/Components/ScenarioPlanning/StaleTag";
 import { statusBadge } from "@/Components/StatusBadge";
 import { Button } from "@/Components/ui/button";
 import { INCLUSION_STATUSES } from "@/domain/scenarioPlanning";
@@ -25,6 +26,7 @@ export default function ProjectForceList({ forces, canManage, onEdit, onRemove }
                                 <span className={statusBadge({ tone: inclusion.tone })}>{inclusion.label}</span>
                                 {link.is_predetermined && <span className={statusBadge({ tone: "neutral" })}>Predetermined</span>}
                                 {link.force?.is_deleted && <span className={statusBadge({ tone: "rejected" })}>Dihapus dari pustaka</span>}
+                                <StaleTag reason={link.stale_reason} />
                             </div>
                             <span className="text-xs text-muted-foreground">
                                 {link.force?.environment} · {link.force?.dimension} · {link.force?.signals_count} sinyal pendukung

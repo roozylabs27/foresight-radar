@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnforceTenantContext;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RecoverLostAiSuggestions;
 use App\Http\Middleware\SetAppLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -34,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
             EnforceTenantContext::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            // After route-model binding: releases exercise AI assists lost with their worker (PI-10).
+            RecoverLostAiSuggestions::class,
         ]);
 
         // Tenant context must exist before implicit route-model binding, otherwise

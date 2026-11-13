@@ -26,6 +26,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -38,7 +39,7 @@ use Tests\TestCase;
  */
 class EarlyWarningIndicatorTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private User $manager;
 
@@ -88,6 +89,7 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, 'Purchasing Power')]), ['is_predetermined' => true]);
         $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $project));
         if ($agreeScores) {
+            $this->keepLibraryScores($this->manager, $project);
             $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project));
         }
 
@@ -203,6 +205,16 @@ class EarlyWarningIndicatorTest extends TestCase
         return $this->actingAs($this->manager)->post(route('scenario-planning.indicators.store', $this->project), $this->indicatorPayload($overrides));
     }
 
+    /** Step 9 done (PI-09): owned indicators telling axis B (default payload) and axis A apart. */
+    private function completeStepNine(): void
+    {
+        $owner = ['owner' => $this->manager->uuid];
+        $this->storeIndicator($owner)->assertSessionHasNoErrors();
+        $this->storeIndicator(['name' => 'Sumbu A', 'directions' => [
+            'HH' => ['direction' => 'rising'], 'HL' => ['direction' => 'rising'], 'LH' => ['direction' => 'falling'], 'LL' => ['direction' => 'falling'],
+        ]] + $owner)->assertSessionHasNoErrors();
+    }
+
     /** PRD-06: after step 9 the coordinator moves the exercise into monitoring or the archive, and back. */
     public function test_the_coordinator_moves_a_finished_exercise_to_monitoring_and_archive(): void
     {
@@ -210,7 +222,7 @@ class EarlyWarningIndicatorTest extends TestCase
         $status = fn (string $to, User $as) => $this->actingAs($as)->post(route('scenario-planning.status', $this->project), ['status' => $to]);
 
         $status('monitoring', $this->manager)->assertSessionHasErrors('status');
-        $this->storeIndicator()->assertSessionHasNoErrors();
+        $this->completeStepNine();
         $status('monitoring', $this->viewer)->assertForbidden();
         $status('draft', $this->manager)->assertSessionHasErrors('status');
         $this->assertSame('active', $this->project->fresh()->status);
@@ -320,16 +332,78 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->assertSame(0, EarlyWarningIndicator::count());
     }
 
-    public function test_step_nine_is_done_with_an_accepted_indicator_rated_in_all_quadrants(): void
+    /**
+     * PI-09: step 9 is done only when accepted, active indicators with an owner and a direction in every
+     * quadrant tell BOTH axes apart (two quadrants that differ only on that axis expect different directions).
+     */
+    public function test_step_nine_is_done_when_owned_indicators_tell_both_axes_apart(): void
     {
         $this->readyFramework();
         $step = fn () => $this->actingAs($this->manager)->get(route('scenario-planning.show', $this->project));
+        $owner = ['owner' => $this->manager->uuid];
 
         $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'available'));
-        $this->storeIndicator(['directions' => ['HH' => ['direction' => 'rising']]]);
+        $this->storeIndicator(['directions' => ['HH' => ['direction' => 'rising']]] + $owner);
         $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'in_progress'));
-        $this->storeIndicator(['name' => 'Lengkap']);
+        // Complete and discriminating on axis B, but nobody owns it.
+        $this->storeIndicator(['name' => 'Tanpa penanggung jawab']);
+        $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'in_progress'));
+        // Owned, but the same direction everywhere: tells no future apart.
+        $this->storeIndicator(['name' => 'Naik di semua', 'directions' => array_fill_keys(Scenario::POSITIONS, ['direction' => 'rising'])] + $owner);
+        $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'in_progress'));
+        // Owned and telling axis B apart (HH ≠ HL): axis A still uncovered.
+        $this->storeIndicator(['name' => 'Sumbu B'] + $owner);
+        $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'in_progress'));
+        // Owned and telling axis A apart (HH ≠ LH).
+        $this->storeIndicator(['name' => 'Sumbu A', 'directions' => [
+            'HH' => ['direction' => 'rising'], 'HL' => ['direction' => 'rising'], 'LH' => ['direction' => 'falling'], 'LL' => ['direction' => 'falling'],
+        ]] + $owner);
         $step()->assertInertia(fn ($page) => $page->where('steps.8.status', 'done'));
+    }
+
+    /** PI-09 follow-up: the indicators page says what still keeps step 9 open, and nothing once it is done. */
+    public function test_the_indicators_page_lists_what_keeps_step_nine_open(): void
+    {
+        $this->readyFramework();
+        $gaps = function (callable $check) {
+            $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
+                ->assertInertia(fn ($page) => $page->where('stepNineGaps', fn ($gaps) => $check(collect($gaps)->values()->all())));
+        };
+        $axisA = 'Belum ada indikator dengan penanggung jawab yang membedakan sumbu A';
+        $axisB = 'Belum ada indikator dengan penanggung jawab yang membedakan sumbu B';
+
+        $gaps(fn ($g) => $g === ['Belum ada indikator yang diterima dengan arah di keempat kuadran.']);
+
+        $this->storeIndicator()->assertSessionHasNoErrors();
+        $gaps(fn ($g) => count($g) === 3 && $g[0] === 'Belum ada penanggung jawab untuk: xEV adoption growth.'
+            && str_starts_with($g[1], $axisA) && str_starts_with($g[2], $axisB));
+
+        EarlyWarningIndicator::where('name', 'xEV adoption growth')->update(['owner_id' => $this->manager->id]);
+        $gaps(fn ($g) => count($g) === 1 && str_starts_with($g[0], $axisA));
+
+        $this->storeIndicator(['name' => 'Sumbu A', 'owner' => $this->manager->uuid, 'directions' => [
+            'HH' => ['direction' => 'rising'], 'HL' => ['direction' => 'rising'], 'LH' => ['direction' => 'falling'], 'LL' => ['direction' => 'falling'],
+        ]])->assertSessionHasNoErrors();
+        $gaps(fn ($g) => $g === []);
+    }
+
+    /** PI-09: relevance counts only accepted indicators that tell the futures apart. */
+    public function test_relevance_ignores_proposed_and_non_discriminating_indicators(): void
+    {
+        $framework = $this->readyFramework();
+        $this->storeIndicator(['name' => 'Naik di semua', 'directions' => array_fill_keys(Scenario::POSITIONS, ['direction' => 'rising'])]);
+        $this->storeIndicator(['name' => 'Masih usulan']);
+        $this->storeIndicator(['name' => 'Dihitung']);
+        EarlyWarningIndicator::where('name', 'Masih usulan')->update(['review_status' => 'proposed']);
+        foreach (['Naik di semua', 'Masih usulan', 'Dihitung'] as $name) {
+            $this->observe($this->manager, EarlyWarningIndicator::where('name', $name)->sole(), ['observed_at' => now()->subWeek()->toDateString(), 'value_numeric' => 5, 'direction' => 'rising'])->assertSessionHasNoErrors();
+        }
+
+        $relevance = app(EarlyWarningIndicatorService::class)->relevance($this->project, $framework);
+
+        $this->assertSame(1, $relevance['counted']);
+        $names = collect($relevance['quadrants'])->flatMap(fn ($q) => collect($q['indicators'])->pluck('name'))->unique()->values()->all();
+        $this->assertSame(['Dihitung'], $names);
     }
 
     private function signal(string $title, string $status = 'ACCEPTED'): Signal
@@ -739,6 +813,8 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->storeIndicator();
         $indicator = EarlyWarningIndicator::sole();
         $fresh = $this->signal('xEV sales up 40% in Q3');
+        // PI-09: an AI-matched observation is dated by its evidence (the source's publication date), not the match.
+        $fresh->source->update(['published_at' => '2026-08-15']);
         $cited = $this->signal('Charging network doubles');
         $this->signal('Unreviewed rumour', 'PENDING');
         $this->observe($this->manager, $indicator, ['observed_at' => '2026-09-30', 'value_text' => 'Sudah dicatat', 'signal' => $cited->uuid])->assertSessionHasNoErrors();
@@ -754,10 +830,12 @@ class EarlyWarningIndicatorTest extends TestCase
         $this->assertStringNotContainsString('Unreviewed rumour', $prompt);
         $proposal = IndicatorObservation::where('origin', 'ai')->sole();
         $this->assertSame(['proposed', $fresh->id, 'rising'], [$proposal->review_status, $proposal->signal_id, $proposal->direction]);
+        $this->assertSame('2026-08-15', $proposal->observed_at->toDateString());
         $this->assertSame('completed', AiGenerationRun::sole()->status);
 
         $this->actingAs($this->viewer)->get(route('scenario-planning.indicators.index', $this->project))
-            ->assertInertia(fn ($page) => $page->where('relevance.counted', 0)->where('indicators.0.observations.0.review_status', 'proposed')->where('matchStatus', 'completed'));
+            // Newest first: the manual note of 2026-09-30, then the proposal dated by its source (2026-08-15).
+            ->assertInertia(fn ($page) => $page->where('relevance.counted', 0)->where('indicators.0.observations.1.review_status', 'proposed')->where('matchStatus', 'completed'));
 
         $this->actingAs($this->manager)->post(route('scenario-planning.indicators.observations.confirm', [$this->project, $indicator, $proposal]))->assertSessionHasNoErrors();
         $this->assertSame(['accepted', $this->manager->id], [$proposal->fresh()->review_status, $proposal->fresh()->recorded_by]);

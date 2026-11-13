@@ -31,6 +31,7 @@ use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -43,7 +44,7 @@ use Tests\TestCase;
  */
 class StrategicResponseTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private User $manager;
 
@@ -93,6 +94,7 @@ class StrategicResponseTest extends TestCase
         $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, 'Purchasing Power')]), ['is_predetermined' => true]);
         $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $project));
         if ($agreeScores) {
+            $this->keepLibraryScores($this->manager, $project);
             $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project));
         }
 
@@ -402,7 +404,7 @@ class StrategicResponseTest extends TestCase
         $this->action($response, 'reject')->assertSessionHasNoErrors();
 
         $this->assertSame([
-            'G1 approved', 'G2 approved', 'G3 approved', 'G4 approved', 'G4 approved', 'G5 approved', 'G7 approved', 'G7 rejected',
+            'G1 approved', 'ST active', 'G2 approved', 'G3 approved', 'G4 approved', 'G4 approved', 'G5 approved', 'G7 approved', 'G7 rejected',
         ], $this->decisions());
         $this->assertSame([$this->manager->id], ProjectDecision::distinct()->pluck('actor_id')->all());
 
@@ -413,7 +415,7 @@ class StrategicResponseTest extends TestCase
                 ->where('decisions.0.subject', 'Secure USP for each xEV model')
                 ->where('decisions.0.actor', $this->manager->name)
                 ->where('decisions.2.gate', 'G5')
-                ->has('decisions', 8));
+                ->has('decisions', 9));
     }
 
     public function test_withdrawn_gates_are_logged_once_each(): void
@@ -583,6 +585,7 @@ class StrategicResponseTest extends TestCase
         $twice(fn ($p) => app(ScenarioPlanningProjectService::class)->confirm($p, $this->manager), fn () => $fresh->fresh());
         $this->actingAs($this->manager)->post(route('scenario-planning.forces.store', $fresh), ['forces' => [$this->forces['Politic']->uuid, $this->forces['Technology']->uuid]])->assertSessionHasNoErrors();
         $twice(fn ($p) => app(ProjectDrivingForceService::class)->confirm($p, $this->manager), fn () => $fresh->fresh());
+        $this->keepLibraryScores($this->manager, $fresh);
         $twice(fn ($p) => app(ProjectAssessmentService::class)->confirm($p, $this->manager), fn () => $fresh->fresh());
 
         $this->readyFramework();
@@ -596,6 +599,37 @@ class StrategicResponseTest extends TestCase
         $count = fn (ScenarioPlanningProject $project, string $gate) => ProjectDecision::where('project_id', $project->id)->where('gate', $gate)->where('action', 'approved')->count();
         $this->assertSame([1, 1, 1], [$count($fresh, 'G1'), $count($fresh, 'G2'), $count($fresh, 'G3')]);
         $this->assertSame([4, 1], [$count($this->project, 'G6'), $count($this->project, 'G7')]);
+    }
+
+    /** Gate rationale (#13): an optional reason and the artefact are kept with each decision. */
+    public function test_a_gate_decision_keeps_its_reason_and_artefact(): void
+    {
+        $this->readyFramework();
+        $this->approveNarratives();
+        $this->store()->assertSessionHasNoErrors();
+        $response = StrategicResponse::sole();
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.responses.approve', [$this->project, $response]), ['rationale' => 'Disepakati di lokakarya kedua.'])->assertSessionHasNoErrors();
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.reopen', $this->project), ['rationale' => str_repeat('x', 1001)])->assertSessionHasErrors('rationale');
+
+        $g7 = ProjectDecision::where('gate', 'G7')->sole();
+        $this->assertSame(['Disepakati di lokakarya kedua.', 'strategic_response', $response->id], [$g7->rationale, $g7->artefact_type, $g7->artefact_id]);
+        $g5 = ProjectDecision::where('gate', 'G5')->where('action', 'approved')->sole();
+        $this->assertSame(['scenario', $this->framework()->id, null], [$g5->artefact_type, $g5->artefact_id, $g5->rationale]);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.show', $this->project))
+            ->assertInertia(fn ($page) => $page->where('decisions.0.gate', 'G7')->where('decisions.0.rationale', 'Disepakati di lokakarya kedua.'));
+    }
+
+    /** Gate rationale (#13): exercise status changes are logged too. */
+    public function test_exercise_status_changes_are_logged(): void
+    {
+        $this->actingAs($this->manager)->post(route('scenario-planning.status', $this->project), ['status' => 'archived', 'rationale' => 'Latihan ditunda.'])->assertSessionHasNoErrors();
+
+        $row = ProjectDecision::where('gate', 'ST')->where('action', 'archived')->sole();
+        $this->assertSame(['archived', 'Latihan ditunda.', 'scenario_planning_project', $this->project->id], [$row->action, $row->rationale, $row->artefact_type, $row->artefact_id]);
+        $this->actingAs($this->viewer)->get(route('scenario-planning.show', $this->project))
+            ->assertInertia(fn ($page) => $page->where('decisions.0.label', 'Status latihan'));
     }
 
     /* Audit 2026-11-11 U6 (AUD-07, AUD-08): upstream changes reach Steps 7–9; G7 needs G6. */
@@ -650,6 +684,51 @@ class StrategicResponseTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('project.stale.downstream.implications', 1)
                 ->where('project.stale.downstream.responses', 1)
                 ->where('project.stale.downstream.indicators', 1));
+    }
+
+    /** PI-03: reopening G5 withdraws G6 and G7 (logged); stale work cannot be approved until reviewed. */
+    public function test_reopening_the_framework_withdraws_narrative_and_response_approvals(): void
+    {
+        $this->readyFramework();
+        $this->store()->assertSessionHasNoErrors();
+        $response = StrategicResponse::sole();
+        foreach (Scenario::POSITIONS as $position) {
+            $this->editNarrative($this->quadrant($position), "Narasi {$position} disepakati tim.")->assertOk();
+            $this->reviewNarrative($this->quadrant($position))->assertOk();
+        }
+        $this->action($response, 'approve')->assertSessionHasNoErrors();
+
+        $this->actingAs($this->manager)->post(route('scenario-planning.framework.reopen', $this->project))->assertSessionHasNoErrors();
+
+        $this->assertSame(0, ScenarioQuadrant::where('review_status', 'approved')->count());
+        $this->assertSame('proposed', $response->fresh()->status);
+        $this->assertNull($response->fresh()->approved_at);
+        $decisions = $this->decisions();
+        $this->assertSame(4, count(array_keys($decisions, 'G6 withdrawn')));
+        $this->assertContains('G7 withdrawn', $decisions);
+
+        // Re-approve G5: the flagged narrative and response wait for a review.
+        $this->approveFramework()->assertSessionHasNoErrors();
+        $quadrant = $this->quadrant('HH');
+        $this->assertNotNull($quadrant->stale_since);
+        $this->reviewNarrative($quadrant)->assertJsonValidationErrors('status');
+        $this->editNarrative($quadrant, 'Narasi HH ditinjau ulang.')->assertOk();
+        $this->reviewNarrative($quadrant->fresh())->assertOk();
+
+        $this->approveNarratives();
+        $this->action($response, 'approve')->assertSessionHasErrors('stale');
+        $this->action($response, 'keep')->assertSessionHasNoErrors();
+        $this->action($response, 'approve')->assertSessionHasNoErrors();
+    }
+
+    private function editNarrative(ScenarioQuadrant $quadrant, string $narrative)
+    {
+        return $this->actingAs($this->manager)->putJson(route('scenario-planning.narratives.quadrant', [$this->project, $quadrant]), ['title' => $quadrant->title, 'narrative' => $narrative]);
+    }
+
+    private function reviewNarrative(ScenarioQuadrant $quadrant)
+    {
+        return $this->actingAs($this->manager)->postJson(route('scenario-planning.narratives.review', [$this->project, $quadrant]), ['status' => 'approved']);
     }
 
     public function test_a_new_axis_flags_steps_seven_to_nine(): void

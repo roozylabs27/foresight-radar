@@ -9,6 +9,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Services\ForceCandidateService;
 use App\Services\ProjectDrivingForceService;
 use App\Services\ScenarioPlanningProjectService;
+use App\Support\DecisionContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -104,6 +105,7 @@ class ProjectDrivingForceController extends Controller
     public function confirm(Request $request, ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
 
         $this->forces->confirm($project, $request->user());
 

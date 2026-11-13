@@ -19,7 +19,7 @@ export function useCriticalUncertainties(projectId) {
         busy,
         save: (values, uncertaintyId) => (uncertaintyId ? visit("put", url("update", uncertaintyId), values) : visit("post", url("store"), values)),
         remove: (uncertaintyId) => visit("delete", url("destroy", uncertaintyId)),
-        approve: (uncertaintyId, axis, acknowledge) => visit("post", url("approve", uncertaintyId), { axis, acknowledge_dependency: acknowledge }),
+        approve: (uncertaintyId, axis, acknowledge, rationale) => visit("post", url("approve", uncertaintyId), { axis, acknowledge_dependency: acknowledge, rationale }),
         withdraw: (uncertaintyId) => visit("post", url("withdraw", uncertaintyId)),
     };
 }

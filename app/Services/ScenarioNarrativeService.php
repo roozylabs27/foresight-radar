@@ -244,6 +244,10 @@ class ScenarioNarrativeService
             if ($status === 'approved' && $quadrant->provider === self::PROVIDER_TEMPLATE && ! $quadrant->isEdited()) {
                 throw ValidationException::withMessages(['status' => 'Narasi ini masih kerangka tanpa AI. Lengkapi narasinya dulu sebelum disetujui.']);
             }
+            // PI-03: a narrative flagged by an upstream change is reviewed (edited, or kept on the overview) first.
+            if ($status === 'approved' && $quadrant->stale_since !== null) {
+                throw ValidationException::withMessages(['status' => 'Narasi ini ditandai perlu ditinjau ('.$quadrant->stale_reason.'). Perbarui narasinya atau tandai tetap berlaku sebelum menyetujuinya.']);
+            }
 
             $quadrant->update($status === 'draft'
                 ? ['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null]

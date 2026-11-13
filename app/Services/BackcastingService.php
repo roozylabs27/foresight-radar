@@ -41,7 +41,7 @@ class BackcastingService
                 'preferred_by' => $user->id,
                 'preferred_at' => now(),
             ])->save();
-            $this->log($project, 'approved', $quadrant->title, $user);
+            $this->log($project, 'approved', $quadrant->title, $user, $rationale);
         });
     }
 
@@ -157,7 +157,7 @@ class BackcastingService
         return $indicator->id;
     }
 
-    private function log(ScenarioPlanningProject $project, string $action, ?string $subject, User $user): void
+    private function log(ScenarioPlanningProject $project, string $action, ?string $subject, User $user, ?string $rationale = null): void
     {
         ProjectDecision::create([
             'tenant_id' => $project->tenant_id,
@@ -166,6 +166,9 @@ class BackcastingService
             'action' => $action,
             'subject' => $subject === null ? null : Str::limit($subject, 200, ''),
             'actor_id' => $user->id,
+            'artefact_type' => 'scenario_planning_project',
+            'artefact_id' => $project->id,
+            'rationale' => $rationale === null ? null : Str::limit($rationale, 1000, ''),
         ]);
     }
 }

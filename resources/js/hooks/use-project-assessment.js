@@ -5,7 +5,7 @@ import { inertiaVisit } from "@/lib/inertia-submit";
 /**
  * Inertia actions for step 3 of an exercise (roadmap R1.1). `save` resolves to
  * Laravel's 422 errors or undefined; `saveMine` / `withdrawMine` handle the signed-in
- * participant's own score (R2.1); `confirm` agrees the scores (gate G3).
+ * participant's own score (R2.1); `keepLibrary` keeps a copied library score (PI-02); `confirm` agrees the scores (gate G3).
  */
 export function useProjectAssessment(projectId) {
     const [busy, setBusy] = useState(false);
@@ -23,6 +23,7 @@ export function useProjectAssessment(projectId) {
         suggest: () => visit("post", route("scenario-planning.assessment.suggest", projectId)),
         acceptSuggestion: (linkId) => visit("post", route("scenario-planning.assessment.suggestion.accept", [projectId, linkId])),
         rejectSuggestion: (linkId) => visit("delete", route("scenario-planning.assessment.suggestion.reject", [projectId, linkId])),
-        confirm: () => visit("post", route("scenario-planning.assessment.confirm", projectId)),
+        keepLibrary: (linkId) => visit("post", route("scenario-planning.assessment.library", [projectId, linkId])),
+        confirm: (rationale) => visit("post", route("scenario-planning.assessment.confirm", projectId), { rationale }),
     };
 }

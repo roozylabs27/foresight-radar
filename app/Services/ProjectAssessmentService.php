@@ -104,9 +104,39 @@ class ProjectAssessmentService
             if ($missing > 0) {
                 throw ValidationException::withMessages(['scores' => "{$missing} driving force yang disertakan belum diberi skor."]);
             }
+            $pending = $this->libraryPending($project);
+            if ($pending > 0) {
+                throw ValidationException::withMessages(['scores' => "{$pending} skor masih salinan penilaian organisasi. Tinjau tiap skor: ubah, atau pilih \"Pakai nilai library\"."]);
+            }
 
             $project->update(['scores_confirmed_by' => $user->id, 'scores_confirmed_at' => now(), 'updated_by' => $user->id]);
         });
+    }
+
+    /**
+     * PI-02: the team keeps a score copied from the organisation rating for this focal issue. The
+     * origin stays `library`; `updated_by` records who reviewed it.
+     *
+     * @throws ValidationException before the force list is agreed, or when there is no library copy to keep
+     */
+    public function keepLibrary(ProjectDrivingForce $link, User $user): void
+    {
+        $this->requireScorable($link);
+        $consensus = $link->consensus;
+        if (! $consensus || $consensus->origin !== Provenance::LIBRARY) {
+            throw ValidationException::withMessages(['scores' => 'Skor ini bukan salinan penilaian organisasi.']);
+        }
+        if ($consensus->updated_by === null) {
+            $consensus->update(['updated_by' => $user->id]);
+        }
+    }
+
+    /** PI-02: included forces whose score is still an unreviewed copy of the organisation rating. */
+    public function libraryPending(ScenarioPlanningProject $project): int
+    {
+        return $project->projectForces()->where('inclusion_status', 'included')
+            ->whereHas('consensus', fn ($query) => $query->where('origin', Provenance::LIBRARY)->whereNull('updated_by'))
+            ->count();
     }
 
     /**
@@ -131,6 +161,7 @@ class ProjectAssessmentService
                 'impact_rationale' => $link->consensus?->impact_rationale,
                 'uncertainty_rationale' => $link->consensus?->uncertainty_rationale,
                 'origin' => $link->consensus?->origin,
+                'library_pending' => $link->consensus?->origin === Provenance::LIBRARY && $link->consensus->updated_by === null,
                 'updated_by' => $link->consensus?->updater?->name,
                 'individual' => $this->spread($link),
                 'mine' => $this->mine($link, $viewer),

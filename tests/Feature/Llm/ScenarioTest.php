@@ -4,13 +4,13 @@ namespace Tests\Feature\Llm;
 
 use App\Jobs\GenerateScenarioNarrative;
 use App\Models\AiGenerationRun;
-use App\Models\CrossImpact;
 use App\Models\Dimension;
 use App\Models\DrivingForce;
 use App\Models\DrivingForceRating;
 use App\Models\Environment;
 use App\Models\Scenario;
 use App\Models\ScenarioCitation;
+use App\Models\ScenarioPlanningProject;
 use App\Models\Signal;
 use App\Models\Source;
 use App\Models\TenantLlmSetting;
@@ -25,6 +25,7 @@ use Mockery;
 use Ramsey\Uuid\Uuid;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\Support\FakeLlmClient;
 use Tests\TestCase;
 
@@ -111,9 +112,30 @@ class ScenarioTest extends TestCase
         return $signal;
     }
 
+    /**
+     * PAD-2: stand-alone scenarios are a read-only archive, so the narrative engine is exercised through an
+     * approved exercise framework (same service; the exercise policy decides who may act).
+     */
     private function scenario(): Scenario
     {
-        return Scenario::create([
+        $project = ScenarioPlanningProject::create([
+            'name' => 'EV 2030', 'focal_question' => 'Bagaimana pasar EV pada 2030?', 'purpose' => 'Uji mesin narasi.',
+            'target_year' => now()->year + 4, 'status' => 'active', 'confirmed_by' => $this->manager->id, 'confirmed_at' => now(),
+            'created_by' => $this->manager->id,
+        ]);
+
+        $framework = $this->standAlone(['project_id' => $project->id, 'framework_status' => 'approved', 'approved_by' => $this->manager->id, 'approved_at' => now()]);
+        // As ScenarioFrameworkService does: four quadrants named after their poles, locked at G5.
+        foreach (Scenario::POSITIONS as $position) {
+            $framework->quadrants()->create(['position' => $position, 'title' => $framework->defaultTitle($position)]);
+        }
+
+        return $framework;
+    }
+
+    private function standAlone(array $overrides = []): Scenario
+    {
+        return Scenario::create($overrides + [
             'name' => 'EV 2030',
             'focal_question' => 'Bagaimana pasar EV pada 2030?',
             'axis_a_force_id' => $this->regulation->id,
@@ -143,56 +165,41 @@ class ScenarioTest extends TestCase
         return $this->actingAs($this->manager)->postJson("/scenarios/{$scenario->uuid}/generate", $body);
     }
 
-    public function test_viewer_can_read_but_not_create_and_others_are_forbidden(): void
+    /**
+     * PAD-2 (2026-11-13): stand-alone scenarios were made outside the nine-step method, so they are a
+     * read-only archive: viewable, but nobody (not even their creator or an admin) creates, edits,
+     * regenerates, reviews or deletes one. Scenarios are now made inside an exercise.
+     */
+    public function test_stand_alone_scenarios_are_a_read_only_archive(): void
     {
-        $scenario = $this->scenario();
+        $archived = $this->standAlone(['created_by' => $this->manager->id]);
+        $quadrant = $archived->quadrants()->create(['position' => 'HH', 'title' => 'Lama', 'narrative' => 'Narasi lama.']);
+        $admin = User::factory()->create();
+        $admin->givePermissionTo(['view-scenario', 'manage-scenario']);
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web'], ['uuid' => (string) Uuid::uuid4(), 'display_name' => 'Admin']);
+        $admin->assignRole('admin');
 
-        $this->actingAs($this->viewer)->get('/scenarios')
-            ->assertStatus(200)
-            ->assertInertia(fn ($page) => $page->component('Report/Scenarios')->where('canManage', false)->where('llm.available', false));
-        $this->actingAs($this->viewer)->getJson("/scenarios/{$scenario->uuid}")->assertStatus(200)->assertJsonPath('name', 'EV 2030');
-        $this->actingAs($this->viewer)->postJson("/scenarios/{$scenario->uuid}/generate")->assertStatus(403);
-        $this->actingAs($this->viewer)->postJson('/scenarios', [])->assertStatus(403);
+        $this->actingAs($this->viewer)->get('/scenarios')->assertStatus(200)->assertInertia(fn ($page) => $page->component('Report/Scenarios'));
+        $this->actingAs($this->viewer)->getJson("/scenarios/{$archived->uuid}")->assertStatus(200)->assertJsonPath('name', 'EV 2030');
         $this->actingAs(User::factory()->create())->getJson('/scenarios/fetch')->assertStatus(403);
-    }
 
-    public function test_create_requires_two_different_approved_forces(): void
-    {
-        $pending = $this->force('Draft Force', 'Economy', 5, 5, 'PENDING');
-        $payload = [
-            'name' => 'EV 2030',
-            'axis_a' => $this->regulation->uuid,
-            'axis_b' => $this->adoption->uuid,
-            'axis_a_low_label' => 'Longgar', 'axis_a_high_label' => 'Ketat',
-            'axis_b_low_label' => 'Lambat', 'axis_b_high_label' => 'Cepat',
-        ];
+        // Creation and axis suggestions are gone.
+        $this->actingAs($this->manager)->postJson('/scenarios', ['name' => 'Baru'])->assertStatus(405);
+        $this->actingAs($this->manager)->putJson("/scenarios/{$archived->uuid}", ['name' => 'Ubah'])->assertStatus(405);
+        $this->actingAs($this->manager)->getJson('/scenarios/suggest-axes')->assertNotFound();
 
-        $this->actingAs($this->manager)->postJson('/scenarios', $payload)
-            ->assertStatus(201)
-            ->assertJsonPath('scenario.axis_a.keyword', 'TKDN Regulation')
-            ->assertJsonPath('scenario.quadrants', []);
-        $this->actingAs($this->manager)->postJson('/scenarios', ['axis_b' => $this->regulation->uuid] + $payload)
-            ->assertStatus(422)->assertJsonValidationErrors('axis_b');
-        $this->actingAs($this->manager)->postJson('/scenarios', ['axis_b' => $pending->uuid] + $payload)
-            ->assertStatus(422)->assertJsonValidationErrors('axis_b');
-    }
+        foreach ([$this->manager, $admin] as $user) {
+            $this->actingAs($user)->postJson("/scenarios/{$archived->uuid}/generate")->assertForbidden();
+            $this->actingAs($user)->putJson("/scenarios/{$archived->uuid}/quadrants/{$quadrant->uuid}", ['title' => 'Baru', 'narrative' => 'Baru.'])->assertForbidden();
+            $this->actingAs($user)->postJson("/scenarios/{$archived->uuid}/quadrants/{$quadrant->uuid}/review", ['status' => 'approved'])->assertForbidden();
+            $this->actingAs($user)->deleteJson("/scenarios/{$archived->uuid}")->assertForbidden();
+        }
+        $this->assertSame(['EV 2030', 'Lama', 'draft'], [$archived->fresh()->name, $quadrant->fresh()->title, $quadrant->fresh()->review_status ?? 'draft']);
+        $this->assertNull($archived->fresh()->deleted_at);
 
-    public function test_suggested_axes_are_strong_independent_and_from_different_dimensions(): void
-    {
-        $sameDimension = $this->force('Import Regulation', 'Regulation', 9, 9);
-        $coupled = $this->force('Battery Prices', 'Economy', 9, 9);
-        $this->force('Minor Trend', 'Ecology', 2, 2);
-        CrossImpact::create(['source_driving_force_id' => $coupled->id, 'target_driving_force_id' => $this->adoption->id, 'score' => 3]);
-
-        $response = $this->actingAs($this->viewer)->getJson('/scenarios/suggest-axes')->assertStatus(200);
-
-        $pairs = collect($response->json('pairs'))->map(fn ($pair) => [$pair['a']['keyword'], $pair['b']['keyword']]);
-        $this->assertNotContains(['Import Regulation', 'TKDN Regulation'], $pairs);
-        $this->assertFalse($pairs->contains(fn ($pair) => in_array('Battery Prices', $pair) && in_array('EV Adoption', $pair)));
-        $this->assertTrue($pairs->contains(fn ($pair) => in_array('TKDN Regulation', $pair) && in_array('EV Adoption', $pair)));
-        // Highest impact x uncertainty first: Import Regulation and Battery Prices (81) lead the candidates.
-        $this->assertSame(['Battery Prices', 'Import Regulation'], collect($response->json('candidates'))->take(2)->pluck('keyword')->sort()->values()->all());
-        $this->assertContains(['source' => $coupled->uuid, 'target' => $this->adoption->uuid, 'score' => 3], $response->json('cross_impacts'));
+        // A viewer cannot act on an exercise framework either.
+        $framework = $this->scenario();
+        $this->actingAs($this->viewer)->postJson("/scenarios/{$framework->uuid}/generate")->assertStatus(403);
     }
 
     public function test_without_a_key_generate_builds_a_labelled_template(): void
@@ -269,7 +276,8 @@ class ScenarioTest extends TestCase
         $this->generate($scenario)->assertStatus(422)->assertJsonValidationErrors('evidence');
 
         $this->assertSame([], $llm->calls);
-        $this->assertSame(0, $scenario->quadrants()->count());
+        // An exercise framework keeps its four named quadrants; nothing was written into them.
+        $this->assertSame(0, $scenario->quadrants()->whereNotNull('narrative')->count());
     }
 
     public function test_a_quadrant_without_valid_citation_rejects_the_whole_result(): void
@@ -283,7 +291,8 @@ class ScenarioTest extends TestCase
         // The citations are checked in the job, so the request is accepted and the job records why nothing was saved.
         $this->generate($scenario)->assertStatus(202)->assertJsonPath('scenario.generation.status', 'failed');
 
-        $this->assertSame(0, $scenario->quadrants()->count());
+        // An exercise framework keeps its four named quadrants; nothing was written into them.
+        $this->assertSame(0, $scenario->quadrants()->whereNotNull('narrative')->count());
         $this->assertNull($scenario->fresh()->provider);
         $this->assertStringContainsString('kuadran LL tidak mengutip bukti yang valid', $scenario->fresh()->generation_error);
     }
@@ -343,13 +352,13 @@ class ScenarioTest extends TestCase
         $first = $this->generate($scenario)->json('scenario.quadrants.0');
 
         $this->actingAs($this->manager)->putJson("/scenarios/{$scenario->uuid}/quadrants/{$first['id']}", [
-            'title' => 'Judul analis',
+            'title' => $first['title'], // quadrant names are locked once the framework is approved (G5)
             'narrative' => 'Narasi yang ditulis analis.',
             'early_indicators' => ['Indikator analis'],
         ])->assertStatus(200)->assertJsonPath('scenario.quadrants.0.edited', true);
 
         $this->generate($scenario)->assertStatus(409);
-        $this->assertSame('Judul analis', $scenario->quadrants()->where('position', $first['position'])->first()->title);
+        $this->assertSame('Narasi yang ditulis analis.', $scenario->quadrants()->where('position', $first['position'])->first()->narrative);
 
         $this->generate($scenario, ['overwrite_edited' => true])->assertStatus(202);
         $this->assertSame(0, $scenario->quadrants()->whereNotNull('edited_at')->count());
@@ -481,7 +490,8 @@ class ScenarioTest extends TestCase
         $this->generate($scenario);
         $rejected = AiGenerationRun::latest('id')->first();
         $this->assertSame('rejected', $rejected->status);
-        $this->assertSame(0, $scenario->quadrants()->count());
+        // An exercise framework keeps its four named quadrants; nothing was written into them.
+        $this->assertSame(0, $scenario->quadrants()->whereNotNull('narrative')->count());
 
         // The provider fails: the template is written and links no run.
         $llm->respond(new LlmException('rate_limited'));

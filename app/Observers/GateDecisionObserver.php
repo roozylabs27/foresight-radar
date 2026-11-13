@@ -8,6 +8,7 @@ use App\Models\Scenario;
 use App\Models\ScenarioPlanningProject;
 use App\Models\ScenarioQuadrant;
 use App\Models\StrategicResponse;
+use App\Support\DecisionContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -47,8 +48,12 @@ class GateDecisionObserver
             $was = $project->getOriginal($column) !== null;
             $is = $project->getAttribute($column) !== null;
             if ($was !== $is) {
-                $this->record($project->tenant_id, $project->id, $gate, $is ? 'approved' : 'withdrawn', $project->name);
+                $this->record($project, $project->id, $gate, $is ? 'approved' : 'withdrawn', $project->name);
             }
+        }
+        // Roadmap #13: lifecycle changes (active, monitoring, archived, draft) are decisions too.
+        if ($project->wasChanged('status')) {
+            $this->record($project, $project->id, ProjectDecision::STATUS, (string) $project->status, $project->name);
         }
     }
 
@@ -68,19 +73,23 @@ class GateDecisionObserver
             default => null,
         };
         if ($action) {
-            $this->record((int) $model->getAttribute('tenant_id'), $projectId, $gate, $action, $subject);
+            $this->record($model, $projectId, $gate, $action, $subject);
         }
     }
 
-    private function record(int $tenantId, int $projectId, string $gate, string $action, ?string $subject): void
+    /** Roadmap #13: the decision keeps its artefact and the reason given in this request, if any. */
+    private function record(Model $artefact, int $projectId, string $gate, string $action, ?string $subject): void
     {
         ProjectDecision::create([
-            'tenant_id' => $tenantId,
+            'tenant_id' => (int) $artefact->getAttribute('tenant_id'),
             'project_id' => $projectId,
             'gate' => $gate,
             'action' => $action,
             'subject' => $subject === null ? null : Str::limit($subject, 200, ''),
             'actor_id' => Auth::id(),
+            'artefact_type' => Str::snake(class_basename($artefact)),
+            'artefact_id' => $artefact->getKey(),
+            'rationale' => app(DecisionContext::class)->rationale(),
         ]);
     }
 }

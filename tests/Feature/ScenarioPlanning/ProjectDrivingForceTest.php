@@ -97,6 +97,52 @@ class ProjectDrivingForceTest extends TestCase
         return ProjectDrivingForce::where('project_id', $project->id)->where('driving_force_id', $force->id)->sole();
     }
 
+    /** PI-06: rejected and closed firm forces are not offered to an exercise and cannot be added. */
+    public function test_rejected_and_closed_forces_stay_out_of_an_exercise(): void
+    {
+        $project = $this->project();
+        $pending = $this->force('TKDN Regulation');
+        $approved = $this->force('Import Regulation', null, ['status' => 'APPROVED']);
+        $rejected = $this->force('Euro-5 Plan', null, ['status' => 'REJECTED']);
+        $closed = $this->force('Solid Battery', $this->technology, ['status' => 'CLOSED']);
+
+        $this->actingAs($this->manager)->get(route('scenario-planning.forces.index', $project))
+            ->assertInertia(fn ($page) => $page->where('library', fn ($library) => collect($library)->pluck('keyword')->sort()->values()->all() === ['Import Regulation', 'TKDN Regulation']));
+
+        $this->add($project, [$pending, $approved, $rejected, $closed])->assertSessionHasErrors('forces');
+        $this->assertSame(0, ProjectDrivingForce::where('project_id', $project->id)->count());
+        $this->add($project, [$pending, $approved])->assertSessionHasNoErrors();
+        $this->assertSame(2, ProjectDrivingForce::where('project_id', $project->id)->count());
+    }
+
+    /** PI-06: a firm force that changes while an exercise uses it flags that exercise link with a reason. */
+    public function test_a_firm_force_change_flags_the_exercises_that_use_it(): void
+    {
+        $project = $this->project();
+        $edited = $this->force('TKDN Regulation');
+        $rejected = $this->force('Import Regulation', null, ['status' => 'APPROVED']);
+        $deleted = $this->force('Solid Battery', $this->technology);
+        $untouched = $this->force('Euro-5 Plan');
+        $this->add($project, [$edited, $rejected, $deleted, $untouched])->assertSessionHasNoErrors();
+
+        $edited->update(['description' => 'Aturan TKDN baru.']);
+        $rejected->update(['status' => 'REJECTED']);
+        $deleted->delete();
+        $untouched->update(['remark' => 'Catatan internal.']);
+
+        $this->assertStringContainsString('TKDN Regulation diubah di library', (string) $this->link($project, $edited)->stale_reason);
+        $this->assertStringContainsString('Import Regulation ditolak di library', (string) $this->link($project, $rejected)->stale_reason);
+        $this->assertStringContainsString('Solid Battery dihapus dari library', (string) ProjectDrivingForce::where('driving_force_id', $deleted->id)->sole()->stale_reason);
+        $this->assertNull($this->link($project, $untouched)->stale_since);
+
+        $this->actingAs($this->viewer)->get(route('scenario-planning.forces.index', $project))
+            ->assertInertia(fn ($page) => $page->where('forces', fn ($forces) => collect($forces)->whereNotNull('stale_reason')->count() === 3));
+
+        // Saving the link in the exercise is the team's review: the flag clears.
+        $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, $edited)]), ['influence_note' => 'Masih relevan.'])->assertSessionHasNoErrors();
+        $this->assertNull($this->link($project, $edited)->stale_since);
+    }
+
     public function test_forces_from_any_month_can_be_added_and_are_listed_without_a_date_filter(): void
     {
         $project = $this->project();

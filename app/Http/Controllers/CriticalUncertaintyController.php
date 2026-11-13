@@ -7,6 +7,7 @@ use App\Models\CriticalUncertainty;
 use App\Models\ScenarioPlanningProject;
 use App\Services\CriticalUncertaintyService;
 use App\Services\ScenarioPlanningProjectService;
+use App\Support\DecisionContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -69,6 +70,7 @@ class CriticalUncertaintyController extends Controller
     public function approve(Request $request, ScenarioPlanningProject $project, CriticalUncertainty $uncertainty): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request, required: $request->boolean('acknowledge_dependency'));
 
         $validated = $request->validate([
             'axis' => ['required', Rule::in(CriticalUncertainty::AXES)],
@@ -85,6 +87,7 @@ class CriticalUncertaintyController extends Controller
     public function withdraw(Request $request, ScenarioPlanningProject $project, CriticalUncertainty $uncertainty): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
 
         $this->uncertainties->withdraw($uncertainty, $request->user());
 

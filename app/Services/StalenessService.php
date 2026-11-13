@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\DrivingForce;
 use App\Models\EarlyWarningIndicator;
+use App\Models\ProjectDrivingForce;
 use App\Models\ScenarioCondition;
 use App\Models\ScenarioImplication;
 use App\Models\ScenarioPlanningProject;
@@ -21,6 +23,8 @@ use Illuminate\Support\Str;
  */
 class StalenessService
 {
+    public const FRAMEWORK_REOPENED = 'Kerangka skenario dibuka kembali (persetujuan G5 ditarik)';
+
     /**
      * Flag the exercise framework and all its quadrants. With `$downstream` (the default) Steps 7–9
      * are flagged too: implications, strategic responses and indicators (audit U6). A threshold
@@ -56,7 +60,19 @@ class StalenessService
     /** Audit U6: the approved framework (G5) was withdrawn, so everything built on it needs a look. */
     public function frameworkReopened(ScenarioPlanningProject $project): void
     {
-        $this->markDownstream($project, 'Kerangka skenario dibuka kembali (persetujuan G5 ditarik)');
+        // PI-03: narratives (G6) and responses (G7) answer the approved framework, so their approvals
+        // fall with it. Row by row, so the decision log records each withdrawal.
+        $framework = $project->framework()->first();
+        if ($framework) {
+            foreach ($framework->quadrants()->where('review_status', 'approved')->get() as $quadrant) {
+                $quadrant->update(['review_status' => 'draft', 'reviewed_by' => null, 'reviewed_at' => null]);
+            }
+            $this->markQuadrants($framework->quadrants()->get(), self::FRAMEWORK_REOPENED, onlyWithNarrative: true);
+        }
+        foreach ($project->strategicResponses()->where('status', 'approved')->get() as $response) {
+            $response->update(['status' => 'proposed', 'approved_by' => null, 'approved_at' => null]);
+        }
+        $this->markDownstream($project, self::FRAMEWORK_REOPENED);
     }
 
     /** @param  Collection<int, ScenarioImplication>  $implications */
@@ -86,6 +102,29 @@ class StalenessService
     private function flag(Model $row, string $reason): void
     {
         $row->forceFill(['stale_since' => $row->getAttribute('stale_since') ?? now(), 'stale_reason' => $this->append($row->getAttribute('stale_reason'), $reason)])->save();
+    }
+
+    /**
+     * PI-06: a firm library force changed while exercises use it. Each exercise link is flagged with
+     * the reason, and a framework whose axis rests on the force is flagged too.
+     */
+    public function firmForceChanged(DrivingForce $force, string $reason): void
+    {
+        $links = ProjectDrivingForce::where('driving_force_id', $force->id)->with('project')->get();
+        foreach ($links as $link) {
+            $this->flag($link, $reason);
+            if ($link->project) {
+                $this->markIfAxisForce($link->project, $link->id, $reason);
+            }
+        }
+    }
+
+    /** PI-06: saving the exercise force is the team's review of a library change. */
+    public function clearProjectForce(ProjectDrivingForce $link): void
+    {
+        if ($link->stale_since !== null) {
+            $link->forceFill(['stale_since' => null, 'stale_reason' => null])->save();
+        }
     }
 
     /** Flag a force's framework when the force belongs to one of its axes. */

@@ -25,6 +25,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -36,7 +37,7 @@ use Tests\TestCase;
  */
 class ForesightExerciseJourneyTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private User $coordinator;
 
@@ -133,6 +134,7 @@ class ForesightExerciseJourneyTest extends TestCase
         $this->assertSame('done', $this->steps($project)[1]);
 
         // Step 3 · Scores agreed (G3) and two critical uncertainties approved as axes (G4).
+        $this->keepLibraryScores($this->coordinator, $project);
         $this->as()->post(route('scenario-planning.assessment.confirm', $project))->assertSessionHasNoErrors();
         $uncertainty = fn (array $keywords, string $name, string $low, string $high) => $this->as()->post(route('scenario-planning.uncertainties.store', $project), [
             'name' => $name, 'description' => "{$name}.", 'forces' => array_map(fn ($k) => $this->link($project, $k)->uuid, $keywords),
@@ -195,14 +197,21 @@ class ForesightExerciseJourneyTest extends TestCase
         $this->assertSame(['approved', 1, 1], [$response->fresh()->status, $response->implications()->count(), $response->conditions()->count()]);
         $this->assertSame('done', $this->steps($project)[7]);
 
-        // Step 9 · An indicator with a direction in every scenario and a numeric threshold.
+        // Step 9 · Owned indicators with a direction in every scenario that together tell both axes
+        // apart (PI-09); the first has a numeric threshold.
         $this->as()->post(route('scenario-planning.indicators.store', $project), [
             'name' => 'Pangsa penjualan xEV', 'uncertainty' => CriticalUncertainty::where('name', 'Technology Development')->value('uuid'),
             'metric' => 'Pangsa penjualan', 'unit' => '%', 'frequency' => 'quarterly', 'source_type' => 'manual',
-            'threshold_operator' => 'gt', 'threshold_value' => 10,
+            'threshold_operator' => 'gt', 'threshold_value' => 10, 'owner' => $this->coordinator->uuid,
             'directions' => ['HH' => ['direction' => 'rising'], 'LH' => ['direction' => 'rising'], 'HL' => ['direction' => 'falling'], 'LL' => ['direction' => 'falling']],
         ])->assertSessionHasNoErrors();
-        $indicator = EarlyWarningIndicator::sole();
+        $this->assertSame('in_progress', $this->steps($project)[8], 'one axis told apart is not enough');
+        $this->as()->post(route('scenario-planning.indicators.store', $project), [
+            'name' => 'Biaya pendanaan proyek', 'metric' => 'Suku bunga kredit investasi', 'unit' => '%', 'frequency' => 'quarterly',
+            'source_type' => 'manual', 'owner' => $this->coordinator->uuid,
+            'directions' => ['HH' => ['direction' => 'falling'], 'HL' => ['direction' => 'falling'], 'LH' => ['direction' => 'rising'], 'LL' => ['direction' => 'rising']],
+        ])->assertSessionHasNoErrors();
+        $indicator = EarlyWarningIndicator::where('name', 'Pangsa penjualan xEV')->sole();
         $this->assertSame(array_fill(0, 9, 'done'), $this->steps($project), 'all nine steps done');
 
         // Monitoring feeds back: a crossing observation is decided on the server and flags review.

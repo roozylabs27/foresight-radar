@@ -8,7 +8,8 @@ Implemented in `App\Services\EarlyWarningIndicatorService::relevance()` (audit 2
 
 ## Inputs
 
-- **Indicators:** only active ones (`status = active`). Retired indicators do not count.
+- **Indicators:** only active, accepted ones (`status = active`, `review_status = accepted`) that tell the futures apart. An indicator counts only when at least one pair of quadrants that differ on a single axis (HH/LH or HL/LL for axis A, HH/HL or LH/LL for axis B) expects different directions (PI-09, 2026-11-13). Retired indicators, proposals and indicators expecting the same direction everywhere do not count: they would raise every reading at once.
+- **Step 9 done:** accepted, active indicators with an owner and a direction in every quadrant that **together tell both axes apart**. One discriminating indicator for one axis is not enough.
 - **Observations:** only accepted ones (`review_status = accepted`; proposals from World Bank or AI matching count once a person confirms them) that have a direction (`rising`, `falling`, `stable`).
 - **Expectations:** each indicator's expected direction per quadrant. Qualitative or unset expectations do not count for that quadrant.
 

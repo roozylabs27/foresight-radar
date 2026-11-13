@@ -108,7 +108,7 @@ export default function Uncertainties({ auth, title, project, steps, uncertainti
                 takenAxes={approved.map((item) => item.axis)}
                 loading={actions.busy}
                 onOpenChange={(open) => !open && setApproving(null)}
-                onApprove={(axis, acknowledge) => actions.approve(approving.id, axis, acknowledge)}
+                onApprove={(axis, acknowledge, rationale) => actions.approve(approving.id, axis, acknowledge, rationale)}
             />
         </AuthenticatedLayout>
     );

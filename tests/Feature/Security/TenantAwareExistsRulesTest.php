@@ -97,20 +97,6 @@ class TenantAwareExistsRulesTest extends TestCase
         $this->assertDatabaseMissing('cross_impacts', ['target_driving_force_id' => $this->forceB->id]);
     }
 
-    public function test_scenario_treats_foreign_axis_as_unknown(): void
-    {
-        $payload = fn (string $uuid) => [
-            'name' => 'Probe', 'axis_a' => $this->forceA->uuid, 'axis_b' => $uuid,
-            'axis_a_low_label' => 'a', 'axis_a_high_label' => 'b', 'axis_b_low_label' => 'c', 'axis_b_high_label' => 'd',
-        ];
-
-        $this->assertSameAsUnknown(
-            fn () => $this->actingAs($this->adminA)->postJson('/scenarios', $payload($this->forceB->uuid)),
-            fn () => $this->actingAs($this->adminA)->postJson('/scenarios', $payload((string) Uuid::uuid4())),
-            'axis_b',
-        );
-    }
-
     public function test_simulation_treats_foreign_force_as_unknown(): void
     {
         $this->assertSameAsUnknown(

@@ -8,6 +8,7 @@ use App\Models\ScenarioPlanningProject;
 use App\Services\FocalIssueSuggestionService;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\StalenessService;
+use App\Support\DecisionContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -82,6 +83,7 @@ class ScenarioPlanningProjectController extends Controller
     public function status(Request $request, ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
         $status = (string) $request->validate(['status' => ['required', 'string']], [], ['status' => 'status'])['status'];
 
         $this->projects->changeStatus($project, $status, $request->user());
@@ -96,6 +98,7 @@ class ScenarioPlanningProjectController extends Controller
     public function confirm(Request $request, ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('confirm', $project);
+        DecisionContext::fromRequest($request);
 
         $this->projects->confirm($project, $request->user());
 

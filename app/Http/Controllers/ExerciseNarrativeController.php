@@ -9,6 +9,7 @@ use App\Models\ScenarioQuadrant;
 use App\Services\ScenarioNarrativeService;
 use App\Services\ScenarioPlanningProjectService;
 use App\Services\ScenarioPresenter;
+use App\Support\DecisionContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -76,6 +77,7 @@ class ExerciseNarrativeController extends Controller
     public function reviewQuadrant(Request $request, ScenarioPlanningProject $project, ScenarioQuadrant $quadrant): JsonResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
         $framework = $this->owned($project, $quadrant);
         $status = $request->validate(['status' => ['required', Rule::in(ScenarioQuadrant::REVIEW_STATUSES)]])['status'];
 

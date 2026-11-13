@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\ScenarioPlanning;
 
-use App\Http\Requests\ScenarioRequest;
 use App\Models\AiGenerationRun;
 use App\Models\CriticalUncertainty;
 use App\Models\Dimension;
@@ -17,11 +16,11 @@ use App\Models\User;
 use App\Services\Llm\Prompts\ScenarioFrameworkPrompt;
 use App\Support\DimensionTaxonomy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -34,7 +33,7 @@ use Tests\TestCase;
  */
 class ScenarioFrameworkTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private User $manager;
 
@@ -84,6 +83,7 @@ class ScenarioFrameworkTest extends TestCase
         $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, 'Purchasing Power')]), ['is_predetermined' => true]);
         $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $project));
         if ($agreeScores) {
+            $this->keepLibraryScores($this->manager, $project);
             $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project));
         }
 
@@ -307,7 +307,7 @@ class ScenarioFrameworkTest extends TestCase
 
         $this->actingAs($this->manager)->putJson("/scenarios/{$framework->uuid}", [
             'name' => 'X', 'axis_a' => $this->forces['Politic']->uuid, 'axis_b' => $this->forces['Technology']->uuid,
-        ] + $this->poles())->assertStatus(422)->assertJsonValidationErrors('framework');
+        ] + $this->poles())->assertStatus(405); // PAD-2: the old edit route is gone; frameworks change in the exercise
 
         $this->actingAs($this->manager)->postJson("/scenarios/{$framework->uuid}/generate")->assertStatus(422)->assertJsonValidationErrors('framework');
     }
@@ -429,8 +429,6 @@ class ScenarioFrameworkTest extends TestCase
             ->assertSessionHasErrors('axis_b_high_label');
         $this->assertSame('Fast', $this->framework()->axis_b_high_label);
 
-        $legacy = Validator::make($this->poles(['axis_a_high_label' => 'unfavorable']), (new ScenarioRequest)->rules());
-        $this->assertArrayHasKey('axis_a_high_label', $legacy->errors()->toArray());
     }
 
     /** Matrix row 4.7: a pole used on both axes makes the quadrant names ambiguous; the page warns, it does not block. */

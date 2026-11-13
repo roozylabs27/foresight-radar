@@ -61,7 +61,8 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                                     description="Setelah dikonfirmasi, langkah 2 (driving forces) terbuka. Mengubah pertanyaan, tujuan, atau tahun target nanti akan membutuhkan konfirmasi ulang."
                                     confirmText="Konfirmasi"
                                     variant="default"
-                                    onConfirm={() => visit("post", route("scenario-planning.confirm", project.id))}
+                                    onConfirm={(rationale) => visit("post", route("scenario-planning.confirm", project.id), { rationale })}
+                                    withRationale
                                 >
                                     <Button size="sm">
                                         <CircleCheckIcon aria-hidden="true" />
@@ -122,7 +123,7 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                             </p>
                         )}
                         <StepList steps={steps} />
-                        {canManage && <div className="flex flex-wrap gap-2"><ExerciseStatusControl project={project} steps={steps} onChange={(to) => new Promise((resolve) => router.post(route("scenario-planning.status", project.id), { status: to }, { preserveScroll: true, onFinish: resolve }))} /></div>}
+                        {canManage && <div className="flex flex-wrap gap-2"><ExerciseStatusControl project={project} steps={steps} onChange={(to, rationale) => new Promise((resolve) => router.post(route("scenario-planning.status", project.id), { status: to, rationale }, { preserveScroll: true, onFinish: resolve }))} /></div>}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium">
                             {project.forces_confirmed_at && <Link href={route("scenario-planning.compare", project.id)} className="text-primary hover:underline">Bandingkan empat skenario</Link>}
                             {project.forces_confirmed_at && <Link href={route("scenario-planning.backcasting.index", project.id)} className="text-primary hover:underline">Masa depan pilihan & backcasting</Link>}

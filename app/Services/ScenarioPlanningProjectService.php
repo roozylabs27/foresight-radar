@@ -44,11 +44,11 @@ class ScenarioPlanningProjectService
         6 => 'Buat narasi tiap skenario lalu tinjau dan setujui keempatnya.',
         7 => 'Catat minimal satu peluang dan satu tantangan di tiap kuadran.',
         8 => 'Susun respons strategis, nilai kecocokannya per kuadran, lalu setujui.',
-        9 => 'Tentukan indikator peringatan dini dan arahnya di tiap kuadran.',
+        9 => 'Tentukan indikator peringatan dini dengan penanggung jawab; bersama-sama arahnya harus membedakan kedua sumbu.',
     ];
 
     /** Logged decisions that are not gates (roadmap R4.1). */
-    private const OTHER_DECISIONS = ['PF' => 'Masa depan pilihan'];
+    private const OTHER_DECISIONS = ['PF' => 'Masa depan pilihan', ProjectDecision::STATUS => 'Status latihan'];
 
     /** Gates in the order they are passed (target workflow §4). */
     private const GATES = [
@@ -163,10 +163,8 @@ class ScenarioPlanningProjectService
      */
     public function update(ScenarioPlanningProject $project, array $validated, User $user): bool
     {
+        // The status is not editable here: changeStatus() and G1 own it (PI-01).
         $project->fill($this->attributes($validated) + ['updated_by' => $user->id]);
-        if (isset($validated['status'])) {
-            $project->status = $validated['status'];
-        }
 
         $reconfirm = $project->isConfirmed() && $project->isDirty(ScenarioPlanningProject::FOCAL_FIELDS);
         // An AI critique (roadmap R3.1) is about the old question.
@@ -340,6 +338,7 @@ class ScenarioPlanningProjectService
                 'label' => self::GATES[$row->gate] ?? self::OTHER_DECISIONS[$row->gate] ?? $row->gate,
                 'action' => $row->action,
                 'subject' => $row->subject,
+                'rationale' => $row->rationale,
                 'actor' => $row->actor?->name,
                 'at' => $row->created_at->toISOString(),
             ])

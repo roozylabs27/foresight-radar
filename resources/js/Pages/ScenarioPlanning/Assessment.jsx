@@ -15,7 +15,7 @@ import { useProjectAssessment } from "@/hooks/use-project-assessment";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 /** Step 3 of an exercise: impact × uncertainty scores, the matrix and gate G3 (roadmap R1.1). */
-export default function Assessment({ auth, title, project, steps, forces, threshold, canManage, canScore, suggestionStatus, suggestionError, errors = {} }) {
+export default function Assessment({ auth, title, project, steps, forces, threshold, canManage, canScore, libraryPending = 0, spreadCount = 0, suggestionStatus, suggestionError, errors = {} }) {
     const actions = useProjectAssessment(project.id);
     const [editing, setEditing] = useState(null);
     const unscored = forces.filter((item) => item.impact == null).length;
@@ -44,7 +44,7 @@ export default function Assessment({ auth, title, project, steps, forces, thresh
                     <div className="mb-3">
                         <SuggestionControl status={suggestionStatus} error={suggestionError} canManage={canManage} disabled={locked || forces.length === 0} busy={actions.busy} onSuggest={actions.suggest} />
                     </div>
-                    <ScoreList forces={forces} threshold={threshold} canManage={canManage && !locked} canScore={canScore && !locked} onEdit={(force, mode) => setEditing({ force, mode })} onWithdraw={locked ? null : (item) => actions.withdrawMine(item.id)} busy={actions.busy} onAcceptSuggestion={(item) => actions.acceptSuggestion(item.id)} onRejectSuggestion={(item) => actions.rejectSuggestion(item.id)} />
+                    <ScoreList forces={forces} threshold={threshold} canManage={canManage && !locked} canScore={canScore && !locked} onEdit={(force, mode) => setEditing({ force, mode })} onWithdraw={locked ? null : (item) => actions.withdrawMine(item.id)} busy={actions.busy} onAcceptSuggestion={(item) => actions.acceptSuggestion(item.id)} onRejectSuggestion={(item) => actions.rejectSuggestion(item.id)} onKeepLibrary={(item) => actions.keepLibrary(item.id)} />
                     <Link href={route("scenario-planning.show", project.id)} className="mt-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeftIcon aria-hidden="true" className="size-4" />
                         {project.name}
@@ -66,14 +66,15 @@ export default function Assessment({ auth, title, project, steps, forces, thresh
                         ) : canManage ? (
                             <ConfirmDialog
                                 title="Sepakati skor?"
-                                description={`${forces.length} driving force sudah diberi skor. Langkah berikutnya akan terbuka.`}
+                                description={`${forces.length} driving force sudah diberi skor.${spreadCount > 0 ? ` ${spreadCount} di antaranya punya skor peserta yang berbeda jauh; pastikan sudah didiskusikan.` : ""} Langkah berikutnya akan terbuka.`}
                                 confirmText="Sepakati"
                                 variant="default"
                                 onConfirm={actions.confirm}
+                                withRationale
                             >
-                                <Button size="sm" disabled={locked || forces.length === 0 || unscored > 0}>
+                                <Button size="sm" disabled={locked || forces.length === 0 || unscored > 0 || libraryPending > 0}>
                                     <CircleCheckIcon aria-hidden="true" />
-                                    {unscored > 0 ? `${unscored} belum diberi skor` : "Sepakati skor"}
+                                    {unscored > 0 ? `${unscored} belum diberi skor` : libraryPending > 0 ? `${libraryPending} skor library belum ditinjau` : "Sepakati skor"}
                                 </Button>
                             </ConfirmDialog>
                         ) : (

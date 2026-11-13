@@ -4,13 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\HandlesApiErrors;
 use App\Http\Requests\ScenarioQuadrantRequest;
-use App\Http\Requests\ScenarioRequest;
 use App\Models\Scenario;
 use App\Models\ScenarioQuadrant;
 use App\Services\Llm\StructuredLlmClient;
 use App\Services\ScenarioNarrativeService;
 use App\Services\ScenarioPresenter;
-use App\Services\ScenarioService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +24,6 @@ class ScenarioController extends Controller
     use HandlesApiErrors;
 
     public function __construct(
-        protected ScenarioService $scenarios,
         protected ScenarioNarrativeService $narratives,
         protected StructuredLlmClient $llm,
     ) {}
@@ -71,47 +68,9 @@ class ScenarioController extends Controller
         }
     }
 
-    public function suggestAxes(): JsonResponse
-    {
-        return response()->json($this->scenarios->suggestAxes(), Response::HTTP_OK);
-    }
-
     public function show(Scenario $scenario): JsonResponse
     {
         return response()->json($this->present($scenario), Response::HTTP_OK);
-    }
-
-    public function store(ScenarioRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-        [$axisA, $axisB] = $this->scenarios->resolveAxes($validated['axis_a'], $validated['axis_b']);
-
-        $scenario = Scenario::create($this->attributes($validated, $axisA->id, $axisB->id) + [
-            'status' => 'DRAFT',
-            'created_by' => Auth::id(),
-            'updated_by' => Auth::id(),
-        ]);
-
-        return response()->json([
-            'message' => 'Skenario dibuat.',
-            'scenario' => $this->present($scenario),
-        ], Response::HTTP_CREATED);
-    }
-
-    public function update(ScenarioRequest $request, Scenario $scenario): JsonResponse
-    {
-        $this->authorize('update', $scenario);
-        $this->refuseFramework($scenario);
-
-        $validated = $request->validated();
-        [$axisA, $axisB] = $this->scenarios->resolveAxes($validated['axis_a'], $validated['axis_b']);
-
-        $scenario->update($this->attributes($validated, $axisA->id, $axisB->id) + [
-            'status' => $validated['status'] ?? $scenario->status,
-            'updated_by' => Auth::id(),
-        ]);
-
-        return response()->json(['message' => 'Skenario diperbarui.', 'scenario' => $this->present($scenario)], Response::HTTP_OK);
     }
 
     public function destroy(Scenario $scenario): JsonResponse
@@ -164,34 +123,12 @@ class ScenarioController extends Controller
         ], Response::HTTP_ACCEPTED);
     }
 
-    /** Axes and poles of an exercise framework are edited in the exercise (step 4), not here. */
-    protected function refuseFramework(Scenario $scenario): void
-    {
-        if ($scenario->isFramework()) {
-            throw ValidationException::withMessages(['framework' => 'Sumbu dan kutub kerangka ini diatur di latihan scenario planning (langkah 4).']);
-        }
-    }
-
     protected function axisLabel(Scenario $scenario, string $axis): string
     {
         $force = $scenario->axisForce($axis);
         $name = $scenario->axisName($axis) ?? '(Faktor dihapus)';
 
         return $force?->trashed() ? $name.' (Dihapus)' : $name;
-    }
-
-    protected function attributes(array $validated, int $axisA, int $axisB): array
-    {
-        return [
-            'name' => $validated['name'],
-            'focal_question' => $validated['focal_question'] ?? null,
-            'axis_a_force_id' => $axisA,
-            'axis_b_force_id' => $axisB,
-            'axis_a_low_label' => $validated['axis_a_low_label'],
-            'axis_a_high_label' => $validated['axis_a_high_label'],
-            'axis_b_low_label' => $validated['axis_b_low_label'],
-            'axis_b_high_label' => $validated['axis_b_high_label'],
-        ];
     }
 
     /** The scenario as both narrative pages show it (ScenarioPresenter). */

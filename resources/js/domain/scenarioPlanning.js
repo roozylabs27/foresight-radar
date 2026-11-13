@@ -66,6 +66,11 @@ export const DECISION_ACTIONS = {
     approved: { label: "Disetujui", tone: "approved" },
     rejected: { label: "Ditolak", tone: "rejected" },
     withdrawn: { label: "Dibatalkan", tone: "pending" },
+    // Exercise status changes (code ST, roadmap #13).
+    draft: { label: "Kembali ke draf", tone: "neutral" },
+    active: { label: "Aktif", tone: "approved" },
+    monitoring: { label: "Pemantauan", tone: "approved" },
+    archived: { label: "Diarsipkan", tone: "neutral" },
 };
 
 /** Exercise participant roles (App\Models\ProjectParticipant); viewers only read. */

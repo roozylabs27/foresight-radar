@@ -9,6 +9,7 @@ use App\Models\ScenarioQuadrant;
 use App\Services\FrameworkSuggestionService;
 use App\Services\ScenarioFrameworkService;
 use App\Services\ScenarioPlanningProjectService;
+use App\Support\DecisionContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -102,6 +103,7 @@ class ScenarioFrameworkController extends Controller
     public function approve(Request $request, ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
 
         $this->frameworks->approve($this->framework($project), $request->user());
 
@@ -111,6 +113,7 @@ class ScenarioFrameworkController extends Controller
     public function reopen(Request $request, ScenarioPlanningProject $project): RedirectResponse
     {
         $this->authorize('update', $project);
+        DecisionContext::fromRequest($request);
 
         $this->frameworks->reopen($this->framework($project), $request->user());
 

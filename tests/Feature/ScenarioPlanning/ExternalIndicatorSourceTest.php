@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Http;
 use Ramsey\Uuid\Uuid;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\KeepsLibraryScores;
 use Tests\TestCase;
 
 /**
@@ -32,7 +33,7 @@ use Tests\TestCase;
  */
 class ExternalIndicatorSourceTest extends TestCase
 {
-    use RefreshDatabase;
+    use KeepsLibraryScores, RefreshDatabase;
 
     private User $manager;
 
@@ -82,6 +83,7 @@ class ExternalIndicatorSourceTest extends TestCase
         $this->actingAs($this->manager)->put(route('scenario-planning.forces.update', [$project, $this->link($project, 'Purchasing Power')]), ['is_predetermined' => true]);
         $this->actingAs($this->manager)->post(route('scenario-planning.forces.confirm', $project));
         if ($agreeScores) {
+            $this->keepLibraryScores($this->manager, $project);
             $this->actingAs($this->manager)->post(route('scenario-planning.assessment.confirm', $project));
         }
 

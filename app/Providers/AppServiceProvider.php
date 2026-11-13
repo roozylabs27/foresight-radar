@@ -8,6 +8,7 @@ use App\Services\Llm\OpenAiCompatibleClient;
 use App\Services\Llm\QuotaLimitedLlmClient;
 use App\Services\Llm\StructuredLlmClient;
 use App\Services\TenantContext;
+use App\Support\DecisionContext;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(TenantContext::class, function () {
             return new TenantContext;
         });
+        // Roadmap #13: the reason given for a gate decision in this request (scoped the same way).
+        $this->app->scoped(DecisionContext::class, fn () => new DecisionContext);
 
         // The configured provider when it is fully set up, otherwise a client that is never available.
         $this->app->singleton(StructuredLlmClient::class, function () {

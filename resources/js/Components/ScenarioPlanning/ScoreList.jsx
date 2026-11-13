@@ -1,4 +1,4 @@
-import { PencilIcon, UserRoundIcon } from "lucide-react";
+import { LibraryIcon, PencilIcon, UserRoundIcon } from "lucide-react";
 
 import ScoreSuggestion from "@/Components/ScenarioPlanning/ScoreSuggestion";
 import { statusBadge } from "@/Components/StatusBadge";
@@ -8,9 +8,10 @@ import { SCORE_CLASSES, classifyScore, formatSpread } from "@/domain/scenarioPla
 /**
  * Included forces with their number, consensus scores, matrix class and score provenance, plus the
  * spread of the participants' own scores (roadmap R2.1). `onEdit(item, mode)` opens the score dialog
- * for the consensus ("consensus") or the signed-in participant's own score ("mine").
+ * for the consensus ("consensus") or the signed-in participant's own score ("mine"); `onKeepLibrary`
+ * keeps a score copied from the organisation rating (PI-02).
  */
-export default function ScoreList({ forces, threshold, canManage, canScore, busy, onEdit, onWithdraw, onAcceptSuggestion, onRejectSuggestion }) {
+export default function ScoreList({ forces, threshold, canManage, canScore, busy, onEdit, onWithdraw, onAcceptSuggestion, onRejectSuggestion, onKeepLibrary }) {
     if (forces.length === 0) {
         return <p className="m-0 py-6 text-center text-sm text-muted-foreground">Belum ada driving force yang disertakan di langkah 2.</p>;
     }
@@ -27,7 +28,8 @@ export default function ScoreList({ forces, threshold, canManage, canScore, busy
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-sm font-semibold text-foreground">{item.force.keyword}</span>
                                 <span className={statusBadge({ tone: kind.tone })}>{kind.label}</span>
-                                {item.origin === "library" && <span className={statusBadge({ tone: "pending" })}>Disalin dari penilaian organisasi, tinjau</span>}
+                                {item.library_pending && <span className={statusBadge({ tone: "pending" })}>Disalin dari penilaian organisasi, tinjau</span>}
+                                {item.origin === "library" && !item.library_pending && <span className={statusBadge({ tone: "approved" })}>Nilai library, sudah ditinjau</span>}
                                 {spread.wide && <span className={statusBadge({ tone: "pending" })}>Skor peserta berbeda jauh, diskusikan</span>}
                             </div>
                             <span className="text-xs text-muted-foreground">
@@ -64,6 +66,12 @@ export default function ScoreList({ forces, threshold, canManage, canScore, busy
                                 <Button size="sm" variant="outline" onClick={() => onEdit(item, "mine")} aria-label={`Skor saya untuk ${item.force.keyword}`}>
                                     <UserRoundIcon aria-hidden="true" />
                                     Skor saya
+                                </Button>
+                            )}
+                            {canManage && item.library_pending && onKeepLibrary && (
+                                <Button size="sm" variant="outline" disabled={busy} onClick={() => onKeepLibrary(item)} aria-label={`Pakai nilai library untuk ${item.force.keyword}`}>
+                                    <LibraryIcon aria-hidden="true" />
+                                    Pakai nilai library
                                 </Button>
                             )}
                             {canManage && (
