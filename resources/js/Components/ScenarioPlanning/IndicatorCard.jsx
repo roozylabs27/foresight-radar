@@ -26,9 +26,9 @@ export default function IndicatorCard({ indicator, quadrants, canManage, canReco
                 {indicator.status === "retired" && <span className={statusBadge({ tone: "closed" })}>Tidak dipantau lagi</span>}
                 {!indicator.discriminates && Object.keys(indicator.directions).length > 0 && (
                     <HintTooltip content="Arahnya sama di semua kuadran yang dinilai, jadi indikator ini belum membedakan skenario.">
-                        <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
+                        <button type="button" className={statusBadge({ tone: "pending" })}>
                             Belum membedakan skenario
-                        </span>
+                        </button>
                     </HintTooltip>
                 )}
             </header>

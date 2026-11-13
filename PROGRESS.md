@@ -546,6 +546,14 @@ Brief: "Production Readiness Remediation & Final Verification" (phases 0–11). 
 - **Readiness decision:** **CONDITIONALLY READY** (matrix §Gate).
   - Owner actions: R-01 alert mail, R-02 backup cron and off-server copy, R-13 MySQL default credentials, plus running `verify-production.sh`.
   - Engineering: R-04 browser E2E, R-05 CSP enforce, R-06 DNS pinning, R-08 Laravel 12.
+- **CI annotations (follow-up, same day):** ESLint 57 warnings → **0**.
+  - Config: the jsx-a11y recommended options were being dropped (bare "warn"), which reported correctly labelled checkboxes; the options are now kept, with `depth` and `Input`/`Textarea` as controls (11 false positives).
+  - Tooltip badges and the locked stepper step are now `<button>`s instead of `span tabIndex`; `aria-disabled` only on locked steps. Sort-header info icon is a real button. Empty table cells got screen-reader text; `CardTitle` renders its children.
+  - `autoFocus` removed where Radix already focuses the first dialog field; kept with a reasoned exception on the sign-in, forgot-password and confirm-password pages and the date picker.
+  - 21 hook warnings: 17 dialogs and 1 polling effect use `useEffectEvent` (React 19.3), so the form still resets only when another item opens; `CommentButton`, `ScenarioSimulation` and `use-exercise-narratives` list or inline their real dependencies.
+  - Workflows: `actions/checkout@v7`, `actions/setup-node@v7` (Node 24), runners pinned to `ubuntu-24.04`.
+  - Enforced: `npm run lint` is `eslint resources/js --max-warnings=0` (user decision), so CI and `verify.sh` fail on any new warning; AGENTS.md updated. Checked: lint exit 0 on the code; a probe with one warning (stdin, no file) exits 1.
+  - Verified: `npm run lint` 0 problems; build passes (the 8 Radix sourcemap messages predate this); browser: score dialog shows each force's own values, stepper step 1 not marked disabled, robustness badge keeps its style and tooltip, no console errors.
 - **Not committed.**
 
 ### 2026-11-13 — Session 99 (product integrity remediation, Phase 1 group 2: PI-03, PI-02, PI-06, gate rationale)

@@ -7,9 +7,9 @@ export default function StaleTag({ reason }) {
 
     return (
         <HintTooltip content={reason}>
-            <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
+            <button type="button" className={statusBadge({ tone: "pending" })}>
                 Perlu ditinjau
-            </span>
+            </button>
         </HintTooltip>
     );
 }

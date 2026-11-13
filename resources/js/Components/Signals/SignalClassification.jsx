@@ -1,5 +1,5 @@
 import { CpuIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -36,12 +36,13 @@ export default function ClassifyDialog({ signal, loading, onOpenChange, onSave }
     const [wildCard, setWildCard] = useState(false);
     const [errors, setErrors] = useState({});
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!signal) return;
         setErrors({});
         setHorizon(signal.horizon ?? "");
         setWildCard(Boolean(signal.wild_card));
-    }, [signal?.uuid]);
+    });
+    useEffect(() => resetForm(), [signal?.uuid]);
 
     const save = async () => {
         const result = await onSave({ horizon: horizon || null, wild_card: wildCard });

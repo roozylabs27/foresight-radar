@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -22,11 +22,12 @@ export default function UncertaintyFormDialog({ open, uncertainty, candidates, t
 
     // Reset when the dialog opens or another uncertainty is chosen, not when props are refreshed
     // after a validation error (that would wipe the input and the errors).
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!open) return;
         setErrors({});
         setValues(uncertainty ? { ...EMPTY, ...uncertainty, description: uncertainty.description ?? "", forces: uncertainty.forces.map((force) => force.id) } : EMPTY);
-    }, [open, uncertainty?.id]);
+    });
+    useEffect(() => resetForm(), [open, uncertainty?.id]);
 
     const set = (name) => (event) => setValues((current) => ({ ...current, [name]: event.target.value }));
     const toggle = (id) => setValues((current) => ({ ...current, forces: current.forces.includes(id) ? current.forces.filter((item) => item !== id) : [...current.forces, id] }));

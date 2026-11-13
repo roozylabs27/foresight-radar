@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -38,14 +38,15 @@ export default function MilestoneDialog({ target, targetYear, owners, responses,
     const [errors, setErrors] = useState({});
     const milestone = target?.milestone;
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!target) return;
         setErrors({});
         setValues(milestone ? {
             year: String(milestone.year), title: milestone.title, description: milestone.description ?? "", status: milestone.status,
             owner: milestone.owner?.id ?? "", response: milestone.response?.id ?? "", indicator: milestone.indicator?.id ?? "",
         } : empty);
-    }, [target, milestone?.id]);
+    });
+    useEffect(() => resetForm(), [target, milestone?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const save = async () => {

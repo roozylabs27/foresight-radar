@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -17,11 +17,12 @@ export default function EditForceDialog({ link, onOpenChange, loading, onSave })
     const [values, setValues] = useState({ inclusion_status: "included", influence_note: "", is_predetermined: false });
 
     // Reset only when another force is opened, not on a props refresh while the dialog is open.
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (link) {
             setValues({ inclusion_status: link.inclusion_status, influence_note: link.influence_note ?? "", is_predetermined: link.is_predetermined });
         }
-    }, [link?.id]);
+    });
+    useEffect(() => resetForm(), [link?.id]);
 
     const set = (name) => (value) => setValues((current) => ({ ...current, [name]: value }));
     const save = async () => {

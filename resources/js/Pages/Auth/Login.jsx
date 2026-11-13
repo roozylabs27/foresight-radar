@@ -81,6 +81,7 @@ export default function Login({ errors: serverErrors = {} }) {
                                 type="email"
                                 placeholder="analis@perusahaan.com"
                                 autoComplete="email"
+                                // eslint-disable-next-line jsx-a11y/no-autofocus -- single-purpose page: the form is the whole page, so focusing its first field loses no context
                                 autoFocus
                                 {...rhfInputProps(props)}
                             />

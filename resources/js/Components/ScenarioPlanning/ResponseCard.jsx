@@ -21,9 +21,9 @@ export default function ResponseCard({ response, quadrants, canManage, busy, onE
                 <ProvenanceBadge origin={response.origin} review={response.status} reviewLabel={status.label} />
                 {robustness && (
                     <HintTooltip content={robustness.hint}>
-                        <span tabIndex={0} className={statusBadge({ tone: response.robustness === "robust" ? "approved" : "neutral" })}>
+                        <button type="button" className={statusBadge({ tone: response.robustness === "robust" ? "approved" : "neutral" })}>
                             {robustness.label} · {response.applies}/4
-                        </span>
+                        </button>
                     </HintTooltip>
                 )}
                 {response.priority && <span className="text-xs font-medium text-foreground">P{response.priority}</span>}

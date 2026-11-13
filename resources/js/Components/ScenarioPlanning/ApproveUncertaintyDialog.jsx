@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -18,13 +18,14 @@ export default function ApproveUncertaintyDialog({ uncertainty, takenAxes, loadi
 
     // Reset only when another uncertainty is opened: props are new objects after every Inertia
     // reload, and resetting on those would wipe the server's errors as soon as they arrive.
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!uncertainty) return;
         setErrors({});
         setAcknowledge(false);
         setRationale("");
         setAxis(takenAxes.includes("A") ? "B" : "A");
-    }, [uncertainty?.id]);
+    });
+    useEffect(() => resetForm(), [uncertainty?.id]);
 
     const approve = async () => {
         const result = await onApprove(axis, acknowledge, rationale.trim() || null);

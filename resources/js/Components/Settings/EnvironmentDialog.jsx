@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -14,11 +14,12 @@ export default function EnvironmentDialog({ target, loading, onOpenChange, onSav
     const [errors, setErrors] = useState({});
     const environment = target?.environment;
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!target) return;
         setErrors({});
         setName(environment?.name ?? "");
-    }, [target, environment?.id]);
+    });
+    useEffect(() => resetForm(), [target, environment?.id]);
 
     const save = async () => {
         const result = await onSave({ name });

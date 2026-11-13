@@ -23,9 +23,9 @@ function Item({ item, canManage, onEdit, onRemove, onAccept }) {
                     {item.impact_level && <span>{IMPACT_LEVELS[item.impact_level]}</span>}
                     {item.generic && (
                         <HintTooltip content={item.similar_to?.length > 0 ? "Judulnya sangat mirip dengan item di kuadran lain, jadi item ini kurang membedakan skenario." : "Judul yang sama ada di keempat kuadran, jadi item ini tidak membedakan skenario."}>
-                            <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
+                            <button type="button" className={statusBadge({ tone: "pending" })}>
                                 {item.similar_to?.length > 0 ? `Generik · mirip ${item.similar_to.join(", ")}` : "Sama di 4 kuadran"}
-                            </span>
+                            </button>
                         </HintTooltip>
                     )}
                 </div>

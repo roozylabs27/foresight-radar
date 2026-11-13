@@ -46,12 +46,9 @@ function StatusCode({ code, label, reason }) {
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <span
-                    tabIndex={0}
-                    className="inline-flex cursor-help rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                >
+                <button type="button" className="inline-flex cursor-help rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
                     {badge}
-                </span>
+                </button>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-xs">
                 {reason}

@@ -15,9 +15,10 @@ function Thread({ projectId, type, id }) {
     const [body, setBody] = useState("");
     const [error, setError] = useState(null);
 
+    const { load } = comments;
     useEffect(() => {
-        comments.load();
-    }, [comments.load]);
+        load();
+    }, [load]);
 
     const add = async () => {
         const errors = await comments.add(body);

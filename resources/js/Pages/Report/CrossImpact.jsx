@@ -237,6 +237,7 @@ function Matrix({ forces, scores, canManage, onEdit, highlight = null }) {
                                     return (
                                         <td key={target.id} className="border-0 border-b border-solid border-border bg-muted/60 p-0.5">
                                             <span aria-hidden="true" className="block size-8" />
+                                            <span className="sr-only">Tidak dinilai: driving force yang sama</span>
                                         </td>
                                     );
                                 }

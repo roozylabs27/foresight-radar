@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -21,11 +21,12 @@ export default function PolesDialog({ open, axes, loading, onOpenChange, onSave 
     const [values, setValues] = useState(() => valuesOf(axes));
     const [errors, setErrors] = useState({});
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!open) return;
         setErrors({});
         setValues(valuesOf(axes));
-    }, [open]);
+    });
+    useEffect(() => resetForm(), [open]);
 
     const set = (name) => (event) => setValues((current) => ({ ...current, [name]: event.target.value }));
     const save = async () => {

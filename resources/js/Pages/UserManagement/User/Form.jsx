@@ -90,7 +90,6 @@ export default function FormUser({ id, isEditMode, initialValues = {}, roles = [
                                 onBlur={field.onBlur}
                                 placeholder="Enter name"
                                 autoComplete="off"
-                                autoFocus={!isEditMode}
                             />
                         </FormField>
                     )}

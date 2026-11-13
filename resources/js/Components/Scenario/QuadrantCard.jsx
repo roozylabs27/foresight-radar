@@ -30,9 +30,9 @@ export function ProvenanceBadges({ quadrant }) {
             {quadrant.edited && <span className={cn(statusBadge(), "bg-warning-soft text-warning")}>Diedit analis</span>}
             {quadrant.stale_reason && (
                 <HintTooltip content={quadrant.stale_reason}>
-                    <span tabIndex={0} className={cn(statusBadge(), "bg-warning-soft text-warning")}>
+                    <button type="button" className={cn(statusBadge(), "bg-warning-soft text-warning")}>
                         Perlu ditinjau
-                    </span>
+                    </button>
                 </HintTooltip>
             )}
         </span>

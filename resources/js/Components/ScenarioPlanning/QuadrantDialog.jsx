@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -15,11 +15,12 @@ export default function QuadrantDialog({ quadrant, loading, onOpenChange, onSave
     const [values, setValues] = useState({ title: "", summary: "" });
     const [errors, setErrors] = useState({});
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!quadrant) return;
         setErrors({});
         setValues({ title: quadrant.title, summary: quadrant.summary ?? "" });
-    }, [quadrant?.id]);
+    });
+    useEffect(() => resetForm(), [quadrant?.id]);
 
     const set = (name) => (event) => setValues((current) => ({ ...current, [name]: event.target.value }));
     const save = async () => {

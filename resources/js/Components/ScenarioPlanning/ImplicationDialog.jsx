@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -42,13 +42,14 @@ export default function ImplicationDialog({ target, forces, loading, onOpenChang
     const [errors, setErrors] = useState({});
     const item = target?.item;
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!target) return;
         setErrors({});
         reset(item
             ? { ...EMPTY, ...item, type: item.type ?? "opportunity", description: item.description ?? "", impact_level: item.impact_level ?? "", priority: item.priority ? String(item.priority) : "", forces: item.forces.map((force) => force.id), conditions: item.conditions.map((condition) => condition.id) }
             : { ...EMPTY, ...target.prefill });
-    }, [target?.quadrant.id, item?.id, target?.prefill]);
+    });
+    useEffect(() => resetForm(), [target?.quadrant.id, item?.id, target?.prefill]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const save = async () => {
