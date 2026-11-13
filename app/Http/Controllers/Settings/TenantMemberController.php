@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -154,6 +155,10 @@ class TenantMemberController extends Controller
         if (! $tenant || (int) $user->tenant_id !== (int) $tenant->id) {
             abort(404);
         }
+        // SEC-PR-03: an organisation admin cannot demote or remove a platform operator (UserPolicy rank).
+        if (Gate::denies('update', $user)) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'role' => ['required', 'string', 'in:admin,bod'],
@@ -187,6 +192,10 @@ class TenantMemberController extends Controller
         // A member of another tenant gets the same 404 as an unknown uuid (TENANT-009).
         if (! $tenant || (int) $user->tenant_id !== (int) $tenant->id) {
             abort(404);
+        }
+        // SEC-PR-03: an organisation admin cannot demote or remove a platform operator (UserPolicy rank).
+        if (Gate::denies('update', $user)) {
+            abort(403);
         }
 
         if ($user->id === Auth::id()) {

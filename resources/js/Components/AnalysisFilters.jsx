@@ -1,9 +1,10 @@
 import { useId, useState } from "react";
 import dayjs from "dayjs";
-import { RotateCwIcon } from "lucide-react";
+import { InfoIcon, RotateCwIcon } from "lucide-react";
 
 import DateRangePicker from "@/Components/DateRangePicker";
 import FilterBar, { FilterField } from "@/Components/FilterBar";
+import HintTooltip from "@/Components/HintTooltip";
 import ReportScopeSelect from "@/Components/ReportScopeSelect";
 import { Button } from "@/Components/ui/button";
 import { FIRM, initialScope, scopeLabel } from "@/domain/reportScope";
@@ -122,7 +123,20 @@ export default function AnalysisFilterBar({
             {filters.scopes?.length > 0 && <ReportScopeSelect value={filters.scope} onChange={filters.setScope} scopes={filters.scopes} />}
             {/* A Key Focal Issue is one snapshot of the exercise, so the period only applies to the firm view. */}
             {(filters.scope ?? FIRM) === FIRM && (
-                <FilterField label="Periode" className="w-full sm:w-auto">
+                <FilterField
+                    label={
+                        <span className="inline-flex items-center gap-1">
+                            Periode penilaian
+                            {/* PI-07 / PAD-1: the FIRM period is when a rating was last assessed, not when it was created. */}
+                            <HintTooltip content="Driving force tampil bila skornya terakhir dinilai (impact, uncertainty, horizon, prioritas, atau status aksi diubah) di dalam periode ini, bukan saat pertama kali didaftarkan.">
+                                <button type="button" className="inline-flex text-muted-foreground hover:text-foreground" aria-label="Arti periode penilaian">
+                                    <InfoIcon aria-hidden="true" className="size-3.5" />
+                                </button>
+                            </HintTooltip>
+                        </span>
+                    }
+                    className="w-full sm:w-auto"
+                >
                     <DateRangePicker value={filters.period} onChange={filters.setPeriod} className="w-full sm:w-[260px]" />
                 </FilterField>
             )}

@@ -88,15 +88,14 @@ class UserLlmSettingController extends Controller
         try {
             $data = $request->validated();
 
-            // If API key is not provided in test payload, use stored key if present
+            // Without a key in the payload, test the user's own stored key. The platform key is never
+            // lent to a personal test (SEC-PR-01): the user chooses the base URL it would be sent to.
             if (empty($data['api_key'])) {
                 /** @var User|null $user */
                 $user = $request->user();
                 $existing = $user?->llmSettings()->where('provider', $data['provider'])->first();
                 if ($existing && ! empty($existing->api_key)) {
                     $data['api_key'] = $existing->api_key;
-                } elseif ($data['provider'] === 'gemini' && ! empty(config('services.openai_compatible.api_key'))) {
-                    $data['api_key'] = config('services.openai_compatible.api_key');
                 }
             }
 

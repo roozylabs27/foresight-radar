@@ -40,7 +40,11 @@ class ForesightReportingService
     }
 
     /**
-     * Common query scope for approved driving forces with status action.
+     * Common query scope for approved driving forces with status action, assessed in the period
+     * (PI-07 / PAD-1: `assessed_at`, the latest change of a scored field). Bounds are whole days in
+     * the application timezone (config app.timezone), inclusive at both ends.
+     *
+     * @return Builder<DrivingForceRating>
      */
     public function baseApprovedRatingQuery(?array $dateRange = null, mixed $dimension = null): Builder
     {
@@ -56,8 +60,9 @@ class ForesightReportingService
                 }
             })
             ->whereNotNull('status_action_id')
-            ->where('created_at', '>=', $dateStart)
-            ->where('created_at', '<=', $dateEnd);
+            // PI-07 / PAD-1: "assessed in the period" (latest assessment), not when the row was created.
+            ->where('assessed_at', '>=', $dateStart)
+            ->where('assessed_at', '<=', $dateEnd);
     }
 
     /**

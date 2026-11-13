@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": "Foresight Radar",
   "version": "1.2.0",
-  "last_updated": "2026-11-11",
+  "last_updated": "2026-11-13",
   "status_vocabulary": [
     "not_started",
     "in_progress",
@@ -126,7 +126,7 @@
         "Categorizes items by dimension sectors",
         "Endpoint is rate-limited and protected by RBAC"
       ],
-      "verification_evidence": "Tests/Feature/Security/RateLimitingTest and Tests/Feature/Security/VisualizationAuthorizationTest pass"
+      "verification_evidence": "Tests/Feature/Security/RateLimitingTest and Tests/Feature/Security/VisualizationAuthorizationTest pass PI-07 (2026-11-13): the FIRM period filters on the rating's latest assessment (driving_force_ratings.assessed_at), tests/Feature/Reliability/FirmAssessmentPeriodTest (6)."
     },
     {
       "id": "FEAT-010",
@@ -139,7 +139,7 @@
         "Highlights high-impact, high-uncertainty critical uncertainties",
         "Allows filtering by dimension and environment"
       ],
-      "verification_evidence": "Tests/Feature/Security/VisualizationAuthorizationTest passes"
+      "verification_evidence": "Tests/Feature/Security/VisualizationAuthorizationTest passes PI-07 (2026-11-13): the FIRM period filters on the rating's latest assessment (driving_force_ratings.assessed_at), tests/Feature/Reliability/FirmAssessmentPeriodTest (6)."
     },
     {
       "id": "FEAT-011",
@@ -152,7 +152,7 @@
         "Sanitizes search queries and avoids SQL wildcard leakage",
         "Exports structured data to XLSX"
       ],
-      "verification_evidence": "Tests/Feature/TableSortTest and Tests/Feature/Security/FilterOperatorPrecedenceTest pass"
+      "verification_evidence": "Tests/Feature/TableSortTest and Tests/Feature/Security/FilterOperatorPrecedenceTest pass PI-07 (2026-11-13): the FIRM period filters on the rating's latest assessment (driving_force_ratings.assessed_at), tests/Feature/Reliability/FirmAssessmentPeriodTest (6)."
     },
     {
       "id": "FEAT-012",
@@ -167,7 +167,7 @@
         "UI renders interactive propagation toggle and ripple trace breakdown panel",
         "Handles missing or unrated parameters gracefully"
       ],
-      "verification_evidence": "Tests/Feature/Reasoning/ScenarioSimulationTest and Tests/Feature/Reasoning/ScenarioSimulationPropagationTest pass (20 assertions)"
+      "verification_evidence": "Tests/Feature/Reasoning/ScenarioSimulationTest and Tests/Feature/Reasoning/ScenarioSimulationPropagationTest pass (20 assertions) PI-07 (2026-11-13): the FIRM period filters on the rating's latest assessment (driving_force_ratings.assessed_at), tests/Feature/Reliability/FirmAssessmentPeriodTest (6)."
     },
     {
       "id": "FEAT-013",

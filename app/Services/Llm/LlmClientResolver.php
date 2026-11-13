@@ -129,7 +129,9 @@ class LlmClientResolver
                 'name' => 'gemini',
                 'label' => 'Google Gemini',
                 'base_url' => $attributes['base_url'] ?: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-                'api_key' => $apiKey ?: config('services.openai_compatible.api_key'),
+                // SEC-PR-01: the platform key only ever goes to the default Gemini host, never to a
+                // base URL that came with the attributes.
+                'api_key' => $apiKey ?: (blank($attributes['base_url'] ?? null) ? config('services.openai_compatible.api_key') : null),
                 'model' => $model,
                 'structured_output' => 'json_object',
                 'reasoning_effort' => $settings['reasoning_effort'] ?? 'low',

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Observers\DrivingForceRatingObserver;
 use App\Services\ForesightReportingService;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,8 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
 
+/**
+ * @property Carbon|null $assessed_at time of the latest assessment (PI-07): the FIRM reporting period filters on it
+ */
 class DrivingForceRating extends Model
 {
     use BelongsToTenant, HasFactory, SoftDeletes;
@@ -26,6 +32,10 @@ class DrivingForceRating extends Model
         'uncertainty_analysis',
     ];
 
+    protected $casts = [
+        'assessed_at' => 'datetime',
+    ];
+
     protected static function booted()
     {
         static::creating(function ($model) {
@@ -33,6 +43,28 @@ class DrivingForceRating extends Model
                 $model->uuid = (string) Uuid::uuid1();
             }
         });
+
+        // PI-07: an assessment is a change of a scored field (the same fields the rating history
+        // tracks). A save that changes none of them, or only touches the row, is not an assessment.
+        static::saving(function (self $model) {
+            if (! $model->exists) {
+                $model->assessed_at ??= $model->freshTimestamp();
+            } elseif ($model->isDirty(DrivingForceRatingObserver::TRACKED)) {
+                $model->assessed_at = $model->freshTimestamp();
+            }
+        });
+    }
+
+    /**
+     * PI-07: set `assessed_at` where it is missing, from the latest rating history event, else the
+     * creation time. Ratings created before the history existed got a 'baseline' history row (their
+     * updated_at or created_at) in 2026_10_16_000001, so the fallback only covers rows with no history.
+     */
+    public static function backfillAssessedAt(): int
+    {
+        return DB::table('driving_force_ratings')->whereNull('assessed_at')->update([
+            'assessed_at' => DB::raw('COALESCE((SELECT MAX(h.changed_at) FROM driving_force_rating_histories h WHERE h.driving_force_rating_id = driving_force_ratings.id), driving_force_ratings.created_at)'),
+        ]);
     }
 
     public function driving_force(): BelongsTo

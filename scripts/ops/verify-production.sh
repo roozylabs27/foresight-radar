@@ -36,6 +36,8 @@ echo "uncommitted files: $(git status --porcelain | wc -l)"
 git status --porcelain | awk '{print "  " $0}' | head -n 20
 echo "last moves of HEAD:"
 git reflog -n 5 --date=iso --format='  %h %gd %gs' 2>/dev/null
+echo "release log (~/foresight-releases.log, written by post-deploy-check.sh; last 5):"
+tail -n 5 "$HOME/foresight-releases.log" 2>/dev/null | awk '{print "  " $0}' || echo "  none yet"
 
 section "3. Containers"
 docker ps -a --filter name=laravel_ --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
@@ -114,6 +116,8 @@ if [ -n "$LATEST" ]; then
   echo "  tables in dump:"
   gunzip -c "$LATEST" | grep '^CREATE TABLE' | sed -E 's/CREATE TABLE `([^`]+)`.*/\1/' | tr '\n' ' ' | fold -w 150 | awk '{print "    " $0}'
   echo "  engines in dump: $(gunzip -c "$LATEST" | grep -oE 'ENGINE=[A-Za-z]+' | sort | uniq -c | tr '\n' ' ')"
+  echo "  checksum sidecar: $([ -f "$LATEST.sha256" ] && ( [ "$(sha256sum "$LATEST" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$LATEST.sha256")" ] && echo matches || echo DIFFERS ) || echo 'none (dump older than the sidecar)')"
+  echo "  backup --check (age, gzip, completion, checksum): $(bash scripts/ops/backup-database.sh --check 2>&1 | tail -n 1)"
 else
   echo "no backup file found"
 fi
@@ -123,4 +127,4 @@ command -v rclone >/dev/null && echo "  rclone installed" || echo "  rclone not 
 command -v aws >/dev/null && echo "  aws cli installed" || echo "  aws cli not installed"
 
 echo
-echo "Done. Nothing was changed."
+echo "Done. Nothing was changed (backup --check only creates its lock file in $BACKUP_DIR)."
