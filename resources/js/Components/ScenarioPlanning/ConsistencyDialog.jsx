@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -17,11 +17,12 @@ export default function ConsistencyDialog({ quadrant, loading, onOpenChange, onS
     const [errors, setErrors] = useState({});
     const warnings = quadrant?.consistency.checks ?? [];
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!quadrant) return;
         setErrors({});
         setValues({ status: quadrant.consistency.status ?? "consistent", note: quadrant.consistency.note ?? "" });
-    }, [quadrant?.id]);
+    });
+    useEffect(() => resetForm(), [quadrant?.id]);
 
     const save = async () => {
         const result = await onSave(quadrant.id, { status: values.status, note: values.note || null });

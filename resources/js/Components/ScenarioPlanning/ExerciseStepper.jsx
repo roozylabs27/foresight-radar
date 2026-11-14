@@ -46,9 +46,9 @@ export default function ExerciseStepper({ project, steps, current }) {
                                         {content}
                                     </Link>
                                 ) : (
-                                    <span tabIndex={0} aria-label={label} aria-current={active ? "step" : undefined} className={className}>
+                                    <button type="button" aria-disabled={step.status === "locked" || undefined} aria-label={label} aria-current={active ? "step" : undefined} className={cn(className, "cursor-default")}>
                                         {content}
-                                    </span>
+                                    </button>
                                 )}
                             </HintTooltip>
                         </li>

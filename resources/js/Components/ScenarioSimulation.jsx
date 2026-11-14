@@ -102,7 +102,7 @@ export default function ScenarioSimulation({ loading, reasoningData, params }) {
             clearTimeout(timer);
             controller.abort();
         };
-    }, [overrides, params, propagate]);
+    }, [activeOverrideCount, overrides, params, propagate]);
 
     if (loading) {
         return (

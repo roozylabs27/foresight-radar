@@ -154,10 +154,10 @@ fi
 #    removed (audit AUD-18/AUD-26).
 # ------------------------------------------------------------------------------
 if [ "${RUN_FRONTEND}" = true ]; then
-    run_check "Frontend Lint (ESLint, 0 errors)" \
+    run_check "Frontend Lint (ESLint, 0 errors, 0 warnings)" \
         "run_npm run lint"
 else
-    run_check "Frontend Lint (ESLint, 0 errors)" "" true
+    run_check "Frontend Lint (ESLint, 0 errors, 0 warnings)" "" true
 fi
 
 # ------------------------------------------------------------------------------

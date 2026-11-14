@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -72,7 +72,7 @@ export default function ScoreDialog({ force, mode = "consensus", onOpenChange, l
     const copy = MODES[mode];
 
     // Reset only when another force or mode is opened, not on the props refresh after a validation error.
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!force) return;
         const source = mode === "mine" ? force.mine ?? {} : force;
         setErrors({});
@@ -82,7 +82,8 @@ export default function ScoreDialog({ force, mode = "consensus", onOpenChange, l
             impact_rationale: source.impact_rationale ?? "",
             uncertainty_rationale: source.uncertainty_rationale ?? "",
         });
-    }, [force?.id, mode]);
+    });
+    useEffect(() => resetForm(), [force?.id, mode]);
 
     const set = (name) => (value) => setValues((current) => ({ ...current, [name]: value }));
     const applyMedian = () => {

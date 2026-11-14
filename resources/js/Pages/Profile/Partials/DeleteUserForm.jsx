@@ -83,7 +83,6 @@ export default function DeleteUserForm() {
                                     type="password"
                                     placeholder="Masukkan kata sandi Anda"
                                     autoComplete="current-password"
-                                    autoFocus
                                     {...rhfInputProps(props)}
                                 />
                             )}

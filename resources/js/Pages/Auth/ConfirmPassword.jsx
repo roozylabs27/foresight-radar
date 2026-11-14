@@ -55,6 +55,7 @@ export default function ConfirmPassword({ errors: serverErrors = {} }) {
                                 type="password"
                                 placeholder="Masukkan kata sandi akun"
                                 autoComplete="current-password"
+                                // eslint-disable-next-line jsx-a11y/no-autofocus -- single-purpose page: the form is the whole page, so focusing its first field loses no context
                                 autoFocus
                                 {...rhfInputProps(props)}
                             />

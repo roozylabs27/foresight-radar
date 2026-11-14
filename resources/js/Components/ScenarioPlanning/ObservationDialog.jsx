@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -38,11 +38,12 @@ export default function ObservationDialog({ indicator, signals, loading, onOpenC
     const { values, setValues, reset, dirty } = useDraft(empty);
     const [errors, setErrors] = useState({});
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!indicator) return;
         setErrors({});
         reset(empty());
-    }, [indicator?.id]);
+    });
+    useEffect(() => resetForm(), [indicator?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const save = async () => {

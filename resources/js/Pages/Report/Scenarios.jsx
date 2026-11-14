@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -45,6 +45,7 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
     const editedCount = scenario.quadrants.filter((quadrant) => quadrant.edited || ["reviewed", "approved"].includes(quadrant.review_status)).length;
 
     // The narrative is written by a queued job: poll until it completes or fails.
+    const notifyChanged = useEffectEvent((data) => onChanged(data));
     useEffect(() => {
         if (!pending) return undefined;
         const controller = new AbortController();
@@ -65,13 +66,12 @@ function ScenarioDetail({ scenario, canManage, llm, onChanged, onDeleted }) {
                 if (result?.status === "failed") toast.error("Narasi tidak dibuat.", { description: result.error, duration });
                 else if (result?.notice) toast.warning(result.message, { description: result.notice, duration });
                 else toast.success(result?.message ?? "Narasi dibuat.", { duration });
-                onChanged(data);
+                notifyChanged(data);
             })
             .catch((error) => {
                 if (!controller.signal.aborted) toast.error("Status narasi tidak dapat dimuat.", { description: errorText(error, error.message) });
             });
         return () => controller.abort();
-        // onChanged is recreated on each parent render; polling restarts only for a new scenario or job.
     }, [scenario.id, pending]);
 
     const generate = async (overwrite = false) => {

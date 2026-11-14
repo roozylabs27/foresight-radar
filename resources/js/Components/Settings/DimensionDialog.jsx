@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -19,11 +19,12 @@ export default function DimensionDialog({ target, environments, loading, onOpenC
     const [errors, setErrors] = useState({});
     const dimension = target?.dimension;
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!target) return;
         setErrors({});
         setValues({ name: dimension?.name ?? "", environment: target.environmentId ?? environments[0]?.id ?? "", color: dimension?.color ?? AUTO });
-    }, [target, dimension?.id]);
+    });
+    useEffect(() => resetForm(), [target, dimension?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const save = async () => {

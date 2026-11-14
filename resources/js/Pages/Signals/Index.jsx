@@ -79,14 +79,14 @@ function HeaderWithTooltip({ title, tooltip }) {
             {tooltip && (
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <span
-                            role="button"
+                        <button
+                            type="button"
                             aria-label={`Informasi tentang ${title}`}
                             className="inline-flex cursor-help text-muted-foreground/70 transition-colors hover:text-foreground"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <InfoIcon className="size-3.5" />
-                        </span>
+                            <InfoIcon aria-hidden="true" className="size-3.5" />
+                        </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs text-xs font-normal text-left">
                         {tooltip}

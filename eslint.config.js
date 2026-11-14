@@ -6,7 +6,8 @@ import globals from "globals";
 
 /**
  * Audit 2026-11-11 AUD-18: lint for the JSX frontend (resources/js). `npm run lint` must report no
- * errors; warnings are known debt in older code, fixed when a file is touched.
+ * errors. Since 2026-11-13 it also reports no warnings: keep it that way (a dialog that resets only when
+ * another item opens uses useEffectEvent, not a shortened dependency list).
  *
  * - Errors: JavaScript mistakes (undefined names, unreachable code), the rules of hooks, and React
  *   mistakes that break rendering (missing keys, duplicate props).
@@ -34,7 +35,17 @@ export default [
             "react/no-unescaped-entities": "off",
             "react-hooks/rules-of-hooks": "error",
             "react-hooks/exhaustive-deps": "warn",
-            ...Object.fromEntries(Object.keys(jsxA11y.flatConfigs.recommended.rules).map((rule) => [rule, "warn"])),
+            // Every recommended jsx-a11y rule as a warning, keeping the plugin's recommended options (for
+            // example control-has-associated-label ignores inputs, which their <label> names). Mapping a rule
+            // to a bare "warn" dropped those options and reported correctly labelled checkboxes.
+            ...Object.fromEntries(
+                Object.entries(jsxA11y.flatConfigs.recommended.rules).map(([rule, setting]) => [rule, Array.isArray(setting) ? ["warn", ...setting.slice(1)] : "warn"]),
+            ),
+            // A checkbox row's text often sits a few elements deep inside its <label>; Textarea and Input are
+            // the design system's form controls.
+            "jsx-a11y/label-has-associated-control": ["warn", { depth: 4, controlComponents: ["Input", "Textarea"] }],
+            // Recommended options, plus depth for header cells whose text sits inside a tooltip trigger.
+            "jsx-a11y/control-has-associated-label": ["warn", { ...jsxA11y.flatConfigs.recommended.rules["jsx-a11y/control-has-associated-label"][1], depth: 4 }],
             // Deprecated in favour of label-has-associated-control (above).
             "jsx-a11y/label-has-for": "off",
             "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true }],

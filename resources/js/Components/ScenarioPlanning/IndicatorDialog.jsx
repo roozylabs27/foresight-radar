@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -46,7 +46,7 @@ export default function IndicatorDialog({ target, quadrants, uncertainties, forc
     const [errors, setErrors] = useState({});
     const indicator = target?.indicator;
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!target) return;
         setErrors({});
         reset(indicator
@@ -61,7 +61,8 @@ export default function IndicatorDialog({ target, quadrants, uncertainties, forc
                   directions: Object.fromEntries(Object.entries(indicator.directions).map(([position, row]) => [position, { direction: row.direction, note: row.note ?? "" }])),
               }
             : { ...EMPTY, ...target.prefill });
-    }, [target, indicator?.id]);
+    });
+    useEffect(() => resetForm(), [target, indicator?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const setDirection = (position, patch) =>

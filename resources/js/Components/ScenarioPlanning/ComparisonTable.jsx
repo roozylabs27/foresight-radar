@@ -68,7 +68,9 @@ export default function ComparisonTable({ quadrants, responses, indicators, canR
                 <caption className="sr-only">Perbandingan empat skenario</caption>
                 <thead>
                     <tr>
-                        <td className="sticky left-0 z-10 w-40 bg-card p-3" />
+                        <td className="sticky left-0 z-10 w-40 bg-card p-3">
+                            <span className="sr-only">Aspek</span>
+                        </td>
                         {quadrants.map((quadrant) => (
                             <th key={quadrant.position} scope="col" className="min-w-52 p-3 text-left align-top">
                                 <span className="block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{quadrant.poles.join(" × ")}</span>

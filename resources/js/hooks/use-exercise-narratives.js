@@ -43,7 +43,7 @@ export function useExerciseNarratives(projectId, framework) {
         if (!pending) return undefined;
         const controller = new AbortController();
         pollUntil(
-            () => axios.get(url("state"), { signal: controller.signal }).then((response) => response.data),
+            () => axios.get(route("scenario-planning.narratives.state", projectId), { signal: controller.signal }).then((response) => response.data),
             (data) => !isPending(data.generation?.status),
             { signal: controller.signal }
         )
@@ -55,7 +55,7 @@ export function useExerciseNarratives(projectId, framework) {
                 else if (result?.status === "failed") toast.error("Narasi tidak dibuat.", { description: result.error, duration });
                 else if (result?.notice) toast.warning(result.message, { description: result.notice, duration });
                 else toast.success(result?.message ?? "Narasi dibuat.", { duration });
-                refresh();
+                router.reload({ only: PROPS });
             })
             .catch((error) => {
                 if (!controller.signal.aborted) toast.error("Status narasi tidak dapat dimuat.", { description: errorText(error) });

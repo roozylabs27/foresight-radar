@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -21,11 +21,12 @@ export default function ConditionDialog({ target, axes, forces, loading, onOpenC
     const [errors, setErrors] = useState({});
     const condition = target?.condition;
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!target) return;
         setErrors({});
         reset(condition ? { kind: condition.kind, text: condition.text, axis: condition.axis, force: condition.force?.id ?? null } : EMPTY);
-    }, [target?.quadrant.id, condition?.id]);
+    });
+    useEffect(() => resetForm(), [target?.quadrant.id, condition?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const save = async () => {

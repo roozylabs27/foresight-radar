@@ -99,6 +99,7 @@ export default function DateRangePicker({
                     defaultMonth={selected?.from}
                     selected={selected}
                     onSelect={handleSelect}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus -- react-day-picker moves keyboard focus to the selected day when the popover opens
                     autoFocus
                 />
                 <p className="border-t px-3 py-2 text-xs text-muted-foreground">

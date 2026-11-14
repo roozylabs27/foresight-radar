@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { router } from "@inertiajs/react";
 import { AlertCircleIcon, BotIcon, LoaderCircleIcon } from "lucide-react";
 
@@ -14,9 +14,10 @@ const PENDING = ["queued", "processing"];
 export default function SuggestionControl({ status, error, validationError, canManage, disabled, busy, onSuggest, label = "Minta saran skor AI", pendingLabel = "AI sedang menyiapkan saran…", reloadOnly = ["forces", "suggestionStatus", "suggestionError"] }) {
     const pending = PENDING.includes(status);
 
+    const reload = useEffectEvent(() => router.reload({ only: reloadOnly }));
     useEffect(() => {
         if (!pending) return undefined;
-        const timer = setInterval(() => router.reload({ only: reloadOnly }), 5000);
+        const timer = setInterval(() => reload(), 5000);
         return () => clearInterval(timer);
     }, [pending]);
 

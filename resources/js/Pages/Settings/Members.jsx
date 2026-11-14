@@ -354,7 +354,6 @@ export default function Members({
                                                         onBlur={field.onBlur}
                                                         placeholder="nama@perusahaan.co.id"
                                                         autoComplete="off"
-                                                        autoFocus
                                                     />
                                                 </FormField>
                                             )}

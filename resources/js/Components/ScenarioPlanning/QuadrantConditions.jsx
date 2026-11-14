@@ -47,16 +47,16 @@ export default function QuadrantConditions({ quadrant, axes, predetermined, mini
                                     {condition.review_status === "proposed" && <ProvenanceBadge origin={condition.origin} review="proposed" />}
                                     {condition.similar_to?.length > 0 && (
                                         <HintTooltip content="Sebagian besar katanya sama dengan kondisi di kuadran lain. Skenario yang mirip sulit dibedakan.">
-                                            <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
+                                            <button type="button" className={statusBadge({ tone: "pending" })}>
                                                 Mirip dengan {condition.similar_to.join(", ")}
-                                            </span>
+                                            </button>
                                         </HintTooltip>
                                     )}
                                     {condition.shared && (
                                         <HintTooltip content="Teks yang sama ada di keempat kuadran. Mungkin ini elemen predetermined, bukan pembeda skenario.">
-                                            <span tabIndex={0} className={statusBadge({ tone: "pending" })}>
+                                            <button type="button" className={statusBadge({ tone: "pending" })}>
                                                 Sama di 4 kuadran
-                                            </span>
+                                            </button>
                                         </HintTooltip>
                                     )}
                                 </div>

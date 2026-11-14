@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import FormDialog from "@/Components/FormDialog";
 import FormField from "@/Components/FormField";
@@ -24,13 +24,14 @@ export default function ResponseDialog({ target, quadrants, implications, condit
     const [errors, setErrors] = useState({});
     const response = target?.response;
 
-    useEffect(() => {
+    const resetForm = useEffectEvent(() => {
         if (!target) return;
         setErrors({});
         reset(response
             ? { ...EMPTY, ...response, description: response.description ?? "", rationale: response.rationale ?? "", initiatives: response.initiatives ?? "", depends_on: response.depends_on ?? "", priority: response.priority ? String(response.priority) : "", owner: response.owner?.id ?? "", fit: { ...response.fit }, implications: response.implications.map((item) => item.id), conditions: response.conditions.map((item) => item.id) }
             : EMPTY);
-    }, [target, response?.id]);
+    });
+    useEffect(() => resetForm(), [target, response?.id]);
 
     const set = (name, value) => setValues((current) => ({ ...current, [name]: value }));
     const setFit = (position, fit) => setValues((current) => ({ ...current, fit: { ...current.fit, [position]: fit } }));

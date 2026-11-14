@@ -9,7 +9,7 @@ on:
 jobs:
   backend:
     name: Backend Tests & Security Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       mysql:
@@ -26,7 +26,7 @@ jobs:
           --health-retries=5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -73,13 +73,13 @@ jobs:
 
   frontend:
     name: Frontend Build & Security Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -93,7 +93,8 @@ jobs:
         run: npm audit --audit-level=critical
 
       # The frontend is JavaScript/JSX; ESLint replaces the old tsc step, which checked no source file.
-      # Fails on errors (undefined names, rules of hooks, broken JSX); warnings are known debt.
+      # `npm run lint` uses --max-warnings=0 (since 2026-11-13): errors (undefined names, rules of hooks,
+      # broken JSX) and any new warning (hook dependencies, accessibility) fail CI.
       - name: ESLint (resources/js)
         run: npm run lint
 
@@ -105,7 +106,7 @@ jobs:
   e2e:
     name: Headless E2E Smoke & Critical Journeys
     needs: [backend, frontend]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       mysql:
@@ -118,7 +119,7 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -128,7 +129,7 @@ jobs:
           coverage: none
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
