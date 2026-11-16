@@ -28,6 +28,7 @@ Columns:
 | R-10 | **Migration `2026_11_11_000001` is not reversible by code.** | A rollback past it needs a database restore | Low | Medium | Pre-migration dump; runbook §5 | No (already on production) | Operator: restore, never `migrate:rollback` |
 | R-16 | **Browser E2E is proven locally; the CI job is new.** 32/32 passed on the isolated stack on 2026-11-14; the `browser-e2e` CI job runs from the next push. | A CI-only problem (image build, timing on hosted runners) could show up there first | Medium | Low | The same `scripts/e2e/run.sh` locally and in CI; traces uploaded on failure | No | Engineering: watch the first CI run |
 | R-17 | **The E2E stack is slower than production** (PHP's built-in server over a bind mount: ~1 s per page; generous timeouts). | Timing-related flakiness | Medium | Low | One retry in CI; explicit waits, no fixed sleeps in the specs | No | Engineering |
+| R-18 | **Per-user rate limits vs. automated clients.** CI browser tests hit `429` at 120 and 60 requests per minute per user (2026-11-16). Limits are now configurable (`config/ops.php`); production keeps 120 and 60, and the E2E stack sets 6000. | A very fast real user, or heavy polling, could also see 429 | Low | Low | Defaults unchanged; `RateLimitingTest` covers the header and the 429 | No | Engineering: watch production logs for 429s |
 
 ## Closed with evidence
 

@@ -47,6 +47,26 @@ class RateLimitingTest extends TestCase
         $this->assertTrue($response->headers->has('X-RateLimit-Remaining'));
     }
 
+    /** The per-user limits come from config/ops.php (production defaults 120 and 60; the E2E stack raises them). */
+    public function test_the_per_user_limits_are_configurable(): void
+    {
+        config(['ops.rate_limits.visualization' => 500, 'ops.rate_limits.app' => 900]);
+
+        $this->actingAs($this->user)->getJson('/visualization/prioritizing/get-data')
+            ->assertStatus(200)
+            ->assertHeader('X-RateLimit-Limit', 500);
+    }
+
+    public function test_the_visualization_limit_still_answers_429_when_exceeded(): void
+    {
+        config(['ops.rate_limits.visualization' => 3]);
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->actingAs($this->user)->getJson('/visualization/prioritizing/get-data')->assertStatus(200);
+        }
+        $this->actingAs($this->user)->getJson('/visualization/prioritizing/get-data')->assertStatus(429);
+    }
+
     public function test_signal_ingest_route_has_rate_limiting_headers(): void
     {
         $response = $this->actingAs($this->user)

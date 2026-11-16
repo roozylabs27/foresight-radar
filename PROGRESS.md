@@ -565,6 +565,13 @@ Brief: "Final Production Readiness Closure & Go-Live Verification". User decisio
   - Reproduced the CI error with a minimal read-only mount (fails without `.env`, works with the placeholder; the container reads `e2e.env`).
   - Local re-run: `bash scripts/e2e/run.sh` 32 passed (exit 0, 907 s); `composer audit` exit 0.
   - Both fixes reach CI once committed.
+- **Second CI run (`browser-e2e` started, 26 passed, F1 failed, C9 flaky):**
+  - Cause: the tests click 3-4 times faster in CI, so one test user exceeded the per-user limits `throttle:120,1` / `throttle:60,1,visualization`.
+  - F1: the redirect after login answered 429, so the URL stayed on `/login`.
+  - C9: the reload after saving answered 429, so no "Setujui" button.
+  - Fix: named limiters `app` and `visualization` in `RouteServiceProvider`, read from `config/ops.php` `rate_limits` (defaults 120 and 60 unchanged); `docker/e2e/e2e.env` sets 6000.
+  - `RateLimitingTest` 2 new tests, red then green (5/5); Pint PASS; `route:list` shows `ThrottleRequests:app` / `:visualization`.
+  - The local Docker Desktop was very slow after its restart, so the full E2E re-run is left to CI.
 - **Release gate: NOT PRODUCTION READY — NO-GO** until the VPS owner evidence exists (verification run, MySQL credentials, alert delivery, scheduled and off-server backup) and `main` is protected.
 - **Not committed.**
 
