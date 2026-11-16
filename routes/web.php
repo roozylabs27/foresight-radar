@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiStatusStreamController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\BackcastingController;
 use App\Http\Controllers\ClosedItemsController;
@@ -106,6 +107,8 @@ Route::prefix('/')->middleware(['auth', 'verified', 'throttle:app'])->group(func
         Route::get('/', 'index')->name('index')->can('view-scenario');
         Route::post('/', 'store')->name('store')->can('manage-scenario');
         Route::get('/{project}', 'show')->name('show')->can('view-scenario');
+        // Server-Sent Events with the AI job statuses of the exercise (replaces short polling, 2026-11-16).
+        Route::get('/{project}/ai-status/stream', [AiStatusStreamController::class, 'stream'])->name('ai-status.stream')->can('view-scenario');
         Route::put('/{project}', 'update')->name('update')->can('manage-scenario');
         Route::post('/{project}/confirm', 'confirm')->name('confirm')->can('manage-scenario');
         Route::post('/{project}/status', 'status')->name('status')->can('manage-scenario');

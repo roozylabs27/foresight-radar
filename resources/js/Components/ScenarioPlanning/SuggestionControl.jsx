@@ -1,25 +1,21 @@
-import { useEffect, useEffectEvent } from "react";
 import { router } from "@inertiajs/react";
 import { AlertCircleIcon, BotIcon, LoaderCircleIcon } from "lucide-react";
 
 import { Button } from "@/Components/ui/button";
+import { useAiStatusStream } from "@/hooks/use-ai-status-stream";
 
 const PENDING = ["queued", "processing"];
 
 /**
  * Starts an AI assist job (roadmap R2.4: score suggestions on step 3, candidate forces on step 2)
- * and shows its state. While the job runs the page reloads `reloadOnly` every few seconds, so the
- * proposals appear without a refresh.
+ * and shows its state. While the job runs the page follows it through Server-Sent Events and reloads
+ * `reloadOnly` when the job's status changes, so the proposals appear without a refresh (polling every
+ * few seconds only when the stream is unavailable).
  */
 export default function SuggestionControl({ status, error, validationError, canManage, disabled, busy, onSuggest, label = "Minta saran skor AI", pendingLabel = "AI sedang menyiapkan saran…", reloadOnly = ["forces", "suggestionStatus", "suggestionError"] }) {
     const pending = PENDING.includes(status);
 
-    const reload = useEffectEvent(() => router.reload({ only: reloadOnly }));
-    useEffect(() => {
-        if (!pending) return undefined;
-        const timer = setInterval(() => reload(), 5000);
-        return () => clearInterval(timer);
-    }, [pending]);
+    useAiStatusStream({ active: pending, onChange: () => router.reload({ only: reloadOnly }) });
 
     return (
         <div className="flex flex-col gap-2">

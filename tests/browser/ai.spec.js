@@ -43,7 +43,12 @@ let slowExercise = "";
 
 test("D1. shows the pending state, blocks a second request, then shows and keeps the result", async () => {
     slowExercise = await createExercise(`AI lambat ${stamp()}`, "Bagaimana kendaraan listrik di Indonesia? [e2e-slow]");
+    // The page follows the job through Server-Sent Events, not by polling.
+    const stream = page.waitForResponse((response) => response.url().includes("/ai-status/stream"));
     await askAi().click();
+    const streamResponse = await stream;
+    expect(streamResponse.status()).toBe(200);
+    expect(streamResponse.headers()["content-type"]).toContain("text/event-stream");
 
     await expect(page.getByText("AI sedang meninjau pertanyaan fokus…")).toBeVisible();
     // While the job runs the assist cannot be asked again (no duplicate submission).
