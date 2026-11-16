@@ -11,4 +11,13 @@ return [
         'app' => (int) env('RATE_LIMIT_APP_PER_MINUTE', 120),
         'visualization' => (int) env('RATE_LIMIT_VISUALIZATION_PER_MINUTE', 60),
     ],
+
+    // Server-Sent Events with the AI job statuses (AiStatusStream). Each open stream holds a PHP-FPM
+    // worker (pm.max_children = 20 in docker/php/zz-docker.conf), so streams are short and capped;
+    // above the cap the page polls instead.
+    'sse' => [
+        'max_seconds' => (int) env('AI_SSE_MAX_SECONDS', 25),
+        'interval_ms' => (int) env('AI_SSE_INTERVAL_MS', 1000),
+        'max_streams' => (int) env('AI_SSE_MAX_STREAMS', 6),
+    ],
 ];

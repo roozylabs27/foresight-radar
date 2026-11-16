@@ -506,6 +506,31 @@
 
 ## Session Log
 
+### 2026-11-16 — Session 102 (AI status via Server-Sent Events instead of short polling)
+
+User request: replace short polling of AI calls with SSE for a better UX. Decision: short, capped SSE with a polling fallback.
+- **Why capped:** PHP-FPM has 20 workers (`pm.max_children`), and an open stream holds one.
+
+- **Server:**
+  - `GET scenario-planning/{project}/ai-status/stream` (`AiStatusStreamController`, `App\Services\Llm\AiStatusStream`), `can('view-scenario')`, organisation-scoped binding;
+  - events: a `retry` hint, `status` at the start and on every change (the 9 `{kind}_suggestion_status` plus the framework's `generation_status`), `: ping` every ~10 s, `end` after `ops.sse.max_seconds` (25 s); the browser reconnects;
+  - at most `ops.sse.max_streams` (6) streams at once through self-expiring cache locks; above that, 503 with `Retry-After` and the page polls;
+  - `X-Accel-Buffering: no`.
+- **Browser:**
+  - `lib/ai-status-stream.js` (`watchAiStatus`) and `hooks/use-ai-status-stream.js`;
+  - `SuggestionControl` (all 9 assists) reloads only when a status changes; narratives (`use-exercise-narratives`) load the result once when the generation is no longer pending;
+  - on failure: the old polling.
+  - Signal extraction (`IngestionContext`) and external fetch still poll (not exercise jobs).
+- **Tests:**
+  - `AiStatusStreamTest` 5 passed: headers, events, end, organisation isolation, permission, 503 at the cap;
+  - Pint (1 quote fixed), Larastan no errors, ESLint 0 warnings, build OK;
+  - Browser E2E on the isolated stack: ai + recovery-ux 8/8; D1 now asserts the page opens `/ai-status/stream` with `text/event-stream` (3/3).
+- **nginx check (dev stack = production setup), in the browser:** the `status` event arrived at 1.05 s (not buffered until the end), `end` at 26 s, then the EventSource reconnects (`readyState` 0).
+- **Regression caught by the full suite:** the stream called `set_time_limit(max_seconds + 15)`. In tests that is 15 s, and the limit outlived the request, killing later tests ("Maximum execution time of 15 seconds exceeded").
+  - Removed: FPM has `max_execution_time = 300`, `usleep` does not count, and the stream ends itself.
+  - Full PHPUnit after the fix: **753 passed**, 0 failed (8,714 assertions, 603 s); ESLint 0 warnings.
+- **Not committed.**
+
 ### 2026-11-14 — Session 101 (final production readiness closure and go-live verification)
 
 Brief: "Final Production Readiness Closure & Go-Live Verification". User decisions:
