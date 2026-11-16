@@ -25,6 +25,12 @@ trap cleanup EXIT
 
 [ -f public/build/manifest.json ] || { echo "No frontend build: run npm run build first."; exit 1; }
 
+# docker/e2e/e2e.env is mounted over /var/www/.env inside a read-only code mount. Docker can only do that
+# when the mount point exists, and a fresh checkout (CI) has no .env. An empty placeholder is enough: the
+# containers read e2e.env (mounted over it and passed as env_file), never this file. An existing .env is
+# left untouched.
+[ -e .env ] || : > .env
+
 echo "[1/5] Starting MySQL and the app..."
 "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
 "${COMPOSE[@]}" up -d e2e_mysql e2e_app

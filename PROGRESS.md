@@ -557,6 +557,14 @@ Brief: "Final Production Readiness Closure & Go-Live Verification". User decisio
   - VPS block 1 handed over (no output yet);
   - blocks 2–7 in `docs/production-readiness/vps-owner-handoff.md` need the merged code.
 - **Docs:** production-readiness matrix (RR-01..RR-23), final verification report, runbook (queue, scheduler recovery, E2E), known risks (R-01, R-02, R-13, R-14, R-15 block GO), VPS handoff, AGENTS.md, feature_list note.
+- **CI follow-up (2026-11-16):**
+  - `main` `7ffa45f` (PR #27 merged) failed CI twice:
+    - `composer audit` on the new advisory `PKSA-yxbx-3c9s-cjt9`; the reviewed exception is in the uncommitted `composer.json`;
+    - `browser-e2e`: Docker could not mount `docker/e2e/e2e.env` over `/var/www/.env`, because a fresh checkout has no `.env` and the code mount is read-only.
+  - Fix: `scripts/e2e/run.sh` creates an empty `.env` placeholder when none exists.
+  - Reproduced the CI error with a minimal read-only mount (fails without `.env`, works with the placeholder; the container reads `e2e.env`).
+  - Local re-run: `bash scripts/e2e/run.sh` 32 passed (exit 0, 907 s); `composer audit` exit 0.
+  - Both fixes reach CI once committed.
 - **Release gate: NOT PRODUCTION READY — NO-GO** until the VPS owner evidence exists (verification run, MySQL credentials, alert delivery, scheduled and off-server backup) and `main` is protected.
 - **Not committed.**
 
