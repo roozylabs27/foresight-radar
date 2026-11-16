@@ -22,7 +22,8 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 const FORM_ID = "scenario-planning-project-edit-form";
 
-const visit = (method, url) => new Promise((resolve) => router.visit(url, { method, preserveScroll: true, onFinish: resolve }));
+// `data` carries e.g. the G1 reason; it used to be dropped here (found by the browser E2E, 2026-11-14).
+const visit = (method, url, data = {}) => new Promise((resolve) => router.visit(url, { method, data, preserveScroll: true, onFinish: resolve }));
 
 /** Workspace of one scenario planning exercise: its focal issue (step 1) and the nine steps. */
 export default function Show({ auth, title, project, steps, nextAction, lastGate, canManage, owners = [], participants = [], decisions = [], focalSuggestion, focalStatus, focalError, errors = {} }) {
@@ -135,9 +136,9 @@ export default function Show({ auth, title, project, steps, nextAction, lastGate
                 </div>
             </main>
 
-            <FormDialog title="Ubah latihan" open={dialog.open} onOpenChange={dialog.setOpen} formId={FORM_ID} isEditMode btnText="Simpan" cancelText="Batal" loading={dialog.saving} className="sm:max-w-2xl">
+            <FormDialog title="Ubah latihan" open={dialog.open} onOpenChange={dialog.setOpen} dirty={dialog.dirty} formId={FORM_ID} isEditMode btnText="Simpan" cancelText="Batal" loading={dialog.saving} className="sm:max-w-2xl">
                 {dialog.open && (
-                    <ProjectForm id={FORM_ID} owners={owners} loading={dialog.saving} onSubmit={dialog.submit} initialValues={{ ...project, owner: project.owner?.id, ...(prefill ? { focal_question: prefill } : {}) }} />
+                    <ProjectForm id={FORM_ID} owners={owners} loading={dialog.saving} onSubmit={dialog.submit} onDirtyChange={dialog.setDirty} initialValues={{ ...project, owner: project.owner?.id, ...(prefill ? { focal_question: prefill } : {}) }} />
                 )}
             </FormDialog>
         </AuthenticatedLayout>

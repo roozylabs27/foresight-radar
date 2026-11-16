@@ -126,5 +126,104 @@ crontab -l 2>/dev/null | grep -i -E 'backup|rclone|s3|rsync' | awk '{print "  " 
 command -v rclone >/dev/null && echo "  rclone installed" || echo "  rclone not installed"
 command -v aws >/dev/null && echo "  aws cli installed" || echo "  aws cli not installed"
 
+
+section "10. Verdicts (PASS / WARN / FAIL / SKIP)"
+# Production readiness 2026-11-13: each check ends in exactly one verdict. SKIP is never counted as PASS.
+# The script exits 1 when any check FAILs. Nothing below prints a secret: passwords are only compared.
+N_PASS=0; N_WARN=0; N_FAIL=0; N_SKIP=0
+verdict() { # verdict PASS|WARN|FAIL|SKIP "check" "detail"
+  case "$1" in PASS) N_PASS=$((N_PASS+1));; WARN) N_WARN=$((N_WARN+1));; FAIL) N_FAIL=$((N_FAIL+1));; *) N_SKIP=$((N_SKIP+1));; esac
+  printf '  [%-4s] %-44s %s\n' "$1" "$2" "${3:-}"
+}
+cfg() { docker exec -e HOME=/tmp -e XDG_CONFIG_HOME=/tmp laravel_app php artisan tinker --execute "echo json_encode(config('$1'));" 2>/dev/null | tail -n 1; }
+
+# Release
+# A git command that fails (wrong directory, "dubious ownership") is a SKIP, never a PASS.
+if GIT_STATUS="$(git status --porcelain 2>/dev/null)" && GIT_HEAD="$(git rev-parse HEAD 2>/dev/null)"; then
+  [ -z "$GIT_STATUS" ] && verdict PASS "working copy clean" || verdict WARN "working copy clean" "$(echo "$GIT_STATUS" | wc -l) changed file(s)"
+  GIT_MAIN="$(git rev-parse origin/main 2>/dev/null || true)"
+  if [ -n "$GIT_MAIN" ] && [ "$GIT_HEAD" = "$GIT_MAIN" ]; then verdict PASS "HEAD = origin/main (last fetch)" "${GIT_HEAD:0:7}"; else verdict WARN "HEAD = origin/main (last fetch)" "HEAD ${GIT_HEAD:0:7}, origin/main ${GIT_MAIN:0:7}"; fi
+else
+  verdict SKIP "working copy clean" "git failed in $PROJECT_DIR (run as the deploy user)"
+  verdict SKIP "HEAD = origin/main (last fetch)" "git failed"
+fi
+if [ -f "$HOME/foresight-releases.log" ]; then
+  LAST_CHECK="$(tail -n 1 "$HOME/foresight-releases.log")"
+  case "$LAST_CHECK" in *check=ok*) verdict PASS "last post-deploy check" "$LAST_CHECK";; *) verdict FAIL "last post-deploy check" "$LAST_CHECK";; esac
+else
+  verdict SKIP "last post-deploy check" "no ~/foresight-releases.log yet"
+fi
+
+# Containers and runtime config
+for c in laravel_app laravel_nginx laravel_mysql laravel_queue laravel_scheduler; do
+  [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" = "true" ] && verdict PASS "container $c running" || verdict FAIL "container $c running"
+done
+[ "$(sha256sum docker/nginx/default.conf | cut -c1-64)" = "$(docker exec laravel_nginx sha256sum /etc/nginx/conf.d/default.conf 2>/dev/null | cut -c1-64)" ] && verdict PASS "nginx loads the repository config" || verdict FAIL "nginx loads the repository config"
+docker exec laravel_nginx nginx -t >/dev/null 2>&1 && verdict PASS "nginx -t" || verdict FAIL "nginx -t"
+[ "$(sha256sum docker/php/local.ini | cut -c1-64)" = "$(docker exec laravel_app sha256sum /usr/local/etc/php/conf.d/local.ini 2>/dev/null | cut -c1-64)" ] && verdict PASS "PHP loads the repository local.ini" || verdict FAIL "PHP loads the repository local.ini"
+
+# Application configuration (values compared, not printed when secret)
+[ "$(cfg app.debug)" = "false" ] && verdict PASS "APP_DEBUG off" || verdict FAIL "APP_DEBUG off" "app.debug=$(cfg app.debug)"
+[ "$(cfg app.env)" = '"production"' ] && verdict PASS "APP_ENV production" || verdict WARN "APP_ENV production" "app.env=$(cfg app.env)"
+[ "$(cfg session.secure)" = "true" ] && verdict PASS "secure session cookie" || verdict FAIL "secure session cookie" "session.secure=$(cfg session.secure)"
+ENV_MODE="$(stat -c %a .env)"
+case "$ENV_MODE" in *[1-7]) verdict WARN ".env not readable by others" "mode $ENV_MODE (suggest 640 or 600)";; *) verdict PASS ".env not readable by others" "mode $ENV_MODE";; esac
+HEALTH="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 --resolve "$(env_value APP_URL | sed -E 's#^https?://##; s#/.*$##'):443:127.0.0.1" "https://$(env_value APP_URL | sed -E 's#^https?://##; s#/.*$##')/up" 2>/dev/null)"
+[ "$HEALTH" = "200" ] && verdict PASS "GET /up through nginx" "200" || verdict FAIL "GET /up through nginx" "$HEALTH"
+
+# Database security (compose defaults are root/root and secret; see docker-compose.yml)
+[ "$(mysql_q 'SELECT 1' | head -n 1)" = "1" ] && verdict PASS "app connects with its .env account" || verdict FAIL "app connects with its .env account"
+[ "$DB_USER" != "root" ] && verdict PASS "app does not use MySQL root" || verdict FAIL "app does not use MySQL root"
+[ "$DB_PASS" != "secret" ] && [ -n "$DB_PASS" ] && verdict PASS "app password is not the compose default" || verdict FAIL "app password is not the compose default"
+if docker exec -e MYSQL_PWD=root laravel_mysql mysql --protocol=TCP -h 127.0.0.1 -uroot -N -B -e 'SELECT 1' >/dev/null 2>&1    || docker exec -e MYSQL_PWD=root laravel_mysql mysql -uroot -N -B -e 'SELECT 1' >/dev/null 2>&1; then
+  verdict FAIL "root does not accept the compose default" "rotate the root password (runbook)"
+else
+  verdict PASS "root does not accept the compose default"
+fi
+GLOBAL_GRANTS="$(mysql_q 'SHOW GRANTS FOR CURRENT_USER()' | grep -c ' ON \*\.\* ' | tr -d ' ')"
+GLOBAL_WIDE="$(mysql_q 'SHOW GRANTS FOR CURRENT_USER()' | grep ' ON \*\.\* ' | grep -c -E 'ALL PRIVILEGES|SUPER|GRANT OPTION|FILE|PROCESS|SHUTDOWN|CREATE USER' | tr -d ' ')"
+[ "${GLOBAL_WIDE:-0}" = "0" ] && verdict PASS "app user has no global admin privileges" "global grant lines: ${GLOBAL_GRANTS:-0} (USAGE is normal)" || verdict FAIL "app user has no global admin privileges" "$GLOBAL_WIDE wide global grant(s)"
+MYSQL_BIND="$(docker port laravel_mysql 3306 2>/dev/null | tr '\n' ' ')"
+case "$MYSQL_BIND" in "") verdict PASS "MySQL not published on the host";; *0.0.0.0*|*'[::]'*) verdict FAIL "MySQL bound to localhost only" "$MYSQL_BIND";; *) verdict PASS "MySQL bound to localhost only" "$MYSQL_BIND";; esac
+
+# Migrations, queue, scheduler
+if PENDING_OUT="$(docker exec laravel_app php artisan migrate:status 2>/dev/null)"; then
+  echo "$PENDING_OUT" | grep -q "Pending" && verdict FAIL "no pending migrations" "$(echo "$PENDING_OUT" | grep -c Pending) pending" || verdict PASS "no pending migrations"
+else
+  verdict FAIL "no pending migrations" "migrate:status failed"
+fi
+OLDEST_WAIT="$(mysql_q 'SELECT COALESCE(TIMESTAMPDIFF(MINUTE, FROM_UNIXTIME(MIN(available_at)), NOW()), 0) FROM jobs' | head -n 1)"
+[ "${OLDEST_WAIT:-0}" -le 15 ] 2>/dev/null && verdict PASS "queue keeps up" "oldest waiting job ${OLDEST_WAIT:-0} min" || verdict WARN "queue keeps up" "oldest waiting job ${OLDEST_WAIT} min"
+FAILED_24H="$(mysql_q 'SELECT COUNT(*) FROM failed_jobs WHERE failed_at >= NOW() - INTERVAL 1 DAY' | head -n 1)"
+[ "${FAILED_24H:-0}" = "0" ] && verdict PASS "no failed jobs in 24 h" || verdict WARN "no failed jobs in 24 h" "$FAILED_24H failed (php artisan queue:failed)"
+SCHED_RUNS="$(docker logs --since 2h laravel_scheduler 2>&1 | grep -c 'ops:failed-jobs')"
+[ "${SCHED_RUNS:-0}" -ge 1 ] && verdict PASS "scheduler ran ops:failed-jobs (2 h)" "$SCHED_RUNS run(s)" || verdict FAIL "scheduler ran ops:failed-jobs (2 h)" "0 runs"
+
+# Alerting
+ALERT_SET="$(cfg ops.alert_email | grep -c '@' | tr -d ' ')"
+[ "$ALERT_SET" = "1" ] && verdict PASS "OPS_ALERT_EMAIL set" || verdict FAIL "OPS_ALERT_EMAIL set"
+MAILER="$(cfg mail.default)"
+case "$MAILER" in '"log"'|'"array"'|'null'|'') verdict FAIL "mailer can deliver" "mail.default=$MAILER";; *) verdict PASS "mailer can deliver" "mail.default=$MAILER";; esac
+verdict SKIP "alert actually delivered" "run: php artisan ops:alert --test, then confirm the inbox"
+
+# Backups
+BACKUP_CHECK="$(bash scripts/ops/backup-database.sh --check 2>&1 | tail -n 1)"
+case "$BACKUP_CHECK" in *" OK "*) verdict PASS "backup fresh and intact" "$BACKUP_CHECK";; *) verdict FAIL "backup fresh and intact" "$BACKUP_CHECK";; esac
+crontab -l 2>/dev/null | grep -q 'backup-database.sh scheduled' && verdict PASS "daily backup cron installed" || verdict FAIL "daily backup cron installed"
+crontab -l 2>/dev/null | grep -q 'backup-database.sh --check' && verdict PASS "backup freshness cron installed" || verdict WARN "backup freshness cron installed"
+SETTINGS_FILE="${BACKUP_SETTINGS_FILE:-$HOME/.config/foresight-backup.env}"
+grep -qE '^OFFSITE_REMOTE=.+' "$SETTINGS_FILE" 2>/dev/null && verdict PASS "off-server copy configured" || verdict WARN "off-server copy configured" "OFFSITE_REMOTE empty: backups share the VPS failure domain"
+[ "$(stat -c %a "$BACKUP_DIR" 2>/dev/null)" = "700" ] && verdict PASS "backup directory owner-only" || verdict FAIL "backup directory owner-only" "mode $(stat -c %a "$BACKUP_DIR" 2>/dev/null)"
+
+# Host resources
+DISK_USED="$(df -P / | awk 'NR==2 {gsub("%",""); print $5}')"
+[ "${DISK_USED:-100}" -lt 85 ] && verdict PASS "root disk below 85%" "${DISK_USED}% used" || verdict WARN "root disk below 85%" "${DISK_USED}% used"
+MEM_AVAIL="$(free -m | awk '/^Mem:/ {print $7}')"
+[ "${MEM_AVAIL:-0}" -ge 256 ] && verdict PASS "available memory >= 256 MB" "${MEM_AVAIL} MB" || verdict WARN "available memory >= 256 MB" "${MEM_AVAIL} MB"
+
+echo
+echo "RESULT: $N_PASS PASS, $N_WARN WARN, $N_FAIL FAIL, $N_SKIP SKIP"
+
 echo
 echo "Done. Nothing was changed (backup --check only creates its lock file in $BACKUP_DIR)."
+[ "$N_FAIL" -eq 0 ]

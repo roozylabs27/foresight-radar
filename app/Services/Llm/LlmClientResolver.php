@@ -99,7 +99,9 @@ class LlmClientResolver
     }
 
     /**
-     * Create a concrete StructuredLlmClient from attribute array.
+     * Create a concrete StructuredLlmClient from attribute array (personal or organisation settings,
+     * or a connection test). OpenAI-compatible clients built here are SSRF-guarded (OutboundGuard);
+     * only the platform client from .env (AppServiceProvider) may point at a local model server.
      */
     public function createClient(array $attributes): StructuredLlmClient
     {
@@ -116,6 +118,7 @@ class LlmClientResolver
                 'max_retries' => $settings['max_retries'] ?? 1,
             ]),
             'openai' => new OpenAiCompatibleClient([
+                'guard_outbound' => true,
                 'name' => 'openai',
                 'label' => 'OpenAI',
                 'base_url' => $attributes['base_url'] ?: 'https://api.openai.com/v1',
@@ -126,6 +129,7 @@ class LlmClientResolver
                 'max_retries' => $settings['max_retries'] ?? 1,
             ]),
             'gemini' => new OpenAiCompatibleClient([
+                'guard_outbound' => true,
                 'name' => 'gemini',
                 'label' => 'Google Gemini',
                 'base_url' => $attributes['base_url'] ?: 'https://generativelanguage.googleapis.com/v1beta/openai/',
@@ -139,6 +143,7 @@ class LlmClientResolver
                 'max_retries' => $settings['max_retries'] ?? 0,
             ]),
             default => new OpenAiCompatibleClient([
+                'guard_outbound' => true,
                 'name' => 'openai_compatible',
                 'label' => $attributes['label'] ?? 'OpenAI-Compatible',
                 'base_url' => $attributes['base_url'] ?? '',

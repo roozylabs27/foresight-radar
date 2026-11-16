@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, master, dev, develop, development, 'feat/**']
 
+# Least privilege (production readiness 2026-11-14): CI only reads the repository.
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend Tests & Security Audit
@@ -161,3 +165,55 @@ jobs:
 
       - name: Run E2E Smoke Test
         run: npx e2e run tests/e2e/smoke.e2e.ts
+
+  browser-e2e:
+    name: Browser E2E (Playwright, isolated stack)
+    needs: [backend, frontend]
+    runs-on: ubuntu-24.04
+    # Workflows A-F (tests/browser) against docker-compose.e2e.yml: its own MySQL, app, queue worker and
+    # the E2E scripted AI client. No secrets: docker/e2e/e2e.env holds only throw-away local values.
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, pdo_mysql, bcmath
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Composer dependencies (mounted into the stack)
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+        env:
+          VITE_APP_NAME: "Foresight Radar"
+
+      - name: Build the app image (foresight-radar-app)
+        run: docker compose build queue
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser E2E (workflows A-F)
+        run: bash scripts/e2e/run.sh
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report
+          path: |
+            storage/e2e-report
+            storage/e2e-results
+          retention-days: 7

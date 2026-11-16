@@ -3,12 +3,15 @@
 namespace App\Providers;
 
 use App\Services\Llm\AnthropicStructuredClient;
+use App\Services\Llm\E2eScriptedLlmClient;
 use App\Services\Llm\NullLlmClient;
 use App\Services\Llm\OpenAiCompatibleClient;
 use App\Services\Llm\QuotaLimitedLlmClient;
 use App\Services\Llm\StructuredLlmClient;
 use App\Services\TenantContext;
 use App\Support\DecisionContext;
+use App\Support\Net\DnsResolver;
+use App\Support\Net\SystemDnsResolver;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(TenantContext::class, function () {
             return new TenantContext;
         });
+        // SSRF guard (production readiness 2026-11-13): DNS answers come from here, so tests control them.
+        $this->app->singleton(DnsResolver::class, SystemDnsResolver::class);
         // Roadmap #13: the reason given for a gate decision in this request (scoped the same way).
         $this->app->scoped(DecisionContext::class, fn () => new DecisionContext);
 
@@ -32,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(StructuredLlmClient::class, function () {
             $client = match (config('services.llm.provider', 'anthropic')) {
                 'openai_compatible' => new OpenAiCompatibleClient(config('services.openai_compatible', [])),
+                // Browser E2E stack only (docker-compose.e2e.yml): never available in any other environment.
+                'e2e' => $this->app->environment('e2e') ? new E2eScriptedLlmClient : new NullLlmClient,
                 default => new AnthropicStructuredClient(config('services.anthropic', [])),
             };
 

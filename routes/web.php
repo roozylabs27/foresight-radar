@@ -61,14 +61,14 @@ Route::post('/locale', [LocaleController::class, 'update'])
     ->name('locale.update')
     ->middleware('throttle:60,1');
 
-Route::prefix('/')->middleware(['auth', 'verified', 'throttle:120,1'])->group(function () {
+Route::prefix('/')->middleware(['auth', 'verified', 'throttle:app'])->group(function () {
     Route::prefix('/dashboard')->controller(DashboardController::class)->name('dashboard.')->group(function () {
         Route::get('/', 'index')->can('view-dashboard');
         Route::get('/reasoning-data', 'reasoning_data')->name('reasoning-data')->can('view-dashboard');
         Route::post('/simulate', 'simulate')->name('simulate')->can('view-dashboard')->middleware('throttle:60,1,simulate');
     });
 
-    Route::prefix('visualization')->middleware('throttle:60,1,visualization')->name('visualization.')->group(function () {
+    Route::prefix('visualization')->middleware('throttle:visualization')->name('visualization.')->group(function () {
         Route::prefix('/prioritizing')->name('prioritizing.')->group(function () {
             Route::get('/', [PrioritizingController::class, 'index'])->can('view-prioritizing');
             Route::get('/get-data', [PrioritizingController::class, 'prioritizing'])->name('get-data')->can('view-prioritizing');

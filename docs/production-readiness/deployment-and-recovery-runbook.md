@@ -1,6 +1,6 @@
 # Deployment and Recovery Runbook — Foresight Radar
 
-Production readiness remediation, 2026-11-13. This runbook is the entry point. The detailed procedures stay where they were rehearsed:
+Production readiness remediation, 2026-11-13; updated 2026-11-14 (final closure). This runbook is the entry point. The detailed procedures stay where they were rehearsed:
 - [docs/guidelines/production-operations-runbook.md](../guidelines/production-operations-runbook.md), referred to below as "Ops §n";
 - [docs/guidelines/deployment-and-rollback.md](../guidelines/deployment-and-rollback.md).
 
@@ -12,7 +12,10 @@ Production: one VPS (Docker Compose: `laravel_app` PHP-FPM, `laravel_nginx`, `la
    - Pint, Larastan level 5 and the full PHPUnit suite on MySQL;
    - `composer audit` (blocks on any advisory not listed in `composer.json` `config.audit.ignore`);
    - `npm audit --audit-level=critical`, ESLint and the production build;
-   - the e2e login smoke.
+   - the e2e login smoke;
+   - the browser E2E suite (Playwright, workflows A–F) on the isolated stack: job `browser-e2e`, from 2026-11-14.
+
+   To run it locally before a risky release: `npm run build && bash scripts/e2e/run.sh`. It needs Docker, the `foresight-radar-app` image and Playwright's Chromium.
 2. Read the migrations of the release. For each one, note whether old code still runs on the new schema (additive, nullable: yes) and whether `down()` loses data. A migration that moves or deletes data needs a restore to roll back (§6).
 3. Check that a recent valid backup exists (`bash scripts/ops/backup-database.sh --check`, Ops §4) and that the disk has room (`df -h`).
 4. Know the current release (`tail -n 3 ~/foresight-releases.log`, or `git rev-parse --short HEAD` on the server).
@@ -42,7 +45,7 @@ Runs never overlap (`concurrency: deploy-production`). Steps:
 ## 3. Post-deployment smoke test (non-destructive)
 
 1. GitHub: the deploy run is green, and its log shows "Deploying <sha>; previous release: <sha>" and the `OK` lines of the post-deploy check.
-2. On the VPS: `bash scripts/ops/verify-production.sh`, read-only. Check:
+2. On the VPS: `bash scripts/ops/verify-production.sh`, read-only. Section 10 ends with `RESULT: n PASS, n WARN, n FAIL, n SKIP`, and the script exits 1 on any FAIL. A SKIP is not a pass. Check:
    - release and release log;
    - containers;
    - the mounted config hashes;
@@ -64,6 +67,7 @@ Runs never overlap (`concurrency: deploy-production`). Steps:
 - **Daily:** the cron from Ops §4b (01:15 WIB backup and a 6-hourly `--check`). **Not confirmed as installed on the VPS** (known risk R-02).
 - **Off-server copy:** `OFFSITE_REMOTE` with rclone `crypt` (Ops §4b). **Not configured** (R-02).
 - **Verify a backup:** run `backup-database.sh --check`. It checks age (≤ 26 h), the gzip stream, the completion marker and the `.sha256` sidecar.
+- **Failure alert:** a failed dump or `--check` mails through `php artisan ops:alert` to `OPS_ALERT_EMAIL` (best effort; it never changes the script's exit code). It also goes to syslog (`foresight-backup`).
 - **Locking:** the deploy and cron runs share `~/foresight-backups/.backup.lock`. A second run waits up to `LOCK_WAIT_SECONDS` (900 s), then fails without touching the other run's files. Tested locally on 2026-11-13.
 
 ## 5. Rollback
@@ -89,9 +93,42 @@ After any rollback:
 - **RPO, measured capability:** the time since the last dump. Today that is the last deploy, because the daily cron is not confirmed. **Target:** ≤ 24 h with the daily cron, plus an off-server copy.
 - **RTO, measured:** restore ≈ 21 s over a populated 4 MB database, code rollback ≈ 19 s. **Target:** ≤ 1 h end to end, including the decision and the checks.
 
-## 7. Incident response
+## 7. Queue recovery
 
-1. Confirm: run `verify-production.sh` sections 3, 7 and 8 (containers, queue and failed jobs, log errors), and load `/up` in a browser.
+- **Worker stopped or stuck:**
+  - `docker ps --filter name=laravel_queue` shows the state;
+  - `docker logs --since 1h laravel_queue` shows the reason;
+  - restart with `docker restart laravel_queue`.
+
+  The worker also restarts itself hourly (`--max-time=3600`), and the container has `restart: unless-stopped`.
+- **Jobs piling up:** `verify-production.sh` §10 "queue keeps up" (WARN above 15 minutes for the oldest waiting job).
+- **Failed jobs:**
+  - `docker exec laravel_app php artisan queue:failed` lists them;
+  - the hourly `ops:failed-jobs` mails a summary to `OPS_ALERT_EMAIL`, with job names and counts only;
+  - retry one with `php artisan queue:retry <id>` after fixing the cause.
+- **AI assists stuck in "pending":** recovered by themselves after the stale window (`StaleJob`, PI-10: shown as failed with "Coba lagi"); no manual database change is needed.
+
+## 8. Scheduler recovery
+
+- **Check:** `verify-production.sh` §10 "scheduler ran ops:failed-jobs (2 h)", and `docker exec laravel_app php artisan schedule:list`.
+- **Stopped:**
+  - `docker logs --since 2h laravel_scheduler` shows the reason;
+  - restart with `docker restart laravel_scheduler`.
+- **After any `.env` change:** `docker restart laravel_queue laravel_scheduler`. Both read the configuration only at start.
+
+## 9. Incident response
+
+1. Confirm: run `verify-production.sh` (section 10 verdicts, plus sections 3, 7 and 8 for detail), and load `/up` in a browser.
+
+   Typical first moves:
+   - **Application unavailable:** containers (§10), `nginx -t`, `docker logs laravel_app`.
+   - **Database unavailable:** `docker ps` for laravel_mysql, then `docker logs laravel_mysql`.
+   - **Queue stopped:** §7.
+   - **Scheduler stopped:** §8.
+   - **Backup failed:** the alert mail, `~/foresight-backups/backup.log`, `journalctl -t foresight-backup`.
+   - **Disk full:** `df -h`; old dumps keep at least 3 valid ones; Docker cleanup only with `docker image prune` (never `volume prune`).
+   - **AI provider unavailable:** assists show their error and can be retried; the method works by hand.
+   - **Deploy failed:** the failing step in the GitHub run, then §5.
 2. Contain:
    - `php artisan down` for data damage;
    - `docker restart laravel_queue` for a stuck worker;
@@ -100,7 +137,7 @@ After any rollback:
 4. Validate with §3 and §8.
 5. Write the incident into `PROGRESS.md`: cause, timeline, data lost (if any), and the follow-up.
 
-## 8. Recovery validation
+## 10. Recovery validation
 
 After a restore or rollback, all must hold:
 - `migrate:status`: nothing pending for the running code;

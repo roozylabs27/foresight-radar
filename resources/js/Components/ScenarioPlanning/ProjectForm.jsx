@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useEffectEvent, useId } from "react";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
 
@@ -47,18 +47,21 @@ const OPTIONAL_FIELDS = [
 /**
  * Create/edit form for a scenario planning exercise. Render it inside
  * <FormDialog formId={id}>; `onSubmit(values)` may resolve to Laravel's 422 errors.
+ * `onDirtyChange(isDirty)` reports unsaved input (FormDialog `dirty`).
  */
-export default function ProjectForm({ id, initialValues = {}, owners = [], loading, onSubmit }) {
+export default function ProjectForm({ id, initialValues = {}, owners = [], loading, onSubmit, onDirtyChange }) {
     const idPrefix = useId();
     const ids = Object.fromEntries(FIELDS.map((name) => [name, `${idPrefix}-${name}`]));
 
-    const { control, submit } = useDialogForm({
+    const { control, submit, formState } = useDialogForm({
         schema,
         defaultValues: Object.fromEntries(FIELDS.map((name) => [name, toFieldValue(initialValues[name])])),
         ids,
         loading,
         onSubmit,
     });
+    const reportDirty = useEffectEvent((isDirty) => onDirtyChange?.(isDirty));
+    useEffect(() => reportDirty(formState.isDirty), [formState.isDirty]);
 
     const controlProps = (name, field, fieldState, required = true) => ({
         ...fieldControlProps(ids[name], fieldState, { required }),

@@ -28,6 +28,12 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // The signed-in area and the reports, per user (was `throttle:120,1` and `throttle:60,1,visualization`).
+        RateLimiter::for('app', fn (Request $request) => Limit::perMinute((int) config('ops.rate_limits.app', 120))
+            ->by('app|'.($request->user()?->id ?: $request->ip())));
+        RateLimiter::for('visualization', fn (Request $request) => Limit::perMinute((int) config('ops.rate_limits.visualization', 60))
+            ->by('visualization|'.($request->user()?->id ?: $request->ip())));
+
         // Invites send email on the tenant's behalf: cap them per inviter and per tenant (INVITE-008).
         RateLimiter::for('tenant-invites', function (Request $request) {
             return [

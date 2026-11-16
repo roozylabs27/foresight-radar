@@ -1,0 +1,78 @@
+# Foresight Radar — isolated browser E2E stack (production readiness 2026-11-13).
+#
+# The Playwright suite (tests/browser) runs against this stack only, never against the developer's stack
+# or production:
+#   - its own Compose project, network and MySQL (data on tmpfs: every `up` starts empty);
+#   - the code is mounted read-only (storage/ is a separate, throw-away volume); the developer's .env is
+#     replaced by docker/e2e/e2e.env;
+#   - a queue worker, so AI assists show their real pending, done and failed states;
+#   - AI is the E2E scripted client (LLM_PROVIDER=e2e, bound only when APP_ENV=e2e); mail goes to `array`.
+#
+# Use it through scripts/e2e/run.sh (up, migrate and seed, run Playwright, down).
+
+name: foresight-e2e
+
+services:
+  e2e_mysql:
+    image: mysql:8.0
+    container_name: e2e_mysql
+    # No reverse DNS per connection (it cost ~7 s on every new connection in this network).
+    command: --skip-name-resolve
+    environment:
+      MYSQL_ROOT_PASSWORD: e2e-root-local-only
+      MYSQL_DATABASE: foresight_e2e
+      MYSQL_USER: e2e
+      MYSQL_PASSWORD: e2e-local-only
+    tmpfs:
+      - /var/lib/mysql
+    networks:
+      - e2e
+
+  e2e_app:
+    image: foresight-radar-app
+    container_name: e2e_app
+    # PHP's built-in server with Laravel's router (see docker-compose.recovery.yml for why not artisan serve);
+    # several workers, because Inertia polls while a page navigates.
+    working_dir: /var/www/public
+    # opcache for the CLI server: without it every request recompiles the framework over the bind mount (~2-5 s).
+    command: php -d opcache.enable_cli=1 -d opcache.memory_consumption=256 -S 0.0.0.0:8000 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+    environment:
+      PHP_CLI_SERVER_WORKERS: "6"
+    depends_on:
+      - e2e_mysql
+    ports:
+      - "127.0.0.1:8091:8000"
+    volumes:
+      - .:/var/www:ro
+      - ./docker/e2e/e2e.env:/var/www/.env:ro
+      # Writable storage shared by app and worker (file cache locks, sessions, compiled views).
+      - e2e_storage:/var/www/storage
+    env_file:
+      - ./docker/e2e/e2e.env
+    networks:
+      - e2e
+
+  e2e_worker:
+    image: foresight-radar-app
+    container_name: e2e_worker
+    working_dir: /var/www
+    command: php -d opcache.enable_cli=1 artisan queue:work --sleep=1 --tries=1 --timeout=60
+    depends_on:
+      - e2e_mysql
+    volumes:
+      - .:/var/www:ro
+      - ./docker/e2e/e2e.env:/var/www/.env:ro
+      # Writable storage shared by app and worker (file cache locks, sessions, compiled views).
+      - e2e_storage:/var/www/storage
+    env_file:
+      - ./docker/e2e/e2e.env
+    networks:
+      - e2e
+
+networks:
+  e2e:
+    name: foresight-e2e
+
+volumes:
+  e2e_storage:
+    name: foresight-e2e-storage

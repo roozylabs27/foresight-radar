@@ -2,6 +2,8 @@
 
 namespace App\Services\Llm;
 
+use App\Support\Net\OutboundGuard;
+use App\Support\Net\UnsafeOutboundUrl;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
@@ -20,6 +22,9 @@ use Illuminate\Support\Str;
  * - Retries cover 429, 5xx and connection errors; the timeout is per attempt.
  * - Logs carry purpose, provider, model, finish reason, token usage and
  *   duration only: never prompt text, document text or the key.
+ * - `guard_outbound` (set for every base URL a user or organisation configured, LlmClientResolver):
+ *   the host must resolve only to public addresses, the connection is pinned to the checked IP
+ *   (no DNS rebinding), redirects are refused and the response size is capped (OutboundGuard).
  */
 class OpenAiCompatibleClient implements StructuredLlmClient
 {
@@ -85,8 +90,15 @@ class OpenAiCompatibleClient implements StructuredLlmClient
 
         try {
             $response = $this->http()->post('/chat/completions', $body);
+        } catch (UnsafeOutboundUrl $e) {
+            throw $this->fail($request, 'api_error', null, $start, $e, $e->getMessage());
         } catch (ConnectionException $e) {
             throw $this->fail($request, str_contains(strtolower($e->getMessage()), 'timed out') ? 'timeout' : 'api_error', null, $start, $e);
+        }
+
+        // Redirects are not followed for guarded hosts, and an API endpoint has no reason to redirect.
+        if ($response->redirect()) {
+            throw $this->fail($request, 'api_error', $response->status(), $start, null, 'Penyedia AI mengalihkan permintaan (redirect); alamat API harus menjawab langsung.');
         }
 
         if ($response->failed()) {
@@ -162,11 +174,17 @@ class OpenAiCompatibleClient implements StructuredLlmClient
             'X-Title' => $this->config['app_title'] ?? null,
         ]);
 
-        $request = Http::baseUrl(rtrim((string) $this->config['base_url'], '/'))
+        $baseUrl = rtrim((string) $this->config['base_url'], '/');
+        // A user-configured host: check it once and pin the connection to the checked address.
+        $options = ! empty($this->config['guard_outbound'])
+            ? app(OutboundGuard::class)->target($baseUrl)->guzzleOptions()
+            : ['force_ip_resolve' => 'v4'];
+
+        $request = Http::baseUrl($baseUrl)
             ->acceptJson()
             ->asJson()
             ->withHeaders($headers)
-            ->withOptions(['force_ip_resolve' => 'v4'])
+            ->withOptions($options)
             ->timeout((int) ($this->config['timeout'] ?? 240))
             ->connectTimeout(10)
             ->retry(
