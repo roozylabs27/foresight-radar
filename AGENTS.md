@@ -77,14 +77,19 @@ Standardized repository entry points for human developers and AI coding agents:
 docker exec laravel_app composer verify   # Unified contract (Pint, Larastan Level 5, PHPUnit)
 npm run build                             # Production frontend bundle
 npm audit --audit-level=critical          # Security quality gate
-npm run test:e2e:smoke                    # Browser e2e smoke (login page)
+npm run test:e2e:smoke                    # Browser e2e smoke (login page, agentic runner)
+bash scripts/e2e/run.sh                   # Playwright browser E2E, workflows A-F, isolated stack (needs npm run build)
 ```
 
 Notes from practice:
 - **Reload after PHP changes:** reload PHP-FPM after changing PHP (`docker exec laravel_app sh -c 'kill -USR2 1'`). Otherwise OPcache keeps serving old routes, and Ziggy reports "route not in the route list". Restart `laravel_queue` after changing job or service code.
 - **Run artisan in the container:** run artisan and tests inside `laravel_app`. Never run two PHPUnit processes at once, because they share the test database.
-- **Browser e2e runner:** `e2e` / `@e2e-dev/web` (`e2e.config.ts`) is an agentic runner that drives the browser through a model. Running it costs AI tokens and needs `ADMIN_PASSWORD` / `DEV_PASSWORD`. It is not Playwright.
-- **CI:** `.github/workflows/ci.yml` runs Pint, Larastan and PHPUnit on MySQL, then npm audit, ESLint and build, and only the e2e smoke test.
+- **Browser E2E (deterministic):** Playwright specs in `tests/browser` (workflows A–F) run against the isolated stack `docker-compose.e2e.yml`:
+  - its own MySQL on tmpfs, app, queue worker, `E2eSeeder` with two organisations;
+  - the AI is the scripted test double `E2eScriptedLlmClient`, bound only when `APP_ENV=e2e`;
+  - run `bash scripts/e2e/run.sh`. Never point it at the dev stack or production.
+- **Agentic e2e runner:** `e2e` / `@e2e-dev/web` (`e2e.config.ts`) drives the browser through a model; it costs AI tokens and needs `ADMIN_PASSWORD` / `DEV_PASSWORD`.
+- **CI:** `.github/workflows/ci.yml` runs Pint, Larastan and PHPUnit on MySQL, a blocking `composer audit` (reviewed exceptions in `composer.json`), npm audit, ESLint (0 warnings) and build, the agentic login smoke, and the Playwright browser E2E (`browser-e2e`).
 - **Deploy:** `.github/workflows/deploy.yml` deploys to production only after CI passed on `main`, and dumps the database before migrating. Pushing to `development` does not deploy. Rollback: `docs/guidelines/deployment-and-rollback.md`.
 
 ---
@@ -124,7 +129,7 @@ This repository uses workflow skills from `.agents/skills/` following a 3-phase 
    - `security-and-hardening`: Enforce Spatie RBAC gates, sanitize inputs, parameterize queries, and guard against OWASP Top 10 risks.
    - `doubt-driven-development`: Adversarially review authorization checks and concurrency boundaries.
 3. **Phase 3: Verify & Review**:
-   - `test-driven-development`: Guard changes with regression tests (PHPUnit for domain logic and HTTP flows; the agentic `e2e` runner for browser journeys).
+   - `test-driven-development`: Guard changes with regression tests (PHPUnit for domain logic and HTTP flows; Playwright specs in `tests/browser` for browser journeys).
    - `debugging-and-error-recovery`: Reproduce -> Localize -> Fix -> Guard.
    - `code-review-and-quality`: Validate changes against Pint and Larastan Level 5.
    - `code-simplification`: Remove dead code and unnecessary complexity without altering verified behavior.

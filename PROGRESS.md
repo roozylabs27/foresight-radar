@@ -1,6 +1,6 @@
 # Project Progress — Foresight Radar
 
-## Current Verified State (updated 2026-11-13, session 100)
+## Current Verified State (updated 2026-11-14, session 101)
 
 - **Repository:** `https://github.com/roozylabs27/foresight-radar`
 - **Current branch:** `development`
@@ -25,7 +25,7 @@
   - The ESLint warnings are debt.
   - No browser e2e for the exercise pages (AUD-19).
   - `composer verify` hits Composer's 1,200 s process timeout on this host; run `php artisan test` directly.
-- **Highest-priority next task:** commit and merge the session 100 production-readiness fixes (SEC-PR-01 is critical), let CI and the gated deploy run, then the VPS owner runs `verify-production.sh` and closes R-01, R-02 and R-13 (`docs/production-readiness/known-risks.md`).
+- **Highest-priority next task:** merge PR #27 and the session 101 closure work, let CI (with browser E2E) and the gated deploy run, then the VPS owner runs `docs/production-readiness/vps-owner-handoff.md` blocks 1-7. Release gate: NO-GO until that evidence exists (session 101).
 
 ---
 
@@ -505,6 +505,60 @@
 ---
 
 ## Session Log
+
+### 2026-11-14 — Session 101 (final production readiness closure and go-live verification)
+
+Brief: "Final Production Readiness Closure & Go-Live Verification". User decisions:
+- VPS commands are run by the user;
+- browser E2E uses Playwright with Chromium.
+
+- **State found:**
+  - `main` `bb4fa31` (session 100 merged as `134ba1a`); CI #120 and Deploy #58 green;
+  - production serves the `bb4fa31` frontend (bundle check), `/up` 200;
+  - PR #27 (`d71ec32`, ESLint gate) open, checks green, not merged;
+  - Deploy #58's SSH log could not be read in the browser pane (R-15).
+- **SSRF / DNS rebinding closed:**
+  - `App\Support\Net\OutboundGuard`, injectable `DnsResolver` / `SystemDnsResolver`, `OutboundTarget`, `UnsafeOutboundUrl`;
+  - every DNS answer must be public (IPv4/IPv6 and the IPv4-in-IPv6 forms); one bad answer rejects the host;
+  - the connection is pinned to the checked IP (`CURLOPT_RESOLVE`; TLS still checks the name);
+  - no redirects; https/443 only; 5 MB cap;
+  - `guard_outbound` on every client from user or organisation settings; `PublicHttpsUrl` delegates to the guard;
+  - tests: `OutboundGuardTest` (unit), `OutboundRequestGuardTest`; `FakeDnsResolver` bound in `TestCase`; mutation check passed.
+- **Alerts:**
+  - `php artisan ops:alert --test | "<message>"`: synchronous, masked recipient, logged failures without loops;
+  - the backup script mails its failures through it;
+  - `OpsAlertTest` 4 passed.
+- **verify-production.sh:**
+  - section 10 verdicts (PASS / WARN / FAIL / SKIP): database boundaries without printing secrets, alert configuration, backup crons and off-server copy, `/up`, `.env` mode, disk and memory;
+  - exit 1 on FAIL;
+  - git failure → SKIP (a false PASS found by a local dry run).
+- **Browser E2E (new):**
+  - `playwright.config.js`, `tests/browser` (auth, exercise-journey, ai, recovery-ux: 32 tests);
+  - isolated stack `docker-compose.e2e.yml` + `docker/e2e/e2e.env` (throw-away values), `E2eSeeder`, `scripts/e2e/run.sh`;
+  - `E2eScriptedLlmClient`, bound only when `APP_ENV=e2e` (`E2eScriptedClientGuardTest`);
+  - CI job `browser-e2e`;
+  - stack fixes: CLI opcache, MySQL `--skip-name-resolve`, shared storage volume, Git Bash path conversion.
+- **Bugs found by the browser E2E and fixed:**
+  - the G1 reason was never sent (`Show.jsx` `visit` dropped data);
+  - the narrative editor wiped typing on background refreshes (`QuadrantCard.jsx`, `useEffectEvent`);
+  - network failures were silent (global Inertia `exception` toast);
+  - the exercise dialog discarded unsaved input (`ProjectForm` `onDirtyChange`, `useProjectDialog` `dirty`).
+- **CI and deploy:**
+  - `permissions: contents: read` in CI;
+  - actions on Node 24 (checkout/setup-node v7, upload-artifact v6), runners `ubuntu-24.04`.
+  - The blocking `composer audit` caught a new Laravel advisory (`PKSA-yxbx-3c9s-cjt9`, Concurrency); reviewed (unused, CLI-only) and listed.
+  - No ruleset protects `main` (R-14).
+- **Verification (final tree, developer machine):**
+  - PHPUnit **746 passed** (8,690 assertions, 558 s); Larastan whole code base: no errors (300 s); Pint PASS (506 files);
+  - ESLint 0 warnings; build OK; npm audit 0 critical; composer audit exit 0;
+  - **browser E2E 32/32** on a fresh isolated stack (`scripts/e2e/run.sh`, exit 0, 469 s);
+  - shell syntax OK; dev DB 38 users, 0 pending; FPM reloaded, queue restarted.
+- **Production:**
+  - VPS block 1 handed over (no output yet);
+  - blocks 2–7 in `docs/production-readiness/vps-owner-handoff.md` need the merged code.
+- **Docs:** production-readiness matrix (RR-01..RR-23), final verification report, runbook (queue, scheduler recovery, E2E), known risks (R-01, R-02, R-13, R-14, R-15 block GO), VPS handoff, AGENTS.md, feature_list note.
+- **Release gate: NOT PRODUCTION READY — NO-GO** until the VPS owner evidence exists (verification run, MySQL credentials, alert delivery, scheduled and off-server backup) and `main` is protected.
+- **Not committed.**
 
 ### 2026-11-13 — Session 100 (production readiness remediation and final verification)
 

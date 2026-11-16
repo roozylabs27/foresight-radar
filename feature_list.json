@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": "Foresight Radar",
   "version": "1.2.0",
-  "last_updated": "2026-11-13",
+  "last_updated": "2026-11-14",
   "status_vocabulary": [
     "not_started",
     "in_progress",
     "blocked",
     "passing"
   ],
-  "status_note": "'passing' means implemented and covered by the recorded automated tests (PHPUnit) plus, where stated, a local browser check. It does not mean browser e2e coverage (none of the scenario planning features have it) or production verification. Known gaps per feature are in docs/audit/2026-11-11/feature-gap-matrix.md; open work is in docs/audit/2026-11-11/remediation-backlog.md.",
+  "status_note": "'passing' means implemented and covered by the recorded automated tests (PHPUnit) plus, where stated, a local browser check. Browser E2E (Playwright, tests/browser, isolated stack) covers authentication and tenant isolation, the exercise lifecycle, the nine steps with gates G1-G7, monitoring, AI handling with a test double, and recovery UX since 2026-11-14 (32 tests). 'passing' does not mean production verification. Known gaps per feature are in docs/audit/2026-11-11/feature-gap-matrix.md; open work is in docs/audit/2026-11-11/remediation-backlog.md.",
   "features": [
     {
       "id": "FEAT-001",

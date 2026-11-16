@@ -3,9 +3,11 @@
 namespace Tests;
 
 use App\Services\Llm\StructuredLlmClient;
+use App\Support\Net\DnsResolver;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Vite;
 use Illuminate\Support\HtmlString;
+use Tests\Support\FakeDnsResolver;
 use Tests\Support\FakeLlmClient;
 
 abstract class TestCase extends BaseTestCase
@@ -17,6 +19,15 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->fakeVite();
+        // No test resolves real DNS names (SSRF guard); tests that need specific answers set them.
+        $this->app->instance(DnsResolver::class, new FakeDnsResolver);
+    }
+
+    protected function fakeDns(): FakeDnsResolver
+    {
+        $resolver = $this->app->make(DnsResolver::class);
+
+        return $resolver instanceof FakeDnsResolver ? $resolver : tap(new FakeDnsResolver, fn ($fake) => $this->app->instance(DnsResolver::class, $fake));
     }
 
     /**

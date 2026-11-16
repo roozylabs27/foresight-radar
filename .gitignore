@@ -32,3 +32,9 @@ yarn-error.log
 /C/
 /docker/certbot
 
+
+# Browser E2E artifacts (Playwright, production readiness 2026-11-14)
+/storage/e2e-results
+/storage/e2e-report
+/test-results
+/playwright-report

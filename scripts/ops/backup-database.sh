@@ -53,7 +53,10 @@ MYSQL_CONTAINER="${MYSQL_CONTAINER:-laravel_mysql}"
 LABEL="${1:?usage: backup-database.sh <label>|--check}"
 
 log() { printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"; }
-fail() { log "BACKUP FAILED: $*"; command -v logger >/dev/null && logger -t foresight-backup "FAILED: $*"; exit 1; }
+# Mail the failure through the app's alert path (ops:alert, OPS_ALERT_EMAIL). Best effort: an alert that
+# cannot be sent is logged by the app and never changes this script's exit code. BACKUP_ALERT=0 disables it.
+alert() { [ "${BACKUP_ALERT:-1}" = "1" ] || return 0; docker exec laravel_app php artisan ops:alert "$1" >/dev/null 2>&1 || true; }
+fail() { log "BACKUP FAILED: $*"; command -v logger >/dev/null && logger -t foresight-backup "FAILED: $*"; alert "Database backup failed on $(hostname): $*"; exit 1; }
 valid_dumps() { ls -1t "$BACKUP_DIR"/db-*.sql.gz 2>/dev/null || true; }
 
 mkdir -p "$BACKUP_DIR"

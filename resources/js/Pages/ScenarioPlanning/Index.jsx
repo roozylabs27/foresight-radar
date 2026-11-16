@@ -73,13 +73,14 @@ export default function Index({ auth, title, projects, canManage, owners }) {
                 description="Langkah 1: tuliskan key focal issue, tujuan, dan tahun target. Isian lain boleh dilengkapi nanti."
                 open={dialog.open}
                 onOpenChange={dialog.setOpen}
+                dirty={dialog.dirty}
                 formId={FORM_ID}
                 btnText="Buat latihan"
                 cancelText="Batal"
                 loading={dialog.saving}
                 className="sm:max-w-2xl"
             >
-                {dialog.open && <ProjectForm id={FORM_ID} owners={owners} loading={dialog.saving} onSubmit={dialog.submit} />}
+                {dialog.open && <ProjectForm id={FORM_ID} owners={owners} loading={dialog.saving} onSubmit={dialog.submit} onDirtyChange={dialog.setDirty} />}
             </FormDialog>
         </AuthenticatedLayout>
     );

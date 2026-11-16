@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useEffectEvent, useState } from "react";
 import { CircleCheckIcon, EyeIcon, LoaderCircleIcon, PencilIcon, UndoIcon } from "lucide-react";
 
 import DiscardChangesDialog from "@/Components/DiscardChangesDialog";
@@ -201,7 +201,10 @@ function EditSheet({ quadrant, open, titleLocked, onOpenChange, onSave }) {
     const [asking, setAsking] = useState(false);
     const requestClose = () => (dirty ? setAsking(true) : onOpenChange(false));
 
-    useEffect(() => {
+    // Reset when the sheet opens or shows another quadrant, not when the quadrant object is refreshed:
+    // a background reload (another save, generation polling) used to wipe the text being typed
+    // (found by the browser E2E, 2026-11-14).
+    const resetForm = useEffectEvent(() => {
         if (open) {
             reset({
                 title: quadrant.title ?? "",
@@ -210,7 +213,8 @@ function EditSheet({ quadrant, open, titleLocked, onOpenChange, onSave }) {
                 early_indicators: (quadrant.early_indicators ?? []).join("\n"),
             });
         }
-    }, [open, quadrant, reset]);
+    });
+    useEffect(() => resetForm(), [open, quadrant?.id]);
 
     const set = (key) => (event) => setValues((current) => ({ ...current, [key]: event.target.value }));
     const submit = async (event) => {
